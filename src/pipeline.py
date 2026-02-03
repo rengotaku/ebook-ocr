@@ -10,12 +10,12 @@ import sys
 import time
 from pathlib import Path
 
-from src_v3.video_hash import compute_full_hash, write_source_info
-from src_v3.extract_frames import extract_frames
-from src_v3.deduplicate import deduplicate_frames
-from src_v3.detect_figures import detect_figures
-from src_v3.ocr_deepseek import ocr_pages_deepseek
-from src_v3.describe_figures import describe_figures
+from src.video_hash import compute_full_hash, write_source_info
+from src.extract_frames import extract_frames
+from src.deduplicate import deduplicate_frames
+from src.detect_figures import detect_figures
+from src.ocr_deepseek import ocr_pages_deepseek
+from src.describe_figures import describe_figures
 
 
 def run_pipeline(

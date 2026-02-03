@@ -15,7 +15,7 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageDraw
 
-from src_v3.ocr import _format_figure_markers
+from src.ocr import _format_figure_markers
 
 
 def _encode_image(path: str) -> str:
