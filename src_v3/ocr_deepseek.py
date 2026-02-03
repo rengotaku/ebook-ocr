@@ -15,9 +15,7 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageDraw
 
-# Import figure marker formatting from v1
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src.ocr import _format_figure_markers
+from src_v3.ocr import _format_figure_markers
 
 
 def _encode_image(path: str) -> str:
