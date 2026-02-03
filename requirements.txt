@@ -1,0 +1,7 @@
+Pillow
+imagehash
+opencv-python
+easyocr
+pytesseract
+doclayout-yolo
+requests

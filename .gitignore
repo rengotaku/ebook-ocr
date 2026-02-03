@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Project artifacts
+movies/
+output/
+
+# IDE / Tools
+.serena/
+.claude/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
