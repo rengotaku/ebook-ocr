@@ -1,5 +1,6 @@
 ---
-description: "Task list template for feature implementation (TDD mandatory)"
+
+description: "Task list template for feature implementation (TDD workflow)"
 ---
 
 # Tasks: [FEATURE NAME]
@@ -7,15 +8,23 @@ description: "Task list template for feature implementation (TDD mandatory)"
 **Input**: Design documents from `.specify/features/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**TDD is MANDATORY**: User Story phases MUST follow TDD workflow (テスト実装 RED → 実装 GREEN → 検証).
+**Tests**: TDD is MANDATORY for User Story phases. Each phase follows テスト実装 (RED) → 実装 (GREEN) → 検証 workflow.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Can run in parallel (different files, no dependencies)
+- **[P]**: No dependencies (different files, execution order free)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
+
+## User Story Summary
+
+| ID | Title | Priority | FR | Scenario |
+|----|-------|----------|----|----------|
+| US1 | [Story title] | P1 | FR-1,2 | シナリオ1 |
+| US2 | [Story title] | P1 | FR-3 | シナリオ1 |
+| US3 | [Story title] | P2 | FR-4 | シナリオ2 |
 
 ## Path Conventions
 
@@ -38,44 +47,56 @@ description: "Task list template for feature implementation (TDD mandatory)"
   - Tested independently
   - Delivered as an MVP increment
 
+  Each User Story phase MUST follow the TDD structure:
+  - 入力: Read previous phase output
+  - テスト実装 (RED): Write tests first, verify FAIL
+  - 実装 (GREEN): Implement to pass tests
+  - 検証: Verify all tests pass, generate phase output
+
   DO NOT keep these sample tasks in the generated tasks.md file.
   ============================================================================
 -->
 
-## Phase 1: Setup (Shared Infrastructure)
+## Phase 1: Setup (Shared Infrastructure) — NO TDD
 
-**Purpose**: Project initialization and basic structure
-**Executor**: メインエージェント（NO TDD）
+**Purpose**: Project initialization, existing code review, and change preparation
 
-- [ ] T001 Create project structure per implementation plan
-- [ ] T002 Setup pytest configuration in tests/conftest.py
-- [ ] T003 [P] Add test/coverage targets to Makefile
-- [ ] T004 Generate phase output: {FEATURE_DIR}/tasks/ph1-output.md
+- [ ] T001 Read current implementation in src/[relevant files]
+- [ ] T002 [P] Read existing tests in tests/[relevant test files]
+- [ ] T003 Generate phase output: .specify/features/[###-feature-name]/tasks/ph1-output.md
 
 ---
 
 ## Phase 2: User Story 1 - [Title] (Priority: P1) MVP
 
 **Goal**: [Brief description of what this story delivers]
+
 **Independent Test**: [How to verify this story works on its own]
-**Executor**: tdd-generator (RED) → phase-executor (GREEN)
 
 ### 入力
-- [ ] T005 Read previous phase output: {FEATURE_DIR}/tasks/ph1-output.md
+
+- [ ] T004 Read previous phase output: .specify/features/[###-feature-name]/tasks/ph1-output.md
 
 ### テスト実装 (RED)
-- [ ] T006 [P] [US1] Implement tests for {feature} in tests/test_{name}.py
-- [ ] T007 Verify `make test` FAIL (RED)
-- [ ] T008 Generate RED output: {FEATURE_DIR}/red-tests/ph2-test.md
+
+- [ ] T005 [P] [US1] Implement test for [behavior] in tests/test_[name].py
+- [ ] T006 [P] [US1] Implement test for [edge cases] in tests/test_[name].py
+- [ ] T007 [P] [US1] Implement test for [integration] in tests/test_[name].py
+- [ ] T008 Verify `make test` FAIL (RED)
+- [ ] T009 Generate RED output: .specify/features/[###-feature-name]/red-tests/ph2-test.md
 
 ### 実装 (GREEN)
-- [ ] T009 Read RED tests: {FEATURE_DIR}/red-tests/ph2-test.md
-- [ ] T010 [P] [US1] Implement {feature} in src/{name}.py
-- [ ] T011 Verify `make test` PASS (GREEN)
+
+- [ ] T010 Read RED tests: .specify/features/[###-feature-name]/red-tests/ph2-test.md
+- [ ] T011 [P] [US1] Implement [component] in src/[location]/[file].py
+- [ ] T012 [P] [US1] Implement [component] in src/[location]/[file].py
+- [ ] T013 [US1] Integrate components (depends on T011, T012)
+- [ ] T014 Verify `make test` PASS (GREEN)
 
 ### 検証
-- [ ] T012 Verify `make coverage` >=80%
-- [ ] T013 Generate phase output: {FEATURE_DIR}/tasks/ph2-output.md
+
+- [ ] T015 Verify `make test` passes all tests (no regressions)
+- [ ] T016 Generate phase output: .specify/features/[###-feature-name]/tasks/ph2-output.md
 
 **Checkpoint**: User Story 1 should be fully functional and testable independently
 
@@ -84,25 +105,31 @@ description: "Task list template for feature implementation (TDD mandatory)"
 ## Phase 3: User Story 2 - [Title] (Priority: P2)
 
 **Goal**: [Brief description of what this story delivers]
+
 **Independent Test**: [How to verify this story works on its own]
-**Executor**: tdd-generator (RED) → phase-executor (GREEN)
 
 ### 入力
-- [ ] T014 Read previous phase output: {FEATURE_DIR}/tasks/ph2-output.md
+
+- [ ] T017 Read previous phase output: .specify/features/[###-feature-name]/tasks/ph2-output.md
 
 ### テスト実装 (RED)
-- [ ] T015 [P] [US2] Implement tests for {feature} in tests/test_{name}.py
-- [ ] T016 Verify `make test` FAIL (RED)
-- [ ] T017 Generate RED output: {FEATURE_DIR}/red-tests/ph3-test.md
+
+- [ ] T018 [P] [US2] Implement test for [behavior] in tests/test_[name].py
+- [ ] T019 [P] [US2] Implement test for [edge cases] in tests/test_[name].py
+- [ ] T020 Verify `make test` FAIL (RED)
+- [ ] T021 Generate RED output: .specify/features/[###-feature-name]/red-tests/ph3-test.md
 
 ### 実装 (GREEN)
-- [ ] T018 Read RED tests: {FEATURE_DIR}/red-tests/ph3-test.md
-- [ ] T019 [P] [US2] Implement {feature} in src/{name}.py
-- [ ] T020 Verify `make test` PASS (GREEN)
+
+- [ ] T022 Read RED tests: .specify/features/[###-feature-name]/red-tests/ph3-test.md
+- [ ] T023 [P] [US2] Implement [component] in src/[location]/[file].py
+- [ ] T024 [US2] Integrate with User Story 1 components (if needed)
+- [ ] T025 Verify `make test` PASS (GREEN)
 
 ### 検証
-- [ ] T021 Verify `make coverage` >=80%
-- [ ] T022 Generate phase output: {FEATURE_DIR}/tasks/ph3-output.md
+
+- [ ] T026 Verify `make test` passes all tests (including regressions from US1)
+- [ ] T027 Generate phase output: .specify/features/[###-feature-name]/tasks/ph3-output.md
 
 **Checkpoint**: User Stories 1 AND 2 should both work independently
 
@@ -112,15 +139,24 @@ description: "Task list template for feature implementation (TDD mandatory)"
 
 ---
 
-## Phase N: Polish & Cross-Cutting Concerns
+## Phase N: Polish & Cross-Cutting Concerns — NO TDD
 
 **Purpose**: Improvements that affect multiple user stories
-**Executor**: phase-executor のみ（NO TDD）
 
-- [ ] TXXX [P] Code cleanup and refactoring
-- [ ] TXXX [P] Performance optimization across all stories
-- [ ] TXXX Run `make test` to verify all tests pass
-- [ ] TXXX Generate phase output: {FEATURE_DIR}/tasks/phN-output.md
+### 入力
+
+- [ ] TXXX Read previous phase output: .specify/features/[###-feature-name]/tasks/ph(N-1)-output.md
+
+### 実装
+
+- [ ] TXXX [P] Remove deprecated code no longer referenced
+- [ ] TXXX [P] Remove obsolete tests no longer needed
+- [ ] TXXX Code cleanup and refactoring
+
+### 検証
+
+- [ ] TXXX Run `make test` to verify all tests pass after cleanup
+- [ ] TXXX Generate phase output: .specify/features/[###-feature-name]/tasks/phN-output.md
 
 ---
 
@@ -129,68 +165,111 @@ description: "Task list template for feature implementation (TDD mandatory)"
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: No dependencies - メインエージェント直接実行
-- **User Stories (Phase 2+)**: Depend on Setup completion - TDD フロー
+- **User Stories (Phase 2+)**: TDD フロー (tdd-generator → phase-executor)
   - User stories proceed sequentially in priority order (P1 → P2 → P3)
-- **Polish (Final Phase)**: Depends on all user stories being complete - phase-executor のみ
+- **Polish (Final Phase)**: Depends on all user stories - phase-executor のみ
 
-### User Story Dependencies
+### Within Each User Story Phase (TDD Flow)
 
-- **User Story 1 (P1)**: Can start after Setup (Phase 1)
-- **User Story 2 (P2)**: Can start after US1 complete
-- **User Story 3 (P3)**: Can start after US2 complete
+1. **入力**: Read previous phase output (context from prior work)
+2. **テスト実装 (RED)**: Write tests FIRST → verify `make test` FAIL → generate RED output
+3. **実装 (GREEN)**: Read RED tests → implement → verify `make test` PASS
+4. **検証**: Confirm no regressions → generate phase output
 
-### TDD サブエージェント役割
+### Agent Delegation
 
-- **tdd-generator** (model: opus): テスト実装 (RED) → `red-tests/ph{N}-test.md` 出力
-- **phase-executor** (model: sonnet): 実装 (GREEN) → 検証 → `tasks/ph{N}-output.md` 出力
+- **Phase 1 (Setup)**: メインエージェント直接実行
+- **Phase 2+ (User Stories)**: tdd-generator (RED) → phase-executor (GREEN + 検証)
+- **Phase N (Polish)**: phase-executor のみ
 
-### フォルダ構成
+### [P] マーク（依存関係なし）
+
+`[P]` は「他タスクとの依存関係がなく、実行順序が自由」であることを示す。並列実行を保証するものではない。
+
+- Setup タスクの [P]: 異なるファイル・ディレクトリの作成で相互依存なし
+- RED テストの [P]: 異なるテストファイルへの書き込みで相互依存なし
+- GREEN 実装の [P]: 異なるソースファイルへの書き込みで相互依存なし
+- User Story 間: 各 Phase は前 Phase の出力に依存するため [P] 不可
+
+---
+
+## Phase Output & RED Test Artifacts
+
+### Directory Structure
 
 ```
-{FEATURE_DIR}/
-├── red-tests/           # tdd-generator 出力（FAIL テスト情報）
-│   ├── ph2-test.md
-│   └── ph3-test.md
-└── tasks/               # phase-executor 出力（Phase 完了情報）
-    ├── ph1-output.md
-    └── ph2-output.md
+.specify/features/[###-feature-name]/
+├── tasks.md                    # This file
+├── tasks/
+│   ├── ph1-output.md           # Phase 1 output (Setup results)
+│   ├── ph2-output.md           # Phase 2 output (US1 GREEN results)
+│   ├── ph3-output.md           # Phase 3 output (US2 GREEN results)
+│   └── phN-output.md           # Final phase output
+└── red-tests/
+    ├── ph2-test.md             # Phase 2 RED test results (FAIL confirmation)
+    └── ph3-test.md             # Phase 3 RED test results (FAIL confirmation)
 ```
+
+### Phase Output Content
+
+Each `phN-output.md` should contain:
+- Summary of what was done
+- Files created/modified
+- Test results (`make test` output)
+- Any decisions or deviations from the plan
+
+### RED Test Output Content
+
+Each `phN-test.md` should contain:
+- Test code written
+- `make test` output showing FAIL (RED confirmation)
+- Number of failing tests and their names
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (User Story 1 Only)
+### MVP First (Phase 1 + Phase 2)
 
-1. Complete Phase 1: Setup
-2. Complete Phase 2: User Story 1 (TDD: RED → GREEN → 検証)
-3. **STOP and VALIDATE**: Test User Story 1 independently
-4. Deploy/demo if ready
+1. Complete Phase 1: Setup (existing code review)
+2. Complete Phase 2: User Story 1 (RED → GREEN → 検証)
+3. **STOP and VALIDATE**: `make test` で全テスト通過を確認
+4. Verify with manual test if applicable
 
-### Incremental Delivery
+### Full Delivery
 
-1. Setup → Foundation ready
-2. User Story 1 → TDD → Test → Deploy/Demo (MVP!)
-3. User Story 2 → TDD → Test → Deploy/Demo
-4. Each story adds value without breaking previous stories
+1. Phase 1 → Phase 2 → Phase 3 → ... → Phase N
+2. Each phase commits: `feat(phase-N): description`
 
 ---
 
 ## Test Coverage Rules
 
-**境界テスト原則**: データ変換の境界でテストする。
-- パイプラインの各ステップの入出力
-- Ollama API のレスポンスパース
-- ファイル I/O の境界（画像読み込み、テキスト出力）
-- エッジケース: 空入力、破損ファイル、タイムアウト
+**境界テストの原則**: データ変換が発生する**すべての境界**でテストを書く
+
+```
+[入力] → [パース] → [変換] → [出力生成] → [ファイル書込]
+   ↓        ↓         ↓          ↓            ↓
+ テスト   テスト    テスト      テスト       テスト
+```
+
+**チェックリスト**:
+- [ ] 入力パース部分のテスト
+- [ ] 変換ロジックのテスト
+- [ ] **出力生成部分のテスト**（見落としやすい）
+- [ ] End-to-End テスト（入力→最終出力）
+
+> 過去の教訓: 出力生成部分のテストがなく、データが最終ファイルに反映されないバグが検出されなかった
 
 ---
 
 ## Notes
 
-- [P] tasks = different files, no dependencies
+- [P] tasks = no dependencies, execution order free
 - [Story] label maps task to specific user story for traceability
 - Each user story should be independently completable and testable
-- TDD: Verify tests FAIL before implementing
+- TDD: テスト実装 (RED) → FAIL 確認 → 実装 (GREEN) → PASS 確認
+- RED output must be generated BEFORE implementation begins
 - Commit after each phase completion
-- Avoid: vague tasks, same file conflicts, cross-story dependencies
+- Stop at any checkpoint to validate story independently
+- Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence

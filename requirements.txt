@@ -5,3 +5,4 @@ easyocr
 pytesseract
 doclayout-yolo
 requests
+pytest

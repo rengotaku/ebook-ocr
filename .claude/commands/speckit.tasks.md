@@ -68,7 +68,7 @@ The tasks.md should be immediately executable - each task must be specific enoug
 
 **CRITICAL**: Tasks MUST be organized by user story to enable independent implementation and testing.
 
-**TDD is MANDATORY**: User Story phases MUST follow TDD workflow (テスト実装 RED → 実装 GREEN → 検証).
+**TDD is MANDATORY**: User Story phases MUST follow TDD workflow (テスト設計 → テスト実装 RED → 実装 GREEN → 検証).
 
 ### Checklist Format (REQUIRED)
 
@@ -107,6 +107,7 @@ Every task MUST strictly follow this format:
 1. **From User Stories (spec.md)** - PRIMARY ORGANIZATION:
    - Each user story (P1, P2, P3...) gets its own phase
    - Map all related components to their story:
+     - テスト設計: テストスケルトン作成タスク
      - テスト実装: assertions 実装 + RED 確認
      - 実装: Models, Services, Pipeline steps
      - 検証: GREEN 確認 + カバレッジ
@@ -162,11 +163,13 @@ TDD Phase は以下の構造で生成:
 - **tdd-generator**: 入力 → テスト実装 (RED) → `red-tests/ph{N}-test.md` 出力
 - **phase-executor**: `red-tests/ph{N}-test.md` 入力 → 実装 (GREEN) → 検証 → `tasks/ph{N}-output.md` 出力
 - RED/GREEN 確認タスクは必須（中断時の状態把握のため）
+- 複数機能がある場合は「テスト実装 → 実装」を機能ごとに繰り返す
 
 **REQUIRED**: Each phase MUST end with a `make test` verification task:
 ```text
 - [ ] T0XX Run `make test` to verify all tests pass
 ```
+This ensures incremental validation and prevents regression at each phase boundary.
 
 ### Phase Input/Output (REQUIRED)
 
@@ -178,7 +181,43 @@ TDD Phase は以下の構造で生成:
 **TDD Phase Output（2段階）**:
 
 1. **RED 出力** (tdd-generator): `{FEATURE_DIR}/red-tests/ph{N}-test.md`
+   ```markdown
+   # Phase {N} RED Tests
+
+   ## サマリー
+   - Phase: Phase {N} - {Phase Name}
+   - FAIL テスト数: {count}
+   - テストファイル: {list}
+
+   ## FAIL テスト一覧
+   | テストファイル | テストメソッド | 期待動作 |
+   |---------------|---------------|---------|
+   | tests/test_xxx.py | test_feature_a | {何をテストしているか} |
+
+   ## 実装ヒント
+   - {テストを PASS させるために必要な実装の概要}
+   ```
+
 2. **Phase 出力** (phase-executor): `{FEATURE_DIR}/tasks/ph{N}-output.md`
+   ```markdown
+   # Phase {N} Output
+
+   ## 作業概要
+   - What was accomplished in this phase
+
+   ## 修正ファイル一覧
+   - `path/to/file1.py` - Description of changes
+   - `path/to/file2.py` - Description of changes
+
+   ## 注意点
+   - Important notes for subsequent phases
+   - Any assumptions made
+
+   ## 実装のミス・課題
+   - Any bugs found and fixed
+   - Known issues or technical debt
+   - Items to revisit in later phases
+   ```
 
 **フォルダ構成**:
 ```
@@ -198,3 +237,26 @@ TDD Phase は以下の構造で生成:
 - Ollama API のレスポンスパース
 - ファイル I/O の境界（画像読み込み、テキスト出力）
 - エッジケース: 空入力、破損ファイル、タイムアウト
+
+### Test Maintenance (REQUIRED for existing codebases)
+
+**When modifying existing code with tests**, you MUST include test update tasks:
+
+1. **New Parameters/Features**: If adding parameters or features to existing functions, add tests covering:
+   - New parameter variations
+   - Edge cases (empty input, malformed data, timeout scenarios)
+   - Integration with existing behavior
+
+2. **Test Task Format**:
+   ```text
+   - [ ] T0XX [P] Add tests for new {feature} in {test_file}
+   ```
+
+3. **Verification**: Run `make test` after implementation to confirm all tests pass
+
+**Example**: Adding `output_format` parameter to `ocr_pages_deepseek()`:
+```text
+- [ ] T015 [P] Add test_ocr_with_output_format in tests/test_ocr.py
+- [ ] T016 [P] Add test_ocr_empty_pages_with_format in tests/test_ocr.py
+- [ ] T017 Run make test to verify all tests pass
+```

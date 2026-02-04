@@ -15,7 +15,7 @@ VLM_URL ?= http://localhost:11434
 # Usage: make ocr HASHDIR=output/a3f8c2d1e5b7f9c0
 HASHDIR ?=
 
-.PHONY: help setup run extract ocr clean clean-all
+.PHONY: help setup run extract ocr test clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,9 @@ extract: setup ## Extract frames only (skip OCR)
 ocr: setup ## Run DeepSeek-OCR on pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make ocr HASHDIR=output/<hash>"; exit 1; }
 	$(PYTHON) src/ocr_deepseek.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt"
+
+test: setup ## Run tests
+	$(PYTHON) -m pytest tests/ -v
 
 clean: ## Remove output files (keep venv)
 	rm -rf $(OUTPUT)
