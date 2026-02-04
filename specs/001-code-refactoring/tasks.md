@@ -172,19 +172,19 @@
 
 ### 入力
 
-- [ ] T058 Read previous phase output: specs/001-code-refactoring/tasks/ph4-output.md
+- [x] T058 Read previous phase output: specs/001-code-refactoring/tasks/ph4-output.md
 
 ### 実装
 
-- [ ] T059 [P] Verify no duplicate function definitions: `grep -rn "def encode_image_file\|def _encode_image" src/` shows single definition
-- [ ] T060 [P] Verify no private cross-imports: `grep -rn "from src\.\w\+ import _" src/` returns 0 results
-- [ ] T061 [P] Verify requirements.txt contains no unused packages
-- [ ] T062 [P] Verify `wc -l src/*.py` shows ~15% reduction from 1167 baseline
+- [x] T059 [P] Verify no duplicate function definitions: `grep -rn "def encode_image_file\|def _encode_image" src/` shows single definition
+- [x] T060 [P] Verify no private cross-imports: `grep -rn "from src\.\w\+ import _" src/` returns 0 results
+- [x] T061 [P] Verify requirements.txt contains no unused packages
+- [x] T062 [P] Verify `wc -l src/*.py` shows ~15% reduction from 1167 baseline
 
 ### 検証
 
-- [ ] T063 Run `make test` to verify all tests pass after cleanup
-- [ ] T064 Generate phase output: specs/001-code-refactoring/tasks/ph5-output.md
+- [x] T063 Run `make test` to verify all tests pass after cleanup
+- [x] T064 Generate phase output: specs/001-code-refactoring/tasks/ph5-output.md
 
 ---
 
