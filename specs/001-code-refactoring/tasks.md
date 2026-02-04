@@ -127,40 +127,40 @@
 
 ### 入力
 
-- [ ] T040 Read previous phase output: specs/001-code-refactoring/tasks/ph3-output.md
+- [x] T040 Read previous phase output: specs/001-code-refactoring/tasks/ph3-output.md
 
 ### テスト実装 (RED) — deduplicate
 
-- [ ] T041 [P] [US3] Implement test_deduplicate_identical_images (同一画像 → 重複検出) in tests/test_deduplicate.py
-- [ ] T042 [P] [US3] Implement test_deduplicate_different_images (異なる画像 → 非重複) in tests/test_deduplicate.py
-- [ ] T043 [P] [US3] Implement test_deduplicate_empty_dir (空ディレクトリ → 空リスト) in tests/test_deduplicate.py
+- [x] T041 [P] [US3] Implement test_deduplicate_identical_images (同一画像 → 重複検出) in tests/test_deduplicate.py
+- [x] T042 [P] [US3] Implement test_deduplicate_different_images (異なる画像 → 非重複) in tests/test_deduplicate.py
+- [x] T043 [P] [US3] Implement test_deduplicate_empty_dir (空ディレクトリ → 空リスト) in tests/test_deduplicate.py
 
 ### テスト実装 (RED) — ocr_deepseek
 
-- [ ] T044 [P] [US3] Implement test_ocr_page_deepseek_mock (Ollama API モック → Markdown出力検証) in tests/test_ocr_deepseek.py
-- [ ] T045 [P] [US3] Implement test_detect_repetition_normal (正常テキスト → None) in tests/test_ocr_deepseek.py
-- [ ] T046 [P] [US3] Implement test_detect_repetition_anomaly (反復テキスト → 異常検出文字列) in tests/test_ocr_deepseek.py
-- [ ] T047 [P] [US3] Implement test_detect_repetition_empty (空テキスト → None) in tests/test_ocr_deepseek.py
+- [x] T044 [P] [US3] Implement test_ocr_page_deepseek_mock (Ollama API モック → Markdown出力検証) in tests/test_ocr_deepseek.py
+- [x] T045 [P] [US3] Implement test_detect_repetition_normal (正常テキスト → None) in tests/test_ocr_deepseek.py
+- [x] T046 [P] [US3] Implement test_detect_repetition_anomaly (反復テキスト → 異常検出文字列) in tests/test_ocr_deepseek.py
+- [x] T047 [P] [US3] Implement test_detect_repetition_empty (空テキスト → None) in tests/test_ocr_deepseek.py
 
 ### テスト実装 (RED) — describe_figures
 
-- [ ] T048 [P] [US3] Implement test_figure_marker_regex (各種マーカー文字列のマッチ検証) in tests/test_describe_figures.py
-- [ ] T049 [P] [US3] Implement test_describe_single_mock (Ollama API モック → 説明文出力検証) in tests/test_describe_figures.py
+- [x] T048 [P] [US3] Implement test_figure_marker_regex (各種マーカー文字列のマッチ検証) in tests/test_describe_figures.py
+- [x] T049 [P] [US3] Implement test_describe_single_mock (Ollama API モック → 説明文出力検証) in tests/test_describe_figures.py
 
-- [ ] T050 Verify `make test` FAIL (RED) — テスト対象のモック設定等でインポートは通るが assertion が FAIL
-- [ ] T051 Generate RED output: specs/001-code-refactoring/red-tests/ph4-test.md
+- [x] T050 Verify `make test` FAIL (RED) — テスト対象のモック設定等でインポートは通るが assertion が FAIL
+- [x] T051 Generate RED output: specs/001-code-refactoring/red-tests/ph4-test.md
 
 ### 実装 (GREEN)
 
-- [ ] T052 Read RED tests: specs/001-code-refactoring/red-tests/ph4-test.md
-- [ ] T053 [P] [US3] Apply context manager pattern to Image.open() in src/deduplicate.py (line ~42)
-- [ ] T054 [P] [US3] Apply context manager pattern to Image.open() in src/ocr_deepseek.py (line ~206)
-- [ ] T055 Verify `make test` PASS (GREEN)
+- [x] T052 Read RED tests: specs/001-code-refactoring/red-tests/ph4-test.md
+- [x] T053 [P] [US3] Apply context manager pattern to Image.open() in src/deduplicate.py (line ~42)
+- [x] T054 [P] [US3] Apply context manager pattern to Image.open() in src/ocr_deepseek.py (line ~206)
+- [x] T055 Verify `make test` PASS (GREEN)
 
 ### 検証
 
-- [ ] T056 Verify `make test` passes all tests (US1 + US2 + US3 — no regressions)
-- [ ] T057 Generate phase output: specs/001-code-refactoring/tasks/ph4-output.md
+- [x] T056 Verify `make test` passes all tests (US1 + US2 + US3 — no regressions)
+- [x] T057 Generate phase output: specs/001-code-refactoring/tasks/ph4-output.md
 
 **Checkpoint**: US1 + US2 + US3 完了。テストスイート導入、リソース管理改善済み。
 

@@ -157,10 +157,10 @@ def ocr_pages_deepseek(
 
         masked_img = None
         if has_layout:
-            raw_img = Image.open(page_path)
-            masked_img = mask_figure_regions(raw_img, page_path.name, layout)
-            if masked_img is raw_img:
-                masked_img = None  # no figures on this page, use file directly
+            with Image.open(page_path) as raw_img:
+                masked_img = mask_figure_regions(raw_img, page_path.name, layout)
+                if masked_img is raw_img:
+                    masked_img = None  # no figures on this page, use file directly
 
         try:
             page_md = ocr_page_deepseek(

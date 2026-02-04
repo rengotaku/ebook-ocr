@@ -39,19 +39,19 @@ def deduplicate_frames(
     page_num = 1
 
     for frame_path in frames:
-        img = Image.open(frame_path)
-        current_hash = imagehash.phash(img)
+        with Image.open(frame_path) as img:
+            current_hash = imagehash.phash(img)
 
-        if prev_hash is not None:
-            distance = current_hash - prev_hash
-            if distance < hash_threshold:
-                continue
+            if prev_hash is not None:
+                distance = current_hash - prev_hash
+                if distance < hash_threshold:
+                    continue
 
-        out_path = dst / f"page_{page_num:04d}.png"
-        img.save(out_path)
-        unique_frames.append(out_path)
-        prev_hash = current_hash
-        page_num += 1
+            out_path = dst / f"page_{page_num:04d}.png"
+            img.save(out_path)
+            unique_frames.append(out_path)
+            prev_hash = current_hash
+            page_num += 1
 
     removed = len(frames) - len(unique_frames)
     print(f"Kept {len(unique_frames)} unique pages, removed {removed} duplicates")
