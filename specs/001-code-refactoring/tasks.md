@@ -93,27 +93,27 @@
 
 ### 入力
 
-- [ ] T028 Read previous phase output: specs/001-code-refactoring/tasks/ph2-output.md
+- [x] T028 Read previous phase output: specs/001-code-refactoring/tasks/ph2-output.md
 
 ### テスト実装 (RED)
 
-- [ ] T029 [P] [US2] Implement test_no_legacy_ocr_import (src/ 全体で `from src.ocr import` が存在しないことを検証) in tests/test_cleanup.py
-- [ ] T030 [P] [US2] Implement test_no_unused_dependencies (requirements.txt に easyocr, pytesseract, opencv-python が含まれないことを検証) in tests/test_cleanup.py
-- [ ] T031 [P] [US2] Implement test_no_private_cross_imports (src/ 全体で `from src.XXX import _` パターンが存在しないことを検証) in tests/test_cleanup.py
-- [ ] T032 Verify `make test` FAIL (RED) — ocr.py がまだ存在し、requirements.txt にレガシー依存が残っているため
-- [ ] T033 Generate RED output: specs/001-code-refactoring/red-tests/ph3-test.md
+- [x] T029 [P] [US2] Implement test_no_legacy_ocr_import (src/ 全体で `from src.ocr import` が存在しないことを検証) in tests/test_cleanup.py
+- [x] T030 [P] [US2] Implement test_no_unused_dependencies (requirements.txt に easyocr, pytesseract, opencv-python が含まれないことを検証) in tests/test_cleanup.py
+- [x] T031 [P] [US2] Implement test_no_private_cross_imports (src/ 全体で `from src.XXX import _` パターンが存在しないことを検証) in tests/test_cleanup.py
+- [x] T032 Verify `make test` FAIL (RED) — ocr.py がまだ存在し、requirements.txt にレガシー依存が残っているため
+- [x] T033 Generate RED output: specs/001-code-refactoring/red-tests/ph3-test.md
 
 ### 実装 (GREEN)
 
-- [ ] T034 Read RED tests: specs/001-code-refactoring/red-tests/ph3-test.md
-- [ ] T035 [US2] Delete src/ocr.py
-- [ ] T036 [US2] Remove easyocr, pytesseract, opencv-python from requirements.txt
-- [ ] T037 Verify `make test` PASS (GREEN)
+- [x] T034 Read RED tests: specs/001-code-refactoring/red-tests/ph3-test.md
+- [x] T035 [US2] Delete src/ocr.py
+- [x] T036 [US2] Remove easyocr, pytesseract, opencv-python from requirements.txt
+- [x] T037 Verify `make test` PASS (GREEN)
 
 ### 検証
 
-- [ ] T038 Verify `make test` passes all tests (including US1 tests — no regressions)
-- [ ] T039 Generate phase output: specs/001-code-refactoring/tasks/ph3-output.md
+- [x] T038 Verify `make test` passes all tests (including US1 tests — no regressions)
+- [x] T039 Generate phase output: specs/001-code-refactoring/tasks/ph3-output.md
 
 **Checkpoint**: US1 + US2 完了。レガシーコードと不要依存が除去され、コードベースがクリーンな状態。
 
