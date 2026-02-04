@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import base64
 import re
 import time
 from pathlib import Path
 
 import requests
+
+from src.utils import encode_image_file
 
 
 FIGURE_MARKER_RE = re.compile(
@@ -25,12 +26,6 @@ Respond ONLY with the description, no preamble."""
 USER_PROMPT = "この画像の内容を説明してください。"
 
 
-def _encode_image(path: str) -> str:
-    """Read an image file and return its base64-encoded string."""
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
-
-
 def _describe_single(
     image_path: str,
     fig_type: str,
@@ -39,7 +34,7 @@ def _describe_single(
     timeout: int,
 ) -> str:
     """Send a cropped figure image to VLM and get a description."""
-    image_b64 = _encode_image(image_path)
+    image_b64 = encode_image_file(image_path)
 
     payload = {
         "model": model,

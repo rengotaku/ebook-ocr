@@ -6,65 +6,19 @@ Outputs native Markdown without post-processing.
 
 from __future__ import annotations
 
-import base64
-import io
 import sys
 import time
 from pathlib import Path
 
 import requests
-from PIL import Image, ImageDraw
+from PIL import Image
 
-from src.ocr import _format_figure_markers
-
-
-def _encode_image(path: str) -> str:
-    """Read an image file and return its base64-encoded string."""
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
-
-
-def _encode_pil_image(img: Image.Image) -> str:
-    """Encode a PIL Image to base64 PNG string."""
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return base64.b64encode(buf.getvalue()).decode("utf-8")
-
-
-def _mask_figure_regions(
-    img: Image.Image,
-    page_name: str,
-    layout: dict,
-) -> Image.Image:
-    """White-out figure/table/formula regions so OCR only reads text.
-
-    Uses raw page coordinates directly (no crop offset needed).
-
-    Args:
-        img: The raw page image.
-        page_name: Page filename for layout lookup (e.g. "page_0169.png").
-        layout: Full layout dict from layout.json.
-
-    Returns:
-        Copy of image with figure regions filled white.
-    """
-    page_layout = layout.get(page_name, {})
-    figures = page_layout.get("figures", [])
-    if not figures:
-        return img
-
-    masked = img.copy()
-    draw = ImageDraw.Draw(masked)
-    w, h = masked.size
-
-    for fig in figures:
-        x1, y1, x2, y2 = fig["bbox"]
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(w, x2), min(h, y2)
-        if x1 < x2 and y1 < y2:
-            draw.rectangle([x1, y1, x2, y2], fill="white")
-
-    return masked
+from src.utils import (
+    encode_image_file,
+    encode_pil_image,
+    format_figure_markers,
+    mask_figure_regions,
+)
 
 
 def ocr_page_deepseek(
@@ -87,7 +41,7 @@ def ocr_page_deepseek(
     Returns:
         Markdown-formatted text extracted from the page.
     """
-    image_b64 = _encode_pil_image(img) if img is not None else _encode_image(page_path)
+    image_b64 = encode_pil_image(img) if img is not None else encode_image_file(page_path)
 
     payload = {
         "model": model,
@@ -204,7 +158,7 @@ def ocr_pages_deepseek(
         masked_img = None
         if has_layout:
             raw_img = Image.open(page_path)
-            masked_img = _mask_figure_regions(raw_img, page_path.name, layout)
+            masked_img = mask_figure_regions(raw_img, page_path.name, layout)
             if masked_img is raw_img:
                 masked_img = None  # no figures on this page, use file directly
 
@@ -229,7 +183,7 @@ def ocr_pages_deepseek(
             errors.append(f"Page {i} ({page_path.name}): Request error: {e}")
             page_md = f"[OCR ERROR: {e}]"
 
-        markers = _format_figure_markers(page_path.name, layout, min_confidence)
+        markers = format_figure_markers(page_path.name, layout, min_confidence)
         header = f"--- Page {i} ({page_path.name}) ---\n"
         all_text.append(f"{header}{markers}{page_md}")
 

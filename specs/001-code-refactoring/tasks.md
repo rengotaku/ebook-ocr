@@ -52,34 +52,34 @@
 
 ### 入力
 
-- [ ] T009 Read previous phase output: specs/001-code-refactoring/tasks/ph1-output.md
+- [x] T009 Read previous phase output: specs/001-code-refactoring/tasks/ph1-output.md
 
 ### テスト実装 (RED)
 
-- [ ] T010 [P] [US1] Implement test_encode_image_file (正常系: 既知画像のbase64検証) in tests/test_utils.py
-- [ ] T011 [P] [US1] Implement test_encode_pil_image (PIL Image → base64 ラウンドトリップ) in tests/test_utils.py
-- [ ] T012 [P] [US1] Implement test_format_figure_markers (layout入力 → マーカー文字列出力) in tests/test_utils.py
-- [ ] T013 [P] [US1] Implement test_format_figure_markers_empty (空layout → 空文字列) in tests/test_utils.py
-- [ ] T014 [P] [US1] Implement test_format_figure_markers_low_confidence (min_confidence以下 → 除外) in tests/test_utils.py
-- [ ] T015 [P] [US1] Implement test_mask_figure_regions (白塗りマスクの座標・ピクセル検証) in tests/test_utils.py
-- [ ] T016 [P] [US1] Implement test_mask_figure_regions_no_figures (図なし → 元画像をそのまま返す) in tests/test_utils.py
-- [ ] T017 [P] [US1] Implement test_mask_figure_regions_clamp (bbox が画像境界を超える場合のクランプ検証) in tests/test_utils.py
-- [ ] T018 Verify `make test` FAIL (RED) — src/utils.py が存在しないため ImportError
-- [ ] T019 Generate RED output: specs/001-code-refactoring/red-tests/ph2-test.md
+- [x] T010 [P] [US1] Implement test_encode_image_file (正常系: 既知画像のbase64検証) in tests/test_utils.py
+- [x] T011 [P] [US1] Implement test_encode_pil_image (PIL Image → base64 ラウンドトリップ) in tests/test_utils.py
+- [x] T012 [P] [US1] Implement test_format_figure_markers (layout入力 → マーカー文字列出力) in tests/test_utils.py
+- [x] T013 [P] [US1] Implement test_format_figure_markers_empty (空layout → 空文字列) in tests/test_utils.py
+- [x] T014 [P] [US1] Implement test_format_figure_markers_low_confidence (min_confidence以下 → 除外) in tests/test_utils.py
+- [x] T015 [P] [US1] Implement test_mask_figure_regions (白塗りマスクの座標・ピクセル検証) in tests/test_utils.py
+- [x] T016 [P] [US1] Implement test_mask_figure_regions_no_figures (図なし → 元画像をそのまま返す) in tests/test_utils.py
+- [x] T017 [P] [US1] Implement test_mask_figure_regions_clamp (bbox が画像境界を超える場合のクランプ検証) in tests/test_utils.py
+- [x] T018 Verify `make test` FAIL (RED) — src/utils.py が存在しないため ImportError
+- [x] T019 Generate RED output: specs/001-code-refactoring/red-tests/ph2-test.md
 
 ### 実装 (GREEN)
 
-- [ ] T020 Read RED tests: specs/001-code-refactoring/red-tests/ph2-test.md
-- [ ] T021 [US1] Create src/utils.py with encode_image_file(), encode_pil_image(), format_figure_markers(), mask_figure_regions()
-- [ ] T022 [US1] Update src/ocr_deepseek.py: replace `from src.ocr import _format_figure_markers` with `from src.utils import format_figure_markers`; remove local `_encode_image`, `_encode_pil_image`, `_mask_figure_regions` definitions; update all call sites
-- [ ] T023 [US1] Update src/describe_figures.py: replace local `_encode_image` with `from src.utils import encode_image_file`; update call site in `_describe_single()`
-- [ ] T024 Verify `make test` PASS (GREEN)
+- [x] T020 Read RED tests: specs/001-code-refactoring/red-tests/ph2-test.md
+- [x] T021 [US1] Create src/utils.py with encode_image_file(), encode_pil_image(), format_figure_markers(), mask_figure_regions()
+- [x] T022 [US1] Update src/ocr_deepseek.py: replace `from src.ocr import _format_figure_markers` with `from src.utils import format_figure_markers`; remove local `_encode_image`, `_encode_pil_image`, `_mask_figure_regions` definitions; update all call sites
+- [x] T023 [US1] Update src/describe_figures.py: replace local `_encode_image` with `from src.utils import encode_image_file`; update call site in `_describe_single()`
+- [x] T024 Verify `make test` PASS (GREEN)
 
 ### 検証
 
-- [ ] T025 Verify `make test` passes all tests (no regressions)
-- [ ] T026 Verify `python -c "from src.ocr_deepseek import ocr_page_deepseek"` succeeds without importing src.ocr
-- [ ] T027 Generate phase output: specs/001-code-refactoring/tasks/ph2-output.md
+- [x] T025 Verify `make test` passes all tests (no regressions)
+- [x] T026 Verify `python -c "from src.ocr_deepseek import ocr_page_deepseek"` succeeds without importing src.ocr
+- [x] T027 Generate phase output: specs/001-code-refactoring/tasks/ph2-output.md
 
 **Checkpoint**: US1 完了。`src/utils.py` に共有関数が統合され、`ocr_deepseek.py` は `ocr.py` に依存しない。
 
