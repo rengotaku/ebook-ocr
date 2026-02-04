@@ -11,7 +11,7 @@ output/
 
 # IDE / Tools
 .serena/
-.claude/
+.claude/settings.local.json
 .vscode/
 .idea/
 
