@@ -21,12 +21,70 @@ from src.utils import (
 )
 
 
+def warm_up_model(
+    model: str,
+    base_url: str = "http://localhost:11434",
+    timeout: int = 300,
+) -> None:
+    """Warm up the model by sending a dummy request to load it into memory.
+
+    Args:
+        model: Ollama model name.
+        base_url: Ollama API base URL.
+        timeout: Request timeout in seconds (longer for initial load).
+
+    Raises:
+        requests.RequestException: If the warm-up request fails.
+    """
+    print(f"  Loading model {model}...", end="", flush=True)
+    start = time.time()
+
+    # Create a minimal 1x1 white image
+    dummy_img = Image.new("RGB", (1, 1), color="white")
+    image_b64 = encode_pil_image(dummy_img)
+
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": "test",
+                "images": [image_b64],
+            },
+        ],
+        "stream": False,
+        "options": {
+            "temperature": 0.0,
+            "num_predict": 1,
+        },
+    }
+
+    response = requests.post(
+        f"{base_url}/api/chat",
+        json=payload,
+        timeout=timeout,
+    )
+    response.raise_for_status()
+
+    elapsed = time.time() - start
+    print(f" loaded in {elapsed:.1f}s")
+
+
+OCR_DEFAULT_OPTIONS = {
+    "temperature": 0.1,
+    "num_predict": 4096,
+    "repeat_penalty": 1.3,
+    "repeat_last_n": -1,
+}
+
+
 def ocr_page_deepseek(
     page_path: str,
     model: str = "deepseek-ocr",
     base_url: str = "http://localhost:11434",
     timeout: int = 60,
     img: Image.Image | None = None,
+    options: dict | None = None,
 ) -> str:
     """OCR a single page image using DeepSeek-OCR via Ollama.
 
@@ -37,11 +95,13 @@ def ocr_page_deepseek(
         timeout: Request timeout in seconds.
         img: Optional pre-processed PIL Image (e.g. with figures masked).
             If provided, this is used instead of reading from page_path.
+        options: Ollama generation options (temperature, repeat_penalty, etc.).
 
     Returns:
         Markdown-formatted text extracted from the page.
     """
     image_b64 = encode_pil_image(img) if img is not None else encode_image_file(page_path)
+    merged_options = {**OCR_DEFAULT_OPTIONS, **(options or {})}
 
     payload = {
         "model": model,
@@ -53,10 +113,7 @@ def ocr_page_deepseek(
             },
         ],
         "stream": False,
-        "options": {
-            "temperature": 0.1,
-            "num_predict": 4096,
-        },
+        "options": merged_options,
     }
 
     response = requests.post(
@@ -74,23 +131,29 @@ def _detect_repetition(
     text: str,
     min_ratio: float = 0.5,
     min_count: int = 10,
+    min_phrase_len: int = 8,
+    min_phrase_repeats: int = 5,
 ) -> str | None:
-    """Detect abnormal line repetition in OCR output.
+    """Detect abnormal repetition in OCR output (line-level and phrase-level).
 
     Args:
         text: OCR output text for a single page.
         min_ratio: Minimum ratio of most-common line to total lines.
         min_count: Minimum count of repeated line to flag.
+        min_phrase_len: Minimum character length of a phrase to check for in-line repetition.
+        min_phrase_repeats: Minimum number of phrase repeats within a single line to flag.
 
     Returns:
         Description of the anomaly, or None if normal.
     """
+    import re
     from collections import Counter
 
     lines = [line for line in text.strip().split("\n") if line.strip()]
     if not lines:
         return None
 
+    # Check 1: Line-level repetition
     counts = Counter(lines)
     most_common_line, count = counts.most_common(1)[0]
     total = len(lines)
@@ -102,6 +165,24 @@ def _detect_repetition(
             f"Repetition detected: \"{preview}\" repeated {count}/{total} "
             f"lines ({ratio:.0%})"
         )
+
+    # Check 2: In-line phrase repetition (e.g. same phrase repeated N+ times in one line)
+    for line in lines:
+        if len(line) < min_phrase_len * min_phrase_repeats:
+            continue
+        # Find repeated substrings of min_phrase_len+ characters occurring 5+ times
+        match = re.search(
+            rf"(.{{{min_phrase_len},100}}?)\1{{{min_phrase_repeats - 1},}}",
+            line,
+        )
+        if match:
+            phrase = match.group(1)[:50]
+            repeat_count = line.count(match.group(1))
+            return (
+                f"In-line repetition detected: \"{phrase}\" repeated "
+                f"{repeat_count} times in one line"
+            )
+
     return None
 
 
@@ -113,6 +194,7 @@ def ocr_pages_deepseek(
     base_url: str = "http://localhost:11434",
     timeout: int = 60,
     min_confidence: float = 0.7,
+    options: dict | None = None,
 ) -> str:
     """Run DeepSeek-OCR on all page images and combine into a single file.
 
@@ -127,6 +209,7 @@ def ocr_pages_deepseek(
         base_url: Ollama API base URL.
         timeout: Per-page timeout in seconds.
         min_confidence: Minimum confidence for figure markers.
+        options: Ollama generation options (temperature, repeat_penalty, etc.).
 
     Returns:
         Path to the output text file.
@@ -142,6 +225,13 @@ def ocr_pages_deepseek(
     print(f"Using DeepSeek-OCR ({model}) on {len(pages)} pages")
     out_path = Path(output_file)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Warm up model to avoid timeout on first page
+    try:
+        warm_up_model(model, base_url, timeout=300)
+    except requests.RequestException as e:
+        print(f"  Model warm-up failed: {e}")
+        print("  Continuing anyway (first page may timeout)...")
 
     all_text: list[str] = []
     errors: list[str] = []
@@ -165,6 +255,7 @@ def ocr_pages_deepseek(
         try:
             page_md = ocr_page_deepseek(
                 str(page_path), model, base_url, timeout, img=masked_img,
+                options=options,
             )
             elapsed = time.time() - page_start
 

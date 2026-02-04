@@ -10,6 +10,8 @@ import sys
 import time
 from pathlib import Path
 
+import yaml
+
 from src.video_hash import compute_full_hash, write_source_info
 from src.extract_frames import extract_frames
 from src.deduplicate import deduplicate_frames
@@ -21,7 +23,7 @@ from src.describe_figures import describe_figures
 def run_pipeline(
     video_path: str,
     output_base: str = "output",
-    interval: float = 2.0,
+    interval: float = 1.5,
     hash_threshold: int = 8,
     ocr_model: str = "deepseek-ocr",
     vlm_model: str = "gemma3:12b",
@@ -30,6 +32,8 @@ def run_pipeline(
     vlm_timeout: int = 120,
     skip_ocr: bool = False,
     min_confidence: float = 0.7,
+    ocr_options: dict | None = None,
+    vlm_options: dict | None = None,
 ) -> None:
     """Run the full video-to-markdown pipeline (v3).
 
@@ -49,6 +53,8 @@ def run_pipeline(
         vlm_timeout: Per-figure VLM timeout in seconds.
         skip_ocr: If True, stop after frame extraction + dedup.
         min_confidence: Minimum confidence for figure detection.
+        ocr_options: Ollama generation options for OCR model.
+        vlm_options: Ollama generation options for VLM model.
     """
     if not Path(video_path).exists():
         print(f"Error: Video file not found: {video_path}", file=sys.stderr)
@@ -108,6 +114,7 @@ def run_pipeline(
         base_url=ollama_url,
         timeout=ocr_timeout,
         min_confidence=min_confidence,
+        options=ocr_options,
     )
 
     # Step 5: Describe figures with VLM
@@ -123,6 +130,7 @@ def run_pipeline(
         base_url=ollama_url,
         timeout=vlm_timeout,
         min_confidence=min_confidence,
+        options=vlm_options,
     )
 
     elapsed = time.time() - start
@@ -133,21 +141,32 @@ def run_pipeline(
     print(f"  Final:  {md_file}")
 
 
+def load_config(config_path: str = "config.yaml") -> dict:
+    """Load configuration from YAML file, returning empty dict if not found."""
+    path = Path(config_path)
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        return yaml.safe_load(f) or {}
+
+
 def main() -> None:
+    cfg = load_config()
+
     parser = argparse.ArgumentParser(
         description="Extract text from e-book screen recording (v3 - DeepSeek-OCR + VLM figures)",
     )
     parser.add_argument("video", help="Input video file path")
-    parser.add_argument("-o", "--output", default="output", help="Base output directory (default: output)")
-    parser.add_argument("-i", "--interval", type=float, default=2.0, help="Frame interval in seconds (default: 2.0)")
-    parser.add_argument("-t", "--threshold", type=int, default=8, help="Dedup hash threshold (default: 8)")
-    parser.add_argument("--ocr-model", default="deepseek-ocr", help="Ollama OCR model (default: deepseek-ocr)")
-    parser.add_argument("--vlm-model", default="gemma3:12b", help="Ollama VLM for figures (default: gemma3:12b)")
-    parser.add_argument("--ollama-url", default="http://localhost:11434", help="Ollama API URL")
-    parser.add_argument("--ocr-timeout", type=int, default=60, help="Per-page OCR timeout (default: 60)")
-    parser.add_argument("--vlm-timeout", type=int, default=120, help="Per-figure VLM timeout (default: 120)")
+    parser.add_argument("-o", "--output", default=cfg.get("output", "output"), help="Base output directory")
+    parser.add_argument("-i", "--interval", type=float, default=cfg.get("interval", 1.5), help="Frame interval in seconds")
+    parser.add_argument("-t", "--threshold", type=int, default=cfg.get("threshold", 8), help="Dedup hash threshold")
+    parser.add_argument("--ocr-model", default=cfg.get("ocr_model", "deepseek-ocr"), help="Ollama OCR model")
+    parser.add_argument("--vlm-model", default=cfg.get("vlm_model", "gemma3:12b"), help="Ollama VLM for figures")
+    parser.add_argument("--ollama-url", default=cfg.get("ollama_url", "http://localhost:11434"), help="Ollama API URL")
+    parser.add_argument("--ocr-timeout", type=int, default=cfg.get("ocr_timeout", 60), help="Per-page OCR timeout")
+    parser.add_argument("--vlm-timeout", type=int, default=cfg.get("vlm_timeout", 120), help="Per-figure VLM timeout")
     parser.add_argument("--skip-ocr", action="store_true", help="Stop after frame extraction (skip OCR)")
-    parser.add_argument("--min-confidence", type=float, default=0.7, help="Figure confidence threshold (default: 0.7)")
+    parser.add_argument("--min-confidence", type=float, default=cfg.get("min_confidence", 0.7), help="Figure confidence threshold")
     args = parser.parse_args()
 
     run_pipeline(
@@ -162,6 +181,8 @@ def main() -> None:
         vlm_timeout=args.vlm_timeout,
         skip_ocr=args.skip_ocr,
         min_confidence=args.min_confidence,
+        ocr_options=cfg.get("ocr_options"),
+        vlm_options=cfg.get("vlm_options"),
     )
 
 
