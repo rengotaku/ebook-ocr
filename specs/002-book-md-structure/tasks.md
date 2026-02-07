@@ -49,7 +49,7 @@
 
 ### Input
 
-- [ ] T008 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph1-output.md
+- [x] T008 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
@@ -64,18 +64,18 @@
 
 ### Implementation (GREEN)
 
-- [ ] T017 REDテストを読む: specs/002-book-md-structure/red-tests/ph2-test.md
-- [ ] T018 [P] [US1] `src/book_converter/parser.py` にページマーカー解析を実装（parse_page_marker関数）
-- [ ] T019 [P] [US1] `src/book_converter/parser.py` にparse_pages関数を実装（Markdownをページ単位でパース）
-- [ ] T020 [P] [US1] `src/book_converter/transformer.py` にtransform_page関数を実装（Page→XML Element変換）
-- [ ] T021 [P] [US1] `src/book_converter/xml_builder.py` にXML出力関数を実装（serialize_element, build_xml）
-- [ ] T022 [US1] コンポーネント統合（T018-T021の結合確認）
-- [ ] T023 `make test` PASS (GREEN) を確認
+- [x] T017 REDテストを読む: specs/002-book-md-structure/red-tests/ph2-test.md
+- [x] T018 [P] [US1] `src/book_converter/parser.py` にページマーカー解析を実装（parse_page_marker関数）
+- [x] T019 [P] [US1] `src/book_converter/parser.py` にparse_pages関数を実装（Markdownをページ単位でパース）
+- [x] T020 [P] [US1] `src/book_converter/transformer.py` にtransform_page関数を実装（Page→XML Element変換）
+- [x] T021 [P] [US1] `src/book_converter/xml_builder.py` にXML出力関数を実装（serialize_element, build_xml）
+- [x] T022 [US1] コンポーネント統合（T018-T021の結合確認）
+- [x] T023 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T024 `make test` で全テスト通過を確認（リグレッションなし）
-- [ ] T025 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph2-output.md
+- [x] T024 `make test` で全テスト通過を確認（リグレッションなし）
+- [x] T025 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph2-output.md
 
 **チェックポイント**: User Story 1は完全に機能し、独立してテスト可能
 
