@@ -106,20 +106,20 @@
 
 ### Implementation (GREEN)
 
-- [ ] T037 REDテストを読む: specs/002-book-md-structure/red-tests/ph3-test.md
-- [ ] T038 [P] [US2] `src/book_converter/parser.py` にparse_heading関数を実装（見出しレベル1-3抽出、4+警告）
-- [ ] T039 [P] [US2] `src/book_converter/parser.py` にparse_paragraph関数を実装（段落テキスト抽出）
-- [ ] T040 [P] [US2] `src/book_converter/parser.py` にparse_list関数を実装（リスト項目抽出）
-- [ ] T041 [P] [US2] `src/book_converter/parser.py` にparse_content関数を実装（Heading/Paragraph/List統合）
-- [ ] T042 [P] [US2] `src/book_converter/transformer.py` にtransform_content関数を実装（Content→XML）
-- [ ] T043 [P] [US2] `src/book_converter/transformer.py` にcontinued属性処理を追加
-- [ ] T044 [US2] コンポーネント統合（T038-T043の結合確認）
-- [ ] T045 `make test` PASS (GREEN) を確認
+- [x] T037 REDテストを読む: specs/002-book-md-structure/red-tests/ph3-test.md
+- [x] T038 [P] [US2] `src/book_converter/parser.py` にparse_heading関数を実装（見出しレベル1-3抽出、4+警告）
+- [x] T039 [P] [US2] `src/book_converter/parser.py` にparse_paragraph関数を実装（段落テキスト抽出）
+- [x] T040 [P] [US2] `src/book_converter/parser.py` にparse_list関数を実装（リスト項目抽出）
+- [x] T041 [P] [US2] `src/book_converter/parser.py` にparse_content関数を実装（Heading/Paragraph/List統合）
+- [x] T042 [P] [US2] `src/book_converter/transformer.py` にtransform_content関数を実装（Content→XML）
+- [x] T043 [P] [US2] `src/book_converter/transformer.py` にcontinued属性処理を追加
+- [x] T044 [US2] コンポーネント統合（T038-T043の結合確認）
+- [x] T045 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T046 `make test` で全テスト通過を確認（US1リグレッションなし）
-- [ ] T047 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph3-output.md
+- [x] T046 `make test` で全テスト通過を確認（US1リグレッションなし）
+- [x] T047 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph3-output.md
 
 **チェックポイント**: User Stories 1 AND 2は両方とも独立して動作
 

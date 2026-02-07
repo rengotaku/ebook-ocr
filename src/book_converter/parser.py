@@ -8,7 +8,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterator
 
-from src.book_converter.models import Page, PageAnnouncement, Content
+from src.book_converter.models import (
+    Page,
+    PageAnnouncement,
+    Content,
+    Heading,
+    Paragraph,
+    List,
+)
 
 
 def parse_page_marker(line: str) -> tuple[str, str] | None:
@@ -81,6 +88,137 @@ def create_page_announcement(page_number: str) -> PageAnnouncement | None:
 
     text = f"{page_number}ページ"
     return PageAnnouncement(text=text, format="simple")
+
+
+def parse_heading(line: str) -> Heading | None:
+    """Parse a markdown heading line.
+
+    Args:
+        line: A line from the Markdown file.
+
+    Returns:
+        Heading object if the line is a heading (# - ###), None otherwise.
+        Level 4+ headings are converted to level 3.
+
+    Example:
+        >>> parse_heading("# Chapter 1")
+        Heading(level=1, text="Chapter 1", read_aloud=True)
+        >>> parse_heading("#### Deep heading")
+        Heading(level=3, text="Deep heading", read_aloud=True)
+    """
+    import re
+
+    # Pattern: ^(#{1,6})\s*(.*)$
+    # Must start at beginning of line (no leading whitespace)
+    pattern = r"^(#{1,6})\s*(.*)$"
+    match = re.match(pattern, line)
+
+    if not match:
+        return None
+
+    markers = match.group(1)
+    text = match.group(2)
+
+    # Calculate level (1-6 from markdown, but cap at 3)
+    level = len(markers)
+    if level > 3:
+        level = 3
+
+    from src.book_converter.models import Heading
+
+    return Heading(level=level, text=text, read_aloud=True)
+
+
+def parse_heading_with_warning(line: str) -> tuple[Heading | None, str | None]:
+    """Parse a heading and return warning if level 4+.
+
+    Args:
+        line: A line from the Markdown file.
+
+    Returns:
+        Tuple of (Heading, warning). Warning is set if level 4+ was detected.
+    """
+    import re
+
+    pattern = r"^(#{1,6})\s*(.*)$"
+    match = re.match(pattern, line)
+
+    if not match:
+        return (None, None)
+
+    markers = match.group(1)
+    original_level = len(markers)
+
+    heading = parse_heading(line)
+
+    if original_level > 3:
+        warning = f"見出しlevel {original_level}階層は3階層に統合されました"
+        return (heading, warning)
+
+    return (heading, None)
+
+
+def parse_paragraph(lines: list[str]) -> Paragraph | None:
+    """Parse paragraph lines into a Paragraph object.
+
+    Args:
+        lines: List of paragraph lines.
+
+    Returns:
+        Paragraph object with joined text, or None if empty/whitespace only.
+
+    Example:
+        >>> parse_paragraph(["Line 1", "Line 2"])
+        Paragraph(text="Line 1\\nLine 2", read_aloud=True)
+    """
+    if not lines:
+        return None
+
+    # Join lines and strip whitespace
+    text = "\n".join(lines).strip()
+
+    if not text:
+        return None
+
+    from src.book_converter.models import Paragraph
+
+    return Paragraph(text=text, read_aloud=True)
+
+
+def parse_list(lines: list[str]) -> List | None:
+    """Parse list lines into a List object.
+
+    Args:
+        lines: List of lines containing list items (- or * markers).
+
+    Returns:
+        List object with items tuple, or None if empty.
+
+    Example:
+        >>> parse_list(["- Item 1", "- Item 2"])
+        List(items=("Item 1", "Item 2"), read_aloud=True)
+    """
+    import re
+
+    if not lines:
+        return None
+
+    items = []
+    # Pattern: optional leading spaces, then - or *, then space, then content
+    pattern = r"^\s*[-*]\s+(.*)$"
+
+    for line in lines:
+        match = re.match(pattern, line)
+        if match:
+            item_text = match.group(1)
+            items.append(item_text)
+
+    if not items:
+        return None
+
+    from src.book_converter.models import List
+
+    return List(items=tuple(items), read_aloud=True)
 
 
 def parse_pages(input_path: Path) -> Iterator[Page]:

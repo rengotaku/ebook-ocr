@@ -107,3 +107,57 @@ def transform_page_announcement(
     elem.set("format", announcement.format)
 
     return elem
+
+
+def transform_heading(heading: Heading) -> Element:
+    """Transform a Heading into an XML Element.
+
+    Args:
+        heading: The Heading object to transform.
+
+    Returns:
+        An XML Element representing the heading.
+
+    Example:
+        >>> heading = Heading(level=1, text="Chapter 1")
+        >>> elem = transform_heading(heading)
+        >>> elem.tag
+        'heading'
+        >>> elem.get("level")
+        '1'
+    """
+    elem = Element("heading")
+    elem.set("level", str(heading.level))
+    elem.text = heading.text
+
+    return elem
+
+
+def transform_content_with_continued(
+    content: Content, continued: bool
+) -> Element | None:
+    """Transform a Content object with continued attribute.
+
+    Args:
+        content: The Content object to transform.
+        continued: Whether this content continues from previous page.
+
+    Returns:
+        An XML Element with optional continued="true" attribute,
+        or None if no elements.
+
+    Example:
+        >>> content = Content(elements=(Paragraph(text="Text"),))
+        >>> elem = transform_content_with_continued(content, True)
+        >>> elem.get("continued")
+        'true'
+    """
+    elem = transform_content(content)
+
+    if elem is None:
+        return None
+
+    if continued:
+        elem.set("continued", "true")
+
+    return elem
