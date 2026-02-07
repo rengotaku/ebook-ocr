@@ -21,7 +21,11 @@ MIN_CONFIDENCE ?= $(shell $(call CFG,min_confidence))
 # Usage: make ocr HASHDIR=output/a3f8c2d1e5b7f9c0
 HASHDIR ?=
 
-.PHONY: help setup run extract ocr test test-book-converter test-cov convert-sample clean clean-all
+# Book converter variables
+INPUT_MD ?=
+OUTPUT_XML ?=
+
+.PHONY: help setup run extract ocr test test-book-converter test-cov converter convert-sample clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -51,6 +55,11 @@ test-book-converter: setup ## Run book_converter tests
 
 test-cov: setup ## Run tests with coverage
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
+
+converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml)
+	@test -n "$(INPUT_MD)" || { echo "Error: INPUT_MD required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
+	@test -n "$(OUTPUT_XML)" || { echo "Error: OUTPUT_XML required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli "$(INPUT_MD)" "$(OUTPUT_XML)"
 
 convert-sample: setup ## Convert sample book.md to XML
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli tests/book_converter/fixtures/sample_book.md output/sample_book.xml
