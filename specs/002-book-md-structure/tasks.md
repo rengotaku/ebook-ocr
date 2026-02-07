@@ -207,21 +207,21 @@
 
 ### Input
 
-- [ ] T084 セットアップ分析を読む: specs/002-book-md-structure/tasks/ph1-output.md
-- [ ] T085 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph5-output.md
+- [x] T084 セットアップ分析を読む: specs/002-book-md-structure/tasks/ph1-output.md
+- [x] T085 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph5-output.md
 
 ### Implementation
 
-- [ ] T086 [P] `make test-cov` でカバレッジ確認（≥80%目標）
-- [ ] T087 [P] コード品質チェック（ruff check src/book_converter/）
-- [ ] T088 [P] ファイルサイズ確認（各ファイル800行以下、各関数50行以下）
-- [ ] T089 quickstart.md 検証（CLIコマンド動作確認）
-- [ ] T090 book.xsd に対するXML検証テスト追加
+- [x] T086 [P] `make test-cov` でカバレッジ確認（≥80%目標）
+- [x] T087 [P] コード品質チェック（ruff check src/book_converter/）
+- [x] T088 [P] ファイルサイズ確認（各ファイル800行以下、各関数50行以下）
+- [x] T089 quickstart.md 検証（CLIコマンド動作確認）
+- [x] T090 book.xsd に対するXML検証テスト追加
 
 ### Verification
 
-- [ ] T091 `make test` で全テスト通過を確認
-- [ ] T092 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph6-output.md
+- [x] T091 `make test` で全テスト通過を確認
+- [x] T092 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph6-output.md
 
 ---
 
