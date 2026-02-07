@@ -17,6 +17,7 @@ from src.book_converter.models import (
     List,
     Figure,
     PageMetadata,
+    ConversionError,
 )
 
 
@@ -408,3 +409,227 @@ def parse_pages(input_path: Path) -> Iterator[Page]:
             content=Content(elements=()),
             announcement=announcement,
         )
+
+
+def parse_pages_with_errors(
+    input_path: Path
+) -> tuple[list[Page], list[ConversionError]]:
+    """Parse a Markdown file into Page objects with error tracking.
+
+    Args:
+        input_path: Path to the Markdown file.
+
+    Returns:
+        Tuple of (pages, errors). Errors are collected but parsing continues.
+    """
+    with open(input_path, encoding="utf-8") as f:
+        content = f.read()
+
+    lines = content.split("\n")
+    pages = []
+    errors = []
+
+    current_page_number = ""
+    current_source_file = ""
+    current_page_lines = []
+    last_page_marker_line = 0
+    page_start_line = 0
+
+    for line_idx, line in enumerate(lines, start=1):
+        # Check if this is a page marker (including those with missing numbers)
+        page_num, source_file = extract_page_number(line)
+        if page_num or source_file:
+            # This is a page marker
+            # Save previous page if any
+            if current_source_file:
+                # Parse the content of the previous page
+                page_obj, page_errors = _parse_single_page_content(
+                    current_page_number,
+                    current_source_file,
+                    current_page_lines,
+                    page_start_line,
+                )
+                pages.append(page_obj)
+                errors.extend(page_errors)
+
+                # Check for missing page number on previous page
+                if not current_page_number:
+                    errors.append(ConversionError(
+                        error_type="PAGE_NUMBER_NOT_FOUND",
+                        message="ページ番号が見つかりません",
+                        page_number="",
+                        line_number=last_page_marker_line,
+                    ))
+
+            # Start new page
+            current_page_number = page_num
+            current_source_file = source_file
+            current_page_lines = []
+            last_page_marker_line = line_idx
+            page_start_line = line_idx
+        else:
+            # Add line to current page content
+            current_page_lines.append(line)
+
+    # Save final page
+    if current_source_file:
+        # Parse the content of the final page
+        page_obj, page_errors = _parse_single_page_content(
+            current_page_number,
+            current_source_file,
+            current_page_lines,
+            page_start_line,
+        )
+        pages.append(page_obj)
+        errors.extend(page_errors)
+
+        # Check for missing page number on final page
+        if not current_page_number:
+            errors.append(ConversionError(
+                error_type="PAGE_NUMBER_NOT_FOUND",
+                message="ページ番号が見つかりません",
+                page_number="",
+                line_number=last_page_marker_line,
+            ))
+
+    return (pages, errors)
+
+
+def _parse_single_page_content(
+    page_number: str,
+    source_file: str,
+    lines: list[str],
+    start_line: int,
+) -> tuple[Page, list[ConversionError]]:
+    """Parse the content of a single page.
+
+    Args:
+        page_number: Page number string.
+        source_file: Source file name.
+        lines: Lines of content for this page.
+        start_line: Starting line number in the original file.
+
+    Returns:
+        Tuple of (Page, list of ConversionErrors).
+    """
+    errors = []
+    content_elements = []
+    figures_list = []
+    metadata = None
+
+    # Parse content line by line
+    idx = 0
+    while idx < len(lines):
+        line = lines[idx]
+        line_num = start_line + idx + 1
+
+        # Check for deep heading warning
+        heading, warning = parse_heading_with_warning(line)
+        if warning is not None:
+            errors.append(ConversionError(
+                error_type="DEEP_HEADING",
+                message=warning,
+                page_number=page_number,
+                line_number=line_num,
+            ))
+
+        # Check for heading
+        if heading is not None:
+            content_elements.append(heading)
+            idx += 1
+            continue
+
+        # Check for figure comment
+        fig_path = parse_figure_comment(line)
+        if fig_path is not None:
+            # Collect lines for figure parsing
+            fig_lines = []
+            fig_idx = idx
+            while fig_idx < len(lines) and fig_idx < idx + 10:  # Look ahead up to 10 lines
+                fig_line = lines[fig_idx]
+                if not fig_line.strip():
+                    # Empty line ends figure block
+                    break
+                fig_lines.append(fig_line)
+                fig_idx += 1
+
+            fig = parse_figure(fig_lines)
+            if fig is not None:
+                figures_list.append(fig)
+            idx = fig_idx
+            continue
+
+        # Check for page metadata (N / M pattern)
+        page_meta = parse_page_metadata(line.strip())
+        if page_meta is not None:
+            metadata = page_meta
+            idx += 1
+            continue
+
+        # Check for list item
+        if line.strip().startswith(('-', '*')) and line.strip()[1:2] in (' ', ''):
+            # Collect consecutive list items
+            list_lines = []
+            list_idx = idx
+            while list_idx < len(lines):
+                list_line = lines[list_idx]
+                if list_line.strip().startswith(('-', '*')) and list_line.strip()[1:2] in (' ', ''):
+                    list_lines.append(list_line)
+                    list_idx += 1
+                elif not list_line.strip():
+                    # Empty line ends list
+                    break
+                else:
+                    # Non-list line ends list
+                    break
+
+            lst = parse_list(list_lines)
+            if lst is not None:
+                content_elements.append(lst)
+            idx = list_idx
+            continue
+
+        # Check for paragraph (non-empty, non-special line)
+        if line.strip():
+            # Collect consecutive non-empty lines for paragraph
+            para_lines = []
+            para_idx = idx
+            while para_idx < len(lines):
+                para_line = lines[para_idx]
+                # Stop at empty line, heading, list, or figure
+                if not para_line.strip():
+                    break
+                if parse_heading(para_line) is not None:
+                    break
+                if para_line.strip().startswith(('-', '*')) and para_line.strip()[1:2] in (' ', ''):
+                    break
+                if parse_figure_comment(para_line) is not None:
+                    break
+                if parse_page_metadata(para_line.strip()) is not None:
+                    break
+                para_lines.append(para_line)
+                para_idx += 1
+
+            para = parse_paragraph(para_lines)
+            if para is not None:
+                content_elements.append(para)
+            idx = para_idx
+            continue
+
+        # Empty line, skip
+        idx += 1
+
+    # Create Page object
+    content = Content(elements=tuple(content_elements))
+    announcement = create_page_announcement(page_number)
+
+    page = Page(
+        number=page_number,
+        source_file=source_file,
+        content=content,
+        announcement=announcement,
+        figures=tuple(figures_list),
+        metadata=metadata,
+    )
+
+    return (page, errors)

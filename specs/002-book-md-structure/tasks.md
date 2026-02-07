@@ -187,17 +187,17 @@
 
 ### Implementation (GREEN)
 
-- [ ] T076 REDテストを読む: specs/002-book-md-structure/red-tests/ph5-test.md
-- [ ] T077 [P] `src/book_converter/cli.py` にmain関数を実装（argparse、--verbose、--quiet）
-- [ ] T078 [P] `src/book_converter/parser.py` にエラーハンドリング追加（警告継続、ConversionError生成）
-- [ ] T079 [P] `src/book_converter/xml_builder.py` にエラーコメント挿入機能を追加（`<!-- ERROR: ... -->`）
-- [ ] T080 [P] `src/book_converter/cli.py` にエラーサマリー出力を実装（最後に警告ログまとめて表示）
-- [ ] T081 `make test` PASS (GREEN) を確認
+- [x] T076 REDテストを読む: specs/002-book-md-structure/red-tests/ph5-test.md
+- [x] T077 [P] `src/book_converter/cli.py` にmain関数を実装（argparse、--verbose、--quiet）
+- [x] T078 [P] `src/book_converter/parser.py` にエラーハンドリング追加（警告継続、ConversionError生成）
+- [x] T079 [P] `src/book_converter/xml_builder.py` にエラーコメント挿入機能を追加（`<!-- ERROR: ... -->`）
+- [x] T080 [P] `src/book_converter/cli.py` にエラーサマリー出力を実装（最後に警告ログまとめて表示）
+- [x] T081 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T082 `make test` で全テスト通過を確認
-- [ ] T083 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph5-output.md
+- [x] T082 `make test` で全テスト通過を確認
+- [x] T083 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph5-output.md
 
 ---
 

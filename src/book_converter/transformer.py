@@ -52,6 +52,18 @@ def transform_page(page: Page) -> Element:
     if content_elem is not None:
         elem.append(content_elem)
 
+    # Add figures
+    for figure in page.figures:
+        figure_elem = transform_figure(figure)
+        if figure_elem is not None:
+            elem.append(figure_elem)
+
+    # Add metadata
+    if page.metadata is not None:
+        metadata_elem = transform_page_metadata(page.metadata)
+        if metadata_elem is not None:
+            elem.append(metadata_elem)
+
     return elem
 
 
