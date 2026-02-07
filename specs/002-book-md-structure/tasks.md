@@ -53,14 +53,14 @@
 
 ### Test Implementation (RED)
 
-- [ ] T009 [P] [US1] ページマーカー解析テストを実装: tests/book_converter/test_parser.py（`--- Page N (file.png) ---` パターン）
-- [ ] T010 [P] [US1] ページ番号抽出テストを実装: tests/book_converter/test_parser.py（正常系、欠落系、エッジケース）
-- [ ] T011 [P] [US1] PageAnnouncementテストを実装: tests/book_converter/test_parser.py（「Nページ」フォーマット）
-- [ ] T012 [P] [US1] ページXML変換テストを実装: tests/book_converter/test_transformer.py（`<page number="N" sourceFile="...">` 生成）
-- [ ] T013 [P] [US1] PageAnnouncementXML変換テストを実装: tests/book_converter/test_transformer.py（`<pageAnnouncement>` 生成）
-- [ ] T014 [P] [US1] 統合テストを実装: tests/book_converter/test_integration.py（Markdown→XML→XPathクエリ）
-- [ ] T015 `make test` FAIL (RED) を確認
-- [ ] T016 RED出力を生成: specs/002-book-md-structure/red-tests/ph2-test.md
+- [x] T009 [P] [US1] ページマーカー解析テストを実装: tests/book_converter/test_parser.py（`--- Page N (file.png) ---` パターン）
+- [x] T010 [P] [US1] ページ番号抽出テストを実装: tests/book_converter/test_parser.py（正常系、欠落系、エッジケース）
+- [x] T011 [P] [US1] PageAnnouncementテストを実装: tests/book_converter/test_parser.py（「Nページ」フォーマット）
+- [x] T012 [P] [US1] ページXML変換テストを実装: tests/book_converter/test_transformer.py（`<page number="N" sourceFile="...">` 生成）
+- [x] T013 [P] [US1] PageAnnouncementXML変換テストを実装: tests/book_converter/test_transformer.py（`<pageAnnouncement>` 生成）
+- [x] T014 [P] [US1] 統合テストを実装: tests/book_converter/test_integration.py（Markdown→XML→XPathクエリ）
+- [x] T015 `make test` FAIL (RED) を確認
+- [x] T016 RED出力を生成: specs/002-book-md-structure/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
