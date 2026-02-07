@@ -5,7 +5,8 @@ Provides functions to transform data models into XML elements.
 
 from __future__ import annotations
 
-from xml.etree.ElementTree import Element
+import re
+from xml.etree.ElementTree import Element, SubElement
 
 from src.book_converter.models import (
     Page,
@@ -17,6 +18,52 @@ from src.book_converter.models import (
     Figure,
     PageMetadata,
 )
+
+
+def apply_emphasis(text: str, parent: Element) -> None:
+    """Apply emphasis conversion to text and set on parent element.
+
+    Converts **text** patterns to <emphasis>text</emphasis> elements.
+
+    Args:
+        text: The text to process for emphasis patterns.
+        parent: The parent element to add text and emphasis children to.
+
+    Example:
+        >>> elem = Element("paragraph")
+        >>> apply_emphasis("before **bold** after", elem)
+        >>> elem.text
+        'before '
+        >>> elem.find("emphasis").text
+        'bold'
+        >>> elem.find("emphasis").tail
+        ' after'
+    """
+    if not text:
+        return
+
+    pattern = r"\*\*(.+?)\*\*"
+    parts = re.split(pattern, text)
+
+    # parts example: ['before', 'emphasis1', 'middle', 'emphasis2', 'after']
+    # Even indices: normal text
+    # Odd indices: emphasized text
+
+    if len(parts) == 1:
+        # No emphasis found
+        parent.text = text
+        return
+
+    # First text (before any emphasis)
+    parent.text = parts[0] if parts[0] else None
+
+    for i in range(1, len(parts), 2):
+        emphasis_text = parts[i]
+        normal_text = parts[i + 1] if i + 1 < len(parts) else ""
+
+        emphasis = SubElement(parent, "emphasis")
+        emphasis.text = emphasis_text
+        emphasis.tail = normal_text if normal_text else None
 
 
 def transform_page(page: Page) -> Element:
@@ -84,18 +131,18 @@ def transform_content(content: Content) -> Element | None:
     for element in content.elements:
         if isinstance(element, Paragraph):
             para_elem = Element("paragraph")
-            para_elem.text = element.text
+            apply_emphasis(element.text, para_elem)
             elem.append(para_elem)
         elif isinstance(element, Heading):
             heading_elem = Element("heading")
             heading_elem.set("level", str(element.level))
-            heading_elem.text = element.text
+            apply_emphasis(element.text, heading_elem)
             elem.append(heading_elem)
         elif isinstance(element, List):
             list_elem = Element("list")
             for item in element.items:
                 item_elem = Element("item")
-                item_elem.text = item
+                apply_emphasis(item, item_elem)
                 list_elem.append(item_elem)
             elem.append(list_elem)
 
@@ -247,6 +294,6 @@ def transform_page_metadata(metadata: PageMetadata | None) -> Element | None:
     elem = Element("pageMetadata")
     elem.set("type", metadata.meta_type)
     elem.set("readAloud", "false")  # Always false for metadata
-    elem.text = metadata.text
+    apply_emphasis(metadata.text, elem)
 
     return elem

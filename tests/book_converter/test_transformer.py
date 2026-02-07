@@ -981,3 +981,180 @@ class TestReadAloudInheritance:
         # paragraphのデフォルトはtrue（省略可）
         read_aloud = para_elem.get("readAloud")
         assert read_aloud is None or read_aloud == "true"
+
+
+# =============================================================================
+# Phase 7: Emphasis Conversion - **強調** → <emphasis>
+# =============================================================================
+
+
+class TestEmphasisConversion:
+    """強調変換テスト: **text** → <emphasis>text</emphasis>"""
+
+    def test_paragraph_with_single_emphasis(self) -> None:
+        """単一の強調を含む段落を変換"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="これは**強調**です。"),)
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+
+        # **強調** が <emphasis>強調</emphasis> に変換される
+        emphasis = para_elem.find("emphasis")
+        assert emphasis is not None
+        assert emphasis.text == "強調"
+
+    def test_paragraph_with_multiple_emphasis(self) -> None:
+        """複数の強調を含む段落を変換"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="**最初**と**二番目**の強調"),)
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+
+        emphasis_elems = para_elem.findall("emphasis")
+        assert len(emphasis_elems) == 2
+        assert emphasis_elems[0].text == "最初"
+        assert emphasis_elems[1].text == "二番目"
+
+    def test_paragraph_without_emphasis(self) -> None:
+        """強調なしの段落はそのまま"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="通常のテキストです。"),)
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+
+        # emphasisは生成されない
+        assert para_elem.find("emphasis") is None
+        assert para_elem.text == "通常のテキストです。"
+
+    def test_paragraph_emphasis_preserves_surrounding_text(self) -> None:
+        """強調の前後のテキストを保持"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="前のテキスト**強調**後のテキスト"),)
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+
+        # 前のテキストはpara_elem.text
+        assert para_elem.text == "前のテキスト"
+        # 強調
+        emphasis = para_elem.find("emphasis")
+        assert emphasis.text == "強調"
+        # 後のテキストはemphasis.tail
+        assert emphasis.tail == "後のテキスト"
+
+    def test_heading_with_emphasis(self) -> None:
+        """強調を含む見出しを変換"""
+        from src.book_converter.transformer import transform_content
+
+        content = Content(
+            elements=(Heading(level=1, text="**重要な**見出し"),)
+        )
+        element = transform_content(content)
+        heading_elem = element.find("heading")
+
+        emphasis = heading_elem.find("emphasis")
+        assert emphasis is not None
+        assert emphasis.text == "重要な"
+        assert emphasis.tail == "見出し"
+
+    def test_list_item_with_emphasis(self) -> None:
+        """強調を含むリストアイテムを変換"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import List
+
+        content = Content(
+            elements=(List(items=("**重要**な項目", "通常の項目")),)
+        )
+        element = transform_content(content)
+        list_elem = element.find("list")
+        items = list_elem.findall("item")
+
+        # 最初のアイテムに強調がある
+        emphasis = items[0].find("emphasis")
+        assert emphasis is not None
+        assert emphasis.text == "重要"
+        assert emphasis.tail == "な項目"
+
+        # 2番目は強調なし
+        assert items[1].find("emphasis") is None
+        assert items[1].text == "通常の項目"
+
+    def test_emphasis_unicode_content(self) -> None:
+        """Unicode文字を含む強調を変換"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="**日本語「テスト」**を含む"),)
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+
+        emphasis = para_elem.find("emphasis")
+        assert emphasis.text == "日本語「テスト」"
+
+    def test_emphasis_xml_serialization(self) -> None:
+        """強調を含む要素をXMLにシリアライズ"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト**強調**です"),)
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+        xml_string = tostring(para_elem, encoding="unicode")
+
+        assert "<emphasis>" in xml_string
+        assert "</emphasis>" in xml_string
+        assert "強調" in xml_string
+
+    def test_full_emphasis_only(self) -> None:
+        """テキスト全体が強調の場合"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="**全体が強調**"),)
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+
+        # テキスト部分は空またはNone
+        assert para_elem.text is None or para_elem.text == ""
+        emphasis = para_elem.find("emphasis")
+        assert emphasis.text == "全体が強調"
+
+    def test_page_metadata_emphasis_preserved(self) -> None:
+        """pageMetadata内の強調も変換"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(
+            text="**はじめに** 1 / 3",
+            meta_type="chapter-page",
+            section_name="はじめに",
+            current=1,
+            total=3,
+        )
+        element = transform_page_metadata(metadata)
+
+        # pageMetadata内の強調も変換される
+        emphasis = element.find("emphasis")
+        assert emphasis is not None
+        assert emphasis.text == "はじめに"
