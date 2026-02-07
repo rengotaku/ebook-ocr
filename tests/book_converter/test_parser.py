@@ -543,3 +543,335 @@ class TestParseList:
 
         assert result is not None
         assert isinstance(result.items, tuple)
+
+
+# =============================================================================
+# Phase 4: User Story 3 - TTS図表説明制御とメタデータ分離
+# =============================================================================
+
+
+class TestParseFigureComment:
+    """T050: 図コメント解析テスト (<!-- FIGURE: path --> パターン)"""
+
+    def test_parse_figure_comment_basic(self) -> None:
+        """基本的な図コメントを解析"""
+        from src.book_converter.parser import parse_figure_comment
+
+        result = parse_figure_comment("<!-- FIGURE: images/figure1.png -->")
+
+        assert result is not None
+        assert result == "images/figure1.png"
+
+    def test_parse_figure_comment_with_spaces(self) -> None:
+        """スペースを含む図コメントを解析"""
+        from src.book_converter.parser import parse_figure_comment
+
+        result = parse_figure_comment("<!--  FIGURE:  path/to/image.png  -->")
+
+        assert result is not None
+        assert result == "path/to/image.png"
+
+    def test_parse_figure_comment_with_japanese_path(self) -> None:
+        """日本語パスを含む図コメントを解析"""
+        from src.book_converter.parser import parse_figure_comment
+
+        result = parse_figure_comment("<!-- FIGURE: 画像/図1.png -->")
+
+        assert result is not None
+        assert result == "画像/図1.png"
+
+    def test_parse_figure_comment_jpg_extension(self) -> None:
+        """JPG拡張子を解析"""
+        from src.book_converter.parser import parse_figure_comment
+
+        result = parse_figure_comment("<!-- FIGURE: photo.jpg -->")
+
+        assert result is not None
+        assert result == "photo.jpg"
+
+    def test_parse_figure_comment_case_insensitive(self) -> None:
+        """FIGUREキーワードは大文字小文字を区別しない"""
+        from src.book_converter.parser import parse_figure_comment
+
+        result = parse_figure_comment("<!-- figure: test.png -->")
+
+        assert result is not None
+        assert result == "test.png"
+
+    def test_parse_non_figure_comment_returns_none(self) -> None:
+        """図コメント以外はNoneを返す"""
+        from src.book_converter.parser import parse_figure_comment
+
+        non_figure_lines = [
+            "<!-- This is a normal comment -->",
+            "<!-- ERROR: something -->",
+            "本文テキスト",
+            "# 見出し",
+            "<!-- FIG: invalid.png -->",  # キーワードが違う
+            "",
+        ]
+        for line in non_figure_lines:
+            result = parse_figure_comment(line)
+            assert result is None, f"Expected None for: {line!r}"
+
+    def test_parse_figure_comment_empty_path(self) -> None:
+        """空のパスを含む図コメント"""
+        from src.book_converter.parser import parse_figure_comment
+
+        result = parse_figure_comment("<!-- FIGURE: -->")
+
+        # 空パスの場合はNoneか空文字列
+        assert result is None or result == ""
+
+    def test_parse_figure_comment_complex_path(self) -> None:
+        """複雑なパスを解析"""
+        from src.book_converter.parser import parse_figure_comment
+
+        result = parse_figure_comment(
+            "<!-- FIGURE: output/chapter_01/fig_2-3_diagram.png -->"
+        )
+
+        assert result is not None
+        assert result == "output/chapter_01/fig_2-3_diagram.png"
+
+
+class TestParseFigureDescription:
+    """T051: 図説明文解析テスト (図コメント後のテキストをdescriptionに)"""
+
+    def test_parse_figure_with_description(self) -> None:
+        """図コメントと説明文を解析"""
+        from src.book_converter.parser import parse_figure
+
+        lines = [
+            "<!-- FIGURE: images/fig1.png -->",
+            "この図は構成図を示しています。",
+        ]
+        result = parse_figure(lines)
+
+        assert result is not None
+        assert result.file == "images/fig1.png"
+        assert result.description == "この図は構成図を示しています。"
+
+    def test_parse_figure_with_multiline_description(self) -> None:
+        """複数行の説明文を解析"""
+        from src.book_converter.parser import parse_figure
+
+        lines = [
+            "<!-- FIGURE: diagram.png -->",
+            "図1: システム構成図",
+            "この図は全体のアーキテクチャを表しています。",
+        ]
+        result = parse_figure(lines)
+
+        assert result is not None
+        assert result.file == "diagram.png"
+        # 複数行は結合されるか、最初の行のみか
+        assert "図1: システム構成図" in result.description or \
+               "アーキテクチャ" in result.description
+
+    def test_parse_figure_without_description(self) -> None:
+        """説明文なしの図を解析"""
+        from src.book_converter.parser import parse_figure
+
+        lines = [
+            "<!-- FIGURE: image.png -->",
+        ]
+        result = parse_figure(lines)
+
+        assert result is not None
+        assert result.file == "image.png"
+        assert result.description == ""
+
+    def test_parse_figure_with_caption(self) -> None:
+        """キャプション付きの図を解析"""
+        from src.book_converter.parser import parse_figure
+
+        lines = [
+            "<!-- FIGURE: chart.png -->",
+            "**図1: 売上推移**",
+            "2020年から2024年までの売上推移を示すグラフです。",
+        ]
+        result = parse_figure(lines)
+
+        assert result is not None
+        assert result.file == "chart.png"
+        # キャプションは ** で囲まれた部分
+        assert "売上推移" in result.caption or "図1" in result.caption
+
+    def test_parse_figure_returns_figure_type(self) -> None:
+        """戻り値はFigure型"""
+        from src.book_converter.parser import parse_figure
+        from src.book_converter.models import Figure
+
+        lines = ["<!-- FIGURE: test.png -->"]
+        result = parse_figure(lines)
+
+        assert isinstance(result, Figure)
+
+    def test_parse_figure_default_read_aloud(self) -> None:
+        """デフォルトのreadAloudは'optional'"""
+        from src.book_converter.parser import parse_figure
+
+        lines = ["<!-- FIGURE: test.png -->"]
+        result = parse_figure(lines)
+
+        assert result is not None
+        assert result.read_aloud == "optional"
+
+    def test_parse_figure_empty_lines_returns_none(self) -> None:
+        """空のラインリストはNoneを返す"""
+        from src.book_converter.parser import parse_figure
+
+        result = parse_figure([])
+
+        assert result is None
+
+    def test_parse_figure_no_comment_returns_none(self) -> None:
+        """図コメントなしはNoneを返す"""
+        from src.book_converter.parser import parse_figure
+
+        lines = [
+            "本文のテキストです。",
+            "図コメントがありません。",
+        ]
+        result = parse_figure(lines)
+
+        assert result is None
+
+    def test_parse_figure_preserves_unicode_description(self) -> None:
+        """Unicode説明文を保持"""
+        from src.book_converter.parser import parse_figure
+
+        lines = [
+            "<!-- FIGURE: 日本語パス.png -->",
+            "日本語の説明文「テスト」です。",
+        ]
+        result = parse_figure(lines)
+
+        assert result is not None
+        assert "日本語の説明文" in result.description
+        assert "「テスト」" in result.description
+
+
+class TestParsePageMetadata:
+    """T052: ページメタデータ解析テスト (N / M パターン、type判定)"""
+
+    def test_parse_page_metadata_simple(self) -> None:
+        """シンプルなN / M形式を解析"""
+        from src.book_converter.parser import parse_page_metadata
+
+        result = parse_page_metadata("3 / 7")
+
+        assert result is not None
+        assert result.text == "3 / 7"
+        assert result.current == 3
+        assert result.total == 7
+        assert result.meta_type == "chapter-page"
+
+    def test_parse_page_metadata_with_section_name(self) -> None:
+        """セクション名付きのメタデータを解析"""
+        from src.book_converter.parser import parse_page_metadata
+
+        result = parse_page_metadata("はじめに 1 / 3")
+
+        assert result is not None
+        assert result.text == "はじめに 1 / 3"
+        assert result.section_name == "はじめに"
+        assert result.current == 1
+        assert result.total == 3
+
+    def test_parse_page_metadata_chapter_page_type(self) -> None:
+        """chapter-pageタイプを判定"""
+        from src.book_converter.parser import parse_page_metadata
+
+        result = parse_page_metadata("第1章 5 / 20")
+
+        assert result is not None
+        assert result.meta_type == "chapter-page"
+        assert result.section_name == "第1章"
+
+    def test_parse_page_metadata_section_page_type(self) -> None:
+        """section-pageタイプを判定"""
+        from src.book_converter.parser import parse_page_metadata
+
+        # セクション名が「節」を含む場合はsection-page
+        result = parse_page_metadata("1.2節 2 / 5")
+
+        assert result is not None
+        # meta_typeは実装に依存するが、section-pageまたはchapter-page
+        assert result.meta_type in ("chapter-page", "section-page")
+
+    def test_parse_page_metadata_unknown_type(self) -> None:
+        """不明なパターンはunknownタイプ"""
+        from src.book_converter.parser import parse_page_metadata
+
+        result = parse_page_metadata("??? 1 / 1")
+
+        assert result is not None
+        assert result.meta_type in ("chapter-page", "unknown")
+
+    def test_parse_page_metadata_invalid_format(self) -> None:
+        """無効なフォーマットはNoneを返す"""
+        from src.book_converter.parser import parse_page_metadata
+
+        invalid_formats = [
+            "本文テキスト",
+            "ページ42",
+            "3 - 7",  # スラッシュでない
+            "a / b",  # 数字でない
+            "",
+            "   ",
+        ]
+        for text in invalid_formats:
+            result = parse_page_metadata(text)
+            assert result is None, f"Expected None for: {text!r}"
+
+    def test_parse_page_metadata_returns_type(self) -> None:
+        """戻り値はPageMetadata型"""
+        from src.book_converter.parser import parse_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        result = parse_page_metadata("1 / 5")
+
+        assert isinstance(result, PageMetadata)
+
+    def test_parse_page_metadata_large_numbers(self) -> None:
+        """大きなページ番号を解析"""
+        from src.book_converter.parser import parse_page_metadata
+
+        result = parse_page_metadata("100 / 500")
+
+        assert result is not None
+        assert result.current == 100
+        assert result.total == 500
+
+    def test_parse_page_metadata_single_page(self) -> None:
+        """単一ページ (1 / 1) を解析"""
+        from src.book_converter.parser import parse_page_metadata
+
+        result = parse_page_metadata("1 / 1")
+
+        assert result is not None
+        assert result.current == 1
+        assert result.total == 1
+
+    def test_parse_page_metadata_with_extra_spaces(self) -> None:
+        """余分なスペースがあっても解析"""
+        from src.book_converter.parser import parse_page_metadata
+
+        result = parse_page_metadata("  まえがき   2  /  10  ")
+
+        assert result is not None
+        assert result.current == 2
+        assert result.total == 10
+        assert result.section_name.strip() == "まえがき"
+
+    def test_parse_page_metadata_preserves_original_text(self) -> None:
+        """元のテキストを保持"""
+        from src.book_converter.parser import parse_page_metadata
+
+        original = "第2章 3 / 15"
+        result = parse_page_metadata(original)
+
+        assert result is not None
+        assert result.text == original

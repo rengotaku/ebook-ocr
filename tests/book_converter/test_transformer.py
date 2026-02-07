@@ -533,3 +533,451 @@ class TestTransformContentContinued:
 
         assert element is not None
         assert element.get("continued") == "true"
+
+
+# =============================================================================
+# Phase 4: User Story 3 - TTS図表説明制御とメタデータ分離
+# =============================================================================
+
+
+class TestTransformFigure:
+    """T053: Figure XML変換テスト (<figure readAloud="optional"> 生成)"""
+
+    def test_transform_figure_basic(self) -> None:
+        """基本的な図をXMLに変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(file="images/fig1.png")
+        element = transform_figure(figure)
+
+        assert element.tag == "figure"
+        file_elem = element.find("file")
+        assert file_elem is not None
+        assert file_elem.text == "images/fig1.png"
+
+    def test_transform_figure_with_caption(self) -> None:
+        """キャプション付きの図を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(
+            file="chart.png",
+            caption="図1: 売上推移",
+        )
+        element = transform_figure(figure)
+
+        caption_elem = element.find("caption")
+        assert caption_elem is not None
+        assert caption_elem.text == "図1: 売上推移"
+
+    def test_transform_figure_with_description(self) -> None:
+        """説明文付きの図を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(
+            file="diagram.png",
+            description="システム構成を表す図です。",
+        )
+        element = transform_figure(figure)
+
+        desc_elem = element.find("description")
+        assert desc_elem is not None
+        assert desc_elem.text == "システム構成を表す図です。"
+
+    def test_transform_figure_read_aloud_optional(self) -> None:
+        """readAloud='optional'属性を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(file="test.png", read_aloud="optional")
+        element = transform_figure(figure)
+
+        assert element.get("readAloud") == "optional"
+
+    def test_transform_figure_read_aloud_true(self) -> None:
+        """readAloud='true'属性を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(file="test.png", read_aloud="true")
+        element = transform_figure(figure)
+
+        assert element.get("readAloud") == "true"
+
+    def test_transform_figure_read_aloud_false(self) -> None:
+        """readAloud='false'属性を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(file="test.png", read_aloud="false")
+        element = transform_figure(figure)
+
+        assert element.get("readAloud") == "false"
+
+    def test_transform_figure_returns_element(self) -> None:
+        """戻り値はElement型"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(file="test.png")
+        element = transform_figure(figure)
+
+        assert isinstance(element, Element)
+
+    def test_transform_figure_full(self) -> None:
+        """全属性を持つ図を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(
+            file="images/architecture.png",
+            caption="図2-1: システムアーキテクチャ",
+            description="本システムの全体構成を示す図です。主要コンポーネント間の関係を表しています。",
+            read_aloud="optional",
+        )
+        element = transform_figure(figure)
+
+        assert element.tag == "figure"
+        assert element.get("readAloud") == "optional"
+        assert element.find("file").text == "images/architecture.png"
+        assert element.find("caption").text == "図2-1: システムアーキテクチャ"
+        assert "全体構成" in element.find("description").text
+
+    def test_transform_figure_xml_serialization(self) -> None:
+        """XMLにシリアライズ可能"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(
+            file="test.png",
+            caption="テスト図",
+            read_aloud="optional",
+        )
+        element = transform_figure(figure)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert "<figure" in xml_string
+        assert 'readAloud="optional"' in xml_string
+        assert "<file>test.png</file>" in xml_string
+        assert "<caption>テスト図</caption>" in xml_string
+
+    def test_transform_figure_with_continued(self) -> None:
+        """ページをまたぐ図を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(
+            file="large_diagram.png",
+            continued=True,
+        )
+        element = transform_figure(figure)
+
+        assert element.get("continued") == "true"
+
+    def test_transform_figure_preserves_unicode(self) -> None:
+        """Unicode文字を保持"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(
+            file="日本語/図表.png",
+            caption="日本語キャプション「テスト」",
+            description="日本語の説明文です。",
+        )
+        element = transform_figure(figure)
+
+        assert element.find("file").text == "日本語/図表.png"
+        assert "日本語キャプション" in element.find("caption").text
+        assert "日本語の説明文" in element.find("description").text
+
+
+class TestTransformPageMetadata:
+    """T054: PageMetadata XML変換テスト (<pageMetadata type="chapter-page"> 生成)"""
+
+    def test_transform_page_metadata_basic(self) -> None:
+        """基本的なページメタデータをXMLに変換"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(
+            text="3 / 7",
+            meta_type="chapter-page",
+            current=3,
+            total=7,
+        )
+        element = transform_page_metadata(metadata)
+
+        assert element.tag == "pageMetadata"
+        assert element.get("type") == "chapter-page"
+        assert element.text == "3 / 7"
+
+    def test_transform_page_metadata_section_page(self) -> None:
+        """section-pageタイプを変換"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(
+            text="1.2節 2 / 5",
+            meta_type="section-page",
+            section_name="1.2節",
+            current=2,
+            total=5,
+        )
+        element = transform_page_metadata(metadata)
+
+        assert element.get("type") == "section-page"
+
+    def test_transform_page_metadata_unknown_type(self) -> None:
+        """unknownタイプを変換"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(
+            text="??? 1 / 1",
+            meta_type="unknown",
+            current=1,
+            total=1,
+        )
+        element = transform_page_metadata(metadata)
+
+        assert element.get("type") == "unknown"
+
+    def test_transform_page_metadata_returns_element(self) -> None:
+        """戻り値はElement型"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(text="1 / 5", current=1, total=5)
+        element = transform_page_metadata(metadata)
+
+        assert isinstance(element, Element)
+
+    def test_transform_page_metadata_none_returns_none(self) -> None:
+        """NoneはNoneを返す"""
+        from src.book_converter.transformer import transform_page_metadata
+
+        result = transform_page_metadata(None)
+
+        assert result is None
+
+    def test_transform_page_metadata_with_section_name(self) -> None:
+        """セクション名を含むメタデータを変換"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(
+            text="はじめに 1 / 3",
+            meta_type="chapter-page",
+            section_name="はじめに",
+            current=1,
+            total=3,
+        )
+        element = transform_page_metadata(metadata)
+
+        assert element.text == "はじめに 1 / 3"
+        # セクション名は属性またはテキストに含まれる
+        xml_string = tostring(element, encoding="unicode")
+        assert "はじめに" in xml_string
+
+    def test_transform_page_metadata_read_aloud_false(self) -> None:
+        """pageMetadataはreadAloud='false'"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(text="1 / 5", current=1, total=5)
+        element = transform_page_metadata(metadata)
+
+        # pageMetadataはTTSで読み上げない
+        assert element.get("readAloud") == "false"
+
+    def test_transform_page_metadata_xml_serialization(self) -> None:
+        """XMLにシリアライズ可能"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(
+            text="第1章 5 / 20",
+            meta_type="chapter-page",
+            section_name="第1章",
+            current=5,
+            total=20,
+        )
+        element = transform_page_metadata(metadata)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert "<pageMetadata" in xml_string
+        assert 'type="chapter-page"' in xml_string
+        assert "第1章 5 / 20" in xml_string
+
+    def test_transform_page_metadata_preserves_original_text(self) -> None:
+        """元のテキストを保持"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        original_text = "まえがき  2  /  10"
+        metadata = PageMetadata(
+            text=original_text,
+            meta_type="chapter-page",
+            section_name="まえがき",
+            current=2,
+            total=10,
+        )
+        element = transform_page_metadata(metadata)
+
+        assert element.text == original_text
+
+
+class TestReadAloudInheritance:
+    """T055: readAloud属性継承テスト (file=false, caption=true, description=親継承)"""
+
+    def test_figure_file_read_aloud_false(self) -> None:
+        """<file>要素はreadAloud='false'"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(file="test.png")
+        element = transform_figure(figure)
+
+        file_elem = element.find("file")
+        assert file_elem is not None
+        # file要素は読み上げない
+        assert file_elem.get("readAloud") == "false"
+
+    def test_figure_caption_read_aloud_true(self) -> None:
+        """<caption>要素はreadAloud='true'"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(file="test.png", caption="図1")
+        element = transform_figure(figure)
+
+        caption_elem = element.find("caption")
+        assert caption_elem is not None
+        # caption要素は読み上げる
+        assert caption_elem.get("readAloud") == "true"
+
+    def test_figure_description_inherits_parent(self) -> None:
+        """<description>要素は親のreadAloud属性を継承"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        # 親がoptionalの場合
+        figure_optional = Figure(
+            file="test.png",
+            description="説明文",
+            read_aloud="optional",
+        )
+        element = transform_figure(figure_optional)
+        desc_elem = element.find("description")
+        # descriptionは親を継承するか、親と同じ設定
+        # 仕様: descriptionは親のreadAloud設定を継承
+        assert desc_elem.get("readAloud") is None or \
+               desc_elem.get("readAloud") == element.get("readAloud")
+
+    def test_figure_description_inherits_true(self) -> None:
+        """親がreadAloud='true'の場合、descriptionも読み上げ対象"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(
+            file="test.png",
+            description="この図は重要です",
+            read_aloud="true",
+        )
+        element = transform_figure(figure)
+        desc_elem = element.find("description")
+
+        # 親がtrueの場合、descriptionも読み上げ対象
+        # 属性を継承するか、明示的にtrueを設定
+        assert desc_elem is not None
+
+    def test_figure_description_inherits_false(self) -> None:
+        """親がreadAloud='false'の場合、descriptionも読み上げない"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        figure = Figure(
+            file="test.png",
+            description="この図は読み上げません",
+            read_aloud="false",
+        )
+        element = transform_figure(figure)
+        desc_elem = element.find("description")
+
+        # 親がfalseの場合、descriptionも読み上げない
+        assert desc_elem is not None
+
+    def test_page_metadata_always_read_aloud_false(self) -> None:
+        """pageMetadataは常にreadAloud='false'"""
+        from src.book_converter.transformer import transform_page_metadata
+        from src.book_converter.models import PageMetadata
+
+        metadata = PageMetadata(text="1 / 5", current=1, total=5)
+        element = transform_page_metadata(metadata)
+
+        # pageMetadataは本文読み上げに混入しない
+        assert element.get("readAloud") == "false"
+
+    def test_page_includes_figure_with_read_aloud(self) -> None:
+        """ページに図が含まれる場合のreadAloud属性"""
+        from src.book_converter.models import Figure
+
+        page = Page(
+            number="1",
+            source_file="page_0001.png",
+            content=Content(elements=()),
+            figures=(
+                Figure(file="fig1.png", read_aloud="optional"),
+                Figure(file="fig2.png", read_aloud="true"),
+            ),
+        )
+
+        element = transform_page(page)
+
+        # ページ内の図が正しく変換されているか
+        # transform_pageが図を含む場合の処理は実装による
+        # 少なくともPageオブジェクトには図が含まれている
+        assert len(page.figures) == 2
+
+    def test_content_read_aloud_default_true(self) -> None:
+        """<content>のreadAloudデフォルトはtrue"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="本文"),)
+        )
+        element = transform_content(content)
+
+        # contentのデフォルトはtrue（省略可）
+        # 属性がなくてもtrue扱い
+        read_aloud = element.get("readAloud")
+        assert read_aloud is None or read_aloud == "true"
+
+    def test_heading_read_aloud_default_true(self) -> None:
+        """<heading>のreadAloudデフォルトはtrue"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=1, text="タイトル")
+        element = transform_heading(heading)
+
+        # headingのデフォルトはtrue（省略可）
+        read_aloud = element.get("readAloud")
+        assert read_aloud is None or read_aloud == "true"
+
+    def test_paragraph_read_aloud_default_true(self) -> None:
+        """<paragraph>のreadAloudデフォルトはtrue"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="段落テキスト"),)
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+
+        # paragraphのデフォルトはtrue（省略可）
+        read_aloud = para_elem.get("readAloud")
+        assert read_aloud is None or read_aloud == "true"

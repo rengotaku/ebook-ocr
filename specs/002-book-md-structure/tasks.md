@@ -133,19 +133,19 @@
 
 ### Input
 
-- [ ] T048 セットアップ分析を読む: specs/002-book-md-structure/tasks/ph1-output.md
-- [ ] T049 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph3-output.md
+- [x] T048 セットアップ分析を読む: specs/002-book-md-structure/tasks/ph1-output.md
+- [x] T049 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T050 [P] [US3] 図コメント解析テストを実装: tests/book_converter/test_parser.py（`<!-- FIGURE: path -->` パターン）
-- [ ] T051 [P] [US3] 図説明文解析テストを実装: tests/book_converter/test_parser.py（図コメント後のテキストをdescriptionに）
-- [ ] T052 [P] [US3] ページメタデータ解析テストを実装: tests/book_converter/test_parser.py（`N / M` パターン、type判定）
-- [ ] T053 [P] [US3] Figure XML変換テストを実装: tests/book_converter/test_transformer.py（`<figure readAloud="optional">` 生成）
-- [ ] T054 [P] [US3] PageMetadata XML変換テストを実装: tests/book_converter/test_transformer.py（`<pageMetadata type="chapter-page">` 生成）
-- [ ] T055 [P] [US3] readAloud属性継承テストを実装: tests/book_converter/test_transformer.py（file=false, caption=true, description=親継承）
-- [ ] T056 `make test` FAIL (RED) を確認
-- [ ] T057 RED出力を生成: specs/002-book-md-structure/red-tests/ph4-test.md
+- [x] T050 [P] [US3] 図コメント解析テストを実装: tests/book_converter/test_parser.py（`<!-- FIGURE: path -->` パターン）
+- [x] T051 [P] [US3] 図説明文解析テストを実装: tests/book_converter/test_parser.py（図コメント後のテキストをdescriptionに）
+- [x] T052 [P] [US3] ページメタデータ解析テストを実装: tests/book_converter/test_parser.py（`N / M` パターン、type判定）
+- [x] T053 [P] [US3] Figure XML変換テストを実装: tests/book_converter/test_transformer.py（`<figure readAloud="optional">` 生成）
+- [x] T054 [P] [US3] PageMetadata XML変換テストを実装: tests/book_converter/test_transformer.py（`<pageMetadata type="chapter-page">` 生成）
+- [x] T055 [P] [US3] readAloud属性継承テストを実装: tests/book_converter/test_transformer.py（file=false, caption=true, description=親継承）
+- [x] T056 `make test` FAIL (RED) を確認
+- [x] T057 RED出力を生成: specs/002-book-md-structure/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
