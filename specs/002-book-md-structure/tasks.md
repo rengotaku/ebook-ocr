@@ -173,17 +173,17 @@
 
 ### Input
 
-- [ ] T068 セットアップ分析を読む: specs/002-book-md-structure/tasks/ph1-output.md
-- [ ] T069 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph4-output.md
+- [x] T068 セットアップ分析を読む: specs/002-book-md-structure/tasks/ph1-output.md
+- [x] T069 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph4-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T070 [P] CLI引数テストを実装: tests/book_converter/test_cli.py（input.md output.xml --verbose --quiet）
-- [ ] T071 [P] エラーハンドリングテストを実装: tests/book_converter/test_parser.py（警告継続、XMLコメントマーク）
-- [ ] T072 [P] E2Eテストを実装: tests/book_converter/test_e2e.py（sample_book.md → expected_book.xml 比較）
-- [ ] T073 [P] エラー率警告テストを実装: tests/book_converter/test_cli.py（10%超過時の警告メッセージ）
-- [ ] T074 `make test` FAIL (RED) を確認
-- [ ] T075 RED出力を生成: specs/002-book-md-structure/red-tests/ph5-test.md
+- [x] T070 [P] CLI引数テストを実装: tests/book_converter/test_cli.py（input.md output.xml --verbose --quiet）
+- [x] T071 [P] エラーハンドリングテストを実装: tests/book_converter/test_parser.py（警告継続、XMLコメントマーク）
+- [x] T072 [P] E2Eテストを実装: tests/book_converter/test_e2e.py（sample_book.md → expected_book.xml 比較）
+- [x] T073 [P] エラー率警告テストを実装: tests/book_converter/test_cli.py（10%超過時の警告メッセージ）
+- [x] T074 `make test` FAIL (RED) を確認
+- [x] T075 RED出力を生成: specs/002-book-md-structure/red-tests/ph5-test.md
 
 ### Implementation (GREEN)
 
