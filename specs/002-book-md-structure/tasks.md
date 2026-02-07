@@ -89,20 +89,20 @@
 
 ### Input
 
-- [ ] T026 セットアップ分析を読む: specs/002-book-md-structure/tasks/ph1-output.md
-- [ ] T027 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph2-output.md
+- [x] T026 セットアップ分析を読む: specs/002-book-md-structure/tasks/ph1-output.md
+- [x] T027 前フェーズ出力を読む: specs/002-book-md-structure/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T028 [P] [US2] 見出し解析テストを実装: tests/book_converter/test_parser.py（`#`, `##`, `###` パターン、level 1-3）
-- [ ] T029 [P] [US2] 4階層以上の見出し警告テストを実装: tests/book_converter/test_parser.py（`####` → level=3 + 警告）
-- [ ] T030 [P] [US2] 段落解析テストを実装: tests/book_converter/test_parser.py（空行区切り、ContentElement生成）
-- [ ] T031 [P] [US2] リスト解析テストを実装: tests/book_converter/test_parser.py（`-` / `*` 項目）
-- [ ] T032 [P] [US2] Heading XML変換テストを実装: tests/book_converter/test_transformer.py（`<heading level="N">` 生成）
-- [ ] T033 [P] [US2] Content XML変換テストを実装: tests/book_converter/test_transformer.py（`<content>` 内に heading/paragraph/list）
-- [ ] T034 [P] [US2] 継続属性テストを実装: tests/book_converter/test_transformer.py（`continued="true"` ページ跨ぎ）
-- [ ] T035 `make test` FAIL (RED) を確認
-- [ ] T036 RED出力を生成: specs/002-book-md-structure/red-tests/ph3-test.md
+- [x] T028 [P] [US2] 見出し解析テストを実装: tests/book_converter/test_parser.py（`#`, `##`, `###` パターン、level 1-3）
+- [x] T029 [P] [US2] 4階層以上の見出し警告テストを実装: tests/book_converter/test_parser.py（`####` → level=3 + 警告）
+- [x] T030 [P] [US2] 段落解析テストを実装: tests/book_converter/test_parser.py（空行区切り、ContentElement生成）
+- [x] T031 [P] [US2] リスト解析テストを実装: tests/book_converter/test_parser.py（`-` / `*` 項目）
+- [x] T032 [P] [US2] Heading XML変換テストを実装: tests/book_converter/test_transformer.py（`<heading level="N">` 生成）
+- [x] T033 [P] [US2] Content XML変換テストを実装: tests/book_converter/test_transformer.py（`<content>` 内に heading/paragraph/list）
+- [x] T034 [P] [US2] 継続属性テストを実装: tests/book_converter/test_transformer.py（`continued="true"` ページ跨ぎ）
+- [x] T035 `make test` FAIL (RED) を確認
+- [x] T036 RED出力を生成: specs/002-book-md-structure/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 

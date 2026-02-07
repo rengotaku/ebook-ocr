@@ -260,3 +260,276 @@ class TestPageXMLStructure:
         xml_string = tostring(element, encoding="unicode")
         assert xml_string.startswith("<page ")
         assert "</page>" in xml_string
+
+
+# =============================================================================
+# Phase 3: User Story 2 - TTSコンテンツ階層と構造解析
+# =============================================================================
+
+
+class TestTransformHeading:
+    """T032: Heading XML変換テスト (<heading level="N"> 生成)"""
+
+    def test_transform_heading_level_1(self) -> None:
+        """レベル1の見出しをXMLに変換"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=1, text="第1章 はじめに")
+        element = transform_heading(heading)
+
+        assert element.tag == "heading"
+        assert element.get("level") == "1"
+        assert element.text == "第1章 はじめに"
+
+    def test_transform_heading_level_2(self) -> None:
+        """レベル2の見出しをXMLに変換"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=2, text="1.1 概要")
+        element = transform_heading(heading)
+
+        assert element.get("level") == "2"
+        assert element.text == "1.1 概要"
+
+    def test_transform_heading_level_3(self) -> None:
+        """レベル3の見出しをXMLに変換"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=3, text="詳細説明")
+        element = transform_heading(heading)
+
+        assert element.get("level") == "3"
+        assert element.text == "詳細説明"
+
+    def test_transform_heading_returns_element(self) -> None:
+        """戻り値はElement型"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=1, text="テスト")
+        element = transform_heading(heading)
+
+        assert isinstance(element, Element)
+
+    def test_transform_heading_preserves_unicode(self) -> None:
+        """Unicode文字を正しく保持"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=1, text="日本語見出し「テスト」")
+        element = transform_heading(heading)
+
+        assert element.text == "日本語見出し「テスト」"
+
+    def test_transform_heading_xml_serialization(self) -> None:
+        """XMLにシリアライズ可能"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=2, text="章タイトル")
+        element = transform_heading(heading)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert "<heading" in xml_string
+        assert 'level="2"' in xml_string
+        assert "章タイトル" in xml_string
+
+
+class TestTransformContent:
+    """T033: Content XML変換テスト (<content>内にheading/paragraph/list)"""
+
+    def test_transform_content_with_heading(self) -> None:
+        """見出しを含むコンテンツを変換"""
+        from src.book_converter.transformer import transform_content
+
+        content = Content(
+            elements=(Heading(level=1, text="タイトル"),)
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        assert element.tag == "content"
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.get("level") == "1"
+        assert heading_elem.text == "タイトル"
+
+    def test_transform_content_with_paragraph(self) -> None:
+        """段落を含むコンテンツを変換"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="本文テキストです。"),)
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.text == "本文テキストです。"
+
+    def test_transform_content_with_list(self) -> None:
+        """リストを含むコンテンツを変換"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import List
+
+        content = Content(
+            elements=(List(items=("項目1", "項目2", "項目3")),)
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        list_elem = element.find("list")
+        assert list_elem is not None
+        items = list_elem.findall("item")
+        assert len(items) == 3
+        assert items[0].text == "項目1"
+        assert items[1].text == "項目2"
+        assert items[2].text == "項目3"
+
+    def test_transform_content_mixed_elements(self) -> None:
+        """見出し、段落、リストが混在するコンテンツ"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph, List
+
+        content = Content(
+            elements=(
+                Heading(level=1, text="章タイトル"),
+                Paragraph(text="導入文です。"),
+                List(items=("ポイント1", "ポイント2")),
+                Heading(level=2, text="節タイトル"),
+                Paragraph(text="詳細説明です。"),
+            )
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        children = list(element)
+        assert len(children) == 5
+
+        # 順序が保持されているか確認
+        assert children[0].tag == "heading"
+        assert children[1].tag == "paragraph"
+        assert children[2].tag == "list"
+        assert children[3].tag == "heading"
+        assert children[4].tag == "paragraph"
+
+    def test_transform_content_empty_returns_none(self) -> None:
+        """空のコンテンツはNoneを返す"""
+        from src.book_converter.transformer import transform_content
+
+        content = Content(elements=())
+        element = transform_content(content)
+
+        assert element is None
+
+    def test_transform_content_preserves_element_order(self) -> None:
+        """要素の順序を保持"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(
+                Paragraph(text="段落1"),
+                Heading(level=2, text="見出し"),
+                Paragraph(text="段落2"),
+            )
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        children = list(element)
+        assert children[0].tag == "paragraph"
+        assert children[0].text == "段落1"
+        assert children[1].tag == "heading"
+        assert children[2].tag == "paragraph"
+        assert children[2].text == "段落2"
+
+
+class TestTransformContentContinued:
+    """T034: 継続属性テスト (continued="true" ページ跨ぎ)"""
+
+    def test_content_with_continued_true(self) -> None:
+        """continued=trueのコンテンツを変換"""
+        from src.book_converter.transformer import transform_content_with_continued
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="継続する本文"),)
+        )
+        element = transform_content_with_continued(content, continued=True)
+
+        assert element is not None
+        assert element.get("continued") == "true"
+
+    def test_content_with_continued_false(self) -> None:
+        """continued=falseの場合は属性なし"""
+        from src.book_converter.transformer import transform_content_with_continued
+        from src.book_converter.models import Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="通常の本文"),)
+        )
+        element = transform_content_with_continued(content, continued=False)
+
+        assert element is not None
+        assert element.get("continued") is None
+
+    def test_page_continued_attribute(self) -> None:
+        """ページのcontinued属性が正しく設定される"""
+        page = Page(
+            number="5",
+            source_file="page_0005.png",
+            content=Content(elements=()),
+            continued=True,
+        )
+
+        element = transform_page(page)
+
+        assert element.get("continued") == "true"
+
+    def test_page_not_continued(self) -> None:
+        """ページがcontinued=falseの場合は属性なし"""
+        page = Page(
+            number="1",
+            source_file="page_0001.png",
+            content=Content(elements=()),
+            continued=False,
+        )
+
+        element = transform_page(page)
+
+        assert element.get("continued") is None
+
+    def test_continued_paragraph_in_content(self) -> None:
+        """ページ跨ぎの段落をXMLで表現"""
+        from src.book_converter.transformer import transform_content_with_continued
+        from src.book_converter.models import Paragraph
+
+        # ページの先頭で前ページからの継続を示す
+        content = Content(
+            elements=(
+                Paragraph(text="（前ページからの続き）本文が続きます。"),
+            )
+        )
+        element = transform_content_with_continued(content, continued=True)
+
+        assert element is not None
+        assert element.get("continued") == "true"
+        para = element.find("paragraph")
+        assert para is not None
+        assert "続き" in para.text
+
+    def test_continued_heading_spanning_pages(self) -> None:
+        """見出しの後に続くページ"""
+        from src.book_converter.transformer import transform_content_with_continued
+        from src.book_converter.models import Paragraph
+
+        # 前ページで見出しが表示され、このページで本文が続く場合
+        content = Content(
+            elements=(
+                Paragraph(text="前ページの見出しに続く本文です。"),
+            )
+        )
+        element = transform_content_with_continued(content, continued=True)
+
+        assert element is not None
+        assert element.get("continued") == "true"
