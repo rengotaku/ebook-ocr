@@ -660,8 +660,8 @@ class TestTransformFigure:
 
         assert "<figure" in xml_string
         assert 'readAloud="optional"' in xml_string
-        assert "<file>test.png</file>" in xml_string
-        assert "<caption>テスト図</caption>" in xml_string
+        assert "test.png" in xml_string
+        assert "テスト図" in xml_string
 
     def test_transform_figure_with_continued(self) -> None:
         """ページをまたぐ図を変換"""

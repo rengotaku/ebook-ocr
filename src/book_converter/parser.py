@@ -15,6 +15,8 @@ from src.book_converter.models import (
     Heading,
     Paragraph,
     List,
+    Figure,
+    PageMetadata,
 )
 
 
@@ -219,6 +221,149 @@ def parse_list(lines: list[str]) -> List | None:
     from src.book_converter.models import List
 
     return List(items=tuple(items), read_aloud=True)
+
+
+def parse_figure_comment(line: str) -> str | None:
+    """Parse a figure comment line to extract the file path.
+
+    Args:
+        line: A line from the Markdown file.
+
+    Returns:
+        File path if the line is a figure comment, None otherwise.
+
+    Example:
+        >>> parse_figure_comment("<!-- FIGURE: path/to/image.png -->")
+        "path/to/image.png"
+        >>> parse_figure_comment("<!-- figure: image.jpg -->")
+        "image.jpg"
+    """
+    import re
+
+    # Pattern: <!-- FIGURE: path --> (case insensitive)
+    pattern = r"<!--\s*[Ff][Ii][Gg][Uu][Rr][Ee]:\s*(.+?)\s*-->"
+    match = re.search(pattern, line)
+
+    if match:
+        path = match.group(1).strip()
+        return path if path else None
+
+    return None
+
+
+def parse_figure(lines: list[str]) -> Figure | None:
+    """Parse figure comment and description into a Figure object.
+
+    Args:
+        lines: List of lines that may contain a figure comment and description.
+
+    Returns:
+        Figure object if a figure comment is found, None otherwise.
+
+    Example:
+        >>> lines = [
+        ...     "<!-- FIGURE: image.png -->",
+        ...     "**図のタイトル**",
+        ...     "図の説明文です。"
+        ... ]
+        >>> fig = parse_figure(lines)
+        >>> fig.file
+        'image.png'
+    """
+    if not lines:
+        return None
+
+    # Find figure comment
+    file_path = None
+    for line in lines:
+        file_path = parse_figure_comment(line)
+        if file_path:
+            break
+
+    if not file_path:
+        return None
+
+    # Extract caption and description from remaining lines
+    caption = ""
+    description_lines = []
+
+    for line in lines:
+        # Skip the figure comment line
+        if parse_figure_comment(line):
+            continue
+
+        # Empty lines
+        if not line.strip():
+            continue
+
+        # Check for bold text (caption): **text**
+        import re
+
+        bold_pattern = r"\*\*(.+?)\*\*"
+        match = re.search(bold_pattern, line)
+
+        if match and not caption:
+            # First bold text becomes caption
+            caption = match.group(1)
+        elif line.strip():
+            # Other non-empty lines become description
+            description_lines.append(line.strip())
+
+    description = "\n".join(description_lines) if description_lines else ""
+
+    return Figure(
+        file=file_path,
+        caption=caption,
+        description=description,
+        read_aloud="optional",
+    )
+
+
+def parse_page_metadata(text: str) -> PageMetadata | None:
+    """Parse page metadata from text.
+
+    Args:
+        text: Text that may contain page metadata (e.g., "はじめに 1 / 3").
+
+    Returns:
+        PageMetadata object if valid format is found, None otherwise.
+
+    Example:
+        >>> parse_page_metadata("はじめに 1 / 3")
+        PageMetadata(text='はじめに 1 / 3', meta_type='chapter-page',
+                     section_name='はじめに', current=1, total=3)
+        >>> parse_page_metadata("第1節 5 / 10")
+        PageMetadata(text='第1節 5 / 10', meta_type='section-page', ...)
+    """
+    import re
+
+    # Pattern: [optional section name] N / M
+    # section name is optional, numbers are required
+    pattern = r"^(.*?)\s*(\d+)\s*/\s*(\d+)\s*$"
+    match = re.match(pattern, text.strip())
+
+    if not match:
+        return None
+
+    section_name = match.group(1).strip()
+    current = int(match.group(2))
+    total = int(match.group(3))
+
+    # Determine meta_type based on section_name
+    meta_type = "chapter-page"  # Default
+    if "節" in section_name:
+        meta_type = "section-page"
+    elif not section_name:
+        # No section name means unknown type
+        meta_type = "chapter-page"
+
+    return PageMetadata(
+        text=text,
+        meta_type=meta_type,
+        section_name=section_name,
+        current=current,
+        total=total,
+    )
 
 
 def parse_pages(input_path: Path) -> Iterator[Page]:

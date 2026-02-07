@@ -14,6 +14,8 @@ from src.book_converter.models import (
     Paragraph,
     Heading,
     List,
+    Figure,
+    PageMetadata,
 )
 
 
@@ -159,5 +161,80 @@ def transform_content_with_continued(
 
     if continued:
         elem.set("continued", "true")
+
+    return elem
+
+
+def transform_figure(figure: Figure) -> Element:
+    """Transform a Figure object into an XML Element.
+
+    Args:
+        figure: The Figure object to transform.
+
+    Returns:
+        An XML Element representing the figure.
+
+    Example:
+        >>> fig = Figure(file="image.png", caption="Title", description="Desc")
+        >>> elem = transform_figure(fig)
+        >>> elem.tag
+        'figure'
+        >>> elem.get("readAloud")
+        'optional'
+    """
+    elem = Element("figure")
+    elem.set("readAloud", figure.read_aloud)
+
+    if figure.continued:
+        elem.set("continued", "true")
+
+    # file element (always readAloud="false")
+    file_elem = Element("file")
+    file_elem.text = figure.file
+    file_elem.set("readAloud", "false")
+    elem.append(file_elem)
+
+    # caption element (readAloud="true" if present)
+    if figure.caption:
+        caption_elem = Element("caption")
+        caption_elem.text = figure.caption
+        caption_elem.set("readAloud", "true")
+        elem.append(caption_elem)
+
+    # description element (inherits from parent)
+    if figure.description:
+        desc_elem = Element("description")
+        desc_elem.text = figure.description
+        elem.append(desc_elem)
+
+    return elem
+
+
+def transform_page_metadata(metadata: PageMetadata | None) -> Element | None:
+    """Transform a PageMetadata object into an XML Element.
+
+    Args:
+        metadata: The PageMetadata object to transform.
+
+    Returns:
+        An XML Element representing the page metadata, or None if input is None.
+
+    Example:
+        >>> meta = PageMetadata(text="3 / 7", meta_type="chapter-page")
+        >>> elem = transform_page_metadata(meta)
+        >>> elem.tag
+        'pageMetadata'
+        >>> elem.get("type")
+        'chapter-page'
+        >>> elem.get("readAloud")
+        'false'
+    """
+    if metadata is None:
+        return None
+
+    elem = Element("pageMetadata")
+    elem.set("type", metadata.meta_type)
+    elem.set("readAloud", "false")  # Always false for metadata
+    elem.text = metadata.text
 
     return elem

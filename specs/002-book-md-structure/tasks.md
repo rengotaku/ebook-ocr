@@ -149,19 +149,19 @@
 
 ### Implementation (GREEN)
 
-- [ ] T058 REDテストを読む: specs/002-book-md-structure/red-tests/ph4-test.md
-- [ ] T059 [P] [US3] `src/book_converter/parser.py` にparse_figure関数を実装（図コメント+説明文抽出）
-- [ ] T060 [P] [US3] `src/book_converter/parser.py` にparse_page_metadata関数を実装（`N / M` 形式、type判定）
-- [ ] T061 [P] [US3] `src/book_converter/transformer.py` にtransform_figure関数を実装（Figure→XML）
-- [ ] T062 [P] [US3] `src/book_converter/transformer.py` にtransform_page_metadata関数を実装（PageMetadata→XML）
-- [ ] T063 [P] [US3] `src/book_converter/transformer.py` にreadAloud属性処理を実装（true/false/optional）
-- [ ] T064 [US3] コンポーネント統合（T059-T063の結合確認）
-- [ ] T065 `make test` PASS (GREEN) を確認
+- [x] T058 REDテストを読む: specs/002-book-md-structure/red-tests/ph4-test.md
+- [x] T059 [P] [US3] `src/book_converter/parser.py` にparse_figure関数を実装（図コメント+説明文抽出）
+- [x] T060 [P] [US3] `src/book_converter/parser.py` にparse_page_metadata関数を実装（`N / M` 形式、type判定）
+- [x] T061 [P] [US3] `src/book_converter/transformer.py` にtransform_figure関数を実装（Figure→XML）
+- [x] T062 [P] [US3] `src/book_converter/transformer.py` にtransform_page_metadata関数を実装（PageMetadata→XML）
+- [x] T063 [P] [US3] `src/book_converter/transformer.py` にreadAloud属性処理を実装（true/false/optional）
+- [x] T064 [US3] コンポーネント統合（T059-T063の結合確認）
+- [x] T065 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T066 `make test` で全テスト通過を確認（US1, US2リグレッションなし）
-- [ ] T067 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph4-output.md
+- [x] T066 `make test` で全テスト通過を確認（US1, US2リグレッションなし）
+- [x] T067 フェーズ出力を生成: specs/002-book-md-structure/tasks/ph4-output.md
 
 **チェックポイント**: User Stories 1, 2, 3はすべて独立して動作
 
