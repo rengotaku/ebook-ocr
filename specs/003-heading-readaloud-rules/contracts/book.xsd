@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Book XML Schema - Extended for heading readAloud attribute
+  Feature: 003-heading-readaloud-rules
+  Date: 2026-02-08
+
+  Changes from 002-book-md-structure:
+  - Added readAloud attribute to heading element (line 82)
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified">
+
+  <!-- Root Element -->
+  <xs:element name="book">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="metadata" minOccurs="0"/>
+        <xs:element ref="page" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Book Metadata -->
+  <xs:element name="metadata">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="title" type="xs:string"/>
+        <xs:element name="isbn" type="xs:string" minOccurs="0"/>
+        <xs:element name="sourceFormat" type="xs:string" minOccurs="0"/>
+        <xs:element name="conversionDate" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Page Element -->
+  <xs:element name="page">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="pageAnnouncement" minOccurs="0"/>
+        <xs:element ref="figure" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="content"/>
+        <xs:element ref="pageMetadata" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="number" type="xs:string" use="required"/>
+      <xs:attribute name="sourceFile" type="xs:string" use="required"/>
+      <xs:attribute name="continued" type="xs:boolean" default="false"/>
+      <xs:attribute name="type" type="pageTypeEnum" default="normal"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Page Type Enumeration -->
+  <xs:simpleType name="pageTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="normal"/>
+      <xs:enumeration value="cover"/>
+      <xs:enumeration value="colophon"/>
+      <xs:enumeration value="toc"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Page Announcement -->
+  <xs:element name="pageAnnouncement">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="format" type="xs:string" default="simple"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Content Element -->
+  <xs:element name="content">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="heading"/>
+        <xs:element ref="paragraph"/>
+        <xs:element ref="list"/>
+      </xs:choice>
+      <xs:attribute name="readAloud" type="xs:boolean" default="true"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Heading Element (UPDATED: added readAloud attribute) -->
+  <xs:element name="heading">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="level" type="headingLevelType" use="required"/>
+          <!-- NEW: readAloud attribute for TTS control -->
+          <xs:attribute name="readAloud" type="xs:boolean" default="true"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Heading Level Type (1-3, or empty for error) -->
+  <xs:simpleType name="headingLevelType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[123]?"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Paragraph Element -->
+  <xs:element name="paragraph">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="readAloud" type="xs:boolean" default="true"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- List Element -->
+  <xs:element name="list">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="item" type="xs:string" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="readAloud" type="xs:boolean" default="true"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Figure Element -->
+  <xs:element name="figure">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="file" type="xs:string"/>
+        <xs:element name="caption" type="xs:string" minOccurs="0"/>
+        <xs:element name="description" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="readAloud" type="readAloudEnum" default="optional"/>
+      <xs:attribute name="continued" type="xs:boolean" default="false"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Read Aloud Enumeration -->
+  <xs:simpleType name="readAloudEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="true"/>
+      <xs:enumeration value="false"/>
+      <xs:enumeration value="optional"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Page Metadata Element -->
+  <xs:element name="pageMetadata">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="type" type="pageMetadataTypeEnum" default="chapter-page"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Page Metadata Type Enumeration -->
+  <xs:simpleType name="pageMetadataTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="chapter-page"/>
+      <xs:enumeration value="section-page"/>
+      <xs:enumeration value="unknown"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- TOC Element (Table of Contents) -->
+  <xs:element name="toc">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tocItem" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- TOC Item Element -->
+  <xs:element name="tocItem">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="level" type="headingLevelType"/>
+          <xs:attribute name="page" type="xs:string"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>
