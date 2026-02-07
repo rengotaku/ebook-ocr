@@ -27,31 +27,17 @@ while [ $i -le $# ]; do
             fi
             SHORT_NAME="$next_arg"
             ;;
-        --number)
-            if [ $((i + 1)) -gt $# ]; then
-                echo 'Error: --number requires a value' >&2
-                exit 1
-            fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            if [[ "$next_arg" == --* ]]; then
-                echo 'Error: --number requires a value' >&2
-                exit 1
-            fi
-            BRANCH_NUMBER="$next_arg"
-            ;;
-        --help|-h) 
-            echo "Usage: $0 [--json] [--short-name <name>] [--number N] <feature_description>"
+        --help|-h)
+            echo "Usage: $0 [--json] [--short-name <name>] <feature_description>"
             echo ""
             echo "Options:"
             echo "  --json              Output in JSON format"
             echo "  --short-name <name> Provide a custom short name (2-4 words) for the branch"
-            echo "  --number N          Specify branch number manually (overrides auto-detection)"
             echo "  --help, -h          Show this help message"
             echo ""
             echo "Examples:"
             echo "  $0 'Add user authentication system' --short-name 'user-auth'"
-            echo "  $0 'Implement OAuth2 integration for API' --number 5"
+            echo "  $0 'Implement OAuth2 integration for API'"
             exit 0
             ;;
         *) 
@@ -63,7 +49,7 @@ done
 
 FEATURE_DESCRIPTION="${ARGS[*]}"
 if [ -z "$FEATURE_DESCRIPTION" ]; then
-    echo "Usage: $0 [--json] [--short-name <name>] [--number N] <feature_description>" >&2
+    echo "Usage: $0 [--json] [--short-name <name>] <feature_description>" >&2
     exit 1
 fi
 
@@ -147,6 +133,50 @@ check_existing_branches() {
 
     # Return next number
     echo $((max_num + 1))
+}
+
+# Function to check if a branch name already exists (local or remote)
+branch_exists() {
+    local branch_name="$1"
+    # Check local branches
+    if git show-ref --verify --quiet "refs/heads/$branch_name" 2>/dev/null; then
+        return 0
+    fi
+    # Check remote branches (all remotes)
+    if git show-ref --quiet "refs/remotes/*/$branch_name" 2>/dev/null; then
+        return 0
+    fi
+    # Also check with pattern matching for remotes
+    if git branch -a 2>/dev/null | grep -q "remotes/[^/]*/\?$branch_name$"; then
+        return 0
+    fi
+    return 1
+}
+
+# Function to check if specs directory already exists
+specs_exists() {
+    local specs_dir="$1"
+    local branch_name="$2"
+    [ -d "$specs_dir/$branch_name" ]
+}
+
+# Function to check for collision (branch or specs already exists)
+check_collision() {
+    local specs_dir="$1"
+    local branch_name="$2"
+    local has_git="$3"
+
+    # Check specs directory
+    if specs_exists "$specs_dir" "$branch_name"; then
+        return 0
+    fi
+
+    # Check branch (only if git is available)
+    if [ "$has_git" = true ] && branch_exists "$branch_name"; then
+        return 0
+    fi
+
+    return 1
 }
 
 # Function to clean and format a branch name
@@ -234,45 +264,76 @@ else
     BRANCH_SUFFIX=$(generate_branch_name "$FEATURE_DESCRIPTION")
 fi
 
-# Determine branch number
-if [ -z "$BRANCH_NUMBER" ]; then
-    if [ "$HAS_GIT" = true ]; then
-        # Check existing branches on remotes
-        BRANCH_NUMBER=$(check_existing_branches "$SPECS_DIR")
-    else
-        # Fall back to local directory check
-        HIGHEST=$(get_highest_from_specs "$SPECS_DIR")
-        BRANCH_NUMBER=$((HIGHEST + 1))
-    fi
+# Determine branch number (always auto-detect)
+if [ "$HAS_GIT" = true ]; then
+    # Check existing branches on remotes
+    BRANCH_NUMBER=$(check_existing_branches "$SPECS_DIR")
+else
+    # Fall back to local directory check
+    HIGHEST=$(get_highest_from_specs "$SPECS_DIR")
+    BRANCH_NUMBER=$((HIGHEST + 1))
 fi
 
-# Force base-10 interpretation to prevent octal conversion (e.g., 010 → 8 in octal, but should be 10 in decimal)
-FEATURE_NUM=$(printf "%03d" "$((10#$BRANCH_NUMBER))")
-BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
+# Retry loop to handle race conditions (max 10 retries)
+MAX_RETRIES=10
+RETRY_COUNT=0
 
-# GitHub enforces a 244-byte limit on branch names
-# Validate and truncate if necessary
-MAX_BRANCH_LENGTH=244
-if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
-    # Calculate how much we need to trim from suffix
-    # Account for: feature number (3) + hyphen (1) = 4 chars
-    MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - 4))
-    
-    # Truncate suffix at word boundary if possible
-    TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
-    # Remove trailing hyphen if truncation created one
-    TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
-    
-    ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
-    BRANCH_NAME="${FEATURE_NUM}-${TRUNCATED_SUFFIX}"
-    
-    >&2 echo "[specify] Warning: Branch name exceeded GitHub's 244-byte limit"
-    >&2 echo "[specify] Original: $ORIGINAL_BRANCH_NAME (${#ORIGINAL_BRANCH_NAME} bytes)"
-    >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    # Force base-10 interpretation to prevent octal conversion (e.g., 010 → 8 in octal, but should be 10 in decimal)
+    FEATURE_NUM=$(printf "%03d" "$((10#$BRANCH_NUMBER))")
+    BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
+
+    # GitHub enforces a 244-byte limit on branch names
+    # Validate and truncate if necessary
+    MAX_BRANCH_LENGTH=244
+    if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
+        # Calculate how much we need to trim from suffix
+        # Account for: feature number (3) + hyphen (1) = 4 chars
+        MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - 4))
+
+        # Truncate suffix at word boundary if possible
+        TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
+        # Remove trailing hyphen if truncation created one
+        TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
+
+        ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
+        BRANCH_NAME="${FEATURE_NUM}-${TRUNCATED_SUFFIX}"
+
+        >&2 echo "[specify] Warning: Branch name exceeded GitHub's 244-byte limit"
+        >&2 echo "[specify] Original: $ORIGINAL_BRANCH_NAME (${#ORIGINAL_BRANCH_NAME} bytes)"
+        >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
+    fi
+
+    # Check for collision before creating
+    if check_collision "$SPECS_DIR" "$BRANCH_NAME" "$HAS_GIT"; then
+        >&2 echo "[specify] Warning: Collision detected for $BRANCH_NAME, incrementing number..."
+        BRANCH_NUMBER=$((BRANCH_NUMBER + 1))
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        continue
+    fi
+
+    # No collision, proceed with creation
+    break
+done
+
+if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+    >&2 echo "[specify] Error: Failed to find available branch number after $MAX_RETRIES retries"
+    exit 1
 fi
 
 if [ "$HAS_GIT" = true ]; then
-    git checkout -b "$BRANCH_NAME"
+    if ! git checkout -b "$BRANCH_NAME" 2>/dev/null; then
+        # Branch creation failed (possible race condition), try incrementing
+        >&2 echo "[specify] Warning: Branch creation failed, retrying with next number..."
+        BRANCH_NUMBER=$((BRANCH_NUMBER + 1))
+        FEATURE_NUM=$(printf "%03d" "$((10#$BRANCH_NUMBER))")
+        BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
+
+        if ! git checkout -b "$BRANCH_NAME"; then
+            >&2 echo "[specify] Error: Failed to create branch $BRANCH_NAME"
+            exit 1
+        fi
+    fi
 else
     >&2 echo "[specify] Warning: Git repository not detected; skipped branch creation for $BRANCH_NAME"
 fi

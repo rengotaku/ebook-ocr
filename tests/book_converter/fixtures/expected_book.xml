@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<book>
+  <metadata>
+    <title>サンプル書籍タイトル</title>
+    <sourceFormat>markdown</sourceFormat>
+  </metadata>
+
+  <page number="1" sourceFile="page_0001.png">
+    <pageAnnouncement format="simple">1ページ</pageAnnouncement>
+
+    <figure readAloud="optional">
+      <file>figures/page_0001_figure1.png</file>
+      <description>表紙の画像</description>
+    </figure>
+
+    <content readAloud="true">
+      <heading level="1">サンプル書籍タイトル</heading>
+    </content>
+
+    <pageMetadata type="chapter-page">1 / 1</pageMetadata>
+  </page>
+
+  <page number="2" sourceFile="page_0002.png">
+    <pageAnnouncement format="simple">2ページ</pageAnnouncement>
+
+    <content readAloud="true">
+      <heading level="2">第1章 はじめに</heading>
+      <paragraph>本書は、サンプルテキストです。
+この段落は複数行にわたります。</paragraph>
+      <list>
+        <item>リスト項目1</item>
+        <item>リスト項目2</item>
+        <item>リスト項目3</item>
+      </list>
+    </content>
+
+    <pageMetadata type="chapter-page">はじめに 1 / 3</pageMetadata>
+  </page>
+
+  <page number="3" sourceFile="page_0003.png">
+    <pageAnnouncement format="simple">3ページ</pageAnnouncement>
+
+    <content readAloud="true">
+      <heading level="3">1.1 概要</heading>
+      <paragraph>この節では概要を説明します。</paragraph>
+      <paragraph>概要の本文がここに続きます。
+長いテキストの例です。</paragraph>
+    </content>
+
+    <pageMetadata type="chapter-page">はじめに 2 / 3</pageMetadata>
+  </page>
+
+  <page number="4" sourceFile="page_0004.png">
+    <pageAnnouncement format="simple">4ページ</pageAnnouncement>
+
+    <figure readAloud="optional">
+      <file>figures/page_0004_diagram.png</file>
+      <description>システム構成図を示す。</description>
+    </figure>
+
+    <content readAloud="true">
+      <heading level="3">1.2 目的</heading>
+      <paragraph>本書の目的は以下の通りです。</paragraph>
+      <list>
+        <item>目的1: サンプルを示す</item>
+        <item>目的2: 構造を説明する</item>
+      </list>
+    </content>
+
+    <pageMetadata type="chapter-page">はじめに 3 / 3</pageMetadata>
+  </page>
+
+  <page number="5" sourceFile="page_0005.png">
+    <pageAnnouncement format="simple">5ページ</pageAnnouncement>
+
+    <content readAloud="true">
+      <heading level="2">第2章 詳細説明</heading>
+      <paragraph>第2章の内容が始まります。</paragraph>
+      <!-- ERROR: HEADING_LEVEL_EXCEEDED - 4階層以上の見出しは level=3 に統合されました -->
+      <heading level="3">深い見出し</heading>
+      <paragraph>これは4階層の見出しです。警告が出るはずです。</paragraph>
+    </content>
+
+    <pageMetadata type="chapter-page">詳細説明 1 / 5</pageMetadata>
+  </page>
+</book>

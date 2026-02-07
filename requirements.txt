@@ -4,3 +4,4 @@ doclayout-yolo
 requests
 pyyaml
 pytest
+pytest-cov

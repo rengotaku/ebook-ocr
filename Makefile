@@ -21,7 +21,7 @@ MIN_CONFIDENCE ?= $(shell $(call CFG,min_confidence))
 # Usage: make ocr HASHDIR=output/a3f8c2d1e5b7f9c0
 HASHDIR ?=
 
-.PHONY: help setup run extract ocr test clean clean-all
+.PHONY: help setup run extract ocr test test-book-converter test-cov convert-sample clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -45,6 +45,15 @@ ocr: setup ## Run DeepSeek-OCR on pages (requires HASHDIR)
 
 test: setup ## Run tests
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v
+
+test-book-converter: setup ## Run book_converter tests
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/book_converter/ -v
+
+test-cov: setup ## Run tests with coverage
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
+
+convert-sample: setup ## Convert sample book.md to XML
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli tests/book_converter/fixtures/sample_book.md output/sample_book.xml
 
 clean: ## Remove output files (keep venv)
 	rm -rf $(OUTPUT)
