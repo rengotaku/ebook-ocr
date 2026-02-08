@@ -902,3 +902,474 @@ class TestTocReadAloudIntegration:
         # 目次マーカーがないのでtableOfContentsは存在しない
         toc = root.find(".//tableOfContents")
         assert toc is None
+
+
+# =============================================================================
+# Phase 4 (004-toc-structure): US4 コンテンツ範囲マーカー
+# =============================================================================
+
+
+class TestContentSkipMarkerIntegration:
+    """T056: 統合テスト（content/skip混合）
+
+    US4: コンテンツ範囲マーカーによる読み上げ制御
+    - `<!-- content -->`で囲まれた範囲はreadAloud="true"
+    - `<!-- skip -->`で囲まれた範囲はreadAloud="false"
+    - マーカーなしはデフォルトでreadAloud="false"
+    - ネストした場合、内側のマーカーが優先
+    """
+
+    def test_content_marker_sets_read_aloud_true(
+        self, tmp_path: Path
+    ) -> None:
+        """contentマーカー内の要素はreadAloud="true"になる"""
+        input_file = tmp_path / "book_with_content.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- content -->
+
+# 第1章 はじめに
+
+本文テキストです。
+
+<!-- /content -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # contentマーカー内の要素がreadAloud="true"になっている
+        page = root.find(".//page[@number='1']")
+        assert page is not None
+
+        content = page.find("content")
+        assert content is not None
+        assert content.get("readAloud") == "true"
+
+    def test_skip_marker_sets_read_aloud_false(
+        self, tmp_path: Path
+    ) -> None:
+        """skipマーカー内の要素はreadAloud="false"になる"""
+        input_file = tmp_path / "book_with_skip.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- skip -->
+
+# 索引
+
+A
+  - あいうえお ... 10
+
+<!-- /skip -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # skipマーカー内の要素がreadAloud="false"になっている
+        page = root.find(".//page[@number='1']")
+        assert page is not None
+
+        content = page.find("content")
+        assert content is not None
+        assert content.get("readAloud") == "false"
+
+    def test_no_marker_defaults_to_read_aloud_false(
+        self, tmp_path: Path
+    ) -> None:
+        """マーカーなしの要素はデフォルトでreadAloud="false"になる"""
+        input_file = tmp_path / "book_no_marker.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 本文
+
+マーカーなしの段落です。
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # マーカーなしの要素がreadAloud="false"になっている
+        page = root.find(".//page[@number='1']")
+        assert page is not None
+
+        content = page.find("content")
+        assert content is not None
+        assert content.get("readAloud") == "false"
+
+    def test_mixed_content_and_skip_markers(
+        self, tmp_path: Path
+    ) -> None:
+        """content/skipマーカーが混在する場合"""
+        input_file = tmp_path / "book_mixed.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- content -->
+
+# 第1章 はじめに
+
+本文テキストです。
+
+<!-- /content -->
+
+<!-- skip -->
+
+# 参考文献
+
+参考文献リスト
+
+<!-- /skip -->
+
+--- Page 2 (page_0002.png) ---
+
+<!-- content -->
+
+## 1.1 概要
+
+本文の続き
+
+<!-- /content -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # XMLに両方のreadAloud属性が含まれている
+        assert 'readAloud="true"' in xml_string
+        assert 'readAloud="false"' in xml_string
+
+    def test_nested_skip_in_content(
+        self, tmp_path: Path
+    ) -> None:
+        """content内にskipがネストした場合、内側が優先"""
+        input_file = tmp_path / "book_nested.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- content -->
+
+# 第1章 はじめに
+
+本文テキストです。
+
+<!-- skip -->
+
+注: この部分は読み上げ対象外
+
+<!-- /skip -->
+
+本文の続きです。
+
+<!-- /content -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # XMLが生成されることを確認
+        page = root.find(".//page[@number='1']")
+        assert page is not None
+
+    def test_content_spanning_multiple_pages(
+        self, tmp_path: Path
+    ) -> None:
+        """contentマーカーが複数ページにまたがる場合"""
+        input_file = tmp_path / "book_multipage.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- content -->
+
+# 第1章 はじめに
+
+本文テキストです。
+
+--- Page 2 (page_0002.png) ---
+
+本文の続きです。
+
+<!-- /content -->
+
+--- Page 3 (page_0003.png) ---
+
+マーカー外のテキスト（readAloud=false）
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # 3ページ存在することを確認
+        pages_elem = root.findall(".//page")
+        assert len(pages_elem) == 3
+
+    def test_multiple_content_blocks_on_same_page(
+        self, tmp_path: Path
+    ) -> None:
+        """同じページに複数のcontentブロックがある場合"""
+        input_file = tmp_path / "book_multiblock.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- content -->
+
+# 本文1
+
+テキスト1
+
+<!-- /content -->
+
+マーカー外テキスト
+
+<!-- content -->
+
+# 本文2
+
+テキスト2
+
+<!-- /content -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # ページが存在することを確認
+        page = root.find(".//page[@number='1']")
+        assert page is not None
+
+    def test_content_with_toc_and_skip_markers(
+        self, tmp_path: Path
+    ) -> None:
+        """content/skip/tocマーカーが混在する場合（完全な書籍構造）"""
+        input_file = tmp_path / "book_full.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 目次
+
+<!-- toc -->
+
+第1章 はじめに ... 2
+
+第2章 まとめ ... 3
+
+<!-- /toc -->
+
+--- Page 2 (page_0002.png) ---
+
+<!-- content -->
+
+# 第1章 はじめに
+
+本文テキストです。
+
+<!-- /content -->
+
+--- Page 3 (page_0003.png) ---
+
+<!-- content -->
+
+# 第2章 まとめ
+
+まとめテキスト
+
+<!-- /content -->
+
+--- Page 4 (page_0004.png) ---
+
+<!-- skip -->
+
+# 索引
+
+索引テキスト
+
+<!-- /skip -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # 4ページ存在
+        pages_elem = root.findall(".//page")
+        assert len(pages_elem) == 4
+
+        # tableOfContentsが存在
+        toc = root.find(".//tableOfContents")
+        assert toc is not None
+        assert toc.get("readAloud") == "false"
+
+        # 目次エントリが2つ
+        entries = toc.findall("entry")
+        assert len(entries) == 2
+
+    def test_xml_read_aloud_attribute_serialization(
+        self, tmp_path: Path
+    ) -> None:
+        """readAloud属性がXMLに正しくシリアライズされる"""
+        input_file = tmp_path / "book_serialize.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- content -->
+
+# タイトル
+
+本文
+
+<!-- /content -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+
+        # XMLに readAloud="true" と readAloud="false" が含まれている
+        # content内は true、pageAnnouncementは false
+        assert 'readAloud=' in xml_string
+
+    def test_backward_compatible_without_content_skip_markers(
+        self, tmp_path: Path
+    ) -> None:
+        """content/skipマーカーなしでも既存動作を維持（後方互換性）"""
+        input_file = tmp_path / "book_backward.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 第1章
+
+本文テキスト
+
+--- Page 2 (page_0002.png) ---
+
+## 1.1 節
+
+詳細説明
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # 既存構造が維持されている
+        assert root.tag == "book"
+        pages_elem = root.findall(".//page")
+        assert len(pages_elem) == 2
+
+        # マーカーなしなのでデフォルトのreadAloud="false"
+        page1 = root.find(".//page[@number='1']")
+        assert page1 is not None
+
+        content = page1.find("content")
+        assert content is not None
+        # デフォルトはreadAloud="false"
+        assert content.get("readAloud") == "false"

@@ -136,20 +136,20 @@
 
 ### Input
 
-- [ ] T048 セットアップ分析を読み込み: specs/004-toc-structure/tasks/ph1-output.md
-- [ ] T049 前フェーズ出力を読み込み: specs/004-toc-structure/tasks/ph3-output.md
+- [x] T048 セットアップ分析を読み込み: specs/004-toc-structure/tasks/ph1-output.md
+- [x] T049 前フェーズ出力を読み込み: specs/004-toc-structure/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T050 [P] [US4] contentマーカー検出テストを実装: tests/book_converter/test_parser.py（`parse_content_marker()`）
-- [ ] T051 [P] [US4] skipマーカー検出テストを実装: tests/book_converter/test_parser.py
-- [ ] T052 [P] [US4] マーカー状態スタックテストを実装: tests/book_converter/test_parser.py（ネスト処理）
-- [ ] T053 [P] [US4] デフォルトreadAloud=falseテストを実装: tests/book_converter/test_transformer.py
-- [ ] T054 [P] [US4] contentマーカー内readAloud=trueテストを実装: tests/book_converter/test_transformer.py
-- [ ] T055 [P] [US4] skipマーカー内readAloud=falseテストを実装: tests/book_converter/test_transformer.py
-- [ ] T056 [P] [US4] 統合テスト（content/skip混合）を実装: tests/book_converter/test_integration.py
-- [ ] T057 `make test` FAIL を確認 (RED)
-- [ ] T058 RED出力を生成: specs/004-toc-structure/red-tests/ph4-test.md
+- [x] T050 [P] [US4] contentマーカー検出テストを実装: tests/book_converter/test_parser.py（`parse_content_marker()`）
+- [x] T051 [P] [US4] skipマーカー検出テストを実装: tests/book_converter/test_parser.py
+- [x] T052 [P] [US4] マーカー状態スタックテストを実装: tests/book_converter/test_parser.py（ネスト処理）
+- [x] T053 [P] [US4] デフォルトreadAloud=falseテストを実装: tests/book_converter/test_transformer.py
+- [x] T054 [P] [US4] contentマーカー内readAloud=trueテストを実装: tests/book_converter/test_transformer.py
+- [x] T055 [P] [US4] skipマーカー内readAloud=falseテストを実装: tests/book_converter/test_transformer.py
+- [x] T056 [P] [US4] 統合テスト（content/skip混合）を実装: tests/book_converter/test_integration.py
+- [x] T057 `make test` FAIL を確認 (RED)
+- [x] T058 RED出力を生成: specs/004-toc-structure/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 

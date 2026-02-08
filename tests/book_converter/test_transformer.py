@@ -1673,3 +1673,329 @@ class TestTableOfContentsReadAloud:
         assert element is not None
         assert element.get("readAloud") == "false"
         assert len(element.findall("entry")) == 0
+
+
+# =============================================================================
+# Phase 4 (004-toc-structure): US4 コンテンツ範囲マーカー
+# =============================================================================
+
+
+class TestDefaultReadAloudFalse:
+    """T053: デフォルトreadAloud=falseテスト
+
+    US4: マーカーで囲まれていない範囲はデフォルトでreadAloud="false"
+    FR-013: マーカーで囲まれていない範囲は、デフォルトで読み上げ非対象（readAloud="false"）としなければならない
+    """
+
+    def test_content_without_marker_has_read_aloud_false(self) -> None:
+        """マーカーなしのcontentはreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        # read_aloud=Falseのコンテンツ（デフォルト動作）
+        content = Content(
+            elements=(Paragraph(text="本文テキスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        assert element.get("readAloud") == "false"
+
+    def test_paragraph_without_marker_has_read_aloud_false(self) -> None:
+        """マーカーなしの段落はreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="段落テキスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "false"
+
+    def test_heading_without_marker_has_read_aloud_false(self) -> None:
+        """マーカーなしの見出しはreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Heading
+
+        content = Content(
+            elements=(Heading(level=1, text="見出し", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.get("readAloud") == "false"
+
+    def test_list_without_marker_has_read_aloud_false(self) -> None:
+        """マーカーなしのリストはreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, List
+
+        content = Content(
+            elements=(List(items=("項目1", "項目2"), read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        list_elem = element.find("list")
+        assert list_elem is not None
+        assert list_elem.get("readAloud") == "false"
+
+    def test_default_content_model_read_aloud_is_false(self) -> None:
+        """Content.read_aloudのデフォルト値はFalse"""
+        from src.book_converter.models import Content
+
+        content = Content(elements=())
+
+        # Phase 4でデフォルトがFalseに変更される
+        assert content.read_aloud is False
+
+
+class TestContentMarkerReadAloudTrue:
+    """T054: contentマーカー内readAloud=trueテスト
+
+    US4: `<!-- content -->`で囲まれた範囲はreadAloud="true"
+    FR-009, FR-010: content開始/終了マーカーの認識
+    """
+
+    def test_content_inside_marker_has_read_aloud_true(self) -> None:
+        """contentマーカー内のcontentはreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="読み上げ対象テキスト", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        assert element.get("readAloud") == "true"
+
+    def test_paragraph_inside_content_marker_has_read_aloud_true(self) -> None:
+        """contentマーカー内の段落はreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="読み上げ対象段落", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "true"
+
+    def test_heading_inside_content_marker_has_read_aloud_true(self) -> None:
+        """contentマーカー内の見出しはreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Heading
+
+        content = Content(
+            elements=(Heading(level=1, text="読み上げ対象見出し", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.get("readAloud") == "true"
+
+    def test_list_inside_content_marker_has_read_aloud_true(self) -> None:
+        """contentマーカー内のリストはreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, List
+
+        content = Content(
+            elements=(List(items=("読み上げ項目1", "読み上げ項目2"), read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        list_elem = element.find("list")
+        assert list_elem is not None
+        assert list_elem.get("readAloud") == "true"
+
+    def test_mixed_elements_inside_content_marker_all_have_read_aloud_true(self) -> None:
+        """contentマーカー内の複合要素は全てreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Heading, Paragraph, List
+
+        content = Content(
+            elements=(
+                Heading(level=1, text="章タイトル", read_aloud=True),
+                Paragraph(text="本文", read_aloud=True),
+                List(items=("項目",), read_aloud=True),
+            ),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        assert element.get("readAloud") == "true"
+
+        heading_elem = element.find("heading")
+        assert heading_elem.get("readAloud") == "true"
+
+        para_elem = element.find("paragraph")
+        assert para_elem.get("readAloud") == "true"
+
+        list_elem = element.find("list")
+        assert list_elem.get("readAloud") == "true"
+
+
+class TestSkipMarkerReadAloudFalse:
+    """T055: skipマーカー内readAloud=falseテスト
+
+    US4: `<!-- skip -->`で囲まれた範囲はreadAloud="false"
+    FR-011, FR-012: skip開始/終了マーカーの認識
+    """
+
+    def test_content_inside_skip_marker_has_read_aloud_false(self) -> None:
+        """skipマーカー内のcontentはreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="索引テキスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        assert element.get("readAloud") == "false"
+
+    def test_paragraph_inside_skip_marker_has_read_aloud_false(self) -> None:
+        """skipマーカー内の段落はreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="索引段落", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "false"
+
+    def test_skip_inside_content_has_read_aloud_false(self) -> None:
+        """contentマーカー内にskipがネストした場合、skipの中はreadAloud="false"
+
+        ネスト例:
+        <!-- content --> (readAloud=true)
+            本文... (readAloud=true)
+            <!-- skip --> (readAloud=false)
+                索引... (readAloud=false)
+            <!-- /skip -->
+            本文続き... (readAloud=true)
+        <!-- /content -->
+        """
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        # skipマーカー内の段落（ネストの内側）
+        content = Content(
+            elements=(Paragraph(text="ネスト内の索引", read_aloud=False),),
+            read_aloud=False,  # 内側のskipが優先
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "false"
+
+    def test_content_inside_skip_then_back_to_skip(self) -> None:
+        """skip内にcontentがネストし、contentを抜けた後はskip
+
+        ネスト例:
+        <!-- skip --> (readAloud=false)
+            索引... (readAloud=false)
+            <!-- content --> (readAloud=true)
+                重要な注釈... (readAloud=true)
+            <!-- /content -->
+            索引続き... (readAloud=false)
+        <!-- /skip -->
+        """
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        # contentマーカーを抜けた後の段落（外側のskipに戻る）
+        content = Content(
+            elements=(Paragraph(text="索引続き", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "false"
+
+
+class TestContentReadAloudXMLSerialization:
+    """contentのreadAloud属性のXMLシリアライズテスト"""
+
+    def test_content_read_aloud_true_in_xml(self) -> None:
+        """readAloud="true"がXMLに出力される"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert 'readAloud="true"' in xml_string
+
+    def test_content_read_aloud_false_in_xml(self) -> None:
+        """readAloud="false"がXMLに出力される"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert 'readAloud="false"' in xml_string
+
+    def test_paragraph_read_aloud_true_in_xml(self) -> None:
+        """段落のreadAloud="true"がXMLに出力される"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+        xml_string = tostring(para_elem, encoding="unicode")
+
+        assert 'readAloud="true"' in xml_string
+
+    def test_paragraph_read_aloud_false_in_xml(self) -> None:
+        """段落のreadAloud="false"がXMLに出力される"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+        xml_string = tostring(para_elem, encoding="unicode")
+
+        assert 'readAloud="false"' in xml_string

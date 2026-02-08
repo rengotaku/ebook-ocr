@@ -1661,3 +1661,350 @@ class TestTocModels:
         from src.book_converter.models import MarkerType
 
         assert issubclass(MarkerType, Enum)
+
+
+# =============================================================================
+# Phase 4 (004-toc-structure): US4 コンテンツ範囲マーカー
+# =============================================================================
+
+
+class TestParseContentMarker:
+    """T050: contentマーカー検出テスト (parse_content_marker)
+
+    US4: コンテンツ範囲マーカーによる読み上げ制御
+    - `<!-- content -->` マーカーで読み上げ対象範囲開始を検出
+    - `<!-- /content -->` マーカーで読み上げ対象範囲終了を検出
+    - 大文字小文字を区別しない
+    """
+
+    def test_parse_content_start_marker(self) -> None:
+        """content開始マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- content -->")
+
+        assert result is not None
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_end_marker(self) -> None:
+        """content終了マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- /content -->")
+
+        assert result is not None
+        assert result == MarkerType.CONTENT_END
+
+    def test_parse_content_marker_case_insensitive_lowercase(self) -> None:
+        """小文字のcontentマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- content -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_marker_case_insensitive_uppercase(self) -> None:
+        """大文字のCONTENTマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- CONTENT -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_marker_case_insensitive_mixed(self) -> None:
+        """大文字小文字混在のContentマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- Content -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_marker_with_extra_spaces(self) -> None:
+        """余分なスペースがあっても検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!--   content   -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_end_marker_uppercase(self) -> None:
+        """大文字の終了マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- /CONTENT -->")
+
+        assert result == MarkerType.CONTENT_END
+
+    def test_parse_content_marker_with_leading_spaces(self) -> None:
+        """先頭にスペースがあっても検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("  <!-- content -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_non_content_marker_returns_none(self) -> None:
+        """contentマーカーでない行はNoneを返す"""
+        from src.book_converter.parser import parse_content_marker
+
+        non_content_lines = [
+            "<!-- toc -->",
+            "<!-- /toc -->",
+            "# 見出し",
+            "本文テキスト",
+            "<!-- FIGURE: image.png -->",
+            "",
+            "   ",
+            "<!-- contents -->",  # typo
+        ]
+        for line in non_content_lines:
+            result = parse_content_marker(line)
+            assert result is None, f"Expected None for line: {line!r}"
+
+
+class TestParseSkipMarker:
+    """T051: skipマーカー検出テスト
+
+    US4: コンテンツ範囲マーカーによる読み上げ制御
+    - `<!-- skip -->` マーカーで読み上げ非対象範囲開始を検出
+    - `<!-- /skip -->` マーカーで読み上げ非対象範囲終了を検出
+    - 大文字小文字を区別しない
+    """
+
+    def test_parse_skip_start_marker(self) -> None:
+        """skip開始マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- skip -->")
+
+        assert result is not None
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_skip_end_marker(self) -> None:
+        """skip終了マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- /skip -->")
+
+        assert result is not None
+        assert result == MarkerType.SKIP_END
+
+    def test_parse_skip_marker_case_insensitive_uppercase(self) -> None:
+        """大文字のSKIPマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- SKIP -->")
+
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_skip_marker_case_insensitive_mixed(self) -> None:
+        """大文字小文字混在のSkipマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- Skip -->")
+
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_skip_marker_with_extra_spaces(self) -> None:
+        """余分なスペースがあっても検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!--   skip   -->")
+
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_skip_end_marker_uppercase(self) -> None:
+        """大文字の終了マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- /SKIP -->")
+
+        assert result == MarkerType.SKIP_END
+
+    def test_parse_skip_marker_with_leading_spaces(self) -> None:
+        """先頭にスペースがあっても検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("  <!-- skip -->")
+
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_non_skip_marker_returns_none(self) -> None:
+        """skipマーカーでない行はNoneを返す"""
+        from src.book_converter.parser import parse_content_marker
+
+        non_skip_lines = [
+            "<!-- toc -->",
+            "<!-- content -->",
+            "# 見出し",
+            "本文テキスト",
+            "<!-- skips -->",  # typo
+        ]
+        for line in non_skip_lines:
+            result = parse_content_marker(line)
+            # contentマーカーはCONTENT_STARTを返す、それ以外はNone
+            if "content" not in line.lower() or "contents" in line.lower():
+                assert result is None, f"Expected None for line: {line!r}"
+
+
+class TestMarkerStateStack:
+    """T052: マーカー状態スタックテスト (ネスト処理)
+
+    US4: マーカーがネストした場合の動作
+    - 空スタック → readAloud=false
+    - "content"をpush → readAloud=true
+    - "skip"をpush → readAloud=false
+    - pop → 前の状態に戻る
+    """
+
+    def test_get_read_aloud_from_empty_stack(self) -> None:
+        """空スタックからreadAloudを取得 → false"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = []
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False
+
+    def test_get_read_aloud_with_content_on_stack(self) -> None:
+        """スタックにcontentがある → true"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["content"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is True
+
+    def test_get_read_aloud_with_skip_on_stack(self) -> None:
+        """スタックにskipがある → false"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["skip"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False
+
+    def test_get_read_aloud_nested_skip_in_content(self) -> None:
+        """content内にskipがネスト → false (内側優先)"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["content", "skip"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False
+
+    def test_get_read_aloud_nested_content_in_skip(self) -> None:
+        """skip内にcontentがネスト → true (内側優先)"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["skip", "content"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is True
+
+    def test_get_read_aloud_after_pop_skip_from_content(self) -> None:
+        """content内でskipをpopした後 → true"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["content", "skip"]
+        stack.pop()  # skipをpop
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is True
+
+    def test_get_read_aloud_after_pop_content(self) -> None:
+        """contentをpopした後 → false (デフォルト)"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["content"]
+        stack.pop()  # contentをpop
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False
+
+    def test_get_read_aloud_deep_nesting(self) -> None:
+        """深いネスト: content → skip → content → skip"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        # content(true) → skip(false) → content(true) → skip(false)
+        stack = ["content", "skip", "content", "skip"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False  # 最も内側がskip
+
+    def test_get_read_aloud_deep_nesting_ending_with_content(self) -> None:
+        """深いネスト: skip → content → skip → content"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["skip", "content", "skip", "content"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is True  # 最も内側がcontent
+
+    def test_stack_manipulation_sequence(self) -> None:
+        """スタック操作のシーケンスをテスト"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = []
+
+        # 初期状態: 空 → false
+        assert get_read_aloud_from_stack(stack) is False
+
+        # content追加 → true
+        stack.append("content")
+        assert get_read_aloud_from_stack(stack) is True
+
+        # skip追加 → false
+        stack.append("skip")
+        assert get_read_aloud_from_stack(stack) is False
+
+        # skip削除 → true
+        stack.pop()
+        assert get_read_aloud_from_stack(stack) is True
+
+        # content削除 → false
+        stack.pop()
+        assert get_read_aloud_from_stack(stack) is False
+
+
+class TestMarkerTypeContentSkip:
+    """MarkerType列挙のcontent/skip値テスト"""
+
+    def test_marker_type_content_start(self) -> None:
+        """MarkerType.CONTENT_STARTの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.CONTENT_START.value == "content_start"
+
+    def test_marker_type_content_end(self) -> None:
+        """MarkerType.CONTENT_ENDの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.CONTENT_END.value == "content_end"
+
+    def test_marker_type_skip_start(self) -> None:
+        """MarkerType.SKIP_STARTの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.SKIP_START.value == "skip_start"
+
+    def test_marker_type_skip_end(self) -> None:
+        """MarkerType.SKIP_ENDの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.SKIP_END.value == "skip_end"
