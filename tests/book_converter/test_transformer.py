@@ -942,7 +942,7 @@ class TestReadAloudInheritance:
         assert len(page.figures) == 2
 
     def test_content_read_aloud_default_true(self) -> None:
-        """<content>のreadAloudデフォルトはtrue"""
+        """<content>のreadAloudデフォルトはfalse (Phase 4で変更)"""
         from src.book_converter.transformer import transform_content
         from src.book_converter.models import Paragraph
 
@@ -951,10 +951,10 @@ class TestReadAloudInheritance:
         )
         element = transform_content(content)
 
-        # contentのデフォルトはtrue（省略可）
-        # 属性がなくてもtrue扱い
+        # Phase 4以降: contentのデフォルトはfalse（マーカーなし）
+        # マーカーで囲まれた場合のみtrue
         read_aloud = element.get("readAloud")
-        assert read_aloud is None or read_aloud == "true"
+        assert read_aloud == "false"
 
     def test_heading_read_aloud_default_true(self) -> None:
         """<heading>のreadAloudデフォルトはtrue"""

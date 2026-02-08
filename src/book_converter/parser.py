@@ -58,6 +58,69 @@ def parse_toc_marker(line: str) -> MarkerType | None:
     return None
 
 
+def parse_content_marker(line: str) -> MarkerType | None:
+    """Parse content/skip marker line.
+
+    Returns:
+        MarkerType.CONTENT_START for <!-- content -->
+        MarkerType.CONTENT_END for <!-- /content -->
+        MarkerType.SKIP_START for <!-- skip -->
+        MarkerType.SKIP_END for <!-- /skip -->
+        None otherwise
+
+    Example:
+        >>> parse_content_marker("<!-- content -->")
+        MarkerType.CONTENT_START
+        >>> parse_content_marker("<!-- /content -->")
+        MarkerType.CONTENT_END
+        >>> parse_content_marker("<!-- skip -->")
+        MarkerType.SKIP_START
+        >>> parse_content_marker("<!-- /skip -->")
+        MarkerType.SKIP_END
+    """
+    import re
+
+    # Content marker pattern
+    content_pattern = r"<!--\s*(/?)\s*[Cc][Oo][Nn][Tt][Ee][Nn][Tt]\s*-->"
+    match = re.search(content_pattern, line)
+    if match:
+        slash = match.group(1)
+        return MarkerType.CONTENT_END if slash else MarkerType.CONTENT_START
+
+    # Skip marker pattern
+    skip_pattern = r"<!--\s*(/?)\s*[Ss][Kk][Ii][Pp]\s*-->"
+    match = re.search(skip_pattern, line)
+    if match:
+        slash = match.group(1)
+        return MarkerType.SKIP_END if slash else MarkerType.SKIP_START
+
+    return None
+
+
+def get_read_aloud_from_stack(stack: list[str]) -> bool:
+    """Get readAloud value from marker stack.
+
+    Args:
+        stack: List of marker types ("content" or "skip")
+
+    Returns:
+        True if top of stack is "content", False otherwise
+
+    Example:
+        >>> get_read_aloud_from_stack([])
+        False
+        >>> get_read_aloud_from_stack(["content"])
+        True
+        >>> get_read_aloud_from_stack(["content", "skip"])
+        False
+    """
+    if not stack:
+        return False  # Default: readAloud=false
+
+    top = stack[-1]
+    return top == "content"
+
+
 def parse_toc_entry(line: str) -> TocEntry | None:
     """Parse a TOC entry line.
 
@@ -636,6 +699,7 @@ def _parse_single_page_content(
     metadata = None
     toc_entries = []
     in_toc = in_toc_initial
+    marker_stack: list[str] = []  # Track content/skip marker state
 
     # Parse content line by line
     idx = 0
@@ -644,13 +708,34 @@ def _parse_single_page_content(
         line_num = start_line + idx + 1
 
         # Check for TOC markers
-        marker = parse_toc_marker(line)
-        if marker == MarkerType.TOC_START:
+        toc_marker = parse_toc_marker(line)
+        if toc_marker == MarkerType.TOC_START:
             in_toc = True
             idx += 1
             continue
-        elif marker == MarkerType.TOC_END:
+        elif toc_marker == MarkerType.TOC_END:
             in_toc = False
+            idx += 1
+            continue
+
+        # Check for content/skip markers
+        content_marker = parse_content_marker(line)
+        if content_marker == MarkerType.CONTENT_START:
+            marker_stack.append("content")
+            idx += 1
+            continue
+        elif content_marker == MarkerType.CONTENT_END:
+            if marker_stack and marker_stack[-1] == "content":
+                marker_stack.pop()
+            idx += 1
+            continue
+        elif content_marker == MarkerType.SKIP_START:
+            marker_stack.append("skip")
+            idx += 1
+            continue
+        elif content_marker == MarkerType.SKIP_END:
+            if marker_stack and marker_stack[-1] == "skip":
+                marker_stack.pop()
             idx += 1
             continue
 
@@ -661,6 +746,9 @@ def _parse_single_page_content(
                 toc_entries.append(toc_entry)
             idx += 1
             continue
+
+        # Get current readAloud value from marker stack
+        read_aloud = get_read_aloud_from_stack(marker_stack)
 
         # Check for deep heading warning
         heading, warning = parse_heading_with_warning(line)
@@ -674,6 +762,8 @@ def _parse_single_page_content(
 
         # Check for heading
         if heading is not None:
+            # Apply readAloud state
+            heading = Heading(level=heading.level, text=heading.text, read_aloud=read_aloud)
             content_elements.append(heading)
             idx += 1
             continue
@@ -724,6 +814,8 @@ def _parse_single_page_content(
 
             lst = parse_list(list_lines)
             if lst is not None:
+                # Apply readAloud state
+                lst = List(items=lst.items, read_aloud=read_aloud)
                 content_elements.append(lst)
             idx = list_idx
             continue
@@ -751,6 +843,8 @@ def _parse_single_page_content(
 
             para = parse_paragraph(para_lines)
             if para is not None:
+                # Apply readAloud state
+                para = Paragraph(text=para.text, read_aloud=read_aloud)
                 content_elements.append(para)
             idx = para_idx
             continue
@@ -759,7 +853,11 @@ def _parse_single_page_content(
         idx += 1
 
     # Create Page object
-    content = Content(elements=tuple(content_elements))
+    # Content readAloud is true if ANY child element has readAloud=true
+    content_read_aloud = any(
+        elem.read_aloud for elem in content_elements
+    ) if content_elements else False
+    content = Content(elements=tuple(content_elements), read_aloud=content_read_aloud)
     announcement = create_page_announcement(page_number)
 
     # Create TableOfContents only on the page where TOC ends

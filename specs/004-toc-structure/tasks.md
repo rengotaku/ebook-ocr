@@ -153,19 +153,19 @@
 
 ### Implementation (GREEN)
 
-- [ ] T059 REDテストを読み込み: specs/004-toc-structure/red-tests/ph4-test.md
-- [ ] T060 [P] [US4] `parse_content_marker()`を実装: src/book_converter/parser.py
-- [ ] T061 [P] [US4] マーカー状態スタック管理を実装: src/book_converter/parser.py
-- [ ] T062 [US4] パーサーにreadAloud状態追跡を統合: src/book_converter/parser.py
-- [ ] T063 [US4] ContentモデルのreadAloudデフォルトをFalseに変更: src/book_converter/models.py
-- [ ] T064 [US4] トランスフォーマーでreadAloud属性を出力: src/book_converter/transformer.py
-- [ ] T065 `make test` PASS を確認 (GREEN)
+- [x] T059 REDテストを読み込み: specs/004-toc-structure/red-tests/ph4-test.md
+- [x] T060 [P] [US4] `parse_content_marker()`を実装: src/book_converter/parser.py
+- [x] T061 [P] [US4] マーカー状態スタック管理を実装: src/book_converter/parser.py
+- [x] T062 [US4] パーサーにreadAloud状態追跡を統合: src/book_converter/parser.py
+- [x] T063 [US4] ContentモデルのreadAloudデフォルトをFalseに変更: src/book_converter/models.py
+- [x] T064 [US4] トランスフォーマーでreadAloud属性を出力: src/book_converter/transformer.py
+- [x] T065 `make test` PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T066 `make test` で全テストパスを確認（全US含む）
-- [ ] T067 `make coverage` で ≥80% を確認
-- [ ] T068 フェーズ出力を生成: specs/004-toc-structure/tasks/ph4-output.md
+- [x] T066 `make test` で全テストパスを確認（全US含む）
+- [x] T067 `make coverage` で ≥80% を確認
+- [x] T068 フェーズ出力を生成: specs/004-toc-structure/tasks/ph4-output.md
 
 **Checkpoint**: US1+US2+US3+US4が全て機能し、独立してテスト可能
 

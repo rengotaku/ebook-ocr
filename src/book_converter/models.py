@@ -73,7 +73,7 @@ class Content:
     """本文コンテンツ"""
 
     elements: tuple[ContentElement, ...]
-    read_aloud: bool = True
+    read_aloud: bool = False
 
 
 @dataclass(frozen=True)

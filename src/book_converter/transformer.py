@@ -203,15 +203,19 @@ def transform_content(content: Content) -> Element | None:
         return None
 
     elem = Element("content")
+    # Add readAloud attribute based on content.read_aloud
+    elem.set("readAloud", "true" if content.read_aloud else "false")
 
     for element in content.elements:
         if isinstance(element, Paragraph):
             para_elem = Element("paragraph")
+            para_elem.set("readAloud", "true" if element.read_aloud else "false")
             apply_emphasis(element.text, para_elem)
             elem.append(para_elem)
         elif isinstance(element, Heading):
             heading_elem = Element("heading")
             heading_elem.set("level", str(element.level))
+            heading_elem.set("readAloud", "true" if element.read_aloud else "false")
             apply_emphasis(element.text, heading_elem)
             # readAloud=False の場合は属性を出力
             if not element.read_aloud:
@@ -219,6 +223,7 @@ def transform_content(content: Content) -> Element | None:
             elem.append(heading_elem)
         elif isinstance(element, List):
             list_elem = Element("list")
+            list_elem.set("readAloud", "true" if element.read_aloud else "false")
             for item in element.items:
                 item_elem = Element("item")
                 apply_emphasis(item, item_elem)
