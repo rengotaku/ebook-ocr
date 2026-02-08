@@ -127,3 +127,25 @@ class ConversionResult:
     error_count: int
     errors: tuple[ConversionError, ...] = ()
     output_path: str = ""
+
+
+@dataclass(frozen=True)
+class ExclusionPattern:
+    """除外パターン定義"""
+
+    id: str  # パターン識別子 (e.g., "running-head", "page-number")
+    priority: int  # 優先度 (高い方が先にマッチ試行) 1-100
+    pattern: str | None  # 正規表現パターン (dynamicタイプの場合はNone)
+    pattern_type: str  # "static" | "dynamic"
+    description: str  # 説明 (e.g., "柱（ランニングヘッド）")
+
+
+@dataclass(frozen=True)
+class HeadingAnalysis:
+    """heading出現頻度分析結果"""
+
+    text: str  # headingテキスト（正規化済み）
+    level: int  # 最頻出時のlevel (1-3)
+    count: int  # 出現回数 (1以上)
+    levels: tuple[int, ...]  # 出現したlevelのリスト（空でない）
+    is_running_head: bool  # 柱として判定されたか

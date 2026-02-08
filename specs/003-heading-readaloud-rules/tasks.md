@@ -66,22 +66,22 @@
 
 ### Implementation (GREEN)
 
-- [ ] T019 REDテストを読む: specs/003-heading-readaloud-rules/red-tests/ph2-test.md
-- [ ] T020 [P] [US1] `src/book_converter/models.py` にExclusionPatternを実装
-- [ ] T021 [P] [US1] `src/book_converter/models.py` にHeadingAnalysisを実装
-- [ ] T022 [P] [US1] `src/book_converter/config.py` にデフォルトパターン定義を実装（running-head, page-number）
-- [ ] T023 [P] [US1] `src/book_converter/analyzer.py` にanalyze_headings関数を実装（heading頻度分析）
-- [ ] T024 [P] [US1] `src/book_converter/analyzer.py` にdetect_running_head関数を実装（柱検出、閾値50%）
-- [ ] T025 [P] [US1] `src/book_converter/analyzer.py` にreassign_heading_level関数を実装（level再配置）
-- [ ] T026 [P] [US1] `src/book_converter/analyzer.py` にmatch_exclusion_pattern関数を実装（パターンマッチング）
-- [ ] T027 [P] [US1] `src/book_converter/transformer.py` のtransform_heading関数を拡張（readAloud属性出力）
-- [ ] T028 [US1] コンポーネント統合（T020-T027の結合確認）
-- [ ] T029 `make test` PASS (GREEN) を確認
+- [x] T019 REDテストを読む: specs/003-heading-readaloud-rules/red-tests/ph2-test.md
+- [x] T020 [P] [US1] `src/book_converter/models.py` にExclusionPatternを実装
+- [x] T021 [P] [US1] `src/book_converter/models.py` にHeadingAnalysisを実装
+- [x] T022 [P] [US1] `src/book_converter/config.py` にデフォルトパターン定義を実装（running-head, page-number）
+- [x] T023 [P] [US1] `src/book_converter/analyzer.py` にanalyze_headings関数を実装（heading頻度分析）
+- [x] T024 [P] [US1] `src/book_converter/analyzer.py` にdetect_running_head関数を実装（柱検出、閾値50%）
+- [x] T025 [P] [US1] `src/book_converter/analyzer.py` にreassign_heading_level関数を実装（level再配置）
+- [x] T026 [P] [US1] `src/book_converter/analyzer.py` にmatch_exclusion_pattern関数を実装（パターンマッチング）
+- [x] T027 [P] [US1] `src/book_converter/transformer.py` のtransform_heading関数を拡張（readAloud属性出力）
+- [x] T028 [US1] コンポーネント統合（T020-T027の結合確認）
+- [x] T029 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T030 `make test` で全テスト通過を確認（リグレッションなし）
-- [ ] T031 フェーズ出力を生成: specs/003-heading-readaloud-rules/tasks/ph2-output.md
+- [x] T030 `make test` で全テスト通過を確認（リグレッションなし）
+- [x] T031 フェーズ出力を生成: specs/003-heading-readaloud-rules/tasks/ph2-output.md
 
 **チェックポイント**: User Story 1は完全に機能し、独立してテスト可能
 
