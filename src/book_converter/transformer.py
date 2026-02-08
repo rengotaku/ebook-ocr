@@ -169,6 +169,7 @@ def transform_page_announcement(
     elem = Element("pageAnnouncement")
     elem.text = announcement.text
     elem.set("format", announcement.format)
+    elem.set("readAloud", "false")
 
     return elem
 
