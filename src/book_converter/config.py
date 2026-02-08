@@ -43,4 +43,20 @@ DEFAULT_EXCLUSION_PATTERNS: list[ExclusionPattern] = [
         pattern_type="static",
         description="章節ラベル（Section X.X形式）",
     ),
+    # 低優先度: 参照表記（完全一致）
+    ExclusionPattern(
+        id="reference",
+        priority=30,
+        pattern=r"^Webサイト$",
+        pattern_type="static",
+        description="Webサイト参照リンク表記",
+    ),
+    # 低優先度: 脚注番号（先頭マッチ）
+    ExclusionPattern(
+        id="footnote",
+        priority=30,
+        pattern=r"^注\d+\.\d+",
+        pattern_type="static",
+        description="脚注番号（注X.X形式）",
+    ),
 ]

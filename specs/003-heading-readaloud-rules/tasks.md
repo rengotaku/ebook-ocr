@@ -143,16 +143,16 @@
 
 ### Implementation (GREEN)
 
-- [ ] T052 REDテストを読む: specs/003-heading-readaloud-rules/red-tests/ph4-test.md
-- [ ] T053 [P] [US3] `src/book_converter/config.py` にreferenceパターンを追加
-- [ ] T054 [P] [US3] `src/book_converter/config.py` にfootnoteパターンを追加
-- [ ] T055 [US3] コンポーネント統合（T053-T054の結合確認）
-- [ ] T056 `make test` PASS (GREEN) を確認
+- [x] T052 REDテストを読む: specs/003-heading-readaloud-rules/red-tests/ph4-test.md
+- [x] T053 [P] [US3] `src/book_converter/config.py` にreferenceパターンを追加
+- [x] T054 [P] [US3] `src/book_converter/config.py` にfootnoteパターンを追加
+- [x] T055 [US3] コンポーネント統合（T053-T054の結合確認）
+- [x] T056 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T057 `make test` で全テスト通過を確認（US1, US2リグレッションなし）
-- [ ] T058 フェーズ出力を生成: specs/003-heading-readaloud-rules/tasks/ph4-output.md
+- [x] T057 `make test` で全テスト通過を確認（US1, US2リグレッションなし）
+- [x] T058 フェーズ出力を生成: specs/003-heading-readaloud-rules/tasks/ph4-output.md
 
 **チェックポイント**: User Stories 1, 2, 3はすべて独立して動作
 
