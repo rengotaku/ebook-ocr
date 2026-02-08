@@ -56,7 +56,7 @@ def transform_toc_entry(entry: TocEntry) -> Element:
 def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
     """Transform TableOfContents to XML element.
 
-    <tableOfContents>
+    <tableOfContents readAloud="false">
       <entry .../>
       <entry .../>
     </tableOfContents>
@@ -80,6 +80,7 @@ def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
         return None
 
     elem = Element("tableOfContents")
+    elem.set("readAloud", "false")
 
     # Add entries
     for entry in toc.entries:

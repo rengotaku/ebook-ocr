@@ -115,14 +115,14 @@
 
 ### Implementation (GREEN)
 
-- [ ] T043 REDテストを読み込み: specs/004-toc-structure/red-tests/ph3-test.md
-- [ ] T044 [US3] tableOfContentsにreadAloud="false"を設定: src/book_converter/transformer.py
-- [ ] T045 `make test` PASS を確認 (GREEN)
+- [x] T043 REDテストを読み込み: specs/004-toc-structure/red-tests/ph3-test.md
+- [x] T044 [US3] tableOfContentsにreadAloud="false"を設定: src/book_converter/transformer.py
+- [x] T045 `make test` PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T046 `make test` で全テストパスを確認（US1+US2含む）
-- [ ] T047 フェーズ出力を生成: specs/004-toc-structure/tasks/ph3-output.md
+- [x] T046 `make test` で全テストパスを確認（US1+US2含む）
+- [x] T047 フェーズ出力を生成: specs/004-toc-structure/tasks/ph3-output.md
 
 **Checkpoint**: US1+US2+US3が全て機能
 
