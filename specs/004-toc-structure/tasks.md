@@ -273,12 +273,12 @@ specs/004-toc-structure/
 ```
 
 **チェックリスト**:
-- [ ] マーカー解析テスト（parse_toc_marker, parse_content_marker）
-- [ ] 目次エントリ解析テスト（parse_toc_entry）
-- [ ] モデル生成テスト（TocEntry, TableOfContents）
-- [ ] 変換ロジックテスト（transform_toc_entry, transform_table_of_contents）
-- [ ] **XML出力テスト**（readAloud属性、entry要素）
-- [ ] E2Eテスト（book.md → book.xml）
+- [X] マーカー解析テスト（parse_toc_marker, parse_content_marker）
+- [X] 目次エントリ解析テスト（parse_toc_entry）
+- [X] モデル生成テスト（TocEntry, TableOfContents）
+- [X] 変換ロジックテスト（transform_toc_entry, transform_table_of_contents）
+- [X] **XML出力テスト**（readAloud属性、entry要素）
+- [X] E2Eテスト（book.md → book.xml）
 
 ---
 
