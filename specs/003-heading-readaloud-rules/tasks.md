@@ -50,19 +50,19 @@
 
 ### Input
 
-- [ ] T009 前フェーズ出力を読む: specs/003-heading-readaloud-rules/tasks/ph1-output.md
+- [x] T009 前フェーズ出力を読む: specs/003-heading-readaloud-rules/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T010 [P] [US1] ExclusionPatternモデルテストを実装: tests/book_converter/test_models.py
-- [ ] T011 [P] [US1] HeadingAnalysisモデルテストを実装: tests/book_converter/test_models.py
-- [ ] T012 [P] [US1] 柱検出テストを実装: tests/book_converter/test_analyzer.py（analyze_headings関数、最頻出level=1検出）
-- [ ] T013 [P] [US1] ページ番号パターンテストを実装: tests/book_converter/test_analyzer.py（`X.X.X — N/M`形式マッチング）
-- [ ] T014 [P] [US1] level再配置テストを実装: tests/book_converter/test_analyzer.py（level 2,3を1に再配置）
-- [ ] T015 [P] [US1] readAloud属性付与テストを実装: tests/book_converter/test_transformer.py（transform_headingでreadAloud="false"出力）
-- [ ] T016 [P] [US1] 統合テストを実装: tests/book_converter/test_analyzer.py（Markdown→heading分析→属性付与フロー）
-- [ ] T017 `make test` FAIL (RED) を確認
-- [ ] T018 RED出力を生成: specs/003-heading-readaloud-rules/red-tests/ph2-test.md
+- [x] T010 [P] [US1] ExclusionPatternモデルテストを実装: tests/book_converter/test_models.py
+- [x] T011 [P] [US1] HeadingAnalysisモデルテストを実装: tests/book_converter/test_models.py
+- [x] T012 [P] [US1] 柱検出テストを実装: tests/book_converter/test_analyzer.py（analyze_headings関数、最頻出level=1検出）
+- [x] T013 [P] [US1] ページ番号パターンテストを実装: tests/book_converter/test_analyzer.py（`X.X.X — N/M`形式マッチング）
+- [x] T014 [P] [US1] level再配置テストを実装: tests/book_converter/test_analyzer.py（level 2,3を1に再配置）
+- [x] T015 [P] [US1] readAloud属性付与テストを実装: tests/book_converter/test_transformer.py（transform_headingでreadAloud="false"出力）
+- [x] T016 [P] [US1] 統合テストを実装: tests/book_converter/test_analyzer.py（Markdown→heading分析→属性付与フロー）
+- [x] T017 `make test` FAIL (RED) を確認
+- [x] T018 RED出力を生成: specs/003-heading-readaloud-rules/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
