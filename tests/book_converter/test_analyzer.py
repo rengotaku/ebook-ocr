@@ -439,3 +439,312 @@ class TestHeadingAnalysisIntegration:
         # Unicode テキストでも正しく処理
         assert len(processed_headings) == 6
         assert all(h.read_aloud is False for h in processed_headings)
+
+
+# =============================================================================
+# T034: 装飾記号パターンテスト (Phase 3: User Story 2)
+# =============================================================================
+
+
+class TestDecorationPatternMatching:
+    """装飾記号パターンテスト - ◆◆◆等の連続記号を除外"""
+
+    def test_match_diamond_pattern(self) -> None:
+        """◆◆◆（黒ひし形連続）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "◆◆◆"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_white_diamond_pattern(self) -> None:
+        """◇◇◇（白ひし形連続）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "◇◇◇"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_black_square_pattern(self) -> None:
+        """■■■（黒四角連続）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "■■■"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_white_square_pattern(self) -> None:
+        """□□□（白四角連続）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "□□□"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_black_circle_pattern(self) -> None:
+        """●●●（黒丸連続）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "●●●"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_white_circle_pattern(self) -> None:
+        """○○○（白丸連続）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "○○○"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_black_triangle_pattern(self) -> None:
+        """▲▲▲（黒三角連続）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "▲▲▲"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_white_triangle_pattern(self) -> None:
+        """△△△（白三角連続）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "△△△"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_mixed_decoration_pattern(self) -> None:
+        """◆◇◆（混合記号）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "◆◇◆"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_match_single_decoration_pattern(self) -> None:
+        """◆（単一記号）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "◆"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "decoration"
+
+    def test_no_match_decoration_with_text(self) -> None:
+        """◆ポイント（記号+テキスト）は装飾パターンにマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "◆ポイント"
+        result = match_exclusion_pattern(text)
+
+        # 装飾パターンにはマッチしない（記号のみが対象）
+        assert result is None or result.id != "decoration"
+
+
+# =============================================================================
+# T035: 章節ラベルパターンテスト (Phase 3: User Story 2)
+# =============================================================================
+
+
+class TestSectionLabelPatternMatching:
+    """章節ラベルパターンテスト - Section X.X形式を除外"""
+
+    def test_match_section_label_simple(self) -> None:
+        """Section 1.1 をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "Section 1.1"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "section-label"
+
+    def test_match_section_label_double_digit(self) -> None:
+        """Section 10.15 をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "Section 10.15"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "section-label"
+
+    def test_match_section_label_with_extra_spaces(self) -> None:
+        """Section  1.2（スペース複数）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "Section  1.2"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "section-label"
+
+    def test_no_match_section_label_with_title(self) -> None:
+        """Section 1.1 概要（ラベル+タイトル）はセクションラベルにマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "Section 1.1 概要"
+        result = match_exclusion_pattern(text)
+
+        # タイトル付きはセクションラベルパターンにマッチしない
+        assert result is None or result.id != "section-label"
+
+    def test_no_match_lowercase_section(self) -> None:
+        """section 1.1（小文字）はマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "section 1.1"
+        result = match_exclusion_pattern(text)
+
+        # 大文字Sectionのみがマッチ
+        assert result is None or result.id != "section-label"
+
+
+# =============================================================================
+# T036: 本文見出し除外されないテスト (Phase 3: User Story 2)
+# =============================================================================
+
+
+class TestNormalHeadingNotExcluded:
+    """本文見出しが誤って除外されないことを確認"""
+
+    def test_normal_heading_not_excluded_numbered(self) -> None:
+        """番号付き見出し「3.2.1 モニタリングの基本」は除外されない"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=2, text="3.2.1 モニタリングの基本"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 1
+        # 通常の見出しはreadAloud=True
+        assert processed[0].read_aloud is True
+
+    def test_normal_heading_not_excluded_simple(self) -> None:
+        """シンプルな見出し「概要」は除外されない"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=2, text="概要"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 1
+        assert processed[0].read_aloud is True
+
+    def test_normal_heading_not_excluded_with_colon(self) -> None:
+        """コロン付き見出し「第1章：はじめに」は除外されない"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=1, text="第1章：はじめに"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 1
+        assert processed[0].read_aloud is True
+
+    def test_heading_with_symbol_in_text_not_excluded(self) -> None:
+        """テキスト内に記号を含む「◆ポイント」は除外されない"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=2, text="◆ポイント"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        # 記号のみではないのでデコレーションパターンにマッチしない
+        assert len(processed) == 1
+        assert processed[0].read_aloud is True
+
+    def test_heading_with_section_keyword_not_excluded(self) -> None:
+        """'Section'を含む本文見出し「Section 1.1 概要」は除外されない"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=2, text="Section 1.1 概要"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        # タイトル付きなのでセクションラベルパターンにマッチしない
+        assert len(processed) == 1
+        assert processed[0].read_aloud is True
+
+    def test_decoration_heading_should_be_excluded(self) -> None:
+        """装飾記号のみの見出し「◆◆◆」は除外される"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=2, text="◆◆◆"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 1
+        # 装飾記号のみはreadAloud=False
+        assert processed[0].read_aloud is False
+
+    def test_section_label_heading_should_be_excluded(self) -> None:
+        """セクションラベル「Section 1.1」は除外される"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=3, text="Section 1.1"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 1
+        # セクションラベルはreadAloud=False
+        assert processed[0].read_aloud is False
+
+    def test_mixed_headings_correct_exclusion(self) -> None:
+        """混合見出しで正しい除外判定"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=1, text="第1章：はじめに"),        # 通常 → True
+            Heading(level=2, text="◆◆◆"),                   # 装飾 → False
+            Heading(level=2, text="1.1 概要"),               # 通常 → True
+            Heading(level=3, text="Section 2.3"),            # ラベル → False
+            Heading(level=2, text="3.2.1 モニタリングの基本"),  # 通常 → True
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 5
+        # 通常見出しはTrue
+        assert processed[0].read_aloud is True  # 第1章：はじめに
+        # 装飾記号はFalse
+        assert processed[1].read_aloud is False  # ◆◆◆
+        # 通常見出しはTrue
+        assert processed[2].read_aloud is True  # 1.1 概要
+        # セクションラベルはFalse
+        assert processed[3].read_aloud is False  # Section 2.3
+        # 通常見出しはTrue
+        assert processed[4].read_aloud is True  # 3.2.1 モニタリングの基本

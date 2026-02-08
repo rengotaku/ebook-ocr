@@ -95,16 +95,16 @@
 
 ### Input
 
-- [ ] T032 セットアップ分析を読む: specs/003-heading-readaloud-rules/tasks/ph1-output.md
-- [ ] T033 前フェーズ出力を読む: specs/003-heading-readaloud-rules/tasks/ph2-output.md
+- [x] T032 セットアップ分析を読む: specs/003-heading-readaloud-rules/tasks/ph1-output.md
+- [x] T033 前フェーズ出力を読む: specs/003-heading-readaloud-rules/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T034 [P] [US2] 装飾記号パターンテストを実装: tests/book_converter/test_analyzer.py（`◆◆◆`等の連続記号）
-- [ ] T035 [P] [US2] 章節ラベルパターンテストを実装: tests/book_converter/test_analyzer.py（`Section X.X`形式）
-- [ ] T036 [P] [US2] 本文見出し除外されないテストを実装: tests/book_converter/test_analyzer.py（「3.2.1 モニタリングの基本」はreadAloud=true）
-- [ ] T037 `make test` FAIL (RED) を確認
-- [ ] T038 RED出力を生成: specs/003-heading-readaloud-rules/red-tests/ph3-test.md
+- [x] T034 [P] [US2] 装飾記号パターンテストを実装: tests/book_converter/test_analyzer.py（`◆◆◆`等の連続記号）
+- [x] T035 [P] [US2] 章節ラベルパターンテストを実装: tests/book_converter/test_analyzer.py（`Section X.X`形式）
+- [x] T036 [P] [US2] 本文見出し除外されないテストを実装: tests/book_converter/test_analyzer.py（「3.2.1 モニタリングの基本」はreadAloud=true）
+- [x] T037 `make test` FAIL (RED) を確認
+- [x] T038 RED出力を生成: specs/003-heading-readaloud-rules/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
