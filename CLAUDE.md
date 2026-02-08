@@ -5,6 +5,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-04
 ## Active Technologies
 - Python 3.13+ (Constitution準拠) (002-book-md-structure)
 - ファイルベース（入力: book.md, 出力: book.xml） (002-book-md-structure)
+- Python 3.13+ + xml.etree.ElementTree（標準ライブラリ）, re（正規表現） (003-heading-readaloud-rules)
+- 設定ファイル（パターン定義）はYAMLまたはJSON形式 (003-heading-readaloud-rules)
 
 - Python 3.13+ + Pillow, imagehash, doclayout-yolo, requests (001-code-refactoring)
 
@@ -24,6 +26,7 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13+: Follow standard conventions
 
 ## Recent Changes
+- 003-heading-readaloud-rules: Added Python 3.13+ + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
 - 002-book-md-structure: Added Python 3.13+ (Constitution準拠)
 
 - 001-code-refactoring: Added Python 3.13+ + Pillow, imagehash, doclayout-yolo, requests

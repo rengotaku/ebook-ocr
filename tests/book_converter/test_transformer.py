@@ -967,6 +967,117 @@ class TestReadAloudInheritance:
         read_aloud = element.get("readAloud")
         assert read_aloud is None or read_aloud == "true"
 
+
+# =============================================================================
+# Phase 2 US1: T015 - readAloud属性付与テスト
+# =============================================================================
+
+
+class TestHeadingReadAloudAttribute:
+    """T015: transform_heading で readAloud="false" 出力テスト"""
+
+    def test_heading_read_aloud_false_attribute(self) -> None:
+        """Heading(read_aloud=False) の場合に readAloud="false" 属性を出力"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=1, text="SREの知識地図", read_aloud=False)
+        element = transform_heading(heading)
+
+        assert element.get("readAloud") == "false"
+
+    def test_heading_read_aloud_true_default(self) -> None:
+        """Heading(read_aloud=True) の場合は readAloud 属性を省略可"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=1, text="通常の見出し", read_aloud=True)
+        element = transform_heading(heading)
+
+        # デフォルト true は属性省略または "true"
+        read_aloud = element.get("readAloud")
+        assert read_aloud is None or read_aloud == "true"
+
+    def test_heading_read_aloud_false_xml_serialization(self) -> None:
+        """readAloud="false" がXMLにシリアライズされる"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=2, text="ページ番号表記", read_aloud=False)
+        element = transform_heading(heading)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert 'readAloud="false"' in xml_string
+
+    def test_heading_read_aloud_preserves_other_attributes(self) -> None:
+        """readAloud 属性と他の属性を両方出力"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=3, text="1.1.1 概要 — 1 / 3", read_aloud=False)
+        element = transform_heading(heading)
+
+        assert element.get("level") == "3"
+        assert element.get("readAloud") == "false"
+        assert element.text == "1.1.1 概要 — 1 / 3"
+
+    def test_heading_read_aloud_false_in_content(self) -> None:
+        """Content 内の Heading で readAloud=False が反映される"""
+        from src.book_converter.transformer import transform_content
+
+        content = Content(
+            elements=(
+                Heading(level=1, text="柱タイトル", read_aloud=False),
+                Heading(level=2, text="通常見出し", read_aloud=True),
+            )
+        )
+        element = transform_content(content)
+
+        headings = element.findall("heading")
+        assert len(headings) == 2
+
+        # 最初の heading は readAloud="false"
+        assert headings[0].get("readAloud") == "false"
+
+        # 2番目の heading は readAloud 省略または "true"
+        read_aloud_2 = headings[1].get("readAloud")
+        assert read_aloud_2 is None or read_aloud_2 == "true"
+
+    def test_heading_read_aloud_unicode_text(self) -> None:
+        """Unicode テキストの見出しで readAloud=False を出力"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(
+            level=1,
+            text="日本語タイトル「テスト」",
+            read_aloud=False,
+        )
+        element = transform_heading(heading)
+
+        assert element.get("readAloud") == "false"
+        assert element.text == "日本語タイトル「テスト」"
+
+    def test_multiple_headings_mixed_read_aloud(self) -> None:
+        """複数の heading で readAloud が混在するケース"""
+        from src.book_converter.transformer import transform_content
+
+        content = Content(
+            elements=(
+                Heading(level=1, text="柱1", read_aloud=False),
+                Heading(level=2, text="本文1", read_aloud=True),
+                Heading(level=1, text="柱2", read_aloud=False),
+                Heading(level=3, text="詳細1", read_aloud=True),
+            )
+        )
+        element = transform_content(content)
+
+        headings = element.findall("heading")
+        assert len(headings) == 4
+
+        # 柱は readAloud="false"
+        assert headings[0].get("readAloud") == "false"
+        assert headings[2].get("readAloud") == "false"
+
+        # 本文見出しは readAloud 省略または "true"
+        assert headings[1].get("readAloud") is None or headings[1].get("readAloud") == "true"
+        assert headings[3].get("readAloud") is None or headings[3].get("readAloud") == "true"
+
     def test_paragraph_read_aloud_default_true(self) -> None:
         """<paragraph>のreadAloudデフォルトはtrue"""
         from src.book_converter.transformer import transform_content

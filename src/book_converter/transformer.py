@@ -137,6 +137,9 @@ def transform_content(content: Content) -> Element | None:
             heading_elem = Element("heading")
             heading_elem.set("level", str(element.level))
             apply_emphasis(element.text, heading_elem)
+            # readAloud=False の場合は属性を出力
+            if not element.read_aloud:
+                heading_elem.set("readAloud", "false")
             elem.append(heading_elem)
         elif isinstance(element, List):
             list_elem = Element("list")
@@ -190,6 +193,10 @@ def transform_heading(heading: Heading) -> Element:
     elem = Element("heading")
     elem.set("level", str(heading.level))
     elem.text = heading.text
+
+    # readAloud=False の場合は属性を出力
+    if not heading.read_aloud:
+        elem.set("readAloud", "false")
 
     return elem
 
