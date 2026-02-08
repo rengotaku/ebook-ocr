@@ -131,15 +131,15 @@
 
 ### Input
 
-- [ ] T046 セットアップ分析を読む: specs/003-heading-readaloud-rules/tasks/ph1-output.md
-- [ ] T047 前フェーズ出力を読む: specs/003-heading-readaloud-rules/tasks/ph3-output.md
+- [x] T046 セットアップ分析を読む: specs/003-heading-readaloud-rules/tasks/ph1-output.md
+- [x] T047 前フェーズ出力を読む: specs/003-heading-readaloud-rules/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T048 [P] [US3] Webサイト参照パターンテストを実装: tests/book_converter/test_analyzer.py（`^Webサイト$`マッチング）
-- [ ] T049 [P] [US3] 脚注番号パターンテストを実装: tests/book_converter/test_analyzer.py（`注X.X`形式）
-- [ ] T050 `make test` FAIL (RED) を確認
-- [ ] T051 RED出力を生成: specs/003-heading-readaloud-rules/red-tests/ph4-test.md
+- [x] T048 [P] [US3] Webサイト参照パターンテストを実装: tests/book_converter/test_analyzer.py（`^Webサイト$`マッチング）
+- [x] T049 [P] [US3] 脚注番号パターンテストを実装: tests/book_converter/test_analyzer.py（`注X.X`形式）
+- [x] T050 `make test` FAIL (RED) を確認
+- [x] T051 RED出力を生成: specs/003-heading-readaloud-rules/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 

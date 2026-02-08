@@ -748,3 +748,235 @@ class TestNormalHeadingNotExcluded:
         assert processed[3].read_aloud is False  # Section 2.3
         # 通常見出しはTrue
         assert processed[4].read_aloud is True  # 3.2.1 モニタリングの基本
+
+
+# =============================================================================
+# T048: Webサイト参照パターンテスト (Phase 4: User Story 3)
+# =============================================================================
+
+
+class TestWebsiteReferencePatternMatching:
+    """Webサイト参照パターンテスト - 単独で「Webサイト」のみの見出しを除外"""
+
+    def test_match_website_reference_exact(self) -> None:
+        """「Webサイト」（完全一致）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "Webサイト"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "reference"
+
+    def test_no_match_website_with_prefix(self) -> None:
+        """「参考Webサイト」（前置詞あり）はマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "参考Webサイト"
+        result = match_exclusion_pattern(text)
+
+        # 完全一致のみなのでマッチしない
+        assert result is None or result.id != "reference"
+
+    def test_no_match_website_with_suffix(self) -> None:
+        """「Webサイト一覧」（接尾辞あり）はマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "Webサイト一覧"
+        result = match_exclusion_pattern(text)
+
+        # 完全一致のみなのでマッチしない
+        assert result is None or result.id != "reference"
+
+    def test_no_match_website_lowercase(self) -> None:
+        """「webサイト」（小文字）はマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "webサイト"
+        result = match_exclusion_pattern(text)
+
+        # 大文字Webのみがマッチ
+        assert result is None or result.id != "reference"
+
+    def test_no_match_website_partial(self) -> None:
+        """「Webサイトを参照」はマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "Webサイトを参照"
+        result = match_exclusion_pattern(text)
+
+        # 完全一致のみなのでマッチしない
+        assert result is None or result.id != "reference"
+
+    def test_website_reference_read_aloud_false(self) -> None:
+        """「Webサイト」見出しはreadAloud=Falseとなる"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=2, text="Webサイト"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 1
+        assert processed[0].read_aloud is False
+
+
+# =============================================================================
+# T049: 脚注番号パターンテスト (Phase 4: User Story 3)
+# =============================================================================
+
+
+class TestFootnotePatternMatching:
+    """脚注番号パターンテスト - 「注X.X」形式を除外"""
+
+    def test_match_footnote_simple(self) -> None:
+        """「注3.1」をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "注3.1"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "footnote"
+
+    def test_match_footnote_double_digit(self) -> None:
+        """「注10.2」（2桁）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "注10.2"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "footnote"
+
+    def test_match_footnote_large_numbers(self) -> None:
+        """「注123.45」（大きな数字）をマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "注123.45"
+        result = match_exclusion_pattern(text)
+
+        assert result is not None
+        assert result.id == "footnote"
+
+    def test_match_footnote_with_trailing_text(self) -> None:
+        """「注3.1 補足説明」（後続テキストあり）もマッチ"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "注3.1 補足説明"
+        result = match_exclusion_pattern(text)
+
+        # 先頭マッチパターンなので後続テキストがあってもマッチ
+        assert result is not None
+        assert result.id == "footnote"
+
+    def test_no_match_footnote_without_number(self) -> None:
+        """「注」のみはマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "注"
+        result = match_exclusion_pattern(text)
+
+        # 数字パターンがないのでマッチしない
+        assert result is None or result.id != "footnote"
+
+    def test_no_match_footnote_in_sentence(self) -> None:
+        """「本文中の注3.1を参照」（文中）はマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "本文中の注3.1を参照"
+        result = match_exclusion_pattern(text)
+
+        # 先頭が「注」ではないのでマッチしない
+        assert result is None or result.id != "footnote"
+
+    def test_no_match_different_note_format(self) -> None:
+        """「注記3」（異なる形式）はマッチしない"""
+        from src.book_converter.analyzer import match_exclusion_pattern
+
+        text = "注記3"
+        result = match_exclusion_pattern(text)
+
+        # 「注X.X」形式ではないのでマッチしない
+        assert result is None or result.id != "footnote"
+
+    def test_footnote_read_aloud_false(self) -> None:
+        """「注3.1」見出しはreadAloud=Falseとなる"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=3, text="注3.1"),
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 1
+        assert processed[0].read_aloud is False
+
+
+# =============================================================================
+# 統合テスト: User Story 3 パターン (Phase 4)
+# =============================================================================
+
+
+class TestUserStory3Integration:
+    """User Story 3 の統合テスト - 参照・メタ情報の除外"""
+
+    def test_mixed_headings_with_reference_and_footnote(self) -> None:
+        """参照表記と脚注番号を含む混合見出しで正しい除外判定"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=1, text="第1章：はじめに"),        # 通常 → True
+            Heading(level=2, text="Webサイト"),              # 参照 → False
+            Heading(level=2, text="1.1 概要"),               # 通常 → True
+            Heading(level=3, text="注3.1"),                  # 脚注 → False
+            Heading(level=2, text="参考文献"),               # 通常 → True
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 5
+        # 通常見出しはTrue
+        assert processed[0].read_aloud is True  # 第1章：はじめに
+        # 参照表記はFalse
+        assert processed[1].read_aloud is False  # Webサイト
+        # 通常見出しはTrue
+        assert processed[2].read_aloud is True  # 1.1 概要
+        # 脚注番号はFalse
+        assert processed[3].read_aloud is False  # 注3.1
+        # 通常見出しはTrue
+        assert processed[4].read_aloud is True  # 参考文献
+
+    def test_all_exclusion_patterns_together(self) -> None:
+        """全除外パターン（US1, US2, US3）を含む混合見出しで正しい除外判定"""
+        from src.book_converter.analyzer import apply_read_aloud_rules
+
+        headings = [
+            Heading(level=1, text="第1章：はじめに"),           # 通常 → True
+            Heading(level=2, text="◆◆◆"),                      # 装飾 → False (US2)
+            Heading(level=3, text="Section 2.3"),               # ラベル → False (US2)
+            Heading(level=2, text="Webサイト"),                 # 参照 → False (US3)
+            Heading(level=3, text="注10.5"),                    # 脚注 → False (US3)
+            Heading(level=2, text="1.1.1 概要 — 1 / 3"),        # ページ番号 → False (US1)
+            Heading(level=2, text="3.2.1 モニタリングの基本"),  # 通常 → True
+        ]
+
+        processed = apply_read_aloud_rules(headings, [])
+
+        assert len(processed) == 7
+        # 通常見出しはTrue
+        assert processed[0].read_aloud is True  # 第1章：はじめに
+        # 装飾記号はFalse
+        assert processed[1].read_aloud is False  # ◆◆◆
+        # セクションラベルはFalse
+        assert processed[2].read_aloud is False  # Section 2.3
+        # 参照表記はFalse
+        assert processed[3].read_aloud is False  # Webサイト
+        # 脚注番号はFalse
+        assert processed[4].read_aloud is False  # 注10.5
+        # ページ番号表記はFalse
+        assert processed[5].read_aloud is False  # 1.1.1 概要 — 1 / 3
+        # 通常見出しはTrue
+        assert processed[6].read_aloud is True  # 3.2.1 モニタリングの基本
