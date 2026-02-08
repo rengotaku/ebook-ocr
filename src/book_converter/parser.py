@@ -838,6 +838,11 @@ def _parse_single_page_content(
                     break
                 if parse_page_metadata(para_line.strip()) is not None:
                     break
+                # Stop at markers (toc, content, skip)
+                if parse_toc_marker(para_line) is not None:
+                    break
+                if parse_content_marker(para_line) is not None:
+                    break
                 para_lines.append(para_line)
                 para_idx += 1
 

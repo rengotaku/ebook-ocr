@@ -177,22 +177,22 @@
 
 ### Input
 
-- [ ] T069 セットアップ分析を読み込み: specs/004-toc-structure/tasks/ph1-output.md
-- [ ] T070 前フェーズ出力を読み込み: specs/004-toc-structure/tasks/ph4-output.md
+- [x] T069 セットアップ分析を読み込み: specs/004-toc-structure/tasks/ph1-output.md
+- [x] T070 前フェーズ出力を読み込み: specs/004-toc-structure/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T071 [P] XSDスキーマを本番に反映: specs/002-book-md-structure/contracts/book.xsd を更新
-- [ ] T072 [P] quickstart.md の検証を実行（サンプル変換テスト）
-- [ ] T073 [P] E2Eテストを追加: tests/book_converter/test_e2e.py（実際のbook.mdサンプル使用）
-- [ ] T074 コードクリーンアップとリファクタリング
-- [ ] T075 `make test` で全テストパスを確認
+- [x] T071 [P] XSDスキーマを本番に反映: specs/002-book-md-structure/contracts/book.xsd を更新
+- [x] T072 [P] quickstart.md の検証を実行（サンプル変換テスト）
+- [x] T073 [P] E2Eテストを追加: tests/book_converter/test_e2e_toc.py（実際のbook.mdサンプル使用）
+- [x] T074 コードクリーンアップとリファクタリング
+- [x] T075 `make test` で全テストパスを確認
 
 ### Verification
 
-- [ ] T076 `make test` で全テストパスを確認
-- [ ] T077 `make coverage` で ≥80% を確認
-- [ ] T078 フェーズ出力を生成: specs/004-toc-structure/tasks/ph5-output.md
+- [x] T076 `make test` で全テストパスを確認
+- [x] T077 `make coverage` で ≥80% を確認
+- [x] T078 フェーズ出力を生成: specs/004-toc-structure/tasks/ph5-output.md
 
 ---
 

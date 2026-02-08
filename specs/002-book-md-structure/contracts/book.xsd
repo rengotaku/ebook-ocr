@@ -7,10 +7,41 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="metadata" minOccurs="0"/>
+        <xs:element ref="tableOfContents" minOccurs="0"/>
         <xs:element ref="page" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+
+  <!-- Table of Contents (NEW) -->
+  <xs:element name="tableOfContents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="entry" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="readAloud" type="xs:boolean" default="false"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- TOC Entry (NEW) -->
+  <xs:element name="entry">
+    <xs:complexType>
+      <xs:attribute name="level" type="tocLevelEnum" use="required"/>
+      <xs:attribute name="number" type="xs:string"/>
+      <xs:attribute name="title" type="xs:string" use="required"/>
+      <xs:attribute name="page" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- TOC Level Enumeration (NEW) -->
+  <xs:simpleType name="tocLevelEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="chapter"/>
+      <xs:enumeration value="section"/>
+      <xs:enumeration value="subsection"/>
+      <xs:enumeration value="other"/>
+    </xs:restriction>
+  </xs:simpleType>
 
   <!-- Book Metadata -->
   <xs:element name="metadata">
@@ -29,6 +60,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="pageAnnouncement" minOccurs="0"/>
+        <xs:element ref="tableOfContents" minOccurs="0"/>
         <xs:element ref="figure" minOccurs="0" maxOccurs="unbounded"/>
         <xs:element ref="content"/>
         <xs:element ref="pageMetadata" minOccurs="0"/>
@@ -56,6 +88,7 @@
       <xs:simpleContent>
         <xs:extension base="xs:string">
           <xs:attribute name="format" type="xs:string" default="simple"/>
+          <xs:attribute name="readAloud" type="xs:boolean" default="false"/>
         </xs:extension>
       </xs:simpleContent>
     </xs:complexType>
@@ -69,18 +102,18 @@
         <xs:element ref="paragraph"/>
         <xs:element ref="list"/>
       </xs:choice>
-      <xs:attribute name="readAloud" type="xs:boolean" default="true"/>
+      <xs:attribute name="readAloud" type="xs:boolean" default="false"/>
     </xs:complexType>
   </xs:element>
 
   <!-- Heading Element -->
   <xs:element name="heading">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="level" type="headingLevelType" use="required"/>
-        </xs:extension>
-      </xs:simpleContent>
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element ref="emphasis" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="level" type="headingLevelType" use="required"/>
+      <xs:attribute name="readAloud" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
 
@@ -93,6 +126,62 @@
 
   <!-- Paragraph Element -->
   <xs:element name="paragraph">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element ref="emphasis" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="readAloud" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Emphasis Element -->
+  <xs:element name="emphasis" type="xs:string"/>
+
+  <!-- List Element -->
+  <xs:element name="list">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="item" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="readAloud" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- List Item Element -->
+  <xs:element name="item">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element ref="emphasis" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Figure Element -->
+  <xs:element name="figure">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="file"/>
+        <xs:element ref="caption" minOccurs="0"/>
+        <xs:element ref="description" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="readAloud" type="readAloudEnum" default="optional"/>
+      <xs:attribute name="continued" type="xs:boolean" default="false"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Figure File -->
+  <xs:element name="file">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="readAloud" type="xs:boolean" default="false"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Figure Caption -->
+  <xs:element name="caption">
     <xs:complexType>
       <xs:simpleContent>
         <xs:extension base="xs:string">
@@ -102,26 +191,14 @@
     </xs:complexType>
   </xs:element>
 
-  <!-- List Element -->
-  <xs:element name="list">
+  <!-- Figure Description -->
+  <xs:element name="description">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="item" type="xs:string" maxOccurs="unbounded"/>
-      </xs:sequence>
-      <xs:attribute name="readAloud" type="xs:boolean" default="true"/>
-    </xs:complexType>
-  </xs:element>
-
-  <!-- Figure Element -->
-  <xs:element name="figure">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="file" type="xs:string"/>
-        <xs:element name="caption" type="xs:string" minOccurs="0"/>
-        <xs:element name="description" type="xs:string" minOccurs="0"/>
-      </xs:sequence>
-      <xs:attribute name="readAloud" type="readAloudEnum" default="optional"/>
-      <xs:attribute name="continued" type="xs:boolean" default="false"/>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="readAloud" type="xs:boolean"/>
+        </xs:extension>
+      </xs:simpleContent>
     </xs:complexType>
   </xs:element>
 
@@ -140,6 +217,7 @@
       <xs:simpleContent>
         <xs:extension base="xs:string">
           <xs:attribute name="type" type="pageMetadataTypeEnum" default="chapter-page"/>
+          <xs:attribute name="readAloud" type="xs:boolean" default="false"/>
         </xs:extension>
       </xs:simpleContent>
     </xs:complexType>
@@ -154,7 +232,7 @@
     </xs:restriction>
   </xs:simpleType>
 
-  <!-- TOC Element (Table of Contents) -->
+  <!-- Legacy TOC Element (deprecated, use tableOfContents) -->
   <xs:element name="toc">
     <xs:complexType>
       <xs:sequence>
@@ -163,7 +241,7 @@
     </xs:complexType>
   </xs:element>
 
-  <!-- TOC Item Element -->
+  <!-- Legacy TOC Item Element (deprecated) -->
   <xs:element name="tocItem">
     <xs:complexType>
       <xs:simpleContent>
