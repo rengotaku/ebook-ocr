@@ -6,7 +6,19 @@ All entities are immutable (frozen dataclasses) per Constitution IV. Immutabilit
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Union
+
+
+class MarkerType(Enum):
+    """Content marker types."""
+
+    TOC_START = "toc_start"
+    TOC_END = "toc_end"
+    CONTENT_START = "content_start"
+    CONTENT_END = "content_end"
+    SKIP_START = "skip_start"
+    SKIP_END = "skip_end"
 
 
 @dataclass(frozen=True)
@@ -87,6 +99,24 @@ class PageMetadata:
 
 
 @dataclass(frozen=True)
+class TocEntry:
+    """Table of Contents entry."""
+
+    text: str  # エントリのタイトルテキスト
+    level: str  # "chapter", "section", "subsection", "other"
+    number: str = ""  # 章番号（例: "1", "2.1", "2.1.1"）
+    page: str = ""  # 参照ページ番号
+
+
+@dataclass(frozen=True)
+class TableOfContents:
+    """Complete Table of Contents."""
+
+    entries: tuple[TocEntry, ...]
+    read_aloud: bool = False
+
+
+@dataclass(frozen=True)
 class Page:
     """1ページ"""
 
@@ -98,6 +128,7 @@ class Page:
     metadata: PageMetadata | None = None
     continued: bool = False
     page_type: str = "normal"  # "normal", "cover", "colophon", "toc"
+    toc: TableOfContents | None = None
 
 
 @dataclass(frozen=True)

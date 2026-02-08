@@ -17,7 +17,76 @@ from src.book_converter.models import (
     List,
     Figure,
     PageMetadata,
+    TocEntry,
+    TableOfContents,
 )
+
+
+def transform_toc_entry(entry: TocEntry) -> Element:
+    """Transform TocEntry to XML element.
+
+    <entry level="chapter" number="1" title="SREとは" page="15"/>
+
+    Args:
+        entry: The TocEntry object to transform.
+
+    Returns:
+        An XML Element representing the TOC entry.
+
+    Example:
+        >>> entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+        >>> elem = transform_toc_entry(entry)
+        >>> elem.tag
+        'entry'
+        >>> elem.get("level")
+        'chapter'
+        >>> elem.get("title")
+        'SREとは'
+    """
+    elem = Element("entry")
+    elem.set("level", entry.level)
+    if entry.number:
+        elem.set("number", entry.number)
+    elem.set("title", entry.text)
+    if entry.page:
+        elem.set("page", entry.page)
+    return elem
+
+
+def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
+    """Transform TableOfContents to XML element.
+
+    <tableOfContents>
+      <entry .../>
+      <entry .../>
+    </tableOfContents>
+
+    Args:
+        toc: The TableOfContents object to transform.
+
+    Returns:
+        An XML Element representing the table of contents, or None if toc is None.
+
+    Example:
+        >>> entries = (TocEntry(text="Chapter 1", level="chapter", number="1"),)
+        >>> toc = TableOfContents(entries=entries, read_aloud=False)
+        >>> elem = transform_table_of_contents(toc)
+        >>> elem.tag
+        'tableOfContents'
+        >>> len(list(elem))
+        1
+    """
+    if toc is None:
+        return None
+
+    elem = Element("tableOfContents")
+
+    # Add entries
+    for entry in toc.entries:
+        entry_elem = transform_toc_entry(entry)
+        elem.append(entry_elem)
+
+    return elem
 
 
 def apply_emphasis(text: str, parent: Element) -> None:
@@ -93,6 +162,12 @@ def transform_page(page: Page) -> Element:
         announcement_elem = transform_page_announcement(page.announcement)
         if announcement_elem is not None:
             elem.append(announcement_elem)
+
+    # Add table of contents if present
+    if page.toc is not None:
+        toc_elem = transform_table_of_contents(page.toc)
+        if toc_elem is not None:
+            elem.append(toc_elem)
 
     # Add content elements
     content_elem = transform_content(page.content)

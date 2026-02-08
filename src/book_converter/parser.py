@@ -18,7 +18,141 @@ from src.book_converter.models import (
     Figure,
     PageMetadata,
     ConversionError,
+    MarkerType,
+    TocEntry,
+    TableOfContents,
 )
+
+
+def parse_toc_marker(line: str) -> MarkerType | None:
+    """Parse a TOC marker line.
+
+    Returns MarkerType.TOC_START or TOC_END if line is a toc marker.
+    Case insensitive.
+
+    Args:
+        line: A line from the Markdown file.
+
+    Returns:
+        MarkerType.TOC_START for <!-- toc -->, MarkerType.TOC_END for <!-- /toc -->,
+        None otherwise.
+
+    Example:
+        >>> parse_toc_marker("<!-- toc -->")
+        MarkerType.TOC_START
+        >>> parse_toc_marker("<!-- /toc -->")
+        MarkerType.TOC_END
+        >>> parse_toc_marker("<!--   TOC   -->")
+        MarkerType.TOC_START
+    """
+    import re
+
+    # Pattern: <!-- [optional /]toc --> (case insensitive, flexible whitespace)
+    pattern = r"<!--\s*(/?)\s*[Tt][Oo][Cc]\s*-->"
+    match = re.search(pattern, line)
+
+    if match:
+        slash = match.group(1)
+        return MarkerType.TOC_END if slash else MarkerType.TOC_START
+
+    return None
+
+
+def parse_toc_entry(line: str) -> TocEntry | None:
+    """Parse a TOC entry line.
+
+    Patterns:
+    - 第N章 タイトル ... ページ番号
+    - N.N タイトル ... ページ番号
+    - N.N.N タイトル ... ページ番号
+    - その他 (はじめに, おわりに, etc.)
+
+    Args:
+        line: A line from the TOC.
+
+    Returns:
+        TocEntry if line matches a TOC pattern, None otherwise.
+
+    Example:
+        >>> parse_toc_entry("第1章 SREとは ... 15")
+        TocEntry(text="SREとは", level="chapter", number="1", page="15")
+        >>> parse_toc_entry("2.1 SLOの理解 ─── 30")
+        TocEntry(text="SLOの理解", level="section", number="2.1", page="30")
+    """
+    import re
+
+    if not line.strip():
+        return None
+
+    # Extract page number first (before removing it from title)
+    page_number = ""
+
+    # Try dot leader pattern: ... N
+    dot_match = re.search(r"\.{2,}\s*(\d+)\s*$", line)
+    if dot_match:
+        page_number = dot_match.group(1)
+        line = line[: dot_match.start()]
+
+    # Try dash leader pattern: ─── N or --- N
+    if not page_number:
+        dash_match = re.search(r"[─\-]{2,}\s*(\d+)\s*$", line)
+        if dash_match:
+            page_number = dash_match.group(1)
+            line = line[: dash_match.start()]
+
+    # Try space leader pattern: (3+ spaces) N
+    if not page_number:
+        space_match = re.search(r"\s{3,}(\d+)\s*$", line)
+        if space_match:
+            page_number = space_match.group(1)
+            line = line[: space_match.start()]
+
+    # Now parse entry patterns
+    line = line.strip()
+
+    # Chapter pattern: 第N章 タイトル
+    chapter_pattern = r"^第(\d+)章\s+(.+)$"
+    match = re.match(chapter_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level="chapter",
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Subsection pattern (must come before section): N.N.N タイトル
+    subsection_pattern = r"^(\d+\.\d+\.\d+)\s+(.+)$"
+    match = re.match(subsection_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level="subsection",
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Section pattern: N.N タイトル
+    section_pattern = r"^(\d+\.\d+)\s+(.+)$"
+    match = re.match(section_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level="section",
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Other pattern (no number prefix)
+    if line:
+        return TocEntry(
+            text=line,
+            level="other",
+            number="",
+            page=page_number,
+        )
+
+    return None
 
 
 def parse_page_marker(line: str) -> tuple[str, str] | None:
@@ -376,39 +510,9 @@ def parse_pages(input_path: Path) -> Iterator[Page]:
     Yields:
         Page objects parsed from the Markdown file.
     """
-    with open(input_path, encoding="utf-8") as f:
-        content = f.read()
-
-    lines = content.split("\n")
-    current_page_number = ""
-    current_source_file = ""
-
-    for line in lines:
-        # Check if this is a page marker
-        marker_result = parse_page_marker(line)
-        if marker_result is not None:
-            # Yield previous page if any
-            if current_page_number or current_source_file:
-                announcement = create_page_announcement(current_page_number)
-                yield Page(
-                    number=current_page_number,
-                    source_file=current_source_file,
-                    content=Content(elements=()),
-                    announcement=announcement,
-                )
-
-            # Start new page
-            current_page_number, current_source_file = marker_result
-
-    # Yield final page
-    if current_page_number or current_source_file:
-        announcement = create_page_announcement(current_page_number)
-        yield Page(
-            number=current_page_number,
-            source_file=current_source_file,
-            content=Content(elements=()),
-            announcement=announcement,
-        )
+    # Use parse_pages_with_errors and yield only pages (ignore errors)
+    pages, _ = parse_pages_with_errors(input_path)
+    yield from pages
 
 
 def parse_pages_with_errors(
@@ -435,6 +539,10 @@ def parse_pages_with_errors(
     last_page_marker_line = 0
     page_start_line = 0
 
+    # Track TOC state across pages
+    in_toc = False
+    toc_entries_accumulated = []
+
     for line_idx, line in enumerate(lines, start=1):
         # Check if this is a page marker (including those with missing numbers)
         page_num, source_file = extract_page_number(line)
@@ -443,14 +551,17 @@ def parse_pages_with_errors(
             # Save previous page if any
             if current_source_file:
                 # Parse the content of the previous page
-                page_obj, page_errors = _parse_single_page_content(
+                page_obj, page_errors, in_toc, new_entries = _parse_single_page_content(
                     current_page_number,
                     current_source_file,
                     current_page_lines,
                     page_start_line,
+                    in_toc,
+                    toc_entries_accumulated,
                 )
                 pages.append(page_obj)
                 errors.extend(page_errors)
+                toc_entries_accumulated.extend(new_entries)
 
                 # Check for missing page number on previous page
                 if not current_page_number:
@@ -474,14 +585,17 @@ def parse_pages_with_errors(
     # Save final page
     if current_source_file:
         # Parse the content of the final page
-        page_obj, page_errors = _parse_single_page_content(
+        page_obj, page_errors, in_toc, new_entries = _parse_single_page_content(
             current_page_number,
             current_source_file,
             current_page_lines,
             page_start_line,
+            in_toc,
+            toc_entries_accumulated,
         )
         pages.append(page_obj)
         errors.extend(page_errors)
+        toc_entries_accumulated.extend(new_entries)
 
         # Check for missing page number on final page
         if not current_page_number:
@@ -500,7 +614,9 @@ def _parse_single_page_content(
     source_file: str,
     lines: list[str],
     start_line: int,
-) -> tuple[Page, list[ConversionError]]:
+    in_toc_initial: bool = False,
+    toc_entries_accumulated: list[TocEntry] | None = None,
+) -> tuple[Page, list[ConversionError], bool, list[TocEntry]]:
     """Parse the content of a single page.
 
     Args:
@@ -508,20 +624,43 @@ def _parse_single_page_content(
         source_file: Source file name.
         lines: Lines of content for this page.
         start_line: Starting line number in the original file.
+        in_toc_initial: Whether we're continuing TOC from previous page.
+        toc_entries_accumulated: TOC entries from previous pages (if continuing).
 
     Returns:
-        Tuple of (Page, list of ConversionErrors).
+        Tuple of (Page, list of ConversionErrors, in_toc_final, new_toc_entries).
     """
     errors = []
     content_elements = []
     figures_list = []
     metadata = None
+    toc_entries = []
+    in_toc = in_toc_initial
 
     # Parse content line by line
     idx = 0
     while idx < len(lines):
         line = lines[idx]
         line_num = start_line + idx + 1
+
+        # Check for TOC markers
+        marker = parse_toc_marker(line)
+        if marker == MarkerType.TOC_START:
+            in_toc = True
+            idx += 1
+            continue
+        elif marker == MarkerType.TOC_END:
+            in_toc = False
+            idx += 1
+            continue
+
+        # If inside TOC, try to parse as TOC entry
+        if in_toc:
+            toc_entry = parse_toc_entry(line)
+            if toc_entry is not None:
+                toc_entries.append(toc_entry)
+            idx += 1
+            continue
 
         # Check for deep heading warning
         heading, warning = parse_heading_with_warning(line)
@@ -623,6 +762,17 @@ def _parse_single_page_content(
     content = Content(elements=tuple(content_elements))
     announcement = create_page_announcement(page_number)
 
+    # Create TableOfContents only on the page where TOC ends
+    # If we're still in TOC mode, don't create the element yet
+    toc = None
+    if not in_toc and toc_entries:
+        # TOC has ended on this page, include all accumulated entries
+        all_entries = []
+        if toc_entries_accumulated:
+            all_entries.extend(toc_entries_accumulated)
+        all_entries.extend(toc_entries)
+        toc = TableOfContents(entries=tuple(all_entries), read_aloud=False)
+
     page = Page(
         number=page_number,
         source_file=source_file,
@@ -630,6 +780,7 @@ def _parse_single_page_content(
         announcement=announcement,
         figures=tuple(figures_list),
         metadata=metadata,
+        toc=toc,
     )
 
-    return (page, errors)
+    return (page, errors, in_toc, toc_entries)

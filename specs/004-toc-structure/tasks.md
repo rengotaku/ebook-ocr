@@ -72,24 +72,24 @@
 
 ### Implementation (GREEN)
 
-- [ ] T022 REDテストを読み込み: specs/004-toc-structure/red-tests/ph2-test.md
-- [ ] T023 [P] [US1] TocEntryデータクラスを追加: src/book_converter/models.py
-- [ ] T024 [P] [US1] TableOfContentsデータクラスを追加: src/book_converter/models.py
-- [ ] T025 [P] [US1] MarkerType列挙を追加: src/book_converter/models.py
-- [ ] T026 [P] [US1] `parse_toc_marker()`を実装: src/book_converter/parser.py
-- [ ] T027 [P] [US2] `parse_toc_entry()`を実装: src/book_converter/parser.py（章・節・項パターン）
-- [ ] T028 [P] [US2] ページ番号抽出ロジックを実装: src/book_converter/parser.py
-- [ ] T029 [US1] パーサーに目次収集ロジックを統合: src/book_converter/parser.py（`_parse_single_page_content()`拡張）
-- [ ] T030 [P] [US1] `transform_toc_entry()`を実装: src/book_converter/transformer.py
-- [ ] T031 [P] [US1] `transform_table_of_contents()`を実装: src/book_converter/transformer.py
-- [ ] T032 [US1] トランスフォーマーに目次変換を統合: src/book_converter/transformer.py
-- [ ] T033 `make test` PASS を確認 (GREEN)
+- [x] T022 REDテストを読み込み: specs/004-toc-structure/red-tests/ph2-test.md
+- [x] T023 [P] [US1] TocEntryデータクラスを追加: src/book_converter/models.py
+- [x] T024 [P] [US1] TableOfContentsデータクラスを追加: src/book_converter/models.py
+- [x] T025 [P] [US1] MarkerType列挙を追加: src/book_converter/models.py
+- [x] T026 [P] [US1] `parse_toc_marker()`を実装: src/book_converter/parser.py
+- [x] T027 [P] [US2] `parse_toc_entry()`を実装: src/book_converter/parser.py（章・節・項パターン）
+- [x] T028 [P] [US2] ページ番号抽出ロジックを実装: src/book_converter/parser.py
+- [x] T029 [US1] パーサーに目次収集ロジックを統合: src/book_converter/parser.py（`_parse_single_page_content()`拡張）
+- [x] T030 [P] [US1] `transform_toc_entry()`を実装: src/book_converter/transformer.py
+- [x] T031 [P] [US1] `transform_table_of_contents()`を実装: src/book_converter/transformer.py
+- [x] T032 [US1] トランスフォーマーに目次変換を統合: src/book_converter/transformer.py
+- [x] T033 `make test` PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T034 `make test` で全テストパスを確認（リグレッションなし）
-- [ ] T035 `make coverage` で ≥80% を確認
-- [ ] T036 フェーズ出力を生成: specs/004-toc-structure/tasks/ph2-output.md
+- [x] T034 `make test` で全テストパスを確認（リグレッションなし）
+- [x] T035 `make coverage` で ≥80% を確認
+- [x] T036 フェーズ出力を生成: specs/004-toc-structure/tasks/ph2-output.md
 
 **Checkpoint**: US1+US2が完全に機能し、独立してテスト可能
 
