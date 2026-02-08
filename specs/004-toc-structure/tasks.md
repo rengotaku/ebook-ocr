@@ -54,21 +54,21 @@
 
 ### Input
 
-- [ ] T010 前フェーズ出力を読み込み: specs/004-toc-structure/tasks/ph1-output.md
+- [x] T010 前フェーズ出力を読み込み: specs/004-toc-structure/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T011 [P] [US1] 目次マーカー検出テストを実装: tests/book_converter/test_parser.py（`parse_toc_marker()`）
-- [ ] T012 [P] [US2] 章パターン（第N章）抽出テストを実装: tests/book_converter/test_parser.py（`parse_toc_entry()`）
-- [ ] T013 [P] [US2] 節パターン（N.N、N.N.N）抽出テストを実装: tests/book_converter/test_parser.py
-- [ ] T014 [P] [US2] ページ番号抽出テストを実装: tests/book_converter/test_parser.py（ドットリーダー、罫線形式）
-- [ ] T015 [P] [US1] TocEntry/TableOfContentsモデルテストを実装: tests/book_converter/test_parser.py
-- [ ] T016 [P] [US1] tableOfContents変換テストを実装: tests/book_converter/test_transformer.py（`transform_table_of_contents()`）
-- [ ] T017 [P] [US2] entry変換テストを実装: tests/book_converter/test_transformer.py（`transform_toc_entry()`）
-- [ ] T018 [P] [US1] 統合テスト（目次マーカーあり）を実装: tests/book_converter/test_integration.py
-- [ ] T019 [P] [US1] 統合テスト（目次マーカーなし、後方互換）を実装: tests/book_converter/test_integration.py
-- [ ] T020 `make test` FAIL を確認 (RED)
-- [ ] T021 RED出力を生成: specs/004-toc-structure/red-tests/ph2-test.md
+- [x] T011 [P] [US1] 目次マーカー検出テストを実装: tests/book_converter/test_parser.py（`parse_toc_marker()`）
+- [x] T012 [P] [US2] 章パターン（第N章）抽出テストを実装: tests/book_converter/test_parser.py（`parse_toc_entry()`）
+- [x] T013 [P] [US2] 節パターン（N.N、N.N.N）抽出テストを実装: tests/book_converter/test_parser.py
+- [x] T014 [P] [US2] ページ番号抽出テストを実装: tests/book_converter/test_parser.py（ドットリーダー、罫線形式）
+- [x] T015 [P] [US1] TocEntry/TableOfContentsモデルテストを実装: tests/book_converter/test_parser.py
+- [x] T016 [P] [US1] tableOfContents変換テストを実装: tests/book_converter/test_transformer.py（`transform_table_of_contents()`）
+- [x] T017 [P] [US2] entry変換テストを実装: tests/book_converter/test_transformer.py（`transform_toc_entry()`）
+- [x] T018 [P] [US1] 統合テスト（目次マーカーあり）を実装: tests/book_converter/test_integration.py
+- [x] T019 [P] [US1] 統合テスト（目次マーカーなし、後方互換）を実装: tests/book_converter/test_integration.py
+- [x] T020 `make test` FAIL を確認 (RED)
+- [x] T021 RED出力を生成: specs/004-toc-structure/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 

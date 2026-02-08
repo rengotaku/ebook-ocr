@@ -1269,3 +1269,298 @@ class TestEmphasisConversion:
         emphasis = element.find("emphasis")
         assert emphasis is not None
         assert emphasis.text == "はじめに"
+
+
+# =============================================================================
+# Phase 2 (004-toc-structure): US1+US2 目次マーカー認識と構造化
+# =============================================================================
+
+
+class TestTransformTableOfContents:
+    """T016: tableOfContents変換テスト (transform_table_of_contents)
+
+    US1: 目次マーカーによる目次認識
+    - <tableOfContents>要素が生成される
+    """
+
+    def test_transform_table_of_contents_basic(self) -> None:
+        """基本的な目次をXMLに変換"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        toc = TableOfContents(entries=(entry,))
+
+        element = transform_table_of_contents(toc)
+
+        assert element is not None
+        assert element.tag == "tableOfContents"
+
+    def test_transform_table_of_contents_returns_element(self) -> None:
+        """戻り値はElement型"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="テスト", level="chapter")
+        toc = TableOfContents(entries=(entry,))
+
+        element = transform_table_of_contents(toc)
+
+        assert isinstance(element, Element)
+
+    def test_transform_table_of_contents_contains_entries(self) -> None:
+        """目次にエントリが含まれる"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry1 = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        entry2 = TocEntry(text="1.1 節", level="section", number="1.1", page="20")
+        toc = TableOfContents(entries=(entry1, entry2))
+
+        element = transform_table_of_contents(toc)
+
+        entries = element.findall("entry")
+        assert len(entries) == 2
+
+    def test_transform_table_of_contents_multiple_entries(self) -> None:
+        """複数エントリの目次を変換"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entries = (
+            TocEntry(text="はじめに", level="other", page="1"),
+            TocEntry(text="第1章", level="chapter", number="1", page="15"),
+            TocEntry(text="1.1 節", level="section", number="1.1", page="16"),
+            TocEntry(text="1.1.1 項", level="subsection", number="1.1.1", page="17"),
+            TocEntry(text="第2章", level="chapter", number="2", page="25"),
+        )
+        toc = TableOfContents(entries=entries)
+
+        element = transform_table_of_contents(toc)
+
+        entry_elems = element.findall("entry")
+        assert len(entry_elems) == 5
+
+    def test_transform_table_of_contents_preserves_order(self) -> None:
+        """エントリの順序を保持"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entries = (
+            TocEntry(text="はじめに", level="other", page="1"),
+            TocEntry(text="第1章", level="chapter", number="1", page="15"),
+            TocEntry(text="おわりに", level="other", page="300"),
+        )
+        toc = TableOfContents(entries=entries)
+
+        element = transform_table_of_contents(toc)
+
+        entry_elems = element.findall("entry")
+        assert entry_elems[0].get("title") == "はじめに"
+        assert entry_elems[1].get("title") == "第1章"
+        assert entry_elems[2].get("title") == "おわりに"
+
+    def test_transform_table_of_contents_xml_serialization(self) -> None:
+        """XMLにシリアライズ可能"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+        toc = TableOfContents(entries=(entry,))
+
+        element = transform_table_of_contents(toc)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert "<tableOfContents" in xml_string
+        assert "<entry" in xml_string
+
+    def test_transform_table_of_contents_none_returns_none(self) -> None:
+        """NoneはNoneを返す"""
+        from src.book_converter.transformer import transform_table_of_contents
+
+        result = transform_table_of_contents(None)
+
+        assert result is None
+
+
+class TestTransformTocEntry:
+    """T017: entry変換テスト (transform_toc_entry)
+
+    US2: 章・節タイトルの構造化
+    - <entry level="..." number="..." title="..." page="..."/> 形式で出力
+    """
+
+    def test_transform_toc_entry_basic(self) -> None:
+        """基本的なエントリをXMLに変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        assert element.tag == "entry"
+
+    def test_transform_toc_entry_level_attribute(self) -> None:
+        """level属性が正しく設定される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "chapter"
+
+    def test_transform_toc_entry_number_attribute(self) -> None:
+        """number属性が正しく設定される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="section", number="2.1", page="20")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("number") == "2.1"
+
+    def test_transform_toc_entry_title_attribute(self) -> None:
+        """title属性が正しく設定される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("title") == "SREとは"
+
+    def test_transform_toc_entry_page_attribute(self) -> None:
+        """page属性が正しく設定される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="42")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("page") == "42"
+
+    def test_transform_toc_entry_chapter(self) -> None:
+        """chapter levelのエントリを変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "chapter"
+        assert element.get("number") == "1"
+        assert element.get("title") == "SREとは"
+        assert element.get("page") == "15"
+
+    def test_transform_toc_entry_section(self) -> None:
+        """section levelのエントリを変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SLOの理解", level="section", number="2.1", page="30")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "section"
+        assert element.get("number") == "2.1"
+        assert element.get("title") == "SLOの理解"
+        assert element.get("page") == "30"
+
+    def test_transform_toc_entry_subsection(self) -> None:
+        """subsection levelのエントリを変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SLA", level="subsection", number="2.1.1", page="35")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "subsection"
+        assert element.get("number") == "2.1.1"
+        assert element.get("title") == "SLA"
+        assert element.get("page") == "35"
+
+    def test_transform_toc_entry_other(self) -> None:
+        """other levelのエントリを変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="はじめに", level="other", page="1")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "other"
+        assert element.get("title") == "はじめに"
+        assert element.get("page") == "1"
+
+    def test_transform_toc_entry_without_number(self) -> None:
+        """number属性が空の場合"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="はじめに", level="other", number="", page="1")
+
+        element = transform_toc_entry(entry)
+
+        # number属性は空文字または省略
+        number = element.get("number")
+        assert number is None or number == ""
+
+    def test_transform_toc_entry_without_page(self) -> None:
+        """page属性が空の場合"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="")
+
+        element = transform_toc_entry(entry)
+
+        # page属性は空文字または省略
+        page = element.get("page")
+        assert page is None or page == ""
+
+    def test_transform_toc_entry_returns_element(self) -> None:
+        """戻り値はElement型"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter")
+
+        element = transform_toc_entry(entry)
+
+        assert isinstance(element, Element)
+
+    def test_transform_toc_entry_preserves_unicode(self) -> None:
+        """Unicode文字を保持"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="日本語「テスト」", level="chapter", number="1", page="10")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("title") == "日本語「テスト」"
+
+    def test_transform_toc_entry_xml_serialization(self) -> None:
+        """XMLにシリアライズ可能"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+
+        element = transform_toc_entry(entry)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert "<entry" in xml_string
+        assert 'level="chapter"' in xml_string
+        assert 'number="1"' in xml_string
+        assert 'title="SREとは"' in xml_string
+        assert 'page="15"' in xml_string

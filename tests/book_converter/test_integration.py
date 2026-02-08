@@ -312,3 +312,385 @@ class TestEdgeCases:
         # Unicodeが正しく処理される
         assert "日本語テキスト" in xml_string
         assert "日本語タイトル" in xml_string
+
+
+# =============================================================================
+# Phase 2 (004-toc-structure): US1+US2 目次マーカー認識と構造化
+# =============================================================================
+
+
+class TestTocMarkerIntegration:
+    """T018: 統合テスト（目次マーカーあり）
+
+    US1: 目次マーカーによる目次認識
+    book.mdに目次マーカーを含む場合、変換後のXMLに<tableOfContents>が生成される
+    """
+
+    def test_book_with_toc_marker_generates_table_of_contents(
+        self, tmp_path: Path
+    ) -> None:
+        """目次マーカー付きの書籍で<tableOfContents>が生成される"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 目次
+
+<!-- toc -->
+
+第1章 SREとは ... 15
+
+1.1 SREの定義 ... 16
+
+<!-- /toc -->
+
+--- Page 2 (page_0002.png) ---
+
+# 第1章 SREとは
+
+本文です。
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # tableOfContentsが存在する
+        toc = root.find(".//tableOfContents")
+        assert toc is not None
+
+    def test_toc_contains_entries(self, tmp_path: Path) -> None:
+        """目次に正しいエントリが含まれる"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- toc -->
+
+第1章 SREとは ... 15
+
+1.1 SREの定義 ... 16
+
+1.1.1 歴史 ... 17
+
+<!-- /toc -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        toc = root.find(".//tableOfContents")
+        assert toc is not None
+
+        entries = toc.findall("entry")
+        assert len(entries) == 3
+
+    def test_toc_entry_has_correct_attributes(self, tmp_path: Path) -> None:
+        """目次エントリが正しい属性を持つ"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- toc -->
+
+第1章 SREとは ... 15
+
+<!-- /toc -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        toc = root.find(".//tableOfContents")
+        entry = toc.find("entry")
+
+        assert entry is not None
+        assert entry.get("level") == "chapter"
+        assert entry.get("number") == "1"
+        assert entry.get("title") == "SREとは"
+        assert entry.get("page") == "15"
+
+    def test_toc_with_various_levels(self, tmp_path: Path) -> None:
+        """さまざまなレベルの目次エントリ"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- toc -->
+
+はじめに ... 1
+
+第1章 SREとは ... 15
+
+1.1 SREの定義 ... 16
+
+1.1.1 歴史 ... 17
+
+第2章 信頼性 ... 25
+
+おわりに ... 300
+
+<!-- /toc -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        toc = root.find(".//tableOfContents")
+        entries = toc.findall("entry")
+
+        # level確認
+        levels = [e.get("level") for e in entries]
+        assert "other" in levels  # はじめに, おわりに
+        assert "chapter" in levels  # 第1章, 第2章
+        assert "section" in levels  # 1.1
+        assert "subsection" in levels  # 1.1.1
+
+    def test_toc_spanning_multiple_pages(self, tmp_path: Path) -> None:
+        """複数ページにまたがる目次"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 目次
+
+<!-- toc -->
+
+第1章 SREとは ... 15
+
+--- Page 2 (page_0002.png) ---
+
+第2章 信頼性 ... 25
+
+<!-- /toc -->
+
+--- Page 3 (page_0003.png) ---
+
+# 第1章 SREとは
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        toc = root.find(".//tableOfContents")
+        assert toc is not None
+
+        entries = toc.findall("entry")
+        # 複数ページにまたがる目次も1つのtableOfContentsに収まる
+        assert len(entries) == 2
+
+
+class TestTocMarkerBackwardCompatibility:
+    """T019: 統合テスト（目次マーカーなし、後方互換）
+
+    US1: 目次マーカーがない場合、既存動作を維持（後方互換性）
+    """
+
+    def test_book_without_toc_marker_no_table_of_contents(
+        self, tmp_path: Path
+    ) -> None:
+        """目次マーカーなしの書籍で<tableOfContents>は生成されない"""
+        input_file = tmp_path / "book_without_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 第1章 SREとは
+
+本文です。
+
+--- Page 2 (page_0002.png) ---
+
+## 1.1 SREの定義
+
+詳細説明です。
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # tableOfContentsは存在しない
+        toc = root.find(".//tableOfContents")
+        assert toc is None
+
+    def test_backward_compatible_page_structure(
+        self, tmp_path: Path
+    ) -> None:
+        """目次マーカーなしでも既存のページ構造は維持"""
+        input_file = tmp_path / "book_without_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 第1章
+
+本文テキスト
+
+--- Page 2 (page_0002.png) ---
+
+## 1.1 節
+
+詳細説明
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # 既存の構造は維持
+        pages_elem = root.findall(".//page")
+        assert len(pages_elem) == 2
+
+        # ページアナウンスは維持
+        page1 = root.find(".//page[@number='1']")
+        assert page1 is not None
+        announcement = page1.find("pageAnnouncement")
+        assert announcement is not None
+        assert announcement.text == "1ページ"
+
+    def test_backward_compatible_content_parsing(
+        self, tmp_path: Path
+    ) -> None:
+        """目次マーカーなしでも既存のコンテンツ解析は維持"""
+        input_file = tmp_path / "book_without_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 見出し
+
+段落テキスト
+
+- リスト項目1
+- リスト項目2
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # 既存のコンテンツ解析は維持
+        page = root.find(".//page[@number='1']")
+        assert page is not None
+
+        # 見出し
+        heading = page.find(".//heading")
+        assert heading is not None
+
+        # 段落
+        paragraph = page.find(".//paragraph")
+        assert paragraph is not None
+
+        # リスト
+        list_elem = page.find(".//list")
+        assert list_elem is not None
+
+    def test_existing_sample_book_unchanged(self) -> None:
+        """既存のsample_book.mdが変更なく動作"""
+        fixture_path = Path(__file__).parent / "fixtures" / "sample_book.md"
+
+        if not fixture_path.exists():
+            pytest.skip("sample_book.md fixture not found")
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(fixture_path))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # 既存のテストと同様に動作
+        assert root.tag == "book"
+        pages_elem = root.findall(".//page")
+        assert len(pages_elem) >= 5
+
+        # 目次マーカーがないのでtableOfContentsは存在しない
+        toc = root.find(".//tableOfContents")
+        assert toc is None
