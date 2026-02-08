@@ -980,3 +980,115 @@ class TestUserStory3Integration:
         assert processed[5].read_aloud is False  # 1.1.1 概要 — 1 / 3
         # 通常見出しはTrue
         assert processed[6].read_aloud is True  # 3.2.1 モニタリングの基本
+
+
+# =============================================================================
+# 表記ゆれ正規化テスト
+# =============================================================================
+
+
+class TestNormalizeText:
+    """normalize_text 関数テスト - ダッシュ類の正規化"""
+
+    def test_normalize_em_dash(self) -> None:
+        """em dash (—) を正規化"""
+        from src.book_converter.analyzer import normalize_text
+
+        result = normalize_text("SREの知識地図——基礎知識")
+        assert "—" not in result
+        assert "-" in result
+
+    def test_normalize_horizontal_bar(self) -> None:
+        """horizontal bar (―) を正規化"""
+        from src.book_converter.analyzer import normalize_text
+
+        result = normalize_text("SREの知識地図――基礎知識")
+        assert "―" not in result
+        assert "-" in result
+
+    def test_normalize_en_dash(self) -> None:
+        """en dash (–) を正規化"""
+        from src.book_converter.analyzer import normalize_text
+
+        result = normalize_text("2020–2025")
+        assert "–" not in result
+        assert "-" in result
+
+    def test_normalize_katakana_dash(self) -> None:
+        """カタカナ長音 (ー) を正規化"""
+        from src.book_converter.analyzer import normalize_text
+
+        result = normalize_text("データー")
+        assert "ー" not in result
+        assert "-" in result
+
+    def test_normalize_fullwidth_hyphen(self) -> None:
+        """全角ハイフン (－) を正規化"""
+        from src.book_converter.analyzer import normalize_text
+
+        result = normalize_text("半角－全角")
+        assert "－" not in result
+        assert "-" in result
+
+    def test_normalize_empty_string(self) -> None:
+        """空文字列は空文字列を返す"""
+        from src.book_converter.analyzer import normalize_text
+
+        assert normalize_text("") == ""
+
+    def test_normalize_no_dash_unchanged(self) -> None:
+        """ダッシュを含まないテキストは変更なし"""
+        from src.book_converter.analyzer import normalize_text
+
+        text = "通常のテキスト"
+        assert normalize_text(text) == text
+
+
+class TestRunningHeadWithTextVariation:
+    """表記ゆれを含む柱検出テスト"""
+
+    def test_detect_running_head_with_dash_variation(self) -> None:
+        """ダッシュの違い（―― vs ——）を同じ柱として検出"""
+        from src.book_converter.analyzer import analyze_headings, detect_running_head
+
+        headings = [
+            # 61回: horizontal bar (――)
+            *[Heading(level=1, text="SREの知識地図――基礎知識から現場まで") for _ in range(61)],
+            # 36回: em dash (——)
+            *[Heading(level=1, text="SREの知識地図——基礎知識から現場まで") for _ in range(36)],
+        ]
+
+        analyses = analyze_headings(headings)
+        analyses = detect_running_head(analyses, total_pages=97, threshold_ratio=0.5)
+
+        # 合計97回出現なので、50%閾値 (48.5) を超える → 柱として検出されるべき
+        running_heads = [a for a in analyses if a.is_running_head]
+        assert len(running_heads) == 1
+        assert running_heads[0].count == 97
+
+    def test_apply_rules_with_dash_variation(self) -> None:
+        """ダッシュ表記ゆれを持つ見出しに正しくreadAloud=falseを設定"""
+        from src.book_converter.analyzer import (
+            analyze_headings,
+            detect_running_head,
+            apply_read_aloud_rules,
+        )
+
+        headings = [
+            Heading(level=1, text="SREの知識地図――基礎知識"),  # horizontal bar
+            Heading(level=1, text="SREの知識地図——基礎知識"),  # em dash
+            Heading(level=1, text="SREの知識地図――基礎知識"),  # horizontal bar
+            Heading(level=2, text="第1章"),
+        ]
+
+        analyses = analyze_headings(headings)
+        analyses = detect_running_head(analyses, total_pages=4, threshold_ratio=0.5)
+
+        processed = apply_read_aloud_rules(headings, analyses)
+
+        # 柱テキスト（表記ゆれを含む）はreadAloud=false
+        assert processed[0].read_aloud is False  # horizontal bar
+        assert processed[1].read_aloud is False  # em dash
+        assert processed[2].read_aloud is False  # horizontal bar
+        # 通常見出しはreadAloud=true
+        assert processed[3].read_aloud is True

@@ -13,8 +13,36 @@ from src.book_converter.models import Heading, HeadingAnalysis, ExclusionPattern
 from src.book_converter.config import DEFAULT_EXCLUSION_PATTERNS
 
 
+# 表記ゆれ正規化用の文字マッピング（ダッシュ類を統一）
+_DASH_CHARS = "—–―‐−ー－"  # em dash, en dash, horizontal bar, hyphen, minus, katakana dash, fullwidth hyphen
+_NORMALIZED_DASH = "-"  # ASCII hyphen-minus
+
+
+def normalize_text(text: str) -> str:
+    """表記ゆれ正規化（柱検出用）
+
+    ダッシュ類の文字（—, –, ―, ‐, −, ー, －）を
+    統一された文字に正規化する。
+
+    Args:
+        text: 正規化対象のテキスト
+
+    Returns:
+        正規化されたテキスト
+    """
+    if not text:
+        return text
+
+    result = text
+    for dash in _DASH_CHARS:
+        result = result.replace(dash, _NORMALIZED_DASH)
+    return result
+
+
 def analyze_headings(headings: list[Heading]) -> list[HeadingAnalysis]:
     """heading頻度分析
+
+    表記ゆれ（ダッシュ類の違い）を正規化して集計する。
 
     Args:
         headings: 分析対象のheadingリスト
@@ -25,24 +53,29 @@ def analyze_headings(headings: list[Heading]) -> list[HeadingAnalysis]:
     if not headings:
         return []
 
-    # テキストごとの統計情報を集計
+    # 正規化テキストごとの統計情報を集計
     stats: dict[str, dict] = defaultdict(lambda: {
         "count": 0,
         "levels": [],
-        "level_counts": defaultdict(int)
+        "level_counts": defaultdict(int),
+        "original_text": None,  # 最初に出現したオリジナルテキスト
     })
 
     for heading in headings:
-        text = heading.text
+        normalized = normalize_text(heading.text)
         level = heading.level
 
-        stats[text]["count"] += 1
-        stats[text]["levels"].append(level)
-        stats[text]["level_counts"][level] += 1
+        # 最初のオリジナルテキストを保存
+        if stats[normalized]["original_text"] is None:
+            stats[normalized]["original_text"] = heading.text
+
+        stats[normalized]["count"] += 1
+        stats[normalized]["levels"].append(level)
+        stats[normalized]["level_counts"][level] += 1
 
     # HeadingAnalysisオブジェクトを生成
     analyses = []
-    for text, data in stats.items():
+    for normalized_text, data in stats.items():
         # 最頻出レベルを決定
         most_frequent_level = max(
             data["level_counts"].items(),
@@ -52,8 +85,9 @@ def analyze_headings(headings: list[Heading]) -> list[HeadingAnalysis]:
         # 出現したlevelsをソート済みタプルに変換
         unique_levels = tuple(sorted(set(data["levels"])))
 
+        # 正規化テキストを使用（比較用）
         analysis = HeadingAnalysis(
-            text=text,
+            text=normalized_text,
             level=most_frequent_level,
             count=data["count"],
             levels=unique_levels,
@@ -154,16 +188,20 @@ def reassign_heading_level(
     """level再配置
 
     柱テキストがlevel 2,3で出現している場合、level 1に再配置する。
+    正規化テキストで比較する。
 
     Args:
         heading: 対象のHeading
-        running_head_texts: 柱として判定されたテキストのセット
+        running_head_texts: 柱として判定されたテキストのセット（正規化済み）
 
     Returns:
         level再配置後の新しいHeadingオブジェクト（イミュータブル）
     """
+    # 正規化テキストで柱判定
+    normalized = normalize_text(heading.text)
+
     # 柱テキストかつlevel != 1 の場合に再配置
-    if heading.text in running_head_texts and heading.level != 1:
+    if normalized in running_head_texts and heading.level != 1:
         return Heading(
             level=1,
             text=heading.text,
@@ -192,7 +230,7 @@ def apply_read_aloud_rules(
     if not headings:
         return []
 
-    # 柱テキストのセットを作成
+    # 柱テキスト（正規化済み）のセットを作成
     running_head_texts = {
         a.text for a in analyses if a.is_running_head
     }
@@ -209,8 +247,11 @@ def apply_read_aloud_rules(
         # パターンマッチング
         matched_pattern = match_exclusion_pattern(heading.text)
 
+        # 正規化テキストで柱判定
+        normalized_heading_text = normalize_text(heading.text)
+
         # readAloud値を決定
-        if heading.text in running_head_texts:
+        if normalized_heading_text in running_head_texts:
             # 柱として検出された場合
             new_heading = Heading(
                 level=heading.level,
