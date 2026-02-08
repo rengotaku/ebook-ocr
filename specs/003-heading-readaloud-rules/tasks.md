@@ -108,16 +108,16 @@
 
 ### Implementation (GREEN)
 
-- [ ] T039 REDテストを読む: specs/003-heading-readaloud-rules/red-tests/ph3-test.md
-- [ ] T040 [P] [US2] `src/book_converter/config.py` にdecorationパターンを追加
-- [ ] T041 [P] [US2] `src/book_converter/config.py` にsection-labelパターンを追加
-- [ ] T042 [US2] コンポーネント統合（T040-T041の結合確認）
-- [ ] T043 `make test` PASS (GREEN) を確認
+- [x] T039 REDテストを読む: specs/003-heading-readaloud-rules/red-tests/ph3-test.md
+- [x] T040 [P] [US2] `src/book_converter/config.py` にdecorationパターンを追加
+- [x] T041 [P] [US2] `src/book_converter/config.py` にsection-labelパターンを追加
+- [x] T042 [US2] コンポーネント統合（T040-T041の結合確認）
+- [x] T043 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T044 `make test` で全テスト通過を確認（US1リグレッションなし）
-- [ ] T045 フェーズ出力を生成: specs/003-heading-readaloud-rules/tasks/ph3-output.md
+- [x] T044 `make test` で全テスト通過を確認（US1リグレッションなし）
+- [x] T045 フェーズ出力を生成: specs/003-heading-readaloud-rules/tasks/ph3-output.md
 
 **チェックポイント**: User Stories 1 AND 2は両方とも独立して動作
 
