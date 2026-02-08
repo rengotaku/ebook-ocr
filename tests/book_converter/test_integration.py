@@ -694,3 +694,211 @@ class TestTocMarkerBackwardCompatibility:
         # 目次マーカーがないのでtableOfContentsは存在しない
         toc = root.find(".//tableOfContents")
         assert toc is None
+
+
+# =============================================================================
+# Phase 3 (004-toc-structure): US3 目次の読み上げ制御
+# =============================================================================
+
+
+class TestTocReadAloudIntegration:
+    """T040: 統合テスト（readAloud確認）
+
+    US3: 目次の読み上げ制御
+    - 変換後のXMLで<tableOfContents readAloud="false">となっていることを確認
+    - FR-006: システムは<tableOfContents>要素にreadAloud="false"属性をデフォルトで設定しなければならない
+    """
+
+    def test_generated_xml_contains_read_aloud_false(
+        self, tmp_path: Path
+    ) -> None:
+        """生成されたXMLにreadAloud="false"が含まれる"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 目次
+
+<!-- toc -->
+
+第1章 SREとは ... 15
+
+<!-- /toc -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        toc = root.find(".//tableOfContents")
+        assert toc is not None
+        assert toc.get("readAloud") == "false"
+
+    def test_multi_entry_toc_read_aloud_false(
+        self, tmp_path: Path
+    ) -> None:
+        """複数エントリの目次でもreadAloud="false"が設定される"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- toc -->
+
+はじめに ... 1
+
+第1章 SREとは ... 15
+
+1.1 SREの定義 ... 16
+
+1.1.1 歴史 ... 17
+
+第2章 信頼性 ... 25
+
+おわりに ... 300
+
+<!-- /toc -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        toc = root.find(".//tableOfContents")
+        assert toc is not None
+        assert toc.get("readAloud") == "false"
+
+        # 全6エントリが含まれている
+        entries = toc.findall("entry")
+        assert len(entries) == 6
+
+    def test_multi_page_toc_read_aloud_false(
+        self, tmp_path: Path
+    ) -> None:
+        """複数ページにまたがる目次でもreadAloud="false"が設定される"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 目次
+
+<!-- toc -->
+
+第1章 SREとは ... 15
+
+--- Page 2 (page_0002.png) ---
+
+第2章 信頼性 ... 25
+
+第3章 モニタリング ... 50
+
+<!-- /toc -->
+
+--- Page 3 (page_0003.png) ---
+
+# 第1章 SREとは
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        toc = root.find(".//tableOfContents")
+        assert toc is not None
+        assert toc.get("readAloud") == "false"
+
+        # 複数ページにまたがる目次も1つのtableOfContentsに収まる
+        entries = toc.findall("entry")
+        assert len(entries) == 3
+
+    def test_xml_string_contains_read_aloud_attribute(
+        self, tmp_path: Path
+    ) -> None:
+        """XMLシリアライズ結果にreadAloud="false"が文字列として含まれる"""
+        input_file = tmp_path / "book_with_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+<!-- toc -->
+
+第1章 テスト ... 10
+
+<!-- /toc -->
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+
+        # XMLシリアライズ結果に readAloud="false" が含まれる
+        assert 'readAloud="false"' in xml_string
+        assert "<tableOfContents" in xml_string
+
+    def test_backward_compatible_without_toc_marker(
+        self, tmp_path: Path
+    ) -> None:
+        """目次マーカーなしの場合、tableOfContentsは生成されない（後方互換）"""
+        input_file = tmp_path / "book_without_toc.md"
+        input_file.write_text(
+            """--- Page 1 (page_0001.png) ---
+
+# 第1章 SREとは
+
+本文です。
+""",
+            encoding="utf-8",
+        )
+
+        from src.book_converter.parser import parse_pages
+        from src.book_converter.xml_builder import build_xml
+
+        pages = list(parse_pages(input_file))
+        book = Book(
+            metadata=BookMetadata(title="Test Book"),
+            pages=tuple(pages),
+        )
+
+        xml_string = build_xml(book)
+        root = fromstring(xml_string)
+
+        # 目次マーカーがないのでtableOfContentsは存在しない
+        toc = root.find(".//tableOfContents")
+        assert toc is None

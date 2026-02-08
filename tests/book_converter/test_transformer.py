@@ -1564,3 +1564,112 @@ class TestTransformTocEntry:
         assert 'number="1"' in xml_string
         assert 'title="SREとは"' in xml_string
         assert 'page="15"' in xml_string
+
+
+# =============================================================================
+# Phase 3 (004-toc-structure): US3 目次の読み上げ制御
+# =============================================================================
+
+
+class TestTableOfContentsReadAloud:
+    """T039: tableOfContentsのreadAloud属性テスト
+
+    US3: 目次の読み上げ制御
+    - <tableOfContents>要素にreadAloud="false"属性がデフォルトで設定される
+    - FR-006: システムは<tableOfContents>要素にreadAloud="false"属性をデフォルトで設定しなければならない
+    """
+
+    def test_table_of_contents_has_read_aloud_false_attribute(self) -> None:
+        """tableOfContentsにreadAloud="false"属性が設定される"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        toc = TableOfContents(entries=(entry,), read_aloud=False)
+
+        element = transform_table_of_contents(toc)
+
+        assert element is not None
+        assert element.get("readAloud") == "false"
+
+    def test_table_of_contents_default_read_aloud_is_false(self) -> None:
+        """tableOfContentsのreadAloudデフォルト値はfalse"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="はじめに", level="other", page="1")
+        # read_aloudを明示せずにTableOfContentsを作成
+        toc = TableOfContents(entries=(entry,))
+
+        element = transform_table_of_contents(toc)
+
+        # デフォルトでreadAloud="false"が設定される
+        assert element.get("readAloud") == "false"
+
+    def test_table_of_contents_read_aloud_in_xml_output(self) -> None:
+        """XMLシリアライズ時にreadAloud属性が含まれる"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+        toc = TableOfContents(entries=(entry,))
+
+        element = transform_table_of_contents(toc)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert 'readAloud="false"' in xml_string
+        assert "<tableOfContents" in xml_string
+
+    def test_page_level_toc_has_read_aloud_false(self) -> None:
+        """ページレベルの目次もreadAloud="false"を持つ"""
+        from src.book_converter.transformer import transform_page
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+        toc = TableOfContents(entries=(entry,))
+
+        page = Page(
+            number="1",
+            source_file="page_0001.png",
+            content=Content(elements=()),
+            toc=toc,
+        )
+
+        element = transform_page(page)
+
+        toc_elem = element.find("tableOfContents")
+        assert toc_elem is not None
+        assert toc_elem.get("readAloud") == "false"
+
+    def test_book_level_toc_has_read_aloud_false(self) -> None:
+        """ブックレベル（複数エントリ）の目次もreadAloud="false"を持つ"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entries = (
+            TocEntry(text="はじめに", level="other", page="1"),
+            TocEntry(text="SREとは", level="chapter", number="1", page="15"),
+            TocEntry(text="SREの定義", level="section", number="1.1", page="16"),
+            TocEntry(text="歴史", level="subsection", number="1.1.1", page="17"),
+            TocEntry(text="おわりに", level="other", page="300"),
+        )
+        toc = TableOfContents(entries=entries)
+
+        element = transform_table_of_contents(toc)
+
+        assert element.get("readAloud") == "false"
+        # すべてのエントリが含まれている
+        assert len(element.findall("entry")) == 5
+
+    def test_empty_toc_still_has_read_aloud_false(self) -> None:
+        """空の目次でもreadAloud="false"が設定される"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TableOfContents
+
+        toc = TableOfContents(entries=())
+
+        element = transform_table_of_contents(toc)
+
+        assert element is not None
+        assert element.get("readAloud") == "false"
+        assert len(element.findall("entry")) == 0

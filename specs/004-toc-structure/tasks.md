@@ -103,15 +103,15 @@
 
 ### Input
 
-- [ ] T037 セットアップ分析を読み込み: specs/004-toc-structure/tasks/ph1-output.md
-- [ ] T038 前フェーズ出力を読み込み: specs/004-toc-structure/tasks/ph2-output.md
+- [x] T037 セットアップ分析を読み込み: specs/004-toc-structure/tasks/ph1-output.md
+- [x] T038 前フェーズ出力を読み込み: specs/004-toc-structure/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T039 [P] [US3] tableOfContentsのreadAloud属性テストを実装: tests/book_converter/test_transformer.py
-- [ ] T040 [P] [US3] 統合テスト（readAloud確認）を実装: tests/book_converter/test_integration.py
-- [ ] T041 `make test` FAIL を確認 (RED)
-- [ ] T042 RED出力を生成: specs/004-toc-structure/red-tests/ph3-test.md
+- [x] T039 [P] [US3] tableOfContentsのreadAloud属性テストを実装: tests/book_converter/test_transformer.py
+- [x] T040 [P] [US3] 統合テスト（readAloud確認）を実装: tests/book_converter/test_integration.py
+- [x] T041 `make test` FAIL を確認 (RED)
+- [x] T042 RED出力を生成: specs/004-toc-structure/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
