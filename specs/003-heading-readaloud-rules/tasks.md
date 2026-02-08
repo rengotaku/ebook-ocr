@@ -164,23 +164,23 @@
 
 ### Input
 
-- [ ] T059 セットアップ分析を読む: specs/003-heading-readaloud-rules/tasks/ph1-output.md
-- [ ] T060 前フェーズ出力を読む: specs/003-heading-readaloud-rules/tasks/ph4-output.md
+- [x] T059 セットアップ分析を読む: specs/003-heading-readaloud-rules/tasks/ph1-output.md
+- [x] T060 前フェーズ出力を読む: specs/003-heading-readaloud-rules/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T061 [P] `src/book_converter/cli.py` に `--running-head-threshold` オプションを追加（FR-008）
-- [ ] T062 [P] `src/book_converter/cli.py` に `--verbose` オプションで除外理由表示を追加
-- [ ] T063 [P] `make test-cov` でカバレッジ確認（≥80%目標）
-- [ ] T064 [P] コード品質チェック（ruff check src/book_converter/）
-- [ ] T065 [P] ファイルサイズ確認（各ファイル800行以下、各関数50行以下）
-- [ ] T066 quickstart.md 検証（CLIコマンド動作確認）
-- [ ] T067 book.xsd に対するXML検証テスト追加
+- [x] T061 [P] `src/book_converter/cli.py` に `--running-head-threshold` オプションを追加（FR-008）
+- [x] T062 [P] `src/book_converter/cli.py` に `--verbose` オプションで除外理由表示を追加
+- [x] T063 [P] `make test-cov` でカバレッジ確認（≥80%目標）
+- [x] T064 [P] コード品質チェック（ruff check src/book_converter/）
+- [x] T065 [P] ファイルサイズ確認（各ファイル800行以下、各関数50行以下）
+- [x] T066 quickstart.md 検証（CLIコマンド動作確認）
+- [x] T067 book.xsd に対するXML検証テスト追加
 
 ### Verification
 
-- [ ] T068 `make test` で全テスト通過を確認
-- [ ] T069 フェーズ出力を生成: specs/003-heading-readaloud-rules/tasks/ph5-output.md
+- [x] T068 `make test` で全テスト通過を確認
+- [x] T069 フェーズ出力を生成: specs/003-heading-readaloud-rules/tasks/ph5-output.md
 
 ---
 

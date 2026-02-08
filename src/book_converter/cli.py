@@ -14,9 +14,17 @@ from src.book_converter.models import (
     BookMetadata,
     ConversionResult,
     ConversionError,
+    Heading,
+    Page,
+    Content,
 )
 from src.book_converter.parser import parse_pages_with_errors
 from src.book_converter.xml_builder import build_xml_with_errors
+from src.book_converter.analyzer import (
+    analyze_headings,
+    detect_running_head,
+    apply_read_aloud_rules,
+)
 
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
@@ -39,7 +47,7 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     group.add_argument(
         "-v", "--verbose",
         action="store_true",
-        help="Verbose output"
+        help="Verbose output (show exclusion reasons)"
     )
     group.add_argument(
         "-q", "--quiet",
@@ -47,15 +55,85 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Quiet mode"
     )
 
+    # Heading analysis options
+    parser.add_argument(
+        "--running-head-threshold",
+        type=float,
+        default=0.5,
+        metavar="RATIO",
+        help="Running head detection threshold as ratio of total pages (default: 0.5)"
+    )
+
     return parser.parse_args(args)
 
 
-def convert_book(input_path: Path, output_path: Path) -> ConversionResult:
+def _extract_headings(pages: list[Page]) -> list[Heading]:
+    """Extract all headings from pages.
+
+    Args:
+        pages: List of pages to extract headings from.
+
+    Returns:
+        List of all headings found in pages.
+    """
+    all_headings: list[Heading] = []
+    for page in pages:
+        for element in page.content.elements:
+            if isinstance(element, Heading):
+                all_headings.append(element)
+    return all_headings
+
+
+def _process_pages_with_headings(
+    pages: list[Page],
+    heading_map: dict[int, Heading]
+) -> list[Page]:
+    """Replace headings in pages with processed versions.
+
+    Args:
+        pages: Original pages.
+        heading_map: Mapping from original heading id to processed heading.
+
+    Returns:
+        List of pages with processed headings.
+    """
+    processed_pages: list[Page] = []
+    for page in pages:
+        new_elements = []
+        for element in page.content.elements:
+            if isinstance(element, Heading):
+                new_elements.append(heading_map[id(element)])
+            else:
+                new_elements.append(element)
+
+        new_page = Page(
+            number=page.number,
+            source_file=page.source_file,
+            announcement=page.announcement,
+            content=Content(elements=tuple(new_elements)),
+            figures=page.figures,
+            metadata=page.metadata,
+            continued=page.continued,
+            page_type=page.page_type,
+        )
+        processed_pages.append(new_page)
+
+    return processed_pages
+
+
+def convert_book(
+    input_path: Path,
+    output_path: Path,
+    running_head_threshold: float = 0.5,
+    verbose: bool = False
+) -> ConversionResult:
     """Convert a Markdown book to XML.
 
     Args:
         input_path: Path to the input Markdown file.
         output_path: Path to the output XML file.
+        running_head_threshold: Ratio threshold for running head detection (default: 0.5).
+        verbose: If True, print exclusion reasons to stdout.
 
     Returns:
         ConversionResult with conversion statistics and errors.
@@ -63,19 +141,26 @@ def convert_book(input_path: Path, output_path: Path) -> ConversionResult:
     # Parse pages with error tracking
     pages, errors = parse_pages_with_errors(input_path)
 
-    # Create Book object
+    # Extract and analyze headings
+    all_headings = _extract_headings(pages)
+    analyses = analyze_headings(all_headings)
+    analyses = detect_running_head(analyses, len(pages), running_head_threshold)
+
+    # Apply readAloud rules
+    processed_headings = apply_read_aloud_rules(all_headings, analyses, verbose)
+    heading_map = {id(orig): proc for orig, proc in zip(all_headings, processed_headings)}
+
+    # Replace headings in pages
+    processed_pages = _process_pages_with_headings(pages, heading_map)
+
+    # Build and write XML
     book = Book(
         metadata=BookMetadata(title="Converted Book"),
-        pages=tuple(pages),
+        pages=tuple(processed_pages),
     )
-
-    # Build XML with error comments
     xml_string = build_xml_with_errors(book, errors)
-
-    # Write to output file
     output_path.write_text(xml_string, encoding="utf-8")
 
-    # Return result
     return ConversionResult(
         success=True,
         total_pages=len(pages),
@@ -109,7 +194,12 @@ def main(args: list[str] | None = None) -> int:
         if parsed.verbose:
             print(f"変換中: {input_path} -> {output_path}")
 
-        result = convert_book(input_path, output_path)
+        result = convert_book(
+            input_path,
+            output_path,
+            running_head_threshold=parsed.running_head_threshold,
+            verbose=parsed.verbose
+        )
 
         # Output summary (unless quiet mode)
         if not parsed.quiet:

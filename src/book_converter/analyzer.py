@@ -66,13 +66,15 @@ def analyze_headings(headings: list[Heading]) -> list[HeadingAnalysis]:
 
 def detect_running_head(
     analyses: list[HeadingAnalysis],
-    total_pages: int
+    total_pages: int,
+    threshold_ratio: float = 0.5
 ) -> list[HeadingAnalysis]:
-    """柱検出（閾値50%）
+    """柱検出（デフォルト閾値50%）
 
     Args:
         analyses: heading分析結果リスト
         total_pages: 総ページ数
+        threshold_ratio: 柱検出閾値（総ページ数に対する比率、デフォルト: 0.5）
 
     Returns:
         is_running_headフラグを更新したHeadingAnalysisリスト
@@ -89,8 +91,8 @@ def detect_running_head(
     # 最頻出のlevel=1 headingを特定
     most_frequent = max(level_1_analyses, key=lambda a: a.count)
 
-    # 出現率が50%以上なら柱として判定
-    threshold = total_pages * 0.5
+    # 指定された閾値以上なら柱として判定
+    threshold = total_pages * threshold_ratio
     running_head_texts = set()
 
     if most_frequent.count >= threshold:
@@ -174,13 +176,15 @@ def reassign_heading_level(
 
 def apply_read_aloud_rules(
     headings: list[Heading],
-    analyses: list[HeadingAnalysis]
+    analyses: list[HeadingAnalysis],
+    verbose: bool = False
 ) -> list[Heading]:
     """readAloud属性付与
 
     Args:
         headings: 対象のheadingリスト
         analyses: heading分析結果（柱検出済み）
+        verbose: 除外理由を標準出力に表示するかどうか
 
     Returns:
         readAloud属性を設定した新しいHeadingリスト
@@ -192,6 +196,12 @@ def apply_read_aloud_rules(
     running_head_texts = {
         a.text for a in analyses if a.is_running_head
     }
+
+    # 柱検出情報を表示（verbose モード）
+    if verbose and running_head_texts:
+        for analysis in analyses:
+            if analysis.is_running_head:
+                print(f"[INFO] Detected running head: \"{analysis.text}\" ({analysis.count} occurrences)")
 
     # 各headingにルールを適用
     processed = []
@@ -207,6 +217,8 @@ def apply_read_aloud_rules(
                 text=heading.text,
                 read_aloud=False,
             )
+            if verbose:
+                print(f"[INFO] Excluded heading (running-head): \"{heading.text}\"")
         elif matched_pattern:
             # 除外パターンにマッチした場合
             new_heading = Heading(
@@ -214,6 +226,8 @@ def apply_read_aloud_rules(
                 text=heading.text,
                 read_aloud=False,
             )
+            if verbose:
+                print(f"[INFO] Excluded heading ({matched_pattern.id}): \"{heading.text}\"")
         else:
             # それ以外は元のread_aloud値を保持
             new_heading = heading
