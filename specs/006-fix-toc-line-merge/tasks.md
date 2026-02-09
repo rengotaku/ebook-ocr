@@ -138,15 +138,15 @@
 
 ### Implementation (GREEN)
 
-- [ ] T045 REDテストを読む: specs/006-fix-toc-line-merge/red-tests/ph4-test.md
-- [ ] T046 [US3] 既存コードに変更が必要な場合のみ修正: src/book_converter/parser.py
-- [ ] T047 `make test` PASS (GREEN) を確認
+- [x] T045 REDテストを読む: specs/006-fix-toc-line-merge/red-tests/ph4-test.md
+- [x] T046 [US3] 既存コードに変更が必要な場合のみ修正: src/book_converter/parser.py
+- [x] T047 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T048 `make test` で全テスト成功を確認（US1, US2含む回帰なし）
-- [ ] T049 手動検証: output/4fd5500620491ebe/book.mdを変換し結果を比較
-- [ ] T050 フェーズ出力を生成: specs/006-fix-toc-line-merge/tasks/ph4-output.md
+- [x] T048 `make test` で全テスト成功を確認（US1, US2含む回帰なし）
+- [x] T049 手動検証: output/4fd5500620491ebe/book.mdを変換し結果を比較
+- [x] T050 フェーズ出力を生成: specs/006-fix-toc-line-merge/tasks/ph4-output.md
 
 **チェックポイント**: すべてのユーザーストーリーが完了し、回帰なし
 
