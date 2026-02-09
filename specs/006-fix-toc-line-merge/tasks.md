@@ -51,17 +51,17 @@
 
 ### Input
 
-- [ ] T008 前フェーズ出力を読む: specs/006-fix-toc-line-merge/tasks/ph1-output.md
+- [X] T008 前フェーズ出力を読む: specs/006-fix-toc-line-merge/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T009 [P] [US1] merge_toc_linesのテストを実装: tests/book_converter/test_parser.py（Chapter結合）
-- [ ] T010 [P] [US1] merge_toc_linesのテストを実装: tests/book_converter/test_parser.py（Episode結合）
-- [ ] T011 [P] [US1] merge_toc_linesのテストを実装: tests/book_converter/test_parser.py（Column結合）
-- [ ] T012 [P] [US1] normalize_toc_lineのテストを実装: tests/book_converter/test_parser.py（**強調**除去）
-- [ ] T013 [P] [US1] parse_toc_entryのテストを実装: tests/book_converter/test_parser.py（Chapter N形式認識）
-- [ ] T014 `make test` FAIL (RED) を確認
-- [ ] T015 RED出力を生成: specs/006-fix-toc-line-merge/red-tests/ph2-test.md
+- [X] T009 [P] [US1] merge_toc_linesのテストを実装: tests/book_converter/test_parser.py（Chapter結合）
+- [X] T010 [P] [US1] merge_toc_linesのテストを実装: tests/book_converter/test_parser.py（Episode結合）
+- [X] T011 [P] [US1] merge_toc_linesのテストを実装: tests/book_converter/test_parser.py（Column結合）
+- [X] T012 [P] [US1] normalize_toc_lineのテストを実装: tests/book_converter/test_parser.py（**強調**除去）
+- [X] T013 [P] [US1] parse_toc_entryのテストを実装: tests/book_converter/test_parser.py（Chapter N形式認識）
+- [X] T014 `make test` FAIL (RED) を確認
+- [X] T015 RED出力を生成: specs/006-fix-toc-line-merge/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 

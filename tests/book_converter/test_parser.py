@@ -2013,3 +2013,514 @@ class TestMarkerTypeContentSkip:
         from src.book_converter.models import MarkerType
 
         assert MarkerType.SKIP_END.value == "skip_end"
+
+
+# =============================================================================
+# Phase 2 (006-fix-toc-line-merge): US1 TOC改行分割エントリの結合
+# =============================================================================
+
+
+class TestMergeTocLinesChapter:
+    """T009: merge_toc_linesテスト - Chapter結合
+
+    US1: TOC改行分割エントリの結合
+    - 「Chapter」単独行と次の「N タイトル」行を結合
+    - FR-001: Chapter単独行 + 次行 → 「Chapter N タイトル」として解析
+    """
+
+    def test_merge_chapter_with_number_title(self) -> None:
+        """「Chapter」と「1 「企画」で失敗」を結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Chapter",
+            "1 「企画」で失敗",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Chapter 1 「企画」で失敗"
+
+    def test_merge_chapter_with_number_title_2(self) -> None:
+        """「Chapter」と「2 「仕様」で失敗」を結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Chapter",
+            "2 「仕様」で失敗",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Chapter 2 「仕様」で失敗"
+
+    def test_merge_multiple_chapters_in_sequence(self) -> None:
+        """複数のChapterエントリを順番に結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Chapter",
+            "1 「企画」で失敗",
+            "Chapter",
+            "2 「仕様」で失敗",
+            "Chapter",
+            "3 「設計」で失敗",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 3
+        assert result[0] == "Chapter 1 「企画」で失敗"
+        assert result[1] == "Chapter 2 「仕様」で失敗"
+        assert result[2] == "Chapter 3 「設計」で失敗"
+
+    def test_merge_chapter_with_empty_line_between(self) -> None:
+        """Chapterと次行の間に空行がある場合も結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Chapter",
+            "",
+            "1 「企画」で失敗",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Chapter 1 「企画」で失敗"
+
+    def test_chapter_standalone_not_followed_by_valid_line(self) -> None:
+        """Chapter単独行の後に有効な行がない場合は結合しない"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Chapter",
+            "おわりに ... 300",  # 番号パターンでない
+        ]
+        result = merge_toc_lines(lines)
+
+        # Chapter単独は保持され、次行も保持される
+        assert len(result) == 2
+        assert result[0] == "Chapter"
+        assert result[1] == "おわりに ... 300"
+
+    def test_merge_chapter_preserves_unicode(self) -> None:
+        """Unicode文字を含むタイトルを正しく保持"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Chapter",
+            "5 「日本語」テスト",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Chapter 5 「日本語」テスト"
+
+
+class TestMergeTocLinesEpisode:
+    """T010: merge_toc_linesテスト - Episode結合
+
+    US1: TOC改行分割エントリの結合
+    - 「Episode NN」行と次のタイトル行を結合
+    - FR-002: Episode NN + 次行 → 「Episode NN タイトル」として解析
+    """
+
+    def test_merge_episode_with_title(self) -> None:
+        """「Episode 01」と「なんでもできる「全部入りソフトウェア」」を結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Episode 01",
+            "なんでもできる「全部入りソフトウェア」",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Episode 01 なんでもできる「全部入りソフトウェア」"
+
+    def test_merge_episode_02_with_title(self) -> None:
+        """「Episode 02」と「みんなの願いをかなえたい「八方美人仕様」」を結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Episode 02",
+            "みんなの願いをかなえたい「八方美人仕様」",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Episode 02 みんなの願いをかなえたい「八方美人仕様」"
+
+    def test_merge_multiple_episodes_in_sequence(self) -> None:
+        """複数のEpisodeエントリを順番に結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Episode 01",
+            "タイトル1",
+            "Episode 02",
+            "タイトル2",
+            "Episode 03",
+            "タイトル3",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 3
+        assert result[0] == "Episode 01 タイトル1"
+        assert result[1] == "Episode 02 タイトル2"
+        assert result[2] == "Episode 03 タイトル3"
+
+    def test_merge_episode_with_multiword_title(self) -> None:
+        """Episodeの後に複数単語のタイトル"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Episode 24",
+            "テスト テスト2 テスト3",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Episode 24 テスト テスト2 テスト3"
+
+    def test_episode_without_number_not_merged(self) -> None:
+        """「Episode」単独（番号なし）は結合しない"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Episode",
+            "タイトル",
+        ]
+        result = merge_toc_lines(lines)
+
+        # Episode単独は結合対象外
+        assert len(result) == 2
+        assert result[0] == "Episode"
+        assert result[1] == "タイトル"
+
+    def test_merge_episode_preserves_page_number(self) -> None:
+        """ページ番号を含む次行も正しく結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Episode 01",
+            "なんでもできる「全部入りソフトウェア」 ... 10",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert "Episode 01" in result[0]
+        assert "なんでもできる" in result[0]
+        assert "10" in result[0]
+
+
+class TestMergeTocLinesColumn:
+    """T011: merge_toc_linesテスト - Column結合
+
+    US1: TOC改行分割エントリの結合
+    - 「Column」単独行と次のタイトル行を結合
+    - FR-003: Column + 次行 → 「Column タイトル」として解析
+    """
+
+    def test_merge_column_with_title(self) -> None:
+        """「Column」と「何を、なぜ作るのかが最重要」を結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Column",
+            "何を、なぜ作るのかが最重要",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Column 何を、なぜ作るのかが最重要"
+
+    def test_merge_column_with_page_number(self) -> None:
+        """Column結合後にページ番号が続く場合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Column",
+            "重要なポイント ... 50",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Column 重要なポイント ... 50"
+
+    def test_merge_multiple_columns_in_sequence(self) -> None:
+        """複数のColumnエントリを順番に結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Column",
+            "コラム1",
+            "Column",
+            "コラム2",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 2
+        assert result[0] == "Column コラム1"
+        assert result[1] == "Column コラム2"
+
+    def test_merge_column_with_empty_line_between(self) -> None:
+        """Columnと次行の間に空行がある場合も結合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Column",
+            "",
+            "空行の後のタイトル",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Column 空行の後のタイトル"
+
+    def test_column_preserves_special_characters(self) -> None:
+        """特殊文字を含むタイトルを保持"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Column",
+            "Q&A: よくある質問 「回答」",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 1
+        assert result[0] == "Column Q&A: よくある質問 「回答」"
+
+
+class TestNormalizeTocLineEmphasis:
+    """T012: normalize_toc_lineテスト - **強調**除去
+
+    US1: TOC改行分割エントリの結合
+    - マークダウン強調記号（**）を除去
+    - FR-007: **Episode 24** → Episode 24 として認識
+    """
+
+    def test_normalize_removes_emphasis_episode(self) -> None:
+        """**Episode 24** → Episode 24"""
+        from src.book_converter.parser import normalize_toc_line
+
+        result = normalize_toc_line("**Episode 24**")
+
+        assert result == "Episode 24"
+
+    def test_normalize_removes_emphasis_column(self) -> None:
+        """**Column** → Column"""
+        from src.book_converter.parser import normalize_toc_line
+
+        result = normalize_toc_line("**Column**")
+
+        assert result == "Column"
+
+    def test_normalize_removes_emphasis_chapter(self) -> None:
+        """**Chapter** → Chapter"""
+        from src.book_converter.parser import normalize_toc_line
+
+        result = normalize_toc_line("**Chapter**")
+
+        assert result == "Chapter"
+
+    def test_normalize_mixed_emphasis_and_text(self) -> None:
+        """**Episode 01** タイトル → Episode 01 タイトル"""
+        from src.book_converter.parser import normalize_toc_line
+
+        result = normalize_toc_line("**Episode 01** タイトル")
+
+        assert result == "Episode 01 タイトル"
+
+    def test_normalize_multiple_emphasis_blocks(self) -> None:
+        """複数の**ブロック**を除去"""
+        from src.book_converter.parser import normalize_toc_line
+
+        result = normalize_toc_line("**前半** 中間 **後半**")
+
+        assert result == "前半 中間 後半"
+
+    def test_normalize_preserves_text_without_emphasis(self) -> None:
+        """強調なしのテキストはそのまま"""
+        from src.book_converter.parser import normalize_toc_line
+
+        result = normalize_toc_line("通常のテキスト")
+
+        assert result == "通常のテキスト"
+
+    def test_normalize_removes_heading_markers_and_emphasis(self) -> None:
+        """### **Episode 24** → Episode 24"""
+        from src.book_converter.parser import normalize_toc_line
+
+        result = normalize_toc_line("### **Episode 24**")
+
+        assert result == "Episode 24"
+
+    def test_normalize_single_asterisk_not_removed(self) -> None:
+        """単一の*は除去しない（強調は**のみ）"""
+        from src.book_converter.parser import normalize_toc_line
+
+        result = normalize_toc_line("*イタリック*テスト")
+
+        # 単一アスタリスク（イタリック）の扱いは実装依存
+        # 少なくとも内容は保持される
+        assert "イタリック" in result or "*イタリック*" in result
+
+
+class TestParseTocEntryChapterFormat:
+    """T013: parse_toc_entryテスト - Chapter N形式認識
+
+    US1: TOC改行分割エントリの結合
+    - 「Chapter N タイトル」形式を認識
+    - FR-004: Chapter N形式をlevel="chapter", number="N"として認識
+    """
+
+    def test_parse_chapter_n_format(self) -> None:
+        """「Chapter 1 「企画」で失敗」をchapterとして認識"""
+        from src.book_converter.parser import parse_toc_entry
+        from src.book_converter.models import TocEntry
+
+        result = parse_toc_entry("Chapter 1 「企画」で失敗")
+
+        assert result is not None
+        assert isinstance(result, TocEntry)
+        assert result.level == "chapter"
+        assert result.number == "1"
+        assert result.text == "「企画」で失敗"
+
+    def test_parse_chapter_10_format(self) -> None:
+        """「Chapter 10 まとめ」をchapterとして認識（2桁）"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("Chapter 10 まとめ")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "10"
+        assert result.text == "まとめ"
+
+    def test_parse_chapter_with_page_number_dots(self) -> None:
+        """「Chapter 1 タイトル ... 15」のページ番号を抽出"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("Chapter 1 タイトル ... 15")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "1"
+        assert result.text == "タイトル"
+        assert result.page == "15"
+
+    def test_parse_chapter_with_page_number_dashes(self) -> None:
+        """「Chapter 2 タイトル --- 25」のページ番号を抽出"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("Chapter 2 タイトル --- 25")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "2"
+        assert result.text == "タイトル"
+        assert result.page == "25"
+
+    def test_parse_chapter_case_insensitive(self) -> None:
+        """「CHAPTER 1 タイトル」も認識（大文字小文字を区別しない）"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("CHAPTER 1 タイトル")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "1"
+
+    def test_parse_chapter_lowercase(self) -> None:
+        """「chapter 1 タイトル」も認識（小文字）"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("chapter 1 タイトル")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "1"
+
+    def test_parse_chapter_preserves_unicode_title(self) -> None:
+        """Unicodeタイトルを正しく保持"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("Chapter 3 「日本語」タイトル「テスト」")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "3"
+        assert result.text == "「日本語」タイトル「テスト」"
+
+    def test_parse_chapter_without_title(self) -> None:
+        """「Chapter 1」のみ（タイトルなし）"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("Chapter 1")
+
+        # タイトルなしの場合も認識すべき
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "1"
+        assert result.text == ""
+
+
+class TestMergeTocLinesMixed:
+    """merge_toc_linesの混合テスト - Chapter, Episode, Column混在"""
+
+    def test_merge_mixed_entries(self) -> None:
+        """Chapter、Episode、Columnが混在するTOC"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "Chapter",
+            "1 はじめに",
+            "Episode 01",
+            "ソフトウェアの話",
+            "Column",
+            "重要なポイント",
+            "Chapter",
+            "2 まとめ",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 4
+        assert result[0] == "Chapter 1 はじめに"
+        assert result[1] == "Episode 01 ソフトウェアの話"
+        assert result[2] == "Column 重要なポイント"
+        assert result[3] == "Chapter 2 まとめ"
+
+    def test_merge_preserves_non_mergeable_lines(self) -> None:
+        """結合対象外の行は保持"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "はじめに ... 1",
+            "Chapter",
+            "1 本編",
+            "おわりに ... 300",
+        ]
+        result = merge_toc_lines(lines)
+
+        assert len(result) == 3
+        assert result[0] == "はじめに ... 1"
+        assert result[1] == "Chapter 1 本編"
+        assert result[2] == "おわりに ... 300"
+
+    def test_merge_empty_list(self) -> None:
+        """空リストは空リストを返す"""
+        from src.book_converter.parser import merge_toc_lines
+
+        result = merge_toc_lines([])
+
+        assert result == []
+
+    def test_merge_single_non_mergeable_line(self) -> None:
+        """単一の結合不要行"""
+        from src.book_converter.parser import merge_toc_lines
+
+        result = merge_toc_lines(["第1章 SREとは ... 15"])
+
+        assert len(result) == 1
+        assert result[0] == "第1章 SREとは ... 15"
