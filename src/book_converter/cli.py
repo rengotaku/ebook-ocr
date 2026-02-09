@@ -18,7 +18,7 @@ from src.book_converter.models import (
     Page,
     Content,
 )
-from src.book_converter.parser import parse_pages_with_errors
+from src.book_converter.parser import parse_pages_with_errors, count_markers
 from src.book_converter.xml_builder import build_xml_with_errors
 from src.book_converter.analyzer import (
     analyze_headings,
@@ -62,6 +62,13 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         default=0.5,
         metavar="RATIO",
         help="Running head detection threshold as ratio of total pages (default: 0.5)"
+    )
+
+    # Page grouping option
+    parser.add_argument(
+        "--group-pages",
+        action="store_true",
+        help="Group pages by TOC structure (front-matter, chapter, section, subsection)"
     )
 
     return parser.parse_args(args)
@@ -110,7 +117,7 @@ def _process_pages_with_headings(
             number=page.number,
             source_file=page.source_file,
             announcement=page.announcement,
-            content=Content(elements=tuple(new_elements)),
+            content=Content(elements=tuple(new_elements), read_aloud=page.content.read_aloud),
             figures=page.figures,
             metadata=page.metadata,
             continued=page.continued,
@@ -125,7 +132,8 @@ def convert_book(
     input_path: Path,
     output_path: Path,
     running_head_threshold: float = 0.5,
-    verbose: bool = False
+    verbose: bool = False,
+    group_pages: bool = False,
 ) -> ConversionResult:
     """Convert a Markdown book to XML.
 
@@ -134,12 +142,13 @@ def convert_book(
         output_path: Path to the output XML file.
         running_head_threshold: Ratio threshold for running head detection (default: 0.5).
         verbose: If True, print exclusion reasons to stdout.
+        group_pages: If True, group pages by TOC structure.
 
     Returns:
         ConversionResult with conversion statistics and errors.
     """
     # Parse pages with error tracking
-    pages, errors = parse_pages_with_errors(input_path)
+    pages, errors, toc = parse_pages_with_errors(input_path)
 
     # Extract and analyze headings
     all_headings = _extract_headings(pages)
@@ -157,8 +166,16 @@ def convert_book(
     book = Book(
         metadata=BookMetadata(title="Converted Book"),
         pages=tuple(processed_pages),
+        toc=toc,
     )
     xml_string = build_xml_with_errors(book, errors)
+
+    # Group pages if requested
+    if group_pages:
+        from src.book_converter.page_grouper import group_pages_by_toc
+        xml_string = group_pages_by_toc(xml_string)
+
+    # Write to output file
     output_path.write_text(xml_string, encoding="utf-8")
 
     return ConversionResult(
@@ -198,12 +215,18 @@ def main(args: list[str] | None = None) -> int:
             input_path,
             output_path,
             running_head_threshold=parsed.running_head_threshold,
-            verbose=parsed.verbose
+            verbose=parsed.verbose,
+            group_pages=parsed.group_pages,
         )
+
+        # Count markers
+        marker_stats = count_markers(input_path)
 
         # Output summary (unless quiet mode)
         if not parsed.quiet:
             print(f"変換完了: {result.total_pages}ページ処理")
+            # Marker statistics
+            print(f"マーカー: toc={marker_stats.toc}, content={marker_stats.content}, skip={marker_stats.skip}")
             if result.error_count > 0:
                 print(f"警告: {result.error_count}個のエラーが発生しました")
 

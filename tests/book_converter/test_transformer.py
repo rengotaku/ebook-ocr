@@ -942,7 +942,7 @@ class TestReadAloudInheritance:
         assert len(page.figures) == 2
 
     def test_content_read_aloud_default_true(self) -> None:
-        """<content>のreadAloudデフォルトはtrue"""
+        """<content>のreadAloudデフォルトはfalse (Phase 4で変更)"""
         from src.book_converter.transformer import transform_content
         from src.book_converter.models import Paragraph
 
@@ -951,10 +951,10 @@ class TestReadAloudInheritance:
         )
         element = transform_content(content)
 
-        # contentのデフォルトはtrue（省略可）
-        # 属性がなくてもtrue扱い
+        # Phase 4以降: contentのデフォルトはfalse（マーカーなし）
+        # マーカーで囲まれた場合のみtrue
         read_aloud = element.get("readAloud")
-        assert read_aloud is None or read_aloud == "true"
+        assert read_aloud == "false"
 
     def test_heading_read_aloud_default_true(self) -> None:
         """<heading>のreadAloudデフォルトはtrue"""
@@ -1269,3 +1269,721 @@ class TestEmphasisConversion:
         emphasis = element.find("emphasis")
         assert emphasis is not None
         assert emphasis.text == "はじめに"
+
+
+# =============================================================================
+# Phase 2 (004-toc-structure): US1+US2 目次マーカー認識と構造化
+# =============================================================================
+
+
+class TestTransformTableOfContents:
+    """T016: toc変換テスト (transform_table_of_contents)
+
+    US1: 目次マーカーによる目次認識
+    - <toc>要素が生成される
+    """
+
+    def test_transform_table_of_contents_basic(self) -> None:
+        """基本的な目次をXMLに変換"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        toc = TableOfContents(entries=(entry,), begin_page="1", end_page="1")
+
+        element = transform_table_of_contents(toc)
+
+        assert element is not None
+        assert element.tag == "toc"
+        assert element.get("begin") == "1"
+        assert element.get("end") == "1"
+
+    def test_transform_table_of_contents_returns_element(self) -> None:
+        """戻り値はElement型"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="テスト", level="chapter")
+        toc = TableOfContents(entries=(entry,))
+
+        element = transform_table_of_contents(toc)
+
+        assert isinstance(element, Element)
+
+    def test_transform_table_of_contents_contains_entries(self) -> None:
+        """目次にエントリが含まれる"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry1 = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        entry2 = TocEntry(text="1.1 節", level="section", number="1.1", page="20")
+        toc = TableOfContents(entries=(entry1, entry2))
+
+        element = transform_table_of_contents(toc)
+
+        entries = element.findall("entry")
+        assert len(entries) == 2
+
+    def test_transform_table_of_contents_multiple_entries(self) -> None:
+        """複数エントリの目次を変換"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entries = (
+            TocEntry(text="はじめに", level="other", page="1"),
+            TocEntry(text="第1章", level="chapter", number="1", page="15"),
+            TocEntry(text="1.1 節", level="section", number="1.1", page="16"),
+            TocEntry(text="1.1.1 項", level="subsection", number="1.1.1", page="17"),
+            TocEntry(text="第2章", level="chapter", number="2", page="25"),
+        )
+        toc = TableOfContents(entries=entries)
+
+        element = transform_table_of_contents(toc)
+
+        entry_elems = element.findall("entry")
+        assert len(entry_elems) == 5
+
+    def test_transform_table_of_contents_preserves_order(self) -> None:
+        """エントリの順序を保持"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entries = (
+            TocEntry(text="はじめに", level="other", page="1"),
+            TocEntry(text="第1章", level="chapter", number="1", page="15"),
+            TocEntry(text="おわりに", level="other", page="300"),
+        )
+        toc = TableOfContents(entries=entries)
+
+        element = transform_table_of_contents(toc)
+
+        entry_elems = element.findall("entry")
+        assert entry_elems[0].get("title") == "はじめに"
+        assert entry_elems[1].get("title") == "第1章"
+        assert entry_elems[2].get("title") == "おわりに"
+
+    def test_transform_table_of_contents_xml_serialization(self) -> None:
+        """XMLにシリアライズ可能"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+        toc = TableOfContents(entries=(entry,), begin_page="5", end_page="7")
+
+        element = transform_table_of_contents(toc)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert "<toc " in xml_string
+        assert 'begin="5"' in xml_string
+        assert "<entry" in xml_string
+
+    def test_transform_table_of_contents_none_returns_none(self) -> None:
+        """NoneはNoneを返す"""
+        from src.book_converter.transformer import transform_table_of_contents
+
+        result = transform_table_of_contents(None)
+
+        assert result is None
+
+
+class TestTransformTocEntry:
+    """T017: entry変換テスト (transform_toc_entry)
+
+    US2: 章・節タイトルの構造化
+    - <entry level="..." number="..." title="..." page="..."/> 形式で出力
+    """
+
+    def test_transform_toc_entry_basic(self) -> None:
+        """基本的なエントリをXMLに変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        assert element.tag == "entry"
+
+    def test_transform_toc_entry_level_attribute(self) -> None:
+        """level属性が正しく設定される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "chapter"
+
+    def test_transform_toc_entry_number_attribute(self) -> None:
+        """number属性が正しく設定される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="section", number="2.1", page="20")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("number") == "2.1"
+
+    def test_transform_toc_entry_title_attribute(self) -> None:
+        """title属性が正しく設定される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("title") == "SREとは"
+
+    def test_transform_toc_entry_page_attribute(self) -> None:
+        """page属性が正しく設定される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="42")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("page") == "42"
+
+    def test_transform_toc_entry_chapter(self) -> None:
+        """chapter levelのエントリを変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "chapter"
+        assert element.get("number") == "1"
+        assert element.get("title") == "SREとは"
+        assert element.get("page") == "15"
+
+    def test_transform_toc_entry_section(self) -> None:
+        """section levelのエントリを変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SLOの理解", level="section", number="2.1", page="30")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "section"
+        assert element.get("number") == "2.1"
+        assert element.get("title") == "SLOの理解"
+        assert element.get("page") == "30"
+
+    def test_transform_toc_entry_subsection(self) -> None:
+        """subsection levelのエントリを変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SLA", level="subsection", number="2.1.1", page="35")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "subsection"
+        assert element.get("number") == "2.1.1"
+        assert element.get("title") == "SLA"
+        assert element.get("page") == "35"
+
+    def test_transform_toc_entry_other(self) -> None:
+        """other levelのエントリを変換"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="はじめに", level="other", page="1")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "other"
+        assert element.get("title") == "はじめに"
+        assert element.get("page") == "1"
+
+    def test_transform_toc_entry_without_number(self) -> None:
+        """number属性が空の場合"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="はじめに", level="other", number="", page="1")
+
+        element = transform_toc_entry(entry)
+
+        # number属性は空文字または省略
+        number = element.get("number")
+        assert number is None or number == ""
+
+    def test_transform_toc_entry_without_page(self) -> None:
+        """page属性が空の場合"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="")
+
+        element = transform_toc_entry(entry)
+
+        # page属性は空文字または省略
+        page = element.get("page")
+        assert page is None or page == ""
+
+    def test_transform_toc_entry_returns_element(self) -> None:
+        """戻り値はElement型"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter")
+
+        element = transform_toc_entry(entry)
+
+        assert isinstance(element, Element)
+
+    def test_transform_toc_entry_preserves_unicode(self) -> None:
+        """Unicode文字を保持"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="日本語「テスト」", level="chapter", number="1", page="10")
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("title") == "日本語「テスト」"
+
+    def test_transform_toc_entry_xml_serialization(self) -> None:
+        """XMLにシリアライズ可能"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+
+        element = transform_toc_entry(entry)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert "<entry" in xml_string
+        assert 'level="chapter"' in xml_string
+        assert 'number="1"' in xml_string
+        assert 'title="SREとは"' in xml_string
+        assert 'page="15"' in xml_string
+
+
+# =============================================================================
+# Phase 3 (004-toc-structure): US3 目次の読み上げ制御
+# =============================================================================
+
+
+class TestTableOfContentsPageRange:
+    """T039: tocのbegin/end属性テスト
+
+    US3: 目次の読み上げ制御
+    - <toc>要素はbook直下に配置され、begin/end属性でページ範囲を示す
+    - TOCはbook直下の2番目の子要素（metadata後）
+    """
+
+    def test_toc_has_begin_and_end_attributes(self) -> None:
+        """tocにbegin/end属性が設定される"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        toc = TableOfContents(entries=(entry,), begin_page="5", end_page="7")
+
+        element = transform_table_of_contents(toc)
+
+        assert element is not None
+        assert element.tag == "toc"
+        assert element.get("begin") == "5"
+        assert element.get("end") == "7"
+
+    def test_toc_without_page_range(self) -> None:
+        """ページ範囲なしのTOC"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="はじめに", level="other", page="1")
+        toc = TableOfContents(entries=(entry,))
+
+        element = transform_table_of_contents(toc)
+
+        assert element is not None
+        assert element.tag == "toc"
+        # 空文字の場合は属性が設定されない
+        assert element.get("begin") is None or element.get("begin") == ""
+        assert element.get("end") is None or element.get("end") == ""
+
+    def test_toc_xml_output_with_page_range(self) -> None:
+        """XMLシリアライズ時にbegin/end属性が含まれる"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+        toc = TableOfContents(entries=(entry,), begin_page="3", end_page="5")
+
+        element = transform_table_of_contents(toc)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert 'begin="3"' in xml_string
+        assert 'end="5"' in xml_string
+        assert "<toc " in xml_string
+
+    def test_toc_with_multiple_entries(self) -> None:
+        """複数エントリのTOC"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entries = (
+            TocEntry(text="はじめに", level="other", page="1"),
+            TocEntry(text="SREとは", level="chapter", number="1", page="15"),
+            TocEntry(text="SREの定義", level="section", number="1.1", page="16"),
+            TocEntry(text="歴史", level="subsection", number="1.1.1", page="17"),
+            TocEntry(text="おわりに", level="other", page="300"),
+        )
+        toc = TableOfContents(entries=entries, begin_page="2", end_page="4")
+
+        element = transform_table_of_contents(toc)
+
+        assert element.tag == "toc"
+        assert element.get("begin") == "2"
+        assert element.get("end") == "4"
+        # すべてのエントリが含まれている
+        assert len(element.findall("entry")) == 5
+
+    def test_empty_toc_returns_none(self) -> None:
+        """空の目次はNoneを返す"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TableOfContents
+
+        toc = TableOfContents(entries=())
+
+        element = transform_table_of_contents(toc)
+
+        # 空のTOCはNoneを返す（エントリがない場合はTOCを出力しない）
+        assert element is None
+
+
+# =============================================================================
+# Phase 4 (004-toc-structure): US4 コンテンツ範囲マーカー
+# =============================================================================
+
+
+class TestDefaultReadAloudFalse:
+    """T053: デフォルトreadAloud=falseテスト
+
+    US4: マーカーで囲まれていない範囲はデフォルトでreadAloud="false"
+    FR-013: マーカーで囲まれていない範囲は、デフォルトで読み上げ非対象（readAloud="false"）としなければならない
+    """
+
+    def test_content_without_marker_has_read_aloud_false(self) -> None:
+        """マーカーなしのcontentはreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        # read_aloud=Falseのコンテンツ（デフォルト動作）
+        content = Content(
+            elements=(Paragraph(text="本文テキスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        assert element.get("readAloud") == "false"
+
+    def test_paragraph_without_marker_has_read_aloud_false(self) -> None:
+        """マーカーなしの段落はreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="段落テキスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "false"
+
+    def test_heading_without_marker_has_read_aloud_false(self) -> None:
+        """マーカーなしの見出しはreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Heading
+
+        content = Content(
+            elements=(Heading(level=1, text="見出し", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.get("readAloud") == "false"
+
+    def test_list_without_marker_has_read_aloud_false(self) -> None:
+        """マーカーなしのリストはreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, List
+
+        content = Content(
+            elements=(List(items=("項目1", "項目2"), read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        list_elem = element.find("list")
+        assert list_elem is not None
+        assert list_elem.get("readAloud") == "false"
+
+    def test_default_content_model_read_aloud_is_false(self) -> None:
+        """Content.read_aloudのデフォルト値はFalse"""
+        from src.book_converter.models import Content
+
+        content = Content(elements=())
+
+        # Phase 4でデフォルトがFalseに変更される
+        assert content.read_aloud is False
+
+
+class TestContentMarkerReadAloudTrue:
+    """T054: contentマーカー内readAloud=trueテスト
+
+    US4: `<!-- content -->`で囲まれた範囲はreadAloud="true"
+    FR-009, FR-010: content開始/終了マーカーの認識
+    """
+
+    def test_content_inside_marker_has_read_aloud_true(self) -> None:
+        """contentマーカー内のcontentはreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="読み上げ対象テキスト", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        assert element.get("readAloud") == "true"
+
+    def test_paragraph_inside_content_marker_has_read_aloud_true(self) -> None:
+        """contentマーカー内の段落はreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="読み上げ対象段落", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "true"
+
+    def test_heading_inside_content_marker_has_read_aloud_true(self) -> None:
+        """contentマーカー内の見出しはreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Heading
+
+        content = Content(
+            elements=(Heading(level=1, text="読み上げ対象見出し", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.get("readAloud") == "true"
+
+    def test_list_inside_content_marker_has_read_aloud_true(self) -> None:
+        """contentマーカー内のリストはreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, List
+
+        content = Content(
+            elements=(List(items=("読み上げ項目1", "読み上げ項目2"), read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        list_elem = element.find("list")
+        assert list_elem is not None
+        assert list_elem.get("readAloud") == "true"
+
+    def test_mixed_elements_inside_content_marker_all_have_read_aloud_true(self) -> None:
+        """contentマーカー内の複合要素は全てreadAloud=true"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Heading, Paragraph, List
+
+        content = Content(
+            elements=(
+                Heading(level=1, text="章タイトル", read_aloud=True),
+                Paragraph(text="本文", read_aloud=True),
+                List(items=("項目",), read_aloud=True),
+            ),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+
+        assert element.get("readAloud") == "true"
+
+        heading_elem = element.find("heading")
+        assert heading_elem.get("readAloud") == "true"
+
+        para_elem = element.find("paragraph")
+        assert para_elem.get("readAloud") == "true"
+
+        list_elem = element.find("list")
+        assert list_elem.get("readAloud") == "true"
+
+
+class TestSkipMarkerReadAloudFalse:
+    """T055: skipマーカー内readAloud=falseテスト
+
+    US4: `<!-- skip -->`で囲まれた範囲はreadAloud="false"
+    FR-011, FR-012: skip開始/終了マーカーの認識
+    """
+
+    def test_content_inside_skip_marker_has_read_aloud_false(self) -> None:
+        """skipマーカー内のcontentはreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="索引テキスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        assert element is not None
+        assert element.get("readAloud") == "false"
+
+    def test_paragraph_inside_skip_marker_has_read_aloud_false(self) -> None:
+        """skipマーカー内の段落はreadAloud=false"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="索引段落", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "false"
+
+    def test_skip_inside_content_has_read_aloud_false(self) -> None:
+        """contentマーカー内にskipがネストした場合、skipの中はreadAloud="false"
+
+        ネスト例:
+        <!-- content --> (readAloud=true)
+            本文... (readAloud=true)
+            <!-- skip --> (readAloud=false)
+                索引... (readAloud=false)
+            <!-- /skip -->
+            本文続き... (readAloud=true)
+        <!-- /content -->
+        """
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        # skipマーカー内の段落（ネストの内側）
+        content = Content(
+            elements=(Paragraph(text="ネスト内の索引", read_aloud=False),),
+            read_aloud=False,  # 内側のskipが優先
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "false"
+
+    def test_content_inside_skip_then_back_to_skip(self) -> None:
+        """skip内にcontentがネストし、contentを抜けた後はskip
+
+        ネスト例:
+        <!-- skip --> (readAloud=false)
+            索引... (readAloud=false)
+            <!-- content --> (readAloud=true)
+                重要な注釈... (readAloud=true)
+            <!-- /content -->
+            索引続き... (readAloud=false)
+        <!-- /skip -->
+        """
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        # contentマーカーを抜けた後の段落（外側のskipに戻る）
+        content = Content(
+            elements=(Paragraph(text="索引続き", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.get("readAloud") == "false"
+
+
+class TestContentReadAloudXMLSerialization:
+    """contentのreadAloud属性のXMLシリアライズテスト"""
+
+    def test_content_read_aloud_true_in_xml(self) -> None:
+        """readAloud="true"がXMLに出力される"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert 'readAloud="true"' in xml_string
+
+    def test_content_read_aloud_false_in_xml(self) -> None:
+        """readAloud="false"がXMLに出力される"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert 'readAloud="false"' in xml_string
+
+    def test_paragraph_read_aloud_true_in_xml(self) -> None:
+        """段落のreadAloud="true"がXMLに出力される"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト", read_aloud=True),),
+            read_aloud=True,
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+        xml_string = tostring(para_elem, encoding="unicode")
+
+        assert 'readAloud="true"' in xml_string
+
+    def test_paragraph_read_aloud_false_in_xml(self) -> None:
+        """段落のreadAloud="false"がXMLに出力される"""
+        from src.book_converter.transformer import transform_content
+        from src.book_converter.models import Content, Paragraph
+
+        content = Content(
+            elements=(Paragraph(text="テスト", read_aloud=False),),
+            read_aloud=False,
+        )
+        element = transform_content(content)
+        para_elem = element.find("paragraph")
+        xml_string = tostring(para_elem, encoding="unicode")
+
+        assert 'readAloud="false"' in xml_string

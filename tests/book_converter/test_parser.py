@@ -902,7 +902,7 @@ class TestErrorHandlingContinueOnWarning:
             "--- Page 3 (page_0003.png) ---\n\n## Chapter 2\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         # 3ページすべて解析される
         assert len(pages) == 3
@@ -922,7 +922,7 @@ class TestErrorHandlingContinueOnWarning:
             "## Valid heading\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         # ページは解析される
         assert len(pages) == 1
@@ -939,7 +939,7 @@ class TestErrorHandlingContinueOnWarning:
             "--- Page (page_0001.png) ---\n\n# Title\n"  # Missing number
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert len(errors) >= 1
         assert isinstance(errors[0], ConversionError)
@@ -958,7 +958,7 @@ class TestErrorHandlingContinueOnWarning:
             "Content\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         # 警告/エラーが記録される
         has_heading_warning = any(
@@ -980,7 +980,7 @@ class TestErrorHandlingContinueOnWarning:
             "# Title\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert len(errors) >= 1
         # line_number属性がある
@@ -1077,10 +1077,10 @@ class TestErrorHandlingParseWithErrors:
 
         assert callable(parse_pages_with_errors)
 
-    def test_returns_tuple_of_pages_and_errors(
+    def test_returns_tuple_of_pages_errors_and_toc(
         self, tmp_path: Path
     ) -> None:
-        """ページリストとエラーリストのタプルを返す"""
+        """ページリストとエラーリストとTOCのタプルを返す"""
         from src.book_converter.parser import parse_pages_with_errors
 
         input_file = tmp_path / "test.md"
@@ -1089,7 +1089,12 @@ class TestErrorHandlingParseWithErrors:
         result = parse_pages_with_errors(input_file)
 
         assert isinstance(result, tuple)
-        assert len(result) == 2
+        assert len(result) == 3
+        pages, errors, toc = result
+        assert isinstance(pages, list)
+        assert isinstance(errors, list)
+        # toc is None when no TOC markers
+        assert toc is None
 
     def test_pages_are_list(
         self, tmp_path: Path
@@ -1100,7 +1105,7 @@ class TestErrorHandlingParseWithErrors:
         input_file = tmp_path / "test.md"
         input_file.write_text("--- Page 1 (page_0001.png) ---\n\n# Title\n")
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert isinstance(pages, (list, tuple))
 
@@ -1113,7 +1118,7 @@ class TestErrorHandlingParseWithErrors:
         input_file = tmp_path / "test.md"
         input_file.write_text("--- Page 1 (page_0001.png) ---\n\n# Title\n")
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert isinstance(errors, (list, tuple))
 
@@ -1130,7 +1135,7 @@ class TestErrorHandlingParseWithErrors:
             "Content here.\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert len(errors) == 0
 
@@ -1148,7 +1153,863 @@ class TestErrorHandlingParseWithErrors:
             "# Title\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         # 複数のエラーが記録される
         assert len(errors) >= 2
+
+
+# =============================================================================
+# Phase 2 (004-toc-structure): US1+US2 目次マーカー認識と構造化
+# =============================================================================
+
+
+class TestParseTocMarker:
+    """T011: 目次マーカー検出テスト (parse_toc_marker)
+
+    US1: 目次マーカーによる目次認識
+    - `<!-- toc -->` マーカーで目次開始を検出
+    - `<!-- /toc -->` マーカーで目次終了を検出
+    - 大文字小文字を区別しない
+    """
+
+    def test_parse_toc_start_marker(self) -> None:
+        """目次開始マーカーを検出"""
+        from src.book_converter.parser import parse_toc_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_toc_marker("<!-- toc -->")
+
+        assert result is not None
+        assert result == MarkerType.TOC_START
+
+    def test_parse_toc_end_marker(self) -> None:
+        """目次終了マーカーを検出"""
+        from src.book_converter.parser import parse_toc_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_toc_marker("<!-- /toc -->")
+
+        assert result is not None
+        assert result == MarkerType.TOC_END
+
+    def test_parse_toc_marker_case_insensitive_lowercase(self) -> None:
+        """小文字のtocマーカーを検出"""
+        from src.book_converter.parser import parse_toc_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_toc_marker("<!-- toc -->")
+
+        assert result == MarkerType.TOC_START
+
+    def test_parse_toc_marker_case_insensitive_uppercase(self) -> None:
+        """大文字のTOCマーカーを検出"""
+        from src.book_converter.parser import parse_toc_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_toc_marker("<!-- TOC -->")
+
+        assert result == MarkerType.TOC_START
+
+    def test_parse_toc_marker_case_insensitive_mixed(self) -> None:
+        """大文字小文字混在のTocマーカーを検出"""
+        from src.book_converter.parser import parse_toc_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_toc_marker("<!-- Toc -->")
+
+        assert result == MarkerType.TOC_START
+
+    def test_parse_toc_marker_with_extra_spaces(self) -> None:
+        """余分なスペースがあっても検出"""
+        from src.book_converter.parser import parse_toc_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_toc_marker("<!--   toc   -->")
+
+        assert result == MarkerType.TOC_START
+
+    def test_parse_toc_end_marker_uppercase(self) -> None:
+        """大文字の終了マーカーを検出"""
+        from src.book_converter.parser import parse_toc_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_toc_marker("<!-- /TOC -->")
+
+        assert result == MarkerType.TOC_END
+
+    def test_parse_non_toc_marker_returns_none(self) -> None:
+        """目次マーカーでない行はNoneを返す"""
+        from src.book_converter.parser import parse_toc_marker
+
+        non_toc_lines = [
+            "<!-- content -->",
+            "<!-- skip -->",
+            "# 見出し",
+            "本文テキスト",
+            "<!-- FIGURE: image.png -->",
+            "",
+            "   ",
+            "<!-- tox -->",  # typo
+        ]
+        for line in non_toc_lines:
+            result = parse_toc_marker(line)
+            assert result is None, f"Expected None for line: {line!r}"
+
+    def test_parse_toc_marker_with_leading_spaces(self) -> None:
+        """先頭にスペースがあっても検出"""
+        from src.book_converter.parser import parse_toc_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_toc_marker("  <!-- toc -->")
+
+        assert result == MarkerType.TOC_START
+
+
+class TestParseTocEntry:
+    """T012-T014: 目次エントリ解析テスト
+
+    US2: 章・節タイトルの構造化
+    - 章パターン: `第N章 タイトル`
+    - 節パターン: `N.N タイトル`
+    - 項パターン: `N.N.N タイトル`
+    - ページ番号抽出: ドットリーダー（...）、罫線（───）、空白区切り
+    """
+
+    # T012: 章パターン（第N章）抽出テスト
+
+    def test_parse_chapter_pattern_basic(self) -> None:
+        """第N章パターンを解析"""
+        from src.book_converter.parser import parse_toc_entry
+        from src.book_converter.models import TocEntry
+
+        result = parse_toc_entry("第1章 SREとは")
+
+        assert result is not None
+        assert isinstance(result, TocEntry)
+        assert result.level == "chapter"
+        assert result.number == "1"
+        assert result.text == "SREとは"
+
+    def test_parse_chapter_pattern_with_page_dots(self) -> None:
+        """第N章パターン + ドットリーダーページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 SREとは ... 15")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "1"
+        assert result.text == "SREとは"
+        assert result.page == "15"
+
+    def test_parse_chapter_pattern_with_page_line(self) -> None:
+        """第N章パターン + 罫線ページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第2章 信頼性の定義 ─── 25")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "2"
+        assert result.text == "信頼性の定義"
+        assert result.page == "25"
+
+    def test_parse_chapter_pattern_double_digit(self) -> None:
+        """2桁の章番号を解析"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第10章 まとめ ... 200")
+
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "10"
+        assert result.text == "まとめ"
+        assert result.page == "200"
+
+    # T013: 節パターン（N.N、N.N.N）抽出テスト
+
+    def test_parse_section_pattern_basic(self) -> None:
+        """N.Nパターンを解析"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1 SLOの理解")
+
+        assert result is not None
+        assert result.level == "section"
+        assert result.number == "2.1"
+        assert result.text == "SLOの理解"
+
+    def test_parse_section_pattern_with_page(self) -> None:
+        """N.Nパターン + ページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1 SLOの理解 ... 30")
+
+        assert result is not None
+        assert result.level == "section"
+        assert result.number == "2.1"
+        assert result.text == "SLOの理解"
+        assert result.page == "30"
+
+    def test_parse_subsection_pattern_basic(self) -> None:
+        """N.N.Nパターンを解析"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1.1 SLA")
+
+        assert result is not None
+        assert result.level == "subsection"
+        assert result.number == "2.1.1"
+        assert result.text == "SLA"
+
+    def test_parse_subsection_pattern_with_page(self) -> None:
+        """N.N.Nパターン + ページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1.1 SLA ─── 35")
+
+        assert result is not None
+        assert result.level == "subsection"
+        assert result.number == "2.1.1"
+        assert result.text == "SLA"
+        assert result.page == "35"
+
+    def test_parse_section_double_digit(self) -> None:
+        """2桁の節番号を解析"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("10.12 高度な設定 ... 150")
+
+        assert result is not None
+        assert result.level == "section"
+        assert result.number == "10.12"
+        assert result.text == "高度な設定"
+        assert result.page == "150"
+
+    # T014: ページ番号抽出テスト（ドットリーダー、罫線形式）
+
+    def test_parse_page_number_with_dots(self) -> None:
+        """ドットリーダー形式のページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 タイトル ... 42")
+
+        assert result is not None
+        assert result.page == "42"
+
+    def test_parse_page_number_with_multiple_dots(self) -> None:
+        """複数のドットを含む形式"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 タイトル ........ 42")
+
+        assert result is not None
+        assert result.page == "42"
+
+    def test_parse_page_number_with_horizontal_line(self) -> None:
+        """罫線形式のページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 タイトル ─── 42")
+
+        assert result is not None
+        assert result.page == "42"
+
+    def test_parse_page_number_with_dashes(self) -> None:
+        """ダッシュ形式のページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 タイトル --- 42")
+
+        assert result is not None
+        assert result.page == "42"
+
+    def test_parse_page_number_with_spaces(self) -> None:
+        """空白区切りのページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 タイトル   42")
+
+        assert result is not None
+        assert result.page == "42"
+
+    def test_parse_entry_without_page_number(self) -> None:
+        """ページ番号なしのエントリ"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 タイトル")
+
+        assert result is not None
+        assert result.page == ""
+
+    def test_parse_page_number_three_digits(self) -> None:
+        """3桁のページ番号"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第15章 付録 ... 999")
+
+        assert result is not None
+        assert result.page == "999"
+
+    # その他のパターン（other）
+
+    def test_parse_other_pattern_hajimeni(self) -> None:
+        """「はじめに」パターン"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("はじめに ... 1")
+
+        assert result is not None
+        assert result.level == "other"
+        assert result.number == ""
+        assert result.text == "はじめに"
+        assert result.page == "1"
+
+    def test_parse_other_pattern_owarini(self) -> None:
+        """「おわりに」パターン"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("おわりに ─── 300")
+
+        assert result is not None
+        assert result.level == "other"
+        assert result.number == ""
+        assert result.text == "おわりに"
+        assert result.page == "300"
+
+    def test_parse_other_pattern_index(self) -> None:
+        """「索引」パターン"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("索引 ... 320")
+
+        assert result is not None
+        assert result.level == "other"
+        assert result.text == "索引"
+        assert result.page == "320"
+
+    def test_parse_toc_entry_empty_line(self) -> None:
+        """空行はNoneを返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("")
+
+        assert result is None
+
+    def test_parse_toc_entry_whitespace_only(self) -> None:
+        """空白のみはNoneを返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("   ")
+
+        assert result is None
+
+    def test_parse_toc_entry_preserves_unicode(self) -> None:
+        """Unicode文字を正しく保持"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第3章 「日本語」テスト ... 50")
+
+        assert result is not None
+        assert result.text == "「日本語」テスト"
+
+
+class TestTocModels:
+    """T015: TocEntry/TableOfContentsモデルテスト
+
+    US1: データモデルが正しく定義されていることを確認
+    """
+
+    def test_toc_entry_exists(self) -> None:
+        """TocEntryクラスが存在する"""
+        from src.book_converter.models import TocEntry
+
+        assert TocEntry is not None
+
+    def test_toc_entry_is_dataclass(self) -> None:
+        """TocEntryはdataclass"""
+        from dataclasses import is_dataclass
+        from src.book_converter.models import TocEntry
+
+        assert is_dataclass(TocEntry)
+
+    def test_toc_entry_is_frozen(self) -> None:
+        """TocEntryはイミュータブル"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+
+        with pytest.raises(Exception):
+            entry.text = "変更"  # type: ignore
+
+    def test_toc_entry_required_fields(self) -> None:
+        """TocEntryの必須フィールド"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="SREとは", level="chapter")
+
+        assert entry.text == "SREとは"
+        assert entry.level == "chapter"
+
+    def test_toc_entry_optional_fields_defaults(self) -> None:
+        """TocEntryのオプションフィールドのデフォルト値"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="テスト", level="other")
+
+        assert entry.number == ""
+        assert entry.page == ""
+
+    def test_toc_entry_level_chapter(self) -> None:
+        """level='chapter'のエントリ"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
+
+        assert entry.level == "chapter"
+        assert entry.number == "1"
+
+    def test_toc_entry_level_section(self) -> None:
+        """level='section'のエントリ"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="節タイトル", level="section", number="1.2", page="20")
+
+        assert entry.level == "section"
+        assert entry.number == "1.2"
+
+    def test_toc_entry_level_subsection(self) -> None:
+        """level='subsection'のエントリ"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="項タイトル", level="subsection", number="1.2.3", page="25")
+
+        assert entry.level == "subsection"
+        assert entry.number == "1.2.3"
+
+    def test_toc_entry_level_other(self) -> None:
+        """level='other'のエントリ"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(text="はじめに", level="other", page="1")
+
+        assert entry.level == "other"
+        assert entry.number == ""
+
+    def test_table_of_contents_exists(self) -> None:
+        """TableOfContentsクラスが存在する"""
+        from src.book_converter.models import TableOfContents
+
+        assert TableOfContents is not None
+
+    def test_table_of_contents_is_dataclass(self) -> None:
+        """TableOfContentsはdataclass"""
+        from dataclasses import is_dataclass
+        from src.book_converter.models import TableOfContents
+
+        assert is_dataclass(TableOfContents)
+
+    def test_table_of_contents_is_frozen(self) -> None:
+        """TableOfContentsはイミュータブル"""
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="テスト", level="chapter")
+        toc = TableOfContents(entries=(entry,))
+
+        with pytest.raises(Exception):
+            toc.entries = ()  # type: ignore
+
+    def test_table_of_contents_with_entries(self) -> None:
+        """TableOfContentsがエントリを保持"""
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry1 = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        entry2 = TocEntry(text="1.1 節", level="section", number="1.1", page="20")
+
+        toc = TableOfContents(entries=(entry1, entry2))
+
+        assert len(toc.entries) == 2
+        assert toc.entries[0].text == "第1章"
+        assert toc.entries[1].text == "1.1 節"
+
+    def test_table_of_contents_read_aloud_default_false(self) -> None:
+        """TableOfContentsのread_aloudデフォルトはFalse"""
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entry = TocEntry(text="テスト", level="chapter")
+        toc = TableOfContents(entries=(entry,))
+
+        assert toc.read_aloud is False
+
+    def test_marker_type_exists(self) -> None:
+        """MarkerType列挙が存在する"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType is not None
+
+    def test_marker_type_toc_start(self) -> None:
+        """MarkerType.TOC_STARTの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.TOC_START.value == "toc_start"
+
+    def test_marker_type_toc_end(self) -> None:
+        """MarkerType.TOC_ENDの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.TOC_END.value == "toc_end"
+
+    def test_marker_type_is_enum(self) -> None:
+        """MarkerTypeはEnum"""
+        from enum import Enum
+        from src.book_converter.models import MarkerType
+
+        assert issubclass(MarkerType, Enum)
+
+
+# =============================================================================
+# Phase 4 (004-toc-structure): US4 コンテンツ範囲マーカー
+# =============================================================================
+
+
+class TestParseContentMarker:
+    """T050: contentマーカー検出テスト (parse_content_marker)
+
+    US4: コンテンツ範囲マーカーによる読み上げ制御
+    - `<!-- content -->` マーカーで読み上げ対象範囲開始を検出
+    - `<!-- /content -->` マーカーで読み上げ対象範囲終了を検出
+    - 大文字小文字を区別しない
+    """
+
+    def test_parse_content_start_marker(self) -> None:
+        """content開始マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- content -->")
+
+        assert result is not None
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_end_marker(self) -> None:
+        """content終了マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- /content -->")
+
+        assert result is not None
+        assert result == MarkerType.CONTENT_END
+
+    def test_parse_content_marker_case_insensitive_lowercase(self) -> None:
+        """小文字のcontentマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- content -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_marker_case_insensitive_uppercase(self) -> None:
+        """大文字のCONTENTマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- CONTENT -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_marker_case_insensitive_mixed(self) -> None:
+        """大文字小文字混在のContentマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- Content -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_marker_with_extra_spaces(self) -> None:
+        """余分なスペースがあっても検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!--   content   -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_content_end_marker_uppercase(self) -> None:
+        """大文字の終了マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- /CONTENT -->")
+
+        assert result == MarkerType.CONTENT_END
+
+    def test_parse_content_marker_with_leading_spaces(self) -> None:
+        """先頭にスペースがあっても検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("  <!-- content -->")
+
+        assert result == MarkerType.CONTENT_START
+
+    def test_parse_non_content_marker_returns_none(self) -> None:
+        """contentマーカーでない行はNoneを返す"""
+        from src.book_converter.parser import parse_content_marker
+
+        non_content_lines = [
+            "<!-- toc -->",
+            "<!-- /toc -->",
+            "# 見出し",
+            "本文テキスト",
+            "<!-- FIGURE: image.png -->",
+            "",
+            "   ",
+            "<!-- contents -->",  # typo
+        ]
+        for line in non_content_lines:
+            result = parse_content_marker(line)
+            assert result is None, f"Expected None for line: {line!r}"
+
+
+class TestParseSkipMarker:
+    """T051: skipマーカー検出テスト
+
+    US4: コンテンツ範囲マーカーによる読み上げ制御
+    - `<!-- skip -->` マーカーで読み上げ非対象範囲開始を検出
+    - `<!-- /skip -->` マーカーで読み上げ非対象範囲終了を検出
+    - 大文字小文字を区別しない
+    """
+
+    def test_parse_skip_start_marker(self) -> None:
+        """skip開始マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- skip -->")
+
+        assert result is not None
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_skip_end_marker(self) -> None:
+        """skip終了マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- /skip -->")
+
+        assert result is not None
+        assert result == MarkerType.SKIP_END
+
+    def test_parse_skip_marker_case_insensitive_uppercase(self) -> None:
+        """大文字のSKIPマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- SKIP -->")
+
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_skip_marker_case_insensitive_mixed(self) -> None:
+        """大文字小文字混在のSkipマーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- Skip -->")
+
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_skip_marker_with_extra_spaces(self) -> None:
+        """余分なスペースがあっても検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!--   skip   -->")
+
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_skip_end_marker_uppercase(self) -> None:
+        """大文字の終了マーカーを検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("<!-- /SKIP -->")
+
+        assert result == MarkerType.SKIP_END
+
+    def test_parse_skip_marker_with_leading_spaces(self) -> None:
+        """先頭にスペースがあっても検出"""
+        from src.book_converter.parser import parse_content_marker
+        from src.book_converter.models import MarkerType
+
+        result = parse_content_marker("  <!-- skip -->")
+
+        assert result == MarkerType.SKIP_START
+
+    def test_parse_non_skip_marker_returns_none(self) -> None:
+        """skipマーカーでない行はNoneを返す"""
+        from src.book_converter.parser import parse_content_marker
+
+        non_skip_lines = [
+            "<!-- toc -->",
+            "<!-- content -->",
+            "# 見出し",
+            "本文テキスト",
+            "<!-- skips -->",  # typo
+        ]
+        for line in non_skip_lines:
+            result = parse_content_marker(line)
+            # contentマーカーはCONTENT_STARTを返す、それ以外はNone
+            if "content" not in line.lower() or "contents" in line.lower():
+                assert result is None, f"Expected None for line: {line!r}"
+
+
+class TestMarkerStateStack:
+    """T052: マーカー状態スタックテスト (ネスト処理)
+
+    US4: マーカーがネストした場合の動作
+    - 空スタック → readAloud=false
+    - "content"をpush → readAloud=true
+    - "skip"をpush → readAloud=false
+    - pop → 前の状態に戻る
+    """
+
+    def test_get_read_aloud_from_empty_stack(self) -> None:
+        """空スタックからreadAloudを取得 → false"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = []
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False
+
+    def test_get_read_aloud_with_content_on_stack(self) -> None:
+        """スタックにcontentがある → true"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["content"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is True
+
+    def test_get_read_aloud_with_skip_on_stack(self) -> None:
+        """スタックにskipがある → false"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["skip"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False
+
+    def test_get_read_aloud_nested_skip_in_content(self) -> None:
+        """content内にskipがネスト → false (内側優先)"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["content", "skip"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False
+
+    def test_get_read_aloud_nested_content_in_skip(self) -> None:
+        """skip内にcontentがネスト → true (内側優先)"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["skip", "content"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is True
+
+    def test_get_read_aloud_after_pop_skip_from_content(self) -> None:
+        """content内でskipをpopした後 → true"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["content", "skip"]
+        stack.pop()  # skipをpop
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is True
+
+    def test_get_read_aloud_after_pop_content(self) -> None:
+        """contentをpopした後 → false (デフォルト)"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["content"]
+        stack.pop()  # contentをpop
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False
+
+    def test_get_read_aloud_deep_nesting(self) -> None:
+        """深いネスト: content → skip → content → skip"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        # content(true) → skip(false) → content(true) → skip(false)
+        stack = ["content", "skip", "content", "skip"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is False  # 最も内側がskip
+
+    def test_get_read_aloud_deep_nesting_ending_with_content(self) -> None:
+        """深いネスト: skip → content → skip → content"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = ["skip", "content", "skip", "content"]
+        result = get_read_aloud_from_stack(stack)
+
+        assert result is True  # 最も内側がcontent
+
+    def test_stack_manipulation_sequence(self) -> None:
+        """スタック操作のシーケンスをテスト"""
+        from src.book_converter.parser import get_read_aloud_from_stack
+
+        stack = []
+
+        # 初期状態: 空 → false
+        assert get_read_aloud_from_stack(stack) is False
+
+        # content追加 → true
+        stack.append("content")
+        assert get_read_aloud_from_stack(stack) is True
+
+        # skip追加 → false
+        stack.append("skip")
+        assert get_read_aloud_from_stack(stack) is False
+
+        # skip削除 → true
+        stack.pop()
+        assert get_read_aloud_from_stack(stack) is True
+
+        # content削除 → false
+        stack.pop()
+        assert get_read_aloud_from_stack(stack) is False
+
+
+class TestMarkerTypeContentSkip:
+    """MarkerType列挙のcontent/skip値テスト"""
+
+    def test_marker_type_content_start(self) -> None:
+        """MarkerType.CONTENT_STARTの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.CONTENT_START.value == "content_start"
+
+    def test_marker_type_content_end(self) -> None:
+        """MarkerType.CONTENT_ENDの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.CONTENT_END.value == "content_end"
+
+    def test_marker_type_skip_start(self) -> None:
+        """MarkerType.SKIP_STARTの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.SKIP_START.value == "skip_start"
+
+    def test_marker_type_skip_end(self) -> None:
+        """MarkerType.SKIP_ENDの値"""
+        from src.book_converter.models import MarkerType
+
+        assert MarkerType.SKIP_END.value == "skip_end"

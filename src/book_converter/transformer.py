@@ -17,7 +17,84 @@ from src.book_converter.models import (
     List,
     Figure,
     PageMetadata,
+    TocEntry,
+    TableOfContents,
 )
+
+
+def transform_toc_entry(entry: TocEntry) -> Element:
+    """Transform TocEntry to XML element.
+
+    <entry level="chapter" number="1" title="SREとは" page="15"/>
+
+    Args:
+        entry: The TocEntry object to transform.
+
+    Returns:
+        An XML Element representing the TOC entry.
+
+    Example:
+        >>> entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+        >>> elem = transform_toc_entry(entry)
+        >>> elem.tag
+        'entry'
+        >>> elem.get("level")
+        'chapter'
+        >>> elem.get("title")
+        'SREとは'
+    """
+    elem = Element("entry")
+    elem.set("level", entry.level)
+    if entry.number:
+        elem.set("number", entry.number)
+    elem.set("title", entry.text)
+    if entry.page:
+        elem.set("page", entry.page)
+    return elem
+
+
+def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
+    """Transform TableOfContents to XML element.
+
+    <toc begin="13" end="15">
+      <entry .../>
+      <entry .../>
+    </toc>
+
+    Args:
+        toc: The TableOfContents object to transform.
+
+    Returns:
+        An XML Element representing the table of contents, or None if toc is None.
+
+    Example:
+        >>> entries = (TocEntry(text="Chapter 1", level="chapter", number="1"),)
+        >>> toc = TableOfContents(entries=entries, begin_page="5", end_page="7")
+        >>> elem = transform_table_of_contents(toc)
+        >>> elem.tag
+        'toc'
+        >>> elem.get("begin")
+        '5'
+    """
+    if toc is None:
+        return None
+
+    # Return None for empty TOC (no entries)
+    if not toc.entries:
+        return None
+
+    elem = Element("toc")
+    if toc.begin_page:
+        elem.set("begin", toc.begin_page)
+    if toc.end_page:
+        elem.set("end", toc.end_page)
+
+    # Add entries
+    for entry in toc.entries:
+        entry_elem = transform_toc_entry(entry)
+        elem.append(entry_elem)
+
+    return elem
 
 
 def apply_emphasis(text: str, parent: Element) -> None:
@@ -127,15 +204,19 @@ def transform_content(content: Content) -> Element | None:
         return None
 
     elem = Element("content")
+    # Add readAloud attribute based on content.read_aloud
+    elem.set("readAloud", "true" if content.read_aloud else "false")
 
     for element in content.elements:
         if isinstance(element, Paragraph):
             para_elem = Element("paragraph")
+            para_elem.set("readAloud", "true" if element.read_aloud else "false")
             apply_emphasis(element.text, para_elem)
             elem.append(para_elem)
         elif isinstance(element, Heading):
             heading_elem = Element("heading")
             heading_elem.set("level", str(element.level))
+            heading_elem.set("readAloud", "true" if element.read_aloud else "false")
             apply_emphasis(element.text, heading_elem)
             # readAloud=False の場合は属性を出力
             if not element.read_aloud:
@@ -143,6 +224,7 @@ def transform_content(content: Content) -> Element | None:
             elem.append(heading_elem)
         elif isinstance(element, List):
             list_elem = Element("list")
+            list_elem.set("readAloud", "true" if element.read_aloud else "false")
             for item in element.items:
                 item_elem = Element("item")
                 apply_emphasis(item, item_elem)
@@ -169,6 +251,7 @@ def transform_page_announcement(
     elem = Element("pageAnnouncement")
     elem.text = announcement.text
     elem.set("format", announcement.format)
+    elem.set("readAloud", "false")
 
     return elem
 

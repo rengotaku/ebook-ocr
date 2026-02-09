@@ -18,7 +18,226 @@ from src.book_converter.models import (
     Figure,
     PageMetadata,
     ConversionError,
+    MarkerType,
+    MarkerStats,
+    TocEntry,
+    TableOfContents,
 )
+
+
+def parse_toc_marker(line: str) -> MarkerType | None:
+    """Parse a TOC marker line.
+
+    Returns MarkerType.TOC_START or TOC_END if line is a toc marker.
+    Case insensitive.
+
+    Args:
+        line: A line from the Markdown file.
+
+    Returns:
+        MarkerType.TOC_START for <!-- toc -->, MarkerType.TOC_END for <!-- /toc -->,
+        None otherwise.
+
+    Example:
+        >>> parse_toc_marker("<!-- toc -->")
+        MarkerType.TOC_START
+        >>> parse_toc_marker("<!-- /toc -->")
+        MarkerType.TOC_END
+        >>> parse_toc_marker("<!--   TOC   -->")
+        MarkerType.TOC_START
+    """
+    import re
+
+    # Pattern: <!-- [optional /]toc --> (case insensitive, flexible whitespace)
+    pattern = r"<!--\s*(/?)\s*[Tt][Oo][Cc]\s*-->"
+    match = re.search(pattern, line)
+
+    if match:
+        slash = match.group(1)
+        return MarkerType.TOC_END if slash else MarkerType.TOC_START
+
+    return None
+
+
+def parse_content_marker(line: str) -> MarkerType | None:
+    """Parse content/skip marker line.
+
+    Returns:
+        MarkerType.CONTENT_START for <!-- content -->
+        MarkerType.CONTENT_END for <!-- /content -->
+        MarkerType.SKIP_START for <!-- skip -->
+        MarkerType.SKIP_END for <!-- /skip -->
+        None otherwise
+
+    Example:
+        >>> parse_content_marker("<!-- content -->")
+        MarkerType.CONTENT_START
+        >>> parse_content_marker("<!-- /content -->")
+        MarkerType.CONTENT_END
+        >>> parse_content_marker("<!-- skip -->")
+        MarkerType.SKIP_START
+        >>> parse_content_marker("<!-- /skip -->")
+        MarkerType.SKIP_END
+    """
+    import re
+
+    # Content marker pattern
+    content_pattern = r"<!--\s*(/?)\s*[Cc][Oo][Nn][Tt][Ee][Nn][Tt]\s*-->"
+    match = re.search(content_pattern, line)
+    if match:
+        slash = match.group(1)
+        return MarkerType.CONTENT_END if slash else MarkerType.CONTENT_START
+
+    # Skip marker pattern
+    skip_pattern = r"<!--\s*(/?)\s*[Ss][Kk][Ii][Pp]\s*-->"
+    match = re.search(skip_pattern, line)
+    if match:
+        slash = match.group(1)
+        return MarkerType.SKIP_END if slash else MarkerType.SKIP_START
+
+    return None
+
+
+def get_read_aloud_from_stack(stack: list[str]) -> bool:
+    """Get readAloud value from marker stack.
+
+    Args:
+        stack: List of marker types ("content" or "skip")
+
+    Returns:
+        True if top of stack is "content", False otherwise
+
+    Example:
+        >>> get_read_aloud_from_stack([])
+        False
+        >>> get_read_aloud_from_stack(["content"])
+        True
+        >>> get_read_aloud_from_stack(["content", "skip"])
+        False
+    """
+    if not stack:
+        return False  # Default: readAloud=false
+
+    top = stack[-1]
+    return top == "content"
+
+
+def normalize_toc_line(line: str) -> str:
+    """Normalize TOC line by removing markdown prefixes.
+
+    Removes heading markers (###), list markers (-, *) from the beginning.
+
+    Args:
+        line: Raw line from TOC section.
+
+    Returns:
+        Normalized line with prefixes removed.
+
+    Example:
+        >>> normalize_toc_line("#### 2.1.3 SLI")
+        "2.1.3 SLI"
+        >>> normalize_toc_line("- 2.1.4 エラーバジェット")
+        "2.1.4 エラーバジェット"
+    """
+    import re
+    return re.sub(r'^[#\-*]+\s*', '', line.strip())
+
+
+def parse_toc_entry(line: str) -> TocEntry | None:
+    """Parse a TOC entry line.
+
+    Patterns:
+    - 第N章 タイトル ... ページ番号
+    - N.N タイトル ... ページ番号
+    - N.N.N タイトル ... ページ番号
+    - その他 (はじめに, おわりに, etc.)
+
+    Args:
+        line: A line from the TOC.
+
+    Returns:
+        TocEntry if line matches a TOC pattern, None otherwise.
+
+    Example:
+        >>> parse_toc_entry("第1章 SREとは ... 15")
+        TocEntry(text="SREとは", level="chapter", number="1", page="15")
+        >>> parse_toc_entry("2.1 SLOの理解 ─── 30")
+        TocEntry(text="SLOの理解", level="section", number="2.1", page="30")
+    """
+    import re
+
+    if not line.strip():
+        return None
+
+    # Extract page number first (before removing it from title)
+    page_number = ""
+
+    # Try dot leader pattern: ... N
+    dot_match = re.search(r"\.{2,}\s*(\d+)\s*$", line)
+    if dot_match:
+        page_number = dot_match.group(1)
+        line = line[: dot_match.start()]
+
+    # Try dash leader pattern: ─── N or --- N
+    if not page_number:
+        dash_match = re.search(r"[─\-]{2,}\s*(\d+)\s*$", line)
+        if dash_match:
+            page_number = dash_match.group(1)
+            line = line[: dash_match.start()]
+
+    # Try space leader pattern: (3+ spaces) N
+    if not page_number:
+        space_match = re.search(r"\s{3,}(\d+)\s*$", line)
+        if space_match:
+            page_number = space_match.group(1)
+            line = line[: space_match.start()]
+
+    # Normalize: remove markdown prefixes (###, -, *)
+    line = normalize_toc_line(line)
+
+    # Chapter pattern: 第N章 タイトル
+    chapter_pattern = r"^第(\d+)章\s+(.+)$"
+    match = re.match(chapter_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level="chapter",
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Subsection pattern (must come before section): N.N.N タイトル
+    subsection_pattern = r"^(\d+\.\d+\.\d+)\s+(.+)$"
+    match = re.match(subsection_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level="subsection",
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Section pattern: N.N タイトル
+    section_pattern = r"^(\d+\.\d+)\s+(.+)$"
+    match = re.match(section_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level="section",
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Other pattern (no number prefix)
+    if line:
+        return TocEntry(
+            text=line,
+            level="other",
+            number="",
+            page=page_number,
+        )
+
+    return None
 
 
 def parse_page_marker(line: str) -> tuple[str, str] | None:
@@ -376,51 +595,21 @@ def parse_pages(input_path: Path) -> Iterator[Page]:
     Yields:
         Page objects parsed from the Markdown file.
     """
-    with open(input_path, encoding="utf-8") as f:
-        content = f.read()
-
-    lines = content.split("\n")
-    current_page_number = ""
-    current_source_file = ""
-
-    for line in lines:
-        # Check if this is a page marker
-        marker_result = parse_page_marker(line)
-        if marker_result is not None:
-            # Yield previous page if any
-            if current_page_number or current_source_file:
-                announcement = create_page_announcement(current_page_number)
-                yield Page(
-                    number=current_page_number,
-                    source_file=current_source_file,
-                    content=Content(elements=()),
-                    announcement=announcement,
-                )
-
-            # Start new page
-            current_page_number, current_source_file = marker_result
-
-    # Yield final page
-    if current_page_number or current_source_file:
-        announcement = create_page_announcement(current_page_number)
-        yield Page(
-            number=current_page_number,
-            source_file=current_source_file,
-            content=Content(elements=()),
-            announcement=announcement,
-        )
+    # Use parse_pages_with_errors and yield only pages (ignore errors and toc)
+    pages, _, _ = parse_pages_with_errors(input_path)
+    yield from pages
 
 
 def parse_pages_with_errors(
     input_path: Path
-) -> tuple[list[Page], list[ConversionError]]:
+) -> tuple[list[Page], list[ConversionError], TableOfContents | None]:
     """Parse a Markdown file into Page objects with error tracking.
 
     Args:
         input_path: Path to the Markdown file.
 
     Returns:
-        Tuple of (pages, errors). Errors are collected but parsing continues.
+        Tuple of (pages, errors, toc). TOC is built from all pages with TOC markers.
     """
     with open(input_path, encoding="utf-8") as f:
         content = f.read()
@@ -435,6 +624,11 @@ def parse_pages_with_errors(
     last_page_marker_line = 0
     page_start_line = 0
 
+    # Track TOC across all pages
+    all_toc_entries: list[TocEntry] = []
+    toc_begin_page = ""
+    toc_end_page = ""
+
     for line_idx, line in enumerate(lines, start=1):
         # Check if this is a page marker (including those with missing numbers)
         page_num, source_file = extract_page_number(line)
@@ -443,7 +637,7 @@ def parse_pages_with_errors(
             # Save previous page if any
             if current_source_file:
                 # Parse the content of the previous page
-                page_obj, page_errors = _parse_single_page_content(
+                page_obj, page_errors, toc_entries, had_toc = _parse_single_page_content(
                     current_page_number,
                     current_source_file,
                     current_page_lines,
@@ -451,6 +645,13 @@ def parse_pages_with_errors(
                 )
                 pages.append(page_obj)
                 errors.extend(page_errors)
+
+                # Track TOC page range
+                if had_toc and current_page_number:
+                    if not toc_begin_page:
+                        toc_begin_page = current_page_number
+                    toc_end_page = current_page_number
+                    all_toc_entries.extend(toc_entries)
 
                 # Check for missing page number on previous page
                 if not current_page_number:
@@ -474,7 +675,7 @@ def parse_pages_with_errors(
     # Save final page
     if current_source_file:
         # Parse the content of the final page
-        page_obj, page_errors = _parse_single_page_content(
+        page_obj, page_errors, toc_entries, had_toc = _parse_single_page_content(
             current_page_number,
             current_source_file,
             current_page_lines,
@@ -482,6 +683,13 @@ def parse_pages_with_errors(
         )
         pages.append(page_obj)
         errors.extend(page_errors)
+
+        # Track TOC page range
+        if had_toc and current_page_number:
+            if not toc_begin_page:
+                toc_begin_page = current_page_number
+            toc_end_page = current_page_number
+            all_toc_entries.extend(toc_entries)
 
         # Check for missing page number on final page
         if not current_page_number:
@@ -492,7 +700,17 @@ def parse_pages_with_errors(
                 line_number=last_page_marker_line,
             ))
 
-    return (pages, errors)
+    # Build TableOfContents if any entries found
+    toc = None
+    if all_toc_entries:
+        toc = TableOfContents(
+            entries=tuple(all_toc_entries),
+            begin_page=toc_begin_page,
+            end_page=toc_end_page,
+            read_aloud=False,
+        )
+
+    return (pages, errors, toc)
 
 
 def _parse_single_page_content(
@@ -500,7 +718,7 @@ def _parse_single_page_content(
     source_file: str,
     lines: list[str],
     start_line: int,
-) -> tuple[Page, list[ConversionError]]:
+) -> tuple[Page, list[ConversionError], list[TocEntry], bool]:
     """Parse the content of a single page.
 
     Args:
@@ -510,18 +728,67 @@ def _parse_single_page_content(
         start_line: Starting line number in the original file.
 
     Returns:
-        Tuple of (Page, list of ConversionErrors).
+        Tuple of (Page, errors, toc_entries, had_toc_marker).
+        had_toc_marker is True if this page contained any TOC markers.
     """
     errors = []
     content_elements = []
     figures_list = []
     metadata = None
+    toc_entries = []
+    in_toc = False
+    had_toc_marker = False  # Track if this page has any TOC markers
+    marker_stack: list[str] = []  # Track content/skip marker state
 
     # Parse content line by line
     idx = 0
     while idx < len(lines):
         line = lines[idx]
         line_num = start_line + idx + 1
+
+        # Check for TOC markers
+        toc_marker = parse_toc_marker(line)
+        if toc_marker == MarkerType.TOC_START:
+            in_toc = True
+            had_toc_marker = True
+            idx += 1
+            continue
+        elif toc_marker == MarkerType.TOC_END:
+            in_toc = False
+            idx += 1
+            continue
+
+        # Check for content/skip markers
+        content_marker = parse_content_marker(line)
+        if content_marker == MarkerType.CONTENT_START:
+            marker_stack.append("content")
+            idx += 1
+            continue
+        elif content_marker == MarkerType.CONTENT_END:
+            if marker_stack and marker_stack[-1] == "content":
+                marker_stack.pop()
+            idx += 1
+            continue
+        elif content_marker == MarkerType.SKIP_START:
+            marker_stack.append("skip")
+            idx += 1
+            continue
+        elif content_marker == MarkerType.SKIP_END:
+            if marker_stack and marker_stack[-1] == "skip":
+                marker_stack.pop()
+            idx += 1
+            continue
+
+        # If inside TOC, try to parse as TOC entry
+        if in_toc:
+            toc_entry = parse_toc_entry(line)
+            if toc_entry is not None:
+                toc_entries.append(toc_entry)
+            idx += 1
+            continue
+
+        # Get current readAloud value from marker stack
+        read_aloud = get_read_aloud_from_stack(marker_stack)
 
         # Check for deep heading warning
         heading, warning = parse_heading_with_warning(line)
@@ -535,6 +802,8 @@ def _parse_single_page_content(
 
         # Check for heading
         if heading is not None:
+            # Apply readAloud state
+            heading = Heading(level=heading.level, text=heading.text, read_aloud=read_aloud)
             content_elements.append(heading)
             idx += 1
             continue
@@ -585,6 +854,8 @@ def _parse_single_page_content(
 
             lst = parse_list(list_lines)
             if lst is not None:
+                # Apply readAloud state
+                lst = List(items=lst.items, read_aloud=read_aloud)
                 content_elements.append(lst)
             idx = list_idx
             continue
@@ -607,11 +878,18 @@ def _parse_single_page_content(
                     break
                 if parse_page_metadata(para_line.strip()) is not None:
                     break
+                # Stop at markers (toc, content, skip)
+                if parse_toc_marker(para_line) is not None:
+                    break
+                if parse_content_marker(para_line) is not None:
+                    break
                 para_lines.append(para_line)
                 para_idx += 1
 
             para = parse_paragraph(para_lines)
             if para is not None:
+                # Apply readAloud state
+                para = Paragraph(text=para.text, read_aloud=read_aloud)
                 content_elements.append(para)
             idx = para_idx
             continue
@@ -620,7 +898,11 @@ def _parse_single_page_content(
         idx += 1
 
     # Create Page object
-    content = Content(elements=tuple(content_elements))
+    # Content readAloud is true if ANY child element has readAloud=true
+    content_read_aloud = any(
+        elem.read_aloud for elem in content_elements
+    ) if content_elements else False
+    content = Content(elements=tuple(content_elements), read_aloud=content_read_aloud)
     announcement = create_page_announcement(page_number)
 
     page = Page(
@@ -632,4 +914,35 @@ def _parse_single_page_content(
         metadata=metadata,
     )
 
-    return (page, errors)
+    return (page, errors, toc_entries, had_toc_marker)
+
+
+def count_markers(input_path: Path) -> MarkerStats:
+    """Count marker occurrences in a Markdown file.
+
+    Args:
+        input_path: Path to the Markdown file.
+
+    Returns:
+        MarkerStats with counts for toc, content, and skip markers.
+    """
+    with open(input_path, encoding="utf-8") as f:
+        content = f.read()
+
+    toc_count = 0
+    content_count = 0
+    skip_count = 0
+
+    for line in content.split("\n"):
+        marker = parse_toc_marker(line)
+        if marker == MarkerType.TOC_START:
+            toc_count += 1
+            continue
+
+        marker = parse_content_marker(line)
+        if marker == MarkerType.CONTENT_START:
+            content_count += 1
+        elif marker == MarkerType.SKIP_START:
+            skip_count += 1
+
+    return MarkerStats(toc=toc_count, content=content_count, skip=skip_count)
