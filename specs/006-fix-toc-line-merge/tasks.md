@@ -103,16 +103,16 @@
 
 ### Implementation (GREEN)
 
-- [ ] T032 REDテストを読む: specs/006-fix-toc-line-merge/red-tests/ph3-test.md
-- [ ] T033 [P] [US2] validate_page_count関数を実装: src/book_converter/page_grouper.py
-- [ ] T034 [US2] group_pages_by_tocを修正（全ページ保持）: src/book_converter/page_grouper.py
-- [ ] T035 [US2] group_pages_by_tocでvalidate_page_countを呼び出し: src/book_converter/page_grouper.py
-- [ ] T036 `make test` PASS (GREEN) を確認
+- [X] T032 REDテストを読む: specs/006-fix-toc-line-merge/red-tests/ph3-test.md
+- [X] T033 [P] [US2] validate_page_count関数を実装: src/book_converter/page_grouper.py
+- [X] T034 [US2] group_pages_by_tocを修正（全ページ保持）: src/book_converter/page_grouper.py
+- [X] T035 [US2] group_pages_by_tocでvalidate_page_countを呼び出し: src/book_converter/page_grouper.py
+- [X] T036 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T037 `make test` で全テスト成功を確認（US1含む回帰なし）
-- [ ] T038 フェーズ出力を生成: specs/006-fix-toc-line-merge/tasks/ph3-output.md
+- [X] T037 `make test` で全テスト成功を確認（US1含む回帰なし）
+- [X] T038 フェーズ出力を生成: specs/006-fix-toc-line-merge/tasks/ph3-output.md
 
 **チェックポイント**: US1とUS2が両方とも独立して動作
 

@@ -9,6 +9,8 @@ import re
 from dataclasses import dataclass
 from xml.etree import ElementTree as ET
 
+from src.book_converter.errors import PageValidationError
+
 
 @dataclass(frozen=True)
 class SectionNumber:
@@ -196,6 +198,32 @@ def parse_toc(toc_element: ET.Element) -> list[TOCEntry]:
     return entries
 
 
+def validate_page_count(input_count: int, output_count: int) -> None:
+    """Validate output page count against input.
+
+    Args:
+        input_count: Number of pages in input
+        output_count: Number of pages in output
+
+    Raises:
+        PageValidationError: If output_count < 50% of input_count
+
+    Returns:
+        None if validation passes
+    """
+    if input_count == 0:
+        return
+
+    loss_ratio = (input_count - output_count) / input_count
+    if loss_ratio >= 0.5:
+        raise PageValidationError(
+            input_count=input_count,
+            output_count=output_count,
+            message=f"Page validation failed: {output_count} of {input_count} pages preserved "
+            f"({(1 - loss_ratio) * 100:.1f}%). At least 50% required.",
+        )
+
+
 def group_pages_by_toc(xml_input: str) -> str:
     """Group pages in book XML by TOC structure.
 
@@ -238,29 +266,41 @@ def group_pages_by_toc(xml_input: str) -> str:
     # Collect all pages and classify them
     pages = root.findall('page')
 
-    # Front-matter pages: before toc_begin and TOC pages themselves
-    front_matter_pages = []
-    content_pages = []
-
-    for page in pages:
-        page_num = int(page.get('number', '0'))
-        if toc_begin and page_num <= toc_end:
-            front_matter_pages.append(page)
-        else:
-            content_pages.append(page)
-
-    # Create front-matter section
-    if front_matter_pages:
+    # If no TOC entries exist, place all pages in front-matter
+    if not toc_entries:
         front_matter_elem = ET.Element('front-matter')
-        for page in front_matter_pages:
+        for page in pages:
             front_matter_elem.append(page)
         new_book.append(front_matter_elem)
+    else:
+        # Front-matter pages: before toc_begin and TOC pages themselves
+        front_matter_pages = []
+        content_pages = []
 
-    # Assign content pages to sections
-    page_assignments = _assign_pages_to_sections(content_pages, toc_lookup)
+        for page in pages:
+            page_num = int(page.get('number', '0'))
+            if toc_begin and page_num <= toc_end:
+                front_matter_pages.append(page)
+            else:
+                content_pages.append(page)
 
-    # Build hierarchical structure
-    _build_hierarchical_structure(new_book, page_assignments, toc_lookup)
+        # Create front-matter section
+        if front_matter_pages:
+            front_matter_elem = ET.Element('front-matter')
+            for page in front_matter_pages:
+                front_matter_elem.append(page)
+            new_book.append(front_matter_elem)
+
+        # Assign content pages to sections
+        page_assignments = _assign_pages_to_sections(content_pages, toc_lookup)
+
+        # Build hierarchical structure
+        _build_hierarchical_structure(new_book, page_assignments, toc_lookup)
+
+    # Validate page count
+    input_count = len(pages)
+    output_count = len(new_book.findall('.//page'))
+    validate_page_count(input_count, output_count)
 
     # Serialize to string
     return _serialize_to_xml(new_book)
