@@ -135,26 +135,26 @@ tests/book_converter/
 
 ### Input
 
-- [ ] T041 セットアップ分析を読む: specs/005-toc-page-grouping/tasks/ph1-output.md
-- [ ] T042 前フェーズ出力を読む: specs/005-toc-page-grouping/tasks/ph3-output.md
+- [x] T041 セットアップ分析を読む: specs/005-toc-page-grouping/tasks/ph1-output.md
+- [x] T042 前フェーズ出力を読む: specs/005-toc-page-grouping/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T043 [P] [US4] 番号欠落ページのフォールバックテストを実装: tests/book_converter/test_page_grouper.py::test_fallback_to_previous_section
-- [ ] T044 [P] [US4] 連続欠落ページのテストを実装: tests/book_converter/test_page_grouper.py::test_consecutive_missing_sections
-- [ ] T045 `make test` FAIL (RED) を確認
-- [ ] T046 RED出力を生成: specs/005-toc-page-grouping/red-tests/ph4-test.md
+- [x] T043 [P] [US4] 番号欠落ページのフォールバックテストを実装: tests/book_converter/test_page_grouper.py::test_fallback_to_previous_section
+- [x] T044 [P] [US4] 連続欠落ページのテストを実装: tests/book_converter/test_page_grouper.py::test_consecutive_missing_sections
+- [x] T045 `make test` FAIL (RED) を確認
+- [x] T046 RED出力を生成: specs/005-toc-page-grouping/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
-- [ ] T047 REDテストを読む: specs/005-toc-page-grouping/red-tests/ph4-test.md
-- [ ] T048 [US4] assign_pages_to_sections()にフォールバックロジックを追加
-- [ ] T049 `make test` PASS (GREEN) を確認
+- [x] T047 REDテストを読む: specs/005-toc-page-grouping/red-tests/ph4-test.md
+- [x] T048 [US4] assign_pages_to_sections()にフォールバックロジックを追加
+- [x] T049 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T050 `make test` で全テストパスを確認（US1+US2+US3含む）
-- [ ] T051 Phase出力を生成: specs/005-toc-page-grouping/tasks/ph4-output.md
+- [x] T050 `make test` で全テストパスを確認（US1+US2+US3含む）
+- [x] T051 Phase出力を生成: specs/005-toc-page-grouping/tasks/ph4-output.md
 
 **Checkpoint**: 全User Storyが機能
 

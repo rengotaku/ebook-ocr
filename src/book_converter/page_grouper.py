@@ -287,7 +287,10 @@ def _assign_pages_to_sections(
 
         if section_num and section_num in toc_lookup:
             current_section = section_num
-        # If no section found, use previous page's section (US4 fallback)
+        elif current_section is None:
+            # FR-008: First content page without section -> assign to first chapter
+            current_section = _find_first_chapter(toc_lookup)
+        # If no section found but current_section exists, use previous page's section (US4 fallback)
 
         if current_section:
             if current_section not in assignments:
@@ -295,6 +298,25 @@ def _assign_pages_to_sections(
             assignments[current_section].append(page)
 
     return assignments
+
+
+def _find_first_chapter(toc_lookup: dict[str, TOCEntry]) -> str | None:
+    """Find the first chapter in TOC.
+
+    Args:
+        toc_lookup: Dict mapping section number to TOCEntry
+
+    Returns:
+        First chapter number or None if no chapters exist
+    """
+    # Find all chapter entries (single digit section numbers)
+    chapter_numbers = [num for num, entry in toc_lookup.items() if entry.level == 'chapter']
+
+    if not chapter_numbers:
+        return None
+
+    # Return the numerically smallest chapter number
+    return min(chapter_numbers, key=lambda x: int(x))
 
 
 def _extract_section_from_page(page: ET.Element) -> str | None:
