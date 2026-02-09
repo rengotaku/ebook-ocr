@@ -82,11 +82,11 @@ SREはGoogleが提唱したプラクティスです。
         tree = ET.parse(book_xml)
         root = tree.getroot()
 
-        # Verify table of contents (appears in page 2 where TOC ends)
-        page2 = [p for p in root.findall("page") if p.get("number") == "2"][0]
-        toc = page2.find("tableOfContents")
+        # Verify table of contents (at book level)
+        toc = root.find("toc")
         assert toc is not None
-        assert toc.get("readAloud") == "false"
+        assert toc.get("begin") == "2"
+        assert toc.get("end") == "2"
 
         # Verify TOC entries
         entries = toc.findall("entry")
@@ -162,14 +162,20 @@ SREはGoogleが提唱したプラクティスです。
             assert para.get("readAloud") == "false"
 
     def test_toc_spanning_multiple_pages(self, tmp_path: Path) -> None:
-        """Test TOC that spans multiple pages."""
+        """Test TOC with page-local markers on multiple pages.
+
+        TOC markers are page-local. Each page should have complete marker pairs.
+        TOC entries from all pages with markers are collected together.
+        """
         book_md = tmp_path / "book.md"
         book_md.write_text(
             """--- Page 1 (page_0001.png) ---
 <!-- toc -->
 第1章 章1 ... 10
+<!-- /toc -->
 
 --- Page 2 (page_0002.png) ---
+<!-- toc -->
 第2章 章2 ... 20
 <!-- /toc -->
 """,
@@ -184,10 +190,11 @@ SREはGoogleが提唱したプラクティスです。
         tree = ET.parse(book_xml)
         root = tree.getroot()
 
-        # TOC should appear only on page 2 (where it ends)
-        page2 = [p for p in root.findall("page") if p.get("number") == "2"][0]
-        toc = page2.find("tableOfContents")
+        # TOC should appear at book level with begin/end tracking pages
+        toc = root.find("toc")
         assert toc is not None
+        assert toc.get("begin") == "1"
+        assert toc.get("end") == "2"
 
         entries = toc.findall("entry")
         assert len(entries) == 2
@@ -257,7 +264,7 @@ SREはGoogleが提唱したプラクティスです。
         root = tree.getroot()
 
         # No table of contents should be generated
-        toc = root.find("tableOfContents")
+        toc = root.find("toc")
         assert toc is None
 
         # All content should have readAloud=false (default)
@@ -275,12 +282,17 @@ SREはGoogleが提唱したプラクティスです。
         assert lst.get("readAloud") == "false"
 
     def test_empty_toc_section(self, tmp_path: Path) -> None:
-        """Test empty TOC section (no valid entries)."""
+        """Test empty TOC section (only whitespace/empty lines).
+
+        Note: Any non-empty text within TOC markers is treated as an entry
+        (level="other" if no pattern matches). To have truly empty TOC,
+        the markers must contain only whitespace.
+        """
         book_md = tmp_path / "book.md"
         book_md.write_text(
             """--- Page 1 (page_0001.png) ---
 <!-- toc -->
-これは目次エントリではありません
+
 <!-- /toc -->
 
 本文
@@ -297,7 +309,7 @@ SREはGoogleが提唱したプラクティスです。
         root = tree.getroot()
 
         # No table of contents should be generated (no valid entries)
-        toc = root.find("tableOfContents")
+        toc = root.find("toc")
         assert toc is None
 
     def test_multiple_content_blocks_same_page(self, tmp_path: Path) -> None:
@@ -425,11 +437,11 @@ SREはGoogleが提唱したプラクティスです。
         tree = ET.parse(book_xml)
         root = tree.getroot()
 
-        # Verify TOC (appears in page 2 where TOC ends)
-        page2 = [p for p in root.findall("page") if p.get("number") == "2"][0]
-        toc = page2.find("tableOfContents")
+        # Verify TOC (at book level)
+        toc = root.find("toc")
         assert toc is not None
-        assert toc.get("readAloud") == "false"
+        assert toc.get("begin") == "2"
+        assert toc.get("end") == "2"
 
         entries = toc.findall("entry")
         assert len(entries) == 5
@@ -454,7 +466,12 @@ class TestE2EErrorHandling:
     """E2E tests for error handling with TOC markers."""
 
     def test_unclosed_toc_marker(self, tmp_path: Path) -> None:
-        """Test handling of unclosed TOC marker."""
+        """Test handling of unclosed TOC marker.
+
+        With page-local parsing, an unclosed TOC marker still collects
+        entries from the rest of the page content. The marker implicitly
+        closes at the end of the page.
+        """
         book_md = tmp_path / "book.md"
         book_md.write_text(
             """--- Page 1 (page_0001.png) ---
@@ -467,15 +484,21 @@ class TestE2EErrorHandling:
         book_xml = tmp_path / "book.xml"
         result = convert_book(book_md, book_xml)
 
-        # Conversion should succeed (TOC just not created)
+        # Conversion should succeed
         assert result.success is True
 
         tree = ET.parse(book_xml)
         root = tree.getroot()
 
-        # No TOC should be generated (unclosed)
-        toc = root.find("tableOfContents")
-        assert toc is None
+        # TOC should be generated (entries collected until end of page)
+        toc = root.find("toc")
+        assert toc is not None
+        assert toc.get("begin") == "1"
+        assert toc.get("end") == "1"
+
+        entries = toc.findall("entry")
+        assert len(entries) == 1
+        assert entries[0].get("title") == "章1"
 
     def test_unclosed_content_marker(self, tmp_path: Path) -> None:
         """Test handling of unclosed content marker."""

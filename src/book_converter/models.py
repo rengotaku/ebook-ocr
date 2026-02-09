@@ -113,6 +113,8 @@ class TableOfContents:
     """Complete Table of Contents."""
 
     entries: tuple[TocEntry, ...]
+    begin_page: str = ""  # TOCが開始するページ番号
+    end_page: str = ""  # TOCが終了するページ番号
     read_aloud: bool = False
 
 
@@ -128,7 +130,6 @@ class Page:
     metadata: PageMetadata | None = None
     continued: bool = False
     page_type: str = "normal"  # "normal", "cover", "colophon", "toc"
-    toc: TableOfContents | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +138,7 @@ class Book:
 
     metadata: BookMetadata
     pages: tuple[Page, ...]  # イミュータブルなタプル
+    toc: TableOfContents | None = None  # 目次（book直下、metadata の次）
 
 
 @dataclass(frozen=True)
@@ -180,3 +182,12 @@ class HeadingAnalysis:
     count: int  # 出現回数 (1以上)
     levels: tuple[int, ...]  # 出現したlevelのリスト（空でない）
     is_running_head: bool  # 柱として判定されたか
+
+
+@dataclass(frozen=True)
+class MarkerStats:
+    """マーカー統計"""
+
+    toc: int = 0  # <!-- toc --> 開始マーカー数
+    content: int = 0  # <!-- content --> 開始マーカー数
+    skip: int = 0  # <!-- skip --> 開始マーカー数

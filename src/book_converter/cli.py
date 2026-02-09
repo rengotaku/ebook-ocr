@@ -18,7 +18,7 @@ from src.book_converter.models import (
     Page,
     Content,
 )
-from src.book_converter.parser import parse_pages_with_errors
+from src.book_converter.parser import parse_pages_with_errors, count_markers
 from src.book_converter.xml_builder import build_xml_with_errors
 from src.book_converter.analyzer import (
     analyze_headings,
@@ -139,7 +139,7 @@ def convert_book(
         ConversionResult with conversion statistics and errors.
     """
     # Parse pages with error tracking
-    pages, errors = parse_pages_with_errors(input_path)
+    pages, errors, toc = parse_pages_with_errors(input_path)
 
     # Extract and analyze headings
     all_headings = _extract_headings(pages)
@@ -157,6 +157,7 @@ def convert_book(
     book = Book(
         metadata=BookMetadata(title="Converted Book"),
         pages=tuple(processed_pages),
+        toc=toc,
     )
     xml_string = build_xml_with_errors(book, errors)
     output_path.write_text(xml_string, encoding="utf-8")
@@ -201,9 +202,14 @@ def main(args: list[str] | None = None) -> int:
             verbose=parsed.verbose
         )
 
+        # Count markers
+        marker_stats = count_markers(input_path)
+
         # Output summary (unless quiet mode)
         if not parsed.quiet:
             print(f"変換完了: {result.total_pages}ページ処理")
+            # Marker statistics
+            print(f"マーカー: toc={marker_stats.toc}, content={marker_stats.content}, skip={marker_stats.skip}")
             if result.error_count > 0:
                 print(f"警告: {result.error_count}個のエラーが発生しました")
 

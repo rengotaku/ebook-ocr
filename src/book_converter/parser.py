@@ -19,6 +19,7 @@ from src.book_converter.models import (
     PageMetadata,
     ConversionError,
     MarkerType,
+    MarkerStats,
     TocEntry,
     TableOfContents,
 )
@@ -121,6 +122,27 @@ def get_read_aloud_from_stack(stack: list[str]) -> bool:
     return top == "content"
 
 
+def normalize_toc_line(line: str) -> str:
+    """Normalize TOC line by removing markdown prefixes.
+
+    Removes heading markers (###), list markers (-, *) from the beginning.
+
+    Args:
+        line: Raw line from TOC section.
+
+    Returns:
+        Normalized line with prefixes removed.
+
+    Example:
+        >>> normalize_toc_line("#### 2.1.3 SLI")
+        "2.1.3 SLI"
+        >>> normalize_toc_line("- 2.1.4 エラーバジェット")
+        "2.1.4 エラーバジェット"
+    """
+    import re
+    return re.sub(r'^[#\-*]+\s*', '', line.strip())
+
+
 def parse_toc_entry(line: str) -> TocEntry | None:
     """Parse a TOC entry line.
 
@@ -170,8 +192,8 @@ def parse_toc_entry(line: str) -> TocEntry | None:
             page_number = space_match.group(1)
             line = line[: space_match.start()]
 
-    # Now parse entry patterns
-    line = line.strip()
+    # Normalize: remove markdown prefixes (###, -, *)
+    line = normalize_toc_line(line)
 
     # Chapter pattern: 第N章 タイトル
     chapter_pattern = r"^第(\d+)章\s+(.+)$"
@@ -573,21 +595,21 @@ def parse_pages(input_path: Path) -> Iterator[Page]:
     Yields:
         Page objects parsed from the Markdown file.
     """
-    # Use parse_pages_with_errors and yield only pages (ignore errors)
-    pages, _ = parse_pages_with_errors(input_path)
+    # Use parse_pages_with_errors and yield only pages (ignore errors and toc)
+    pages, _, _ = parse_pages_with_errors(input_path)
     yield from pages
 
 
 def parse_pages_with_errors(
     input_path: Path
-) -> tuple[list[Page], list[ConversionError]]:
+) -> tuple[list[Page], list[ConversionError], TableOfContents | None]:
     """Parse a Markdown file into Page objects with error tracking.
 
     Args:
         input_path: Path to the Markdown file.
 
     Returns:
-        Tuple of (pages, errors). Errors are collected but parsing continues.
+        Tuple of (pages, errors, toc). TOC is built from all pages with TOC markers.
     """
     with open(input_path, encoding="utf-8") as f:
         content = f.read()
@@ -602,9 +624,10 @@ def parse_pages_with_errors(
     last_page_marker_line = 0
     page_start_line = 0
 
-    # Track TOC state across pages
-    in_toc = False
-    toc_entries_accumulated = []
+    # Track TOC across all pages
+    all_toc_entries: list[TocEntry] = []
+    toc_begin_page = ""
+    toc_end_page = ""
 
     for line_idx, line in enumerate(lines, start=1):
         # Check if this is a page marker (including those with missing numbers)
@@ -614,17 +637,21 @@ def parse_pages_with_errors(
             # Save previous page if any
             if current_source_file:
                 # Parse the content of the previous page
-                page_obj, page_errors, in_toc, new_entries = _parse_single_page_content(
+                page_obj, page_errors, toc_entries, had_toc = _parse_single_page_content(
                     current_page_number,
                     current_source_file,
                     current_page_lines,
                     page_start_line,
-                    in_toc,
-                    toc_entries_accumulated,
                 )
                 pages.append(page_obj)
                 errors.extend(page_errors)
-                toc_entries_accumulated.extend(new_entries)
+
+                # Track TOC page range
+                if had_toc and current_page_number:
+                    if not toc_begin_page:
+                        toc_begin_page = current_page_number
+                    toc_end_page = current_page_number
+                    all_toc_entries.extend(toc_entries)
 
                 # Check for missing page number on previous page
                 if not current_page_number:
@@ -648,17 +675,21 @@ def parse_pages_with_errors(
     # Save final page
     if current_source_file:
         # Parse the content of the final page
-        page_obj, page_errors, in_toc, new_entries = _parse_single_page_content(
+        page_obj, page_errors, toc_entries, had_toc = _parse_single_page_content(
             current_page_number,
             current_source_file,
             current_page_lines,
             page_start_line,
-            in_toc,
-            toc_entries_accumulated,
         )
         pages.append(page_obj)
         errors.extend(page_errors)
-        toc_entries_accumulated.extend(new_entries)
+
+        # Track TOC page range
+        if had_toc and current_page_number:
+            if not toc_begin_page:
+                toc_begin_page = current_page_number
+            toc_end_page = current_page_number
+            all_toc_entries.extend(toc_entries)
 
         # Check for missing page number on final page
         if not current_page_number:
@@ -669,7 +700,17 @@ def parse_pages_with_errors(
                 line_number=last_page_marker_line,
             ))
 
-    return (pages, errors)
+    # Build TableOfContents if any entries found
+    toc = None
+    if all_toc_entries:
+        toc = TableOfContents(
+            entries=tuple(all_toc_entries),
+            begin_page=toc_begin_page,
+            end_page=toc_end_page,
+            read_aloud=False,
+        )
+
+    return (pages, errors, toc)
 
 
 def _parse_single_page_content(
@@ -677,9 +718,7 @@ def _parse_single_page_content(
     source_file: str,
     lines: list[str],
     start_line: int,
-    in_toc_initial: bool = False,
-    toc_entries_accumulated: list[TocEntry] | None = None,
-) -> tuple[Page, list[ConversionError], bool, list[TocEntry]]:
+) -> tuple[Page, list[ConversionError], list[TocEntry], bool]:
     """Parse the content of a single page.
 
     Args:
@@ -687,18 +726,18 @@ def _parse_single_page_content(
         source_file: Source file name.
         lines: Lines of content for this page.
         start_line: Starting line number in the original file.
-        in_toc_initial: Whether we're continuing TOC from previous page.
-        toc_entries_accumulated: TOC entries from previous pages (if continuing).
 
     Returns:
-        Tuple of (Page, list of ConversionErrors, in_toc_final, new_toc_entries).
+        Tuple of (Page, errors, toc_entries, had_toc_marker).
+        had_toc_marker is True if this page contained any TOC markers.
     """
     errors = []
     content_elements = []
     figures_list = []
     metadata = None
     toc_entries = []
-    in_toc = in_toc_initial
+    in_toc = False
+    had_toc_marker = False  # Track if this page has any TOC markers
     marker_stack: list[str] = []  # Track content/skip marker state
 
     # Parse content line by line
@@ -711,6 +750,7 @@ def _parse_single_page_content(
         toc_marker = parse_toc_marker(line)
         if toc_marker == MarkerType.TOC_START:
             in_toc = True
+            had_toc_marker = True
             idx += 1
             continue
         elif toc_marker == MarkerType.TOC_END:
@@ -865,17 +905,6 @@ def _parse_single_page_content(
     content = Content(elements=tuple(content_elements), read_aloud=content_read_aloud)
     announcement = create_page_announcement(page_number)
 
-    # Create TableOfContents only on the page where TOC ends
-    # If we're still in TOC mode, don't create the element yet
-    toc = None
-    if not in_toc and toc_entries:
-        # TOC has ended on this page, include all accumulated entries
-        all_entries = []
-        if toc_entries_accumulated:
-            all_entries.extend(toc_entries_accumulated)
-        all_entries.extend(toc_entries)
-        toc = TableOfContents(entries=tuple(all_entries), read_aloud=False)
-
     page = Page(
         number=page_number,
         source_file=source_file,
@@ -883,7 +912,37 @@ def _parse_single_page_content(
         announcement=announcement,
         figures=tuple(figures_list),
         metadata=metadata,
-        toc=toc,
     )
 
-    return (page, errors, in_toc, toc_entries)
+    return (page, errors, toc_entries, had_toc_marker)
+
+
+def count_markers(input_path: Path) -> MarkerStats:
+    """Count marker occurrences in a Markdown file.
+
+    Args:
+        input_path: Path to the Markdown file.
+
+    Returns:
+        MarkerStats with counts for toc, content, and skip markers.
+    """
+    with open(input_path, encoding="utf-8") as f:
+        content = f.read()
+
+    toc_count = 0
+    content_count = 0
+    skip_count = 0
+
+    for line in content.split("\n"):
+        marker = parse_toc_marker(line)
+        if marker == MarkerType.TOC_START:
+            toc_count += 1
+            continue
+
+        marker = parse_content_marker(line)
+        if marker == MarkerType.CONTENT_START:
+            content_count += 1
+        elif marker == MarkerType.SKIP_START:
+            skip_count += 1
+
+    return MarkerStats(toc=toc_count, content=content_count, skip=skip_count)

@@ -902,7 +902,7 @@ class TestErrorHandlingContinueOnWarning:
             "--- Page 3 (page_0003.png) ---\n\n## Chapter 2\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         # 3ページすべて解析される
         assert len(pages) == 3
@@ -922,7 +922,7 @@ class TestErrorHandlingContinueOnWarning:
             "## Valid heading\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         # ページは解析される
         assert len(pages) == 1
@@ -939,7 +939,7 @@ class TestErrorHandlingContinueOnWarning:
             "--- Page (page_0001.png) ---\n\n# Title\n"  # Missing number
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert len(errors) >= 1
         assert isinstance(errors[0], ConversionError)
@@ -958,7 +958,7 @@ class TestErrorHandlingContinueOnWarning:
             "Content\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         # 警告/エラーが記録される
         has_heading_warning = any(
@@ -980,7 +980,7 @@ class TestErrorHandlingContinueOnWarning:
             "# Title\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert len(errors) >= 1
         # line_number属性がある
@@ -1077,10 +1077,10 @@ class TestErrorHandlingParseWithErrors:
 
         assert callable(parse_pages_with_errors)
 
-    def test_returns_tuple_of_pages_and_errors(
+    def test_returns_tuple_of_pages_errors_and_toc(
         self, tmp_path: Path
     ) -> None:
-        """ページリストとエラーリストのタプルを返す"""
+        """ページリストとエラーリストとTOCのタプルを返す"""
         from src.book_converter.parser import parse_pages_with_errors
 
         input_file = tmp_path / "test.md"
@@ -1089,7 +1089,12 @@ class TestErrorHandlingParseWithErrors:
         result = parse_pages_with_errors(input_file)
 
         assert isinstance(result, tuple)
-        assert len(result) == 2
+        assert len(result) == 3
+        pages, errors, toc = result
+        assert isinstance(pages, list)
+        assert isinstance(errors, list)
+        # toc is None when no TOC markers
+        assert toc is None
 
     def test_pages_are_list(
         self, tmp_path: Path
@@ -1100,7 +1105,7 @@ class TestErrorHandlingParseWithErrors:
         input_file = tmp_path / "test.md"
         input_file.write_text("--- Page 1 (page_0001.png) ---\n\n# Title\n")
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert isinstance(pages, (list, tuple))
 
@@ -1113,7 +1118,7 @@ class TestErrorHandlingParseWithErrors:
         input_file = tmp_path / "test.md"
         input_file.write_text("--- Page 1 (page_0001.png) ---\n\n# Title\n")
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert isinstance(errors, (list, tuple))
 
@@ -1130,7 +1135,7 @@ class TestErrorHandlingParseWithErrors:
             "Content here.\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert len(errors) == 0
 
@@ -1148,7 +1153,7 @@ class TestErrorHandlingParseWithErrors:
             "# Title\n"
         )
 
-        pages, errors = parse_pages_with_errors(input_file)
+        pages, errors, _ = parse_pages_with_errors(input_file)
 
         # 複数のエラーが記録される
         assert len(errors) >= 2

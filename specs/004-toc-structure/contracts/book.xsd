@@ -7,31 +7,20 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="metadata" minOccurs="0"/>
-        <xs:element ref="tableOfContents" minOccurs="0"/>
+        <xs:element ref="toc" minOccurs="0"/>
         <xs:element ref="page" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <!-- Book Metadata -->
-  <xs:element name="metadata">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="title" type="xs:string"/>
-        <xs:element name="isbn" type="xs:string" minOccurs="0"/>
-        <xs:element name="sourceFormat" type="xs:string" minOccurs="0"/>
-        <xs:element name="conversionDate" type="xs:string" minOccurs="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <!-- Table of Contents (NEW) -->
-  <xs:element name="tableOfContents">
+  <!-- Table of Contents -->
+  <xs:element name="toc">
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="entry" maxOccurs="unbounded"/>
       </xs:sequence>
-      <xs:attribute name="readAloud" type="xs:boolean" default="false"/>
+      <xs:attribute name="begin" type="xs:string"/>
+      <xs:attribute name="end" type="xs:string"/>
     </xs:complexType>
   </xs:element>
 
@@ -55,12 +44,23 @@
     </xs:restriction>
   </xs:simpleType>
 
+  <!-- Book Metadata -->
+  <xs:element name="metadata">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="title" type="xs:string"/>
+        <xs:element name="isbn" type="xs:string" minOccurs="0"/>
+        <xs:element name="sourceFormat" type="xs:string" minOccurs="0"/>
+        <xs:element name="conversionDate" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
   <!-- Page Element -->
   <xs:element name="page">
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="pageAnnouncement" minOccurs="0"/>
-        <xs:element ref="tableOfContents" minOccurs="0"/>
         <xs:element ref="figure" minOccurs="0" maxOccurs="unbounded"/>
         <xs:element ref="content"/>
         <xs:element ref="pageMetadata" minOccurs="0"/>
@@ -231,26 +231,5 @@
       <xs:enumeration value="unknown"/>
     </xs:restriction>
   </xs:simpleType>
-
-  <!-- Legacy TOC Element (deprecated, use tableOfContents) -->
-  <xs:element name="toc">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tocItem" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <!-- Legacy TOC Item Element (deprecated) -->
-  <xs:element name="tocItem">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="level" type="headingLevelType"/>
-          <xs:attribute name="page" type="xs:string"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
 
 </xs:schema>

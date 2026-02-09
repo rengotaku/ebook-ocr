@@ -1277,10 +1277,10 @@ class TestEmphasisConversion:
 
 
 class TestTransformTableOfContents:
-    """T016: tableOfContents変換テスト (transform_table_of_contents)
+    """T016: toc変換テスト (transform_table_of_contents)
 
     US1: 目次マーカーによる目次認識
-    - <tableOfContents>要素が生成される
+    - <toc>要素が生成される
     """
 
     def test_transform_table_of_contents_basic(self) -> None:
@@ -1289,12 +1289,14 @@ class TestTransformTableOfContents:
         from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
-        toc = TableOfContents(entries=(entry,))
+        toc = TableOfContents(entries=(entry,), begin_page="1", end_page="1")
 
         element = transform_table_of_contents(toc)
 
         assert element is not None
-        assert element.tag == "tableOfContents"
+        assert element.tag == "toc"
+        assert element.get("begin") == "1"
+        assert element.get("end") == "1"
 
     def test_transform_table_of_contents_returns_element(self) -> None:
         """戻り値はElement型"""
@@ -1366,12 +1368,13 @@ class TestTransformTableOfContents:
         from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
-        toc = TableOfContents(entries=(entry,))
+        toc = TableOfContents(entries=(entry,), begin_page="5", end_page="7")
 
         element = transform_table_of_contents(toc)
         xml_string = tostring(element, encoding="unicode")
 
-        assert "<tableOfContents" in xml_string
+        assert "<toc " in xml_string
+        assert 'begin="5"' in xml_string
         assert "<entry" in xml_string
 
     def test_transform_table_of_contents_none_returns_none(self) -> None:
@@ -1571,78 +1574,62 @@ class TestTransformTocEntry:
 # =============================================================================
 
 
-class TestTableOfContentsReadAloud:
-    """T039: tableOfContentsのreadAloud属性テスト
+class TestTableOfContentsPageRange:
+    """T039: tocのbegin/end属性テスト
 
     US3: 目次の読み上げ制御
-    - <tableOfContents>要素にreadAloud="false"属性がデフォルトで設定される
-    - FR-006: システムは<tableOfContents>要素にreadAloud="false"属性をデフォルトで設定しなければならない
+    - <toc>要素はbook直下に配置され、begin/end属性でページ範囲を示す
+    - TOCはbook直下の2番目の子要素（metadata後）
     """
 
-    def test_table_of_contents_has_read_aloud_false_attribute(self) -> None:
-        """tableOfContentsにreadAloud="false"属性が設定される"""
+    def test_toc_has_begin_and_end_attributes(self) -> None:
+        """tocにbegin/end属性が設定される"""
         from src.book_converter.transformer import transform_table_of_contents
         from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
-        toc = TableOfContents(entries=(entry,), read_aloud=False)
+        toc = TableOfContents(entries=(entry,), begin_page="5", end_page="7")
 
         element = transform_table_of_contents(toc)
 
         assert element is not None
-        assert element.get("readAloud") == "false"
+        assert element.tag == "toc"
+        assert element.get("begin") == "5"
+        assert element.get("end") == "7"
 
-    def test_table_of_contents_default_read_aloud_is_false(self) -> None:
-        """tableOfContentsのreadAloudデフォルト値はfalse"""
+    def test_toc_without_page_range(self) -> None:
+        """ページ範囲なしのTOC"""
         from src.book_converter.transformer import transform_table_of_contents
         from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="はじめに", level="other", page="1")
-        # read_aloudを明示せずにTableOfContentsを作成
         toc = TableOfContents(entries=(entry,))
 
         element = transform_table_of_contents(toc)
 
-        # デフォルトでreadAloud="false"が設定される
-        assert element.get("readAloud") == "false"
+        assert element is not None
+        assert element.tag == "toc"
+        # 空文字の場合は属性が設定されない
+        assert element.get("begin") is None or element.get("begin") == ""
+        assert element.get("end") is None or element.get("end") == ""
 
-    def test_table_of_contents_read_aloud_in_xml_output(self) -> None:
-        """XMLシリアライズ時にreadAloud属性が含まれる"""
+    def test_toc_xml_output_with_page_range(self) -> None:
+        """XMLシリアライズ時にbegin/end属性が含まれる"""
         from src.book_converter.transformer import transform_table_of_contents
         from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
-        toc = TableOfContents(entries=(entry,))
+        toc = TableOfContents(entries=(entry,), begin_page="3", end_page="5")
 
         element = transform_table_of_contents(toc)
         xml_string = tostring(element, encoding="unicode")
 
-        assert 'readAloud="false"' in xml_string
-        assert "<tableOfContents" in xml_string
+        assert 'begin="3"' in xml_string
+        assert 'end="5"' in xml_string
+        assert "<toc " in xml_string
 
-    def test_page_level_toc_has_read_aloud_false(self) -> None:
-        """ページレベルの目次もreadAloud="false"を持つ"""
-        from src.book_converter.transformer import transform_page
-        from src.book_converter.models import TocEntry, TableOfContents
-
-        entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
-        toc = TableOfContents(entries=(entry,))
-
-        page = Page(
-            number="1",
-            source_file="page_0001.png",
-            content=Content(elements=()),
-            toc=toc,
-        )
-
-        element = transform_page(page)
-
-        toc_elem = element.find("tableOfContents")
-        assert toc_elem is not None
-        assert toc_elem.get("readAloud") == "false"
-
-    def test_book_level_toc_has_read_aloud_false(self) -> None:
-        """ブックレベル（複数エントリ）の目次もreadAloud="false"を持つ"""
+    def test_toc_with_multiple_entries(self) -> None:
+        """複数エントリのTOC"""
         from src.book_converter.transformer import transform_table_of_contents
         from src.book_converter.models import TocEntry, TableOfContents
 
@@ -1653,16 +1640,18 @@ class TestTableOfContentsReadAloud:
             TocEntry(text="歴史", level="subsection", number="1.1.1", page="17"),
             TocEntry(text="おわりに", level="other", page="300"),
         )
-        toc = TableOfContents(entries=entries)
+        toc = TableOfContents(entries=entries, begin_page="2", end_page="4")
 
         element = transform_table_of_contents(toc)
 
-        assert element.get("readAloud") == "false"
+        assert element.tag == "toc"
+        assert element.get("begin") == "2"
+        assert element.get("end") == "4"
         # すべてのエントリが含まれている
         assert len(element.findall("entry")) == 5
 
-    def test_empty_toc_still_has_read_aloud_false(self) -> None:
-        """空の目次でもreadAloud="false"が設定される"""
+    def test_empty_toc_returns_none(self) -> None:
+        """空の目次はNoneを返す"""
         from src.book_converter.transformer import transform_table_of_contents
         from src.book_converter.models import TableOfContents
 
@@ -1670,9 +1659,8 @@ class TestTableOfContentsReadAloud:
 
         element = transform_table_of_contents(toc)
 
-        assert element is not None
-        assert element.get("readAloud") == "false"
-        assert len(element.findall("entry")) == 0
+        # 空のTOCはNoneを返す（エントリがない場合はTOCを出力しない）
+        assert element is None
 
 
 # =============================================================================

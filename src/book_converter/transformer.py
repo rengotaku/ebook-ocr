@@ -56,10 +56,10 @@ def transform_toc_entry(entry: TocEntry) -> Element:
 def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
     """Transform TableOfContents to XML element.
 
-    <tableOfContents readAloud="false">
+    <toc begin="13" end="15">
       <entry .../>
       <entry .../>
-    </tableOfContents>
+    </toc>
 
     Args:
         toc: The TableOfContents object to transform.
@@ -69,18 +69,25 @@ def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
 
     Example:
         >>> entries = (TocEntry(text="Chapter 1", level="chapter", number="1"),)
-        >>> toc = TableOfContents(entries=entries, read_aloud=False)
+        >>> toc = TableOfContents(entries=entries, begin_page="5", end_page="7")
         >>> elem = transform_table_of_contents(toc)
         >>> elem.tag
-        'tableOfContents'
-        >>> len(list(elem))
-        1
+        'toc'
+        >>> elem.get("begin")
+        '5'
     """
     if toc is None:
         return None
 
-    elem = Element("tableOfContents")
-    elem.set("readAloud", "false")
+    # Return None for empty TOC (no entries)
+    if not toc.entries:
+        return None
+
+    elem = Element("toc")
+    if toc.begin_page:
+        elem.set("begin", toc.begin_page)
+    if toc.end_page:
+        elem.set("end", toc.end_page)
 
     # Add entries
     for entry in toc.entries:
@@ -163,12 +170,6 @@ def transform_page(page: Page) -> Element:
         announcement_elem = transform_page_announcement(page.announcement)
         if announcement_elem is not None:
             elem.append(announcement_elem)
-
-    # Add table of contents if present
-    if page.toc is not None:
-        toc_elem = transform_table_of_contents(page.toc)
-        if toc_elem is not None:
-            elem.append(toc_elem)
 
     # Add content elements
     content_elem = transform_content(page.content)

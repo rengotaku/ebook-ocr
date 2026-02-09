@@ -8,7 +8,7 @@ from __future__ import annotations
 from xml.etree.ElementTree import Element, tostring, Comment
 
 from src.book_converter.models import Book, ConversionError
-from src.book_converter.transformer import transform_page
+from src.book_converter.transformer import transform_page, transform_table_of_contents
 
 
 def build_xml(book: Book) -> str:
@@ -35,6 +35,11 @@ def build_xml(book: Book) -> str:
         metadata.append(isbn)
 
     root.append(metadata)
+
+    # Add TOC after metadata (if exists)
+    toc_elem = transform_table_of_contents(book.toc)
+    if toc_elem is not None:
+        root.append(toc_elem)
 
     # Add pages
     for page in book.pages:
@@ -93,6 +98,11 @@ def build_xml_with_errors(book: Book, errors: list[ConversionError]) -> str:
         metadata.append(isbn)
 
     root.append(metadata)
+
+    # Add TOC after metadata (if exists)
+    toc_elem = transform_table_of_contents(book.toc)
+    if toc_elem is not None:
+        root.append(toc_elem)
 
     # Build a mapping of page numbers to errors
     page_errors: dict[str, list[ConversionError]] = {}
