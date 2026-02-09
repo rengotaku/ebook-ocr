@@ -166,22 +166,22 @@ tests/book_converter/
 
 ### Input
 
-- [ ] T052 セットアップ分析を読む: specs/005-toc-page-grouping/tasks/ph1-output.md
-- [ ] T053 前フェーズ出力を読む: specs/005-toc-page-grouping/tasks/ph4-output.md
+- [x] T052 セットアップ分析を読む: specs/005-toc-page-grouping/tasks/ph1-output.md
+- [x] T053 前フェーズ出力を読む: specs/005-toc-page-grouping/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T054 [P] CLIに--group-pagesオプションを追加: src/book_converter/cli.py
-- [ ] T055 [P] スタンドアロン実行機能を追加: src/book_converter/page_grouper.py::main()
-- [ ] T056 [P] __init__.pyにエクスポートを追加: src/book_converter/__init__.py
-- [ ] T057 コードクリーンアップとdocstring追加
-- [ ] T058 quickstart.md検証を実行
+- [x] T054 [P] CLIに--group-pagesオプションを追加: src/book_converter/cli.py
+- [x] T055 [P] スタンドアロン実行機能を追加: src/book_converter/page_grouper.py::main()
+- [x] T056 [P] __init__.pyにエクスポートを追加: src/book_converter/__init__.py
+- [x] T057 コードクリーンアップとdocstring追加
+- [x] T058 quickstart.md検証を実行
 
 ### Verification
 
-- [ ] T059 `make test` で全テストパスを確認
-- [ ] T060 実データ（output/4fd5500620491ebe/book.xml）でE2Eテスト
-- [ ] T061 Phase出力を生成: specs/005-toc-page-grouping/tasks/ph5-output.md
+- [x] T059 `make test` で全テストパスを確認
+- [x] T060 実データ（output/4fd5500620491ebe/book.xml）でE2Eテスト
+- [x] T061 Phase出力を生成: specs/005-toc-page-grouping/tasks/ph5-output.md
 
 ---
 

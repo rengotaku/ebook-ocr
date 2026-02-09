@@ -64,6 +64,13 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Running head detection threshold as ratio of total pages (default: 0.5)"
     )
 
+    # Page grouping option
+    parser.add_argument(
+        "--group-pages",
+        action="store_true",
+        help="Group pages by TOC structure (front-matter, chapter, section, subsection)"
+    )
+
     return parser.parse_args(args)
 
 
@@ -125,7 +132,8 @@ def convert_book(
     input_path: Path,
     output_path: Path,
     running_head_threshold: float = 0.5,
-    verbose: bool = False
+    verbose: bool = False,
+    group_pages: bool = False,
 ) -> ConversionResult:
     """Convert a Markdown book to XML.
 
@@ -134,6 +142,7 @@ def convert_book(
         output_path: Path to the output XML file.
         running_head_threshold: Ratio threshold for running head detection (default: 0.5).
         verbose: If True, print exclusion reasons to stdout.
+        group_pages: If True, group pages by TOC structure.
 
     Returns:
         ConversionResult with conversion statistics and errors.
@@ -160,6 +169,13 @@ def convert_book(
         toc=toc,
     )
     xml_string = build_xml_with_errors(book, errors)
+
+    # Group pages if requested
+    if group_pages:
+        from src.book_converter.page_grouper import group_pages_by_toc
+        xml_string = group_pages_by_toc(xml_string)
+
+    # Write to output file
     output_path.write_text(xml_string, encoding="utf-8")
 
     return ConversionResult(
@@ -199,7 +215,8 @@ def main(args: list[str] | None = None) -> int:
             input_path,
             output_path,
             running_head_threshold=parsed.running_head_threshold,
-            verbose=parsed.verbose
+            verbose=parsed.verbose,
+            group_pages=parsed.group_pages,
         )
 
         # Count markers

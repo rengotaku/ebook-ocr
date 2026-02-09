@@ -504,3 +504,48 @@ def _serialize_to_xml(element: ET.Element) -> str:
     """
     xml_str = ET.tostring(element, encoding='unicode')
     return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
+
+
+def main() -> int:
+    """CLI entry point for standalone page grouping.
+
+    Returns:
+        Exit code (0 for success, non-zero for error).
+    """
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        description='Group pages by TOC structure'
+    )
+    parser.add_argument('input', help='Input book.xml file')
+    parser.add_argument(
+        '-o', '--output', help='Output file (default: stdout)'
+    )
+    args = parser.parse_args()
+
+    try:
+        # Read input file
+        with open(args.input, 'r', encoding='utf-8') as f:
+            input_xml = f.read()
+
+        # Group pages
+        result = group_pages_by_toc(input_xml)
+
+        # Write output
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(result)
+        else:
+            print(result)
+
+        return 0
+
+    except Exception as e:
+        print(f"エラー: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == '__main__':
+    import sys
+    sys.exit(main())
