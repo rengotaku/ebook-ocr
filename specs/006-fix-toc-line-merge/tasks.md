@@ -65,12 +65,12 @@
 
 ### Implementation (GREEN)
 
-- [ ] T016 REDテストを読む: specs/006-fix-toc-line-merge/red-tests/ph2-test.md
-- [ ] T017 [P] [US1] normalize_toc_lineを拡張（**強調**除去）: src/book_converter/parser.py
-- [ ] T018 [P] [US1] merge_toc_lines関数を実装: src/book_converter/parser.py
-- [ ] T019 [US1] parse_toc_entryを拡張（Chapter N形式）: src/book_converter/parser.py
-- [ ] T020 [US1] _parse_single_page_contentでmerge_toc_linesを呼び出し: src/book_converter/parser.py
-- [ ] T021 `make test` PASS (GREEN) を確認
+- [X] T016 REDテストを読む: specs/006-fix-toc-line-merge/red-tests/ph2-test.md
+- [X] T017 [P] [US1] normalize_toc_lineを拡張（**強調**除去）: src/book_converter/parser.py
+- [X] T018 [P] [US1] merge_toc_lines関数を実装: src/book_converter/parser.py
+- [X] T019 [US1] parse_toc_entryを拡張（Chapter N形式）: src/book_converter/parser.py
+- [X] T020 [US1] _parse_single_page_contentでmerge_toc_linesを呼び出し: src/book_converter/parser.py
+- [X] T021 `make test` PASS (GREEN) を確認
 
 ### Verification
 
