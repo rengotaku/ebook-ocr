@@ -1399,3 +1399,155 @@ A
         assert content is not None
         # デフォルトはreadAloud="false"
         assert content.get("readAloud") == "false"
+
+
+# =============================================================================
+# Phase 4 (006-fix-toc-line-merge): US3 既存動作の保持 (回帰テスト)
+# =============================================================================
+
+
+class TestTocOneLineFormatPreservation:
+    """T041: US3 - 1行形式TOCエントリの保持テスト (回帰テスト)
+
+    既に1行で完結しているTOCエントリは、merge_toc_lines処理によって
+    変更されないことを確認する。
+
+    FR-006: 既存の正常ファイルは同一の出力結果を維持
+    """
+
+    def test_single_line_chapter_not_modified(self) -> None:
+        """1行で完結する第N章形式は変更されない"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = ["第1章 SREとは ... 14"]
+        result = merge_toc_lines(lines)
+        assert result == lines
+
+    def test_single_line_section_not_modified(self) -> None:
+        """1行で完結するN.N節形式は変更されない"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = ["2.1 SLOの理解 ... 30"]
+        result = merge_toc_lines(lines)
+        assert result == lines
+
+    def test_single_line_subsection_not_modified(self) -> None:
+        """1行で完結するN.N.N節形式は変更されない"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = ["2.1.1 SLA ... 35"]
+        result = merge_toc_lines(lines)
+        assert result == lines
+
+    def test_mixed_complete_entries_not_modified(self) -> None:
+        """複数の完結エントリは変更されない"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "第1章 SREとは ... 14",
+            "2.1 SLOの理解 ... 30",
+            "2.1.1 SLA ... 35",
+        ]
+        result = merge_toc_lines(lines)
+        assert result == lines
+
+    def test_parse_toc_entry_japanese_chapter_still_works(self) -> None:
+        """既存の第N章パターンが引き続き認識される"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 SREとは ... 14")
+        assert result is not None
+        assert result.level == "chapter"
+        assert result.number == "1"
+        assert result.text == "SREとは"
+        assert result.page == "14"
+
+    def test_parse_toc_entry_section_still_works(self) -> None:
+        """既存のN.N節パターンが引き続き認識される"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1 SLOの理解 ... 30")
+        assert result is not None
+        assert result.level == "section"
+        assert result.number == "2.1"
+        assert result.text == "SLOの理解"
+        assert result.page == "30"
+
+    def test_parse_toc_entry_subsection_still_works(self) -> None:
+        """既存のN.N.N節パターンが引き続き認識される"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1.1 SLA ... 35")
+        assert result is not None
+        assert result.level == "subsection"
+        assert result.number == "2.1.1"
+        assert result.text == "SLA"
+        assert result.page == "35"
+
+    def test_parse_toc_entry_other_still_works(self) -> None:
+        """既存のother形式（はじめに等）が引き続き認識される"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("はじめに ... 1")
+        assert result is not None
+        assert result.level == "other"
+        assert result.number == ""
+        assert result.text == "はじめに"
+        assert result.page == "1"
+
+    def test_chapter_n_pattern_merged_correctly(self) -> None:
+        """Chapter N形式は正しく結合される（新機能確認）"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = ["Chapter", "1 失敗と成功"]
+        result = merge_toc_lines(lines)
+        assert result == ["Chapter 1 失敗と成功"]
+
+    def test_episode_nn_pattern_merged_correctly(self) -> None:
+        """Episode NN形式は正しく結合される（新機能確認）"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = ["Episode 01", "全部入りソフトウェア"]
+        result = merge_toc_lines(lines)
+        assert result == ["Episode 01 全部入りソフトウェア"]
+
+    def test_column_pattern_merged_correctly(self) -> None:
+        """Column形式は正しく結合される（新機能確認）"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = ["Column", "重要なポイント"]
+        result = merge_toc_lines(lines)
+        assert result == ["Column 重要なポイント"]
+
+    def test_mixed_single_and_split_entries(self) -> None:
+        """完結エントリと分割エントリが混在する場合"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "第1章 SREとは ... 14",
+            "Chapter",
+            "2 信頼性",
+            "2.1 SLOの理解 ... 30",
+        ]
+        result = merge_toc_lines(lines)
+        assert result == [
+            "第1章 SREとは ... 14",
+            "Chapter 2 信頼性",
+            "2.1 SLOの理解 ... 30",
+        ]
+
+    def test_empty_lines_between_entries(self) -> None:
+        """空行を含むTOCリストの処理"""
+        from src.book_converter.parser import merge_toc_lines
+
+        lines = [
+            "第1章 SREとは ... 14",
+            "",
+            "第2章 信頼性 ... 25",
+        ]
+        result = merge_toc_lines(lines)
+        # 空行はスキップされ、完結エントリはそのまま
+        assert result == [
+            "第1章 SREとは ... 14",
+            "第2章 信頼性 ... 25",
+        ]

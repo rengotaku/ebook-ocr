@@ -126,15 +126,15 @@
 
 ### Input
 
-- [ ] T039 セットアップ分析を読む: specs/006-fix-toc-line-merge/tasks/ph1-output.md
-- [ ] T040 前フェーズ出力を読む: specs/006-fix-toc-line-merge/tasks/ph3-output.md
+- [x] T039 セットアップ分析を読む: specs/006-fix-toc-line-merge/tasks/ph1-output.md
+- [x] T040 前フェーズ出力を読む: specs/006-fix-toc-line-merge/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T041 [P] [US3] 回帰テストを実装: tests/book_converter/test_integration.py（1行形式TOC保持）
-- [ ] T042 [P] [US3] E2Eテストを実装: tests/book_converter/test_e2e_toc.py（正常ファイル変換結果不変）
-- [ ] T043 `make test` FAIL (RED) を確認
-- [ ] T044 RED出力を生成: specs/006-fix-toc-line-merge/red-tests/ph4-test.md
+- [x] T041 [P] [US3] 回帰テストを実装: tests/book_converter/test_integration.py（1行形式TOC保持）
+- [x] T042 [P] [US3] E2Eテストを実装: tests/book_converter/test_e2e_toc.py（正常ファイル変換結果不変）
+- [x] T043 `make test` PASS (回帰テストのため既存動作をテスト - 全PASS)
+- [x] T044 RED出力を生成: specs/006-fix-toc-line-merge/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
