@@ -117,7 +117,7 @@ def _process_pages_with_headings(
             number=page.number,
             source_file=page.source_file,
             announcement=page.announcement,
-            content=Content(elements=tuple(new_elements)),
+            content=Content(elements=tuple(new_elements), read_aloud=page.content.read_aloud),
             figures=page.figures,
             metadata=page.metadata,
             continued=page.continued,
