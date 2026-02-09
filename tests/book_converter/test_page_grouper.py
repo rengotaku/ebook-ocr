@@ -936,3 +936,414 @@ class TestChapterTitlePageEdgeCases:
             # Find direct child page (chapter title page)
             pages = [p for p in chapter.findall("page") if p.get("type") == "chapter-title"]
             assert len(pages) == 1, f"Chapter {chapter_num} should have exactly one chapter-title page"
+
+
+# =============================================================================
+# US4 Tests: Fallback to Previous Section (Phase 4)
+# =============================================================================
+
+
+class TestFallbackToPreviousSection:
+    """Tests for fallback to previous section when page lacks section number (FR-008).
+
+    FR-008: システムはセクション番号を抽出できないページを、
+    直前のページと同じセクションに配置しなければならない
+    """
+
+    def test_fallback_to_previous_section(self) -> None:
+        """Page without section number goes to previous page's section.
+
+        Scenario:
+        - Page 3: "1.1 SREの概要 ― 1 / 3" -> section 1.1
+        - Page 4: "2 / 3" (no section info) -> fallback to section 1.1
+        - Page 5: "3 / 3" (no section info) -> fallback to section 1.1
+        """
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="SREとは" page="2" />
+        <entry level="section" number="1.1" title="SREの概要" page="3" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>第1章 SREとは — 1 / 1</pageMetadata>
+        <content><heading level="1">第1章 SREとは</heading></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata type="section-page" readAloud="false">1.1 SREの概要 ― 1 / 3</pageMetadata>
+        <content>
+            <heading level="2">1.1 SREの概要</heading>
+            <paragraph>SREはGoogleで生まれた...</paragraph>
+        </content>
+    </page>
+    <page number="4" sourceFile="page_0004.png">
+        <pageMetadata type="section-page" readAloud="false">2 / 3</pageMetadata>
+        <content>
+            <paragraph>続きのコンテンツ...</paragraph>
+        </content>
+    </page>
+    <page number="5" sourceFile="page_0005.png">
+        <pageMetadata type="section-page" readAloud="false">3 / 3</pageMetadata>
+        <content>
+            <paragraph>セクションの終わり</paragraph>
+        </content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        chapter1 = root.find("chapter[@number='1']")
+        assert chapter1 is not None
+
+        section1_1 = chapter1.find("section[@number='1.1']")
+        assert section1_1 is not None
+
+        # All three pages (3, 4, 5) should be in section 1.1
+        pages = section1_1.findall("page")
+        page_numbers = [p.get("number") for p in pages]
+
+        assert "3" in page_numbers, "Page 3 (with section info) should be in section 1.1"
+        assert "4" in page_numbers, "Page 4 (no section info) should fallback to section 1.1"
+        assert "5" in page_numbers, "Page 5 (no section info) should fallback to section 1.1"
+
+    def test_consecutive_missing_sections(self) -> None:
+        """Multiple consecutive pages without section numbers all go to the same section.
+
+        Scenario:
+        - Page 3: "1.1 Title" -> section 1.1
+        - Page 4: "1 / 5" -> fallback to section 1.1
+        - Page 5: "2 / 5" -> fallback to section 1.1
+        - Page 6: "3 / 5" -> fallback to section 1.1
+        - Page 7: "4 / 5" -> fallback to section 1.1
+        - Page 8: "5 / 5" -> fallback to section 1.1
+        """
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="Chapter One" page="2" />
+        <entry level="section" number="1.1" title="Section One" page="3" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>第1章 Chapter One — 1 / 1</pageMetadata>
+        <content><heading level="1">第1章 Chapter One</heading></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata>1.1 Section One ― 1 / 6</pageMetadata>
+        <content><heading level="2">1.1 Section One</heading></content>
+    </page>
+    <page number="4" sourceFile="page_0004.png">
+        <pageMetadata>2 / 6</pageMetadata>
+        <content><paragraph>Content</paragraph></content>
+    </page>
+    <page number="5" sourceFile="page_0005.png">
+        <pageMetadata>3 / 6</pageMetadata>
+        <content><paragraph>Content</paragraph></content>
+    </page>
+    <page number="6" sourceFile="page_0006.png">
+        <pageMetadata>4 / 6</pageMetadata>
+        <content><paragraph>Content</paragraph></content>
+    </page>
+    <page number="7" sourceFile="page_0007.png">
+        <pageMetadata>5 / 6</pageMetadata>
+        <content><paragraph>Content</paragraph></content>
+    </page>
+    <page number="8" sourceFile="page_0008.png">
+        <pageMetadata>6 / 6</pageMetadata>
+        <content><paragraph>Content</paragraph></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        chapter1 = root.find("chapter[@number='1']")
+        assert chapter1 is not None
+
+        section1_1 = chapter1.find("section[@number='1.1']")
+        assert section1_1 is not None
+
+        # All six pages (3-8) should be in section 1.1
+        pages = section1_1.findall("page")
+        page_numbers = [p.get("number") for p in pages]
+
+        assert len(page_numbers) == 6, f"Section 1.1 should contain 6 pages, got {len(page_numbers)}"
+        for num in ["3", "4", "5", "6", "7", "8"]:
+            assert num in page_numbers, f"Page {num} should be in section 1.1"
+
+    def test_first_chapter_page_without_section_stays_in_chapter(self) -> None:
+        """If first page after chapter title has no section, it stays at chapter level.
+
+        Scenario:
+        - Page 2: "第1章 Title" -> chapter 1 (chapter-title)
+        - Page 3: "1 / 2" (no section info, but belongs to chapter 1) -> stays at chapter level
+        - Page 4: "1.1 Section" -> section 1.1
+        """
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="Chapter One" page="2" />
+        <entry level="section" number="1.1" title="Section One" page="4" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>第1章 Chapter One — 1 / 2</pageMetadata>
+        <content><heading level="1">第1章 Chapter One</heading></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata>2 / 2</pageMetadata>
+        <content><paragraph>Introduction to chapter...</paragraph></content>
+    </page>
+    <page number="4" sourceFile="page_0004.png">
+        <pageMetadata>1.1 Section One ― 1 / 1</pageMetadata>
+        <content><heading level="2">1.1 Section One</heading></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        chapter1 = root.find("chapter[@number='1']")
+        assert chapter1 is not None
+
+        # Page 2 should be at chapter level (chapter-title)
+        page2 = chapter1.find("page[@number='2']")
+        assert page2 is not None, "Page 2 (chapter title) should be at chapter level"
+        assert page2.get("type") == "chapter-title", "Page 2 should have type='chapter-title'"
+
+        # Page 3 should also be at chapter level (fallback from chapter 1, before any section)
+        page3 = chapter1.find("page[@number='3']")
+        assert page3 is not None, "Page 3 (no section, after chapter title) should be at chapter level"
+
+        # Page 4 should be in section 1.1
+        section1_1 = chapter1.find("section[@number='1.1']")
+        assert section1_1 is not None
+        page4 = section1_1.find("page[@number='4']")
+        assert page4 is not None, "Page 4 should be in section 1.1"
+
+    def test_fallback_preserves_page_order(self) -> None:
+        """Pages maintain correct order after fallback assignment.
+
+        Scenario:
+        - Page 3: "1.1 Title" -> section 1.1 (first)
+        - Page 4: "2 / 3" -> fallback to section 1.1 (second)
+        - Page 5: "3 / 3" -> fallback to section 1.1 (third)
+
+        Pages should appear in order 3, 4, 5 within section 1.1.
+        """
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="Chapter One" page="2" />
+        <entry level="section" number="1.1" title="Section One" page="3" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>第1章 Chapter One — 1 / 1</pageMetadata>
+        <content><heading level="1">第1章 Chapter One</heading></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata>1.1 Section One ― 1 / 3</pageMetadata>
+        <content><heading level="2">1.1 Section One</heading></content>
+    </page>
+    <page number="4" sourceFile="page_0004.png">
+        <pageMetadata>2 / 3</pageMetadata>
+        <content><paragraph>Middle content</paragraph></content>
+    </page>
+    <page number="5" sourceFile="page_0005.png">
+        <pageMetadata>3 / 3</pageMetadata>
+        <content><paragraph>End content</paragraph></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        chapter1 = root.find("chapter[@number='1']")
+        assert chapter1 is not None
+
+        section1_1 = chapter1.find("section[@number='1.1']")
+        assert section1_1 is not None
+
+        # Get pages in order
+        pages = section1_1.findall("page")
+        page_numbers = [p.get("number") for p in pages]
+
+        # Verify order is preserved: 3, 4, 5
+        assert page_numbers == ["3", "4", "5"], f"Pages should be in order [3, 4, 5], got {page_numbers}"
+
+    def test_fallback_when_section_not_in_toc(self) -> None:
+        """Page with section number NOT in TOC should fallback to previous section.
+
+        Scenario:
+        - Page 3: "1.1 Title" -> section 1.1 (in TOC)
+        - Page 4: "1.2 Title" -> section 1.2 NOT in TOC -> fallback to 1.1
+        - Page 5: "1 / 1" -> no section -> fallback to 1.1
+        """
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="Chapter One" page="2" />
+        <entry level="section" number="1.1" title="Section One" page="3" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>第1章 Chapter One — 1 / 1</pageMetadata>
+        <content><heading level="1">第1章 Chapter One</heading></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata>1.1 Section One ― 1 / 2</pageMetadata>
+        <content><heading level="2">1.1 Section One</heading></content>
+    </page>
+    <page number="4" sourceFile="page_0004.png">
+        <pageMetadata>1.2 Unlisted Section ― 1 / 1</pageMetadata>
+        <content><heading level="2">1.2 Unlisted Section</heading></content>
+    </page>
+    <page number="5" sourceFile="page_0005.png">
+        <pageMetadata>1 / 1</pageMetadata>
+        <content><paragraph>Some content</paragraph></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        chapter1 = root.find("chapter[@number='1']")
+        assert chapter1 is not None
+
+        section1_1 = chapter1.find("section[@number='1.1']")
+        assert section1_1 is not None
+
+        # Page 3 should be in section 1.1
+        pages = section1_1.findall("page")
+        page_numbers = [p.get("number") for p in pages]
+
+        assert "3" in page_numbers, "Page 3 should be in section 1.1"
+        # Page 4 has section 1.2 which is NOT in TOC, so should fallback to 1.1
+        assert "4" in page_numbers, "Page 4 (section 1.2 not in TOC) should fallback to section 1.1"
+        # Page 5 has no section info, should fallback to 1.1
+        assert "5" in page_numbers, "Page 5 (no section) should fallback to section 1.1"
+
+    def test_section_transition_with_missing_info(self) -> None:
+        """Page without section info between two sections goes to previous section.
+
+        Scenario:
+        - Page 3: "1.1 Title" -> section 1.1
+        - Page 4: "1 / 2" -> no section -> fallback to 1.1
+        - Page 5: "1.2 Title" -> section 1.2
+        """
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="Chapter One" page="2" />
+        <entry level="section" number="1.1" title="Section One" page="3" />
+        <entry level="section" number="1.2" title="Section Two" page="5" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>第1章 Chapter One — 1 / 1</pageMetadata>
+        <content><heading level="1">第1章 Chapter One</heading></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata>1.1 Section One ― 1 / 2</pageMetadata>
+        <content><heading level="2">1.1 Section One</heading></content>
+    </page>
+    <page number="4" sourceFile="page_0004.png">
+        <pageMetadata>2 / 2</pageMetadata>
+        <content><paragraph>Continuation of section 1.1</paragraph></content>
+    </page>
+    <page number="5" sourceFile="page_0005.png">
+        <pageMetadata>1.2 Section Two ― 1 / 1</pageMetadata>
+        <content><heading level="2">1.2 Section Two</heading></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        chapter1 = root.find("chapter[@number='1']")
+        assert chapter1 is not None
+
+        section1_1 = chapter1.find("section[@number='1.1']")
+        assert section1_1 is not None
+
+        section1_2 = chapter1.find("section[@number='1.2']")
+        assert section1_2 is not None
+
+        # Section 1.1 should contain pages 3 and 4
+        pages_1_1 = section1_1.findall("page")
+        page_numbers_1_1 = [p.get("number") for p in pages_1_1]
+        assert "3" in page_numbers_1_1, "Page 3 should be in section 1.1"
+        assert "4" in page_numbers_1_1, "Page 4 (no section) should fallback to section 1.1"
+
+        # Section 1.2 should contain only page 5
+        pages_1_2 = section1_2.findall("page")
+        page_numbers_1_2 = [p.get("number") for p in pages_1_2]
+        assert "5" in page_numbers_1_2, "Page 5 should be in section 1.2"
+        assert "4" not in page_numbers_1_2, "Page 4 should NOT be in section 1.2"
+
+    def test_first_content_page_without_section_not_dropped(self) -> None:
+        """First content page without section info should NOT be dropped.
+
+        Edge case: When the very first content page (after front-matter) has no
+        recognizable section number, it should not be silently dropped.
+
+        Scenario:
+        - Page 1: TOC (front-matter)
+        - Page 2: "1 / 1" (no section info, no chapter indicator) -> should still appear
+        - Page 3: "1.1 Section One" -> section 1.1
+        """
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="Chapter One" page="2" />
+        <entry level="section" number="1.1" title="Section One" page="3" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>1 / 1</pageMetadata>
+        <content><paragraph>No chapter indicator but belongs to chapter 1</paragraph></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata>1.1 Section One ― 1 / 1</pageMetadata>
+        <content><heading level="2">1.1 Section One</heading></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        # Page 2 should NOT be dropped - it should appear somewhere in the output
+        # Find all pages in the entire document
+        all_pages = root.findall(".//page")
+        all_page_numbers = [p.get("number") for p in all_pages]
+
+        assert "2" in all_page_numbers, (
+            "Page 2 should NOT be dropped from output. "
+            f"Found pages: {all_page_numbers}"
+        )
+
+        # Page 2 should be in chapter 1 (at chapter level since no section info)
+        chapter1 = root.find("chapter[@number='1']")
+        assert chapter1 is not None
+
+        # Page 2 should be directly under chapter (not in a section)
+        page2 = chapter1.find("page[@number='2']")
+        assert page2 is not None, (
+            "Page 2 (first content page without section) should be at chapter level"
+        )
