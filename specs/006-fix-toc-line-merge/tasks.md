@@ -158,21 +158,21 @@
 
 ### Input
 
-- [ ] T051 セットアップ分析を読む: specs/006-fix-toc-line-merge/tasks/ph1-output.md
-- [ ] T052 前フェーズ出力を読む: specs/006-fix-toc-line-merge/tasks/ph4-output.md
+- [X] T051 セットアップ分析を読む: specs/006-fix-toc-line-merge/tasks/ph1-output.md
+- [X] T052 前フェーズ出力を読む: specs/006-fix-toc-line-merge/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T053 [P] 問題ファイル（157012a97dcbebed）での最終検証
-- [ ] T054 [P] 正常ファイル（4fd5500620491ebe）での最終検証
-- [ ] T055 quickstart.mdの検証手順を実行
-- [ ] T056 コードクリーンアップ（不要なコメント削除等）
+- [X] T053 [P] 問題ファイル（157012a97dcbebed）での最終検証
+- [X] T054 [P] 正常ファイル（4fd5500620491ebe）での最終検証
+- [X] T055 quickstart.mdの検証手順を実行
+- [X] T056 コードクリーンアップ（不要なコメント削除等）
 
 ### Verification
 
-- [ ] T057 `make test` で全テスト成功を確認
-- [ ] T058 `make coverage` でカバレッジ≥80%を確認
-- [ ] T059 フェーズ出力を生成: specs/006-fix-toc-line-merge/tasks/ph5-output.md
+- [X] T057 `make test` で全テスト成功を確認
+- [X] T058 `make coverage` でカバレッジ≥80%を確認
+- [X] T059 フェーズ出力を生成: specs/006-fix-toc-line-merge/tasks/ph5-output.md
 
 ---
 
