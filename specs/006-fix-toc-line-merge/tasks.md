@@ -89,17 +89,17 @@
 
 ### Input
 
-- [ ] T024 セットアップ分析を読む: specs/006-fix-toc-line-merge/tasks/ph1-output.md
-- [ ] T025 前フェーズ出力を読む: specs/006-fix-toc-line-merge/tasks/ph2-output.md
+- [x] T024 セットアップ分析を読む: specs/006-fix-toc-line-merge/tasks/ph1-output.md
+- [x] T025 前フェーズ出力を読む: specs/006-fix-toc-line-merge/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T026 [P] [US2] validate_page_countのテストを実装: tests/book_converter/test_page_grouper.py（正常ケース）
-- [ ] T027 [P] [US2] validate_page_countのテストを実装: tests/book_converter/test_page_grouper.py（50%欠損エラー）
-- [ ] T028 [P] [US2] group_pages_by_tocのテストを実装: tests/book_converter/test_page_grouper.py（全ページ保持）
-- [ ] T029 [P] [US2] group_pages_by_tocのテストを実装: tests/book_converter/test_page_grouper.py（TOC空でもfront-matter配置）
-- [ ] T030 `make test` FAIL (RED) を確認
-- [ ] T031 RED出力を生成: specs/006-fix-toc-line-merge/red-tests/ph3-test.md
+- [x] T026 [P] [US2] validate_page_countのテストを実装: tests/book_converter/test_page_grouper.py（正常ケース）
+- [x] T027 [P] [US2] validate_page_countのテストを実装: tests/book_converter/test_page_grouper.py（50%欠損エラー）
+- [x] T028 [P] [US2] group_pages_by_tocのテストを実装: tests/book_converter/test_page_grouper.py（全ページ保持）
+- [x] T029 [P] [US2] group_pages_by_tocのテストを実装: tests/book_converter/test_page_grouper.py（TOC空でもfront-matter配置）
+- [x] T030 `make test` FAIL (RED) を確認
+- [x] T031 RED出力を生成: specs/006-fix-toc-line-merge/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
