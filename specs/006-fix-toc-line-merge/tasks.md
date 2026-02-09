@@ -33,13 +33,13 @@
 
 **目的**: 既存コードのレビューと変更準備
 
-- [ ] T001 既存実装を確認: src/book_converter/parser.py（parse_toc_entry, normalize_toc_line）
-- [ ] T002 [P] 既存実装を確認: src/book_converter/page_grouper.py（group_pages_by_toc）
-- [ ] T003 [P] 既存テストを確認: tests/book_converter/test_parser.py
-- [ ] T004 [P] 既存テストを確認: tests/book_converter/test_page_grouper.py
-- [ ] T005 問題ファイルのTOC構造を分析: output/157012a97dcbebed/book.md
-- [ ] T006 正常ファイルのTOC構造を分析: output/4fd5500620491ebe/book.md（回帰テスト用ベースライン）
-- [ ] T007 フェーズ出力を生成: specs/006-fix-toc-line-merge/tasks/ph1-output.md
+- [X] T001 既存実装を確認: src/book_converter/parser.py（parse_toc_entry, normalize_toc_line）
+- [X] T002 [P] 既存実装を確認: src/book_converter/page_grouper.py（group_pages_by_toc）
+- [X] T003 [P] 既存テストを確認: tests/book_converter/test_parser.py
+- [X] T004 [P] 既存テストを確認: tests/book_converter/test_page_grouper.py
+- [X] T005 問題ファイルのTOC構造を分析: output/157012a97dcbebed/book.md
+- [X] T006 正常ファイルのTOC構造を分析: output/4fd5500620491ebe/book.md（回帰テスト用ベースライン）
+- [X] T007 フェーズ出力を生成: specs/006-fix-toc-line-merge/tasks/ph1-output.md
 
 ---
 
