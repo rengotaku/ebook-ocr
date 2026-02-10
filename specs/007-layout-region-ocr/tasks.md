@@ -134,17 +134,17 @@
 
 ### Implementation (GREEN)
 
-- [ ] T042 Read RED tests: specs/007-layout-region-ocr/red-tests/ph4-test.md
-- [ ] T043 [P] [US2] crop_region() 関数実装: src/utils.py - 領域クロップユーティリティ
-- [ ] T044 [P] [US2] select_ocr_engine() 関数実装: src/layout_ocr.py - 領域種類に応じたエンジン選択
-- [ ] T045 [P] [US2] format_ocr_result() 関数実装: src/layout_ocr.py - 領域種類に応じたマークアップ
-- [ ] T046 [US2] ocr_by_layout() 関数実装: src/layout_ocr.py - 領域別OCR dispatcher（T043-T045を統合）
-- [ ] T047 Verify `make test` PASS (GREEN)
+- [x] T042 Read RED tests: specs/007-layout-region-ocr/red-tests/ph4-test.md
+- [x] T043 [P] [US2] crop_region() 関数実装: src/layout_ocr.py - 領域クロップユーティリティ
+- [x] T044 [P] [US2] select_ocr_engine() 関数実装: src/layout_ocr.py - 領域種類に応じたエンジン選択
+- [x] T045 [P] [US2] format_ocr_result() 関数実装: src/layout_ocr.py - 領域種類に応じたマークアップ
+- [x] T046 [US2] ocr_by_layout() 関数実装: src/layout_ocr.py - 領域別OCR dispatcher（T043-T045を統合）
+- [x] T047 Verify `make test` PASS (GREEN)
 
 ### Verification
 
-- [ ] T048 Verify `make test` passes all tests (including US1, US3 regressions)
-- [ ] T049 Generate phase output: specs/007-layout-region-ocr/tasks/ph4-output.md
+- [x] T048 Verify `make test` passes all tests (including US1, US3 regressions)
+- [x] T049 Generate phase output: specs/007-layout-region-ocr/tasks/ph4-output.md
 
 **Checkpoint**: US1 + US2 + US3 完了後、検出→ソート→OCRの一連の処理が動作
 
