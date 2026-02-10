@@ -59,7 +59,7 @@ test-cov: setup ## Run tests with coverage
 converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml [THRESHOLD=0.5] [VERBOSE=1])
 	@test -n "$(INPUT_MD)" || { echo "Error: INPUT_MD required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
 	@test -n "$(OUTPUT_XML)" || { echo "Error: OUTPUT_XML required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli "$(INPUT_MD)" "$(OUTPUT_XML)" --group-pages \
+	PYTHONPATH=$(CURDIR) USE_LLM_TOC_CLASSIFIER=true $(PYTHON) -m src.book_converter.cli "$(INPUT_MD)" "$(OUTPUT_XML)" --group-pages \
 		$(if $(THRESHOLD),--running-head-threshold $(THRESHOLD)) \
 		$(if $(VERBOSE),--verbose)
 

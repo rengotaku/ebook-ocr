@@ -28,10 +28,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13+: Follow standard conventions
 
 ## Recent Changes
+- 006-fix-toc-line-merge: Added Python 3.13+ + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
 - 005-toc-page-grouping: Added Python 3.13+ (Constitution準拠) + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
 - 004-toc-structure: Added Python 3.13+ (Constitution準拠) + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
-- 003-heading-readaloud-rules: Added Python 3.13+ + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
-- 002-book-md-structure: Added Python 3.13+ (Constitution準拠)
 
 
 <!-- MANUAL ADDITIONS START -->

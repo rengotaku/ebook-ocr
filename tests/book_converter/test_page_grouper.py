@@ -1347,3 +1347,339 @@ class TestFallbackToPreviousSection:
         assert page2 is not None, (
             "Page 2 (first content page without section) should be at chapter level"
         )
+
+
+# =============================================================================
+# Phase 3 Tests: US2 - Page Loss Prevention (ページ欠損の防止)
+# =============================================================================
+
+
+class TestValidatePageCountNormal:
+    """Tests for validate_page_count function - normal cases (T026).
+
+    FR-005: All input pages must appear in output XML, even if TOC is incomplete.
+    """
+
+    def test_validate_all_pages_present(self) -> None:
+        """10 input pages, 10 output pages -> no error."""
+        from src.book_converter.page_grouper import validate_page_count
+
+        # Should not raise any exception
+        validate_page_count(input_count=10, output_count=10)
+
+    def test_validate_with_toc_pages(self) -> None:
+        """Total pages (front-matter + chapters) equal to input -> no error."""
+        from src.book_converter.page_grouper import validate_page_count
+
+        # Scenario: 5 front-matter + 15 chapter pages = 20 total
+        # Input: 20 pages, Output: 20 pages
+        validate_page_count(input_count=20, output_count=20)
+
+    def test_validate_exact_match(self) -> None:
+        """Input count == output count is valid."""
+        from src.book_converter.page_grouper import validate_page_count
+
+        # Test with various counts
+        validate_page_count(input_count=1, output_count=1)
+        validate_page_count(input_count=100, output_count=100)
+        validate_page_count(input_count=181, output_count=181)
+
+    def test_validate_minor_loss_no_error(self) -> None:
+        """Minor page loss (less than 50%) should not raise error."""
+        from src.book_converter.page_grouper import validate_page_count
+
+        # 10% loss: OK
+        validate_page_count(input_count=100, output_count=90)
+        # 30% loss: OK
+        validate_page_count(input_count=100, output_count=70)
+        # 49% loss: OK (boundary)
+        validate_page_count(input_count=100, output_count=51)
+
+
+class TestValidatePageCountError:
+    """Tests for validate_page_count function - error cases (T027).
+
+    FR-008: When 50%+ pages are missing, report as error.
+    """
+
+    def test_validate_50_percent_loss_raises_error(self) -> None:
+        """10 input, 5 output (50% loss) -> PageValidationError."""
+        from src.book_converter.errors import PageValidationError
+        from src.book_converter.page_grouper import validate_page_count
+
+        with pytest.raises(PageValidationError):
+            validate_page_count(input_count=10, output_count=5)
+
+    def test_validate_over_50_percent_loss(self) -> None:
+        """10 input, 4 output (60% loss) -> error."""
+        from src.book_converter.errors import PageValidationError
+        from src.book_converter.page_grouper import validate_page_count
+
+        with pytest.raises(PageValidationError):
+            validate_page_count(input_count=10, output_count=4)
+
+    def test_validate_49_percent_loss_no_error(self) -> None:
+        """10 input, 6 output (40% loss) -> warning but no error."""
+        from src.book_converter.page_grouper import validate_page_count
+
+        # 40% loss is under threshold, should not raise
+        validate_page_count(input_count=10, output_count=6)
+
+    def test_error_message_contains_counts(self) -> None:
+        """Error message shows expected vs actual counts."""
+        from src.book_converter.errors import PageValidationError
+        from src.book_converter.page_grouper import validate_page_count
+
+        with pytest.raises(PageValidationError) as exc_info:
+            validate_page_count(input_count=100, output_count=40)
+
+        error = exc_info.value
+        # Check that error contains the counts
+        assert error.input_count == 100
+        assert error.output_count == 40
+        # Check that message contains counts
+        assert "100" in str(error)
+        assert "40" in str(error)
+
+    def test_validate_extreme_loss(self) -> None:
+        """181 input, 10 output (94.5% loss) -> error (real bug scenario)."""
+        from src.book_converter.errors import PageValidationError
+        from src.book_converter.page_grouper import validate_page_count
+
+        with pytest.raises(PageValidationError):
+            validate_page_count(input_count=181, output_count=10)
+
+    def test_validate_zero_output_raises_error(self) -> None:
+        """Zero output pages always raises error."""
+        from src.book_converter.errors import PageValidationError
+        from src.book_converter.page_grouper import validate_page_count
+
+        with pytest.raises(PageValidationError):
+            validate_page_count(input_count=10, output_count=0)
+
+
+class TestGroupPagesPreservation:
+    """Tests for group_pages_by_toc preserving all pages (T028).
+
+    FR-005: All input pages must appear in output XML.
+    """
+
+    def test_all_pages_in_output(self) -> None:
+        """Parse XML, count pages, compare to input."""
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="2">
+        <entry level="chapter" number="1" title="Chapter One" page="3" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>Cover</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata>Chapter 1 Title</pageMetadata>
+        <content><heading level="1">Chapter 1</heading></content>
+    </page>
+    <page number="4" sourceFile="page_0004.png">
+        <content><paragraph>Chapter 1 content</paragraph></content>
+    </page>
+    <page number="5" sourceFile="page_0005.png">
+        <content><paragraph>More content</paragraph></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        # Count all pages in output
+        all_pages = root.findall(".//page")
+        assert len(all_pages) == 5, f"Expected 5 pages, found {len(all_pages)}"
+
+    def test_pages_not_duplicated(self) -> None:
+        """Each page appears exactly once."""
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="Chapter One" page="2" />
+        <entry level="section" number="1.1" title="Section 1.1" page="3" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>Chapter 1 Title</pageMetadata>
+        <content><heading level="1">Chapter 1</heading></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <pageMetadata>1.1 Section 1.1 - 1/1</pageMetadata>
+        <content><heading level="2">1.1 Section 1.1</heading></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        # Get all page numbers
+        all_pages = root.findall(".//page")
+        page_numbers = [p.get("number") for p in all_pages]
+
+        # Check no duplicates
+        assert len(page_numbers) == len(set(page_numbers)), (
+            f"Duplicate pages found: {page_numbers}"
+        )
+
+    def test_page_content_preserved(self) -> None:
+        """Page content is not lost during grouping."""
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+        <entry level="chapter" number="1" title="Chapter" page="2" />
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>TOC content here</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <pageMetadata>Chapter Metadata</pageMetadata>
+        <content>
+            <heading level="1">Chapter Title</heading>
+            <paragraph>Important paragraph</paragraph>
+        </content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        # Find page 2 and verify content is preserved
+        page2 = root.find(".//page[@number='2']")
+        assert page2 is not None
+
+        # Check metadata preserved
+        metadata = page2.find("pageMetadata")
+        assert metadata is not None
+        assert "Chapter Metadata" in metadata.text or "Chapter Metadata" in ET.tostring(metadata, encoding='unicode')
+
+        # Check content preserved
+        content = page2.find("content")
+        assert content is not None
+        heading = content.find("heading")
+        assert heading is not None
+
+    def test_181_pages_input_181_output(self) -> None:
+        """Specific case from problem file: 181 pages input -> 181 pages output."""
+        # Generate 181 pages
+        pages_xml = []
+        for i in range(1, 182):
+            pages_xml.append(
+                f'<page number="{i}" sourceFile="page_{i:04d}.png">'
+                f'<content><paragraph>Page {i}</paragraph></content>'
+                f'</page>'
+            )
+
+        book_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>181 Page Book</title></metadata>
+    <toc begin="1" end="5">
+        <entry level="chapter" number="1" title="Chapter One" page="6" />
+        <entry level="chapter" number="2" title="Chapter Two" page="100" />
+    </toc>
+    {''.join(pages_xml)}
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        # Count all pages in output
+        all_pages = root.findall(".//page")
+        assert len(all_pages) == 181, (
+            f"Expected 181 pages, found {len(all_pages)}. "
+            f"Page loss: {181 - len(all_pages)} pages"
+        )
+
+
+class TestGroupPagesEmptyToc:
+    """Tests for group_pages_by_toc when TOC is empty (T029).
+
+    FR-005: When TOC is empty, all pages should go to front-matter.
+    """
+
+    def test_empty_toc_all_to_front_matter(self) -> None:
+        """When no TOC entries, all pages go to front-matter."""
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>No TOC Entries Book</title></metadata>
+    <toc begin="1" end="1">
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>Page 1</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <content><paragraph>Page 2</paragraph></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <content><paragraph>Page 3</paragraph></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        # All pages should be in front-matter
+        front_matter = root.find("front-matter")
+        assert front_matter is not None, "Front-matter should exist"
+
+        pages = front_matter.findall("page")
+        assert len(pages) == 3, f"All 3 pages should be in front-matter, found {len(pages)}"
+
+        # Verify no chapters were created
+        chapters = root.findall("chapter")
+        assert len(chapters) == 0, "No chapters should be created when TOC is empty"
+
+    def test_no_toc_element_all_to_front_matter(self) -> None:
+        """When <toc> element is missing, all pages go to front-matter."""
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>No TOC Element Book</title></metadata>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>Page 1</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <content><paragraph>Page 2</paragraph></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        # All pages should be somewhere (not dropped)
+        all_pages = root.findall(".//page")
+        assert len(all_pages) == 2, f"All 2 pages should be preserved, found {len(all_pages)}"
+
+    def test_front_matter_preserves_order(self) -> None:
+        """Pages maintain original order in front-matter."""
+        book_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <metadata><title>Test</title></metadata>
+    <toc begin="1" end="1">
+    </toc>
+    <page number="1" sourceFile="page_0001.png">
+        <content><paragraph>First</paragraph></content>
+    </page>
+    <page number="2" sourceFile="page_0002.png">
+        <content><paragraph>Second</paragraph></content>
+    </page>
+    <page number="3" sourceFile="page_0003.png">
+        <content><paragraph>Third</paragraph></content>
+    </page>
+</book>"""
+        result = group_pages_by_toc(book_xml)
+        root = ET.fromstring(result)
+
+        front_matter = root.find("front-matter")
+        assert front_matter is not None
+
+        pages = front_matter.findall("page")
+        page_numbers = [p.get("number") for p in pages]
+
+        # Order should be preserved: 1, 2, 3
+        assert page_numbers == ["1", "2", "3"], (
+            f"Page order not preserved. Expected ['1', '2', '3'], got {page_numbers}"
+        )
