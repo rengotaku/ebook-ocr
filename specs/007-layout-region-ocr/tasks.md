@@ -84,17 +84,17 @@
 
 ### Input
 
-- [ ] T020 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
-- [ ] T021 Read previous phase output: specs/007-layout-region-ocr/tasks/ph2-output.md
+- [x] T020 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
+- [x] T021 Read previous phase output: specs/007-layout-region-ocr/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T022 [P] [US3] 単純ソートテスト実装: tests/test_reading_order.py - 上から下、左から右の順序を検証
-- [ ] T023 [P] [US3] 2カラムソートテスト実装: tests/test_reading_order.py - 左カラム全体→右カラム全体の順序を検証
-- [ ] T024 [P] [US3] タイトル優先テスト実装: tests/test_reading_order.py - TITLEがTEXTより先になることを検証
-- [ ] T025 [P] [US3] 重複除去テスト実装: tests/test_reading_order.py - 重複領域の処理を検証
-- [ ] T026 Verify `make test` FAIL (RED)
-- [ ] T027 Generate RED output: specs/007-layout-region-ocr/red-tests/ph3-test.md
+- [x] T022 [P] [US3] 単純ソートテスト実装: tests/test_reading_order.py - 上から下、左から右の順序を検証
+- [x] T023 [P] [US3] 2カラムソートテスト実装: tests/test_reading_order.py - 左カラム全体→右カラム全体の順序を検証
+- [x] T024 [P] [US3] タイトル優先テスト実装: tests/test_reading_order.py - TITLEがTEXTより先になることを検証
+- [x] T025 [P] [US3] 重複除去テスト実装: tests/test_reading_order.py - 重複領域の処理を検証
+- [x] T026 Verify `make test` FAIL (RED)
+- [x] T027 Generate RED output: specs/007-layout-region-ocr/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
