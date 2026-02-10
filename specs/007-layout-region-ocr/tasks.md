@@ -158,16 +158,16 @@
 
 ### Input
 
-- [ ] T050 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
-- [ ] T051 Read previous phase output: specs/007-layout-region-ocr/tasks/ph4-output.md
+- [x] T050 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
+- [x] T051 Read previous phase output: specs/007-layout-region-ocr/tasks/ph4-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T052 [P] [US4] 空layout フォールバックテスト実装: tests/test_layout_ocr.py - 領域なしでページ全体OCRが実行されることを検証
-- [ ] T053 [P] [US4] 低カバー率フォールバックテスト実装: tests/test_layout_ocr.py - 30%未満でページ全体OCRが実行されることを検証
-- [ ] T054 [P] [US4] カバー率計算テスト実装: tests/test_layout_ocr.py - calculate_coverage() の正確性を検証
-- [ ] T055 Verify `make test` FAIL (RED)
-- [ ] T056 Generate RED output: specs/007-layout-region-ocr/red-tests/ph5-test.md
+- [x] T052 [P] [US4] 空layout フォールバックテスト実装: tests/test_layout_ocr.py - 領域なしでページ全体OCRが実行されることを検証
+- [x] T053 [P] [US4] 低カバー率フォールバックテスト実装: tests/test_layout_ocr.py - 30%未満でページ全体OCRが実行されることを検証
+- [x] T054 [P] [US4] カバー率計算テスト実装: tests/test_layout_ocr.py - calculate_coverage() の正確性を検証
+- [x] T055 Verify `make test` FAIL (RED)
+- [x] T056 Generate RED output: specs/007-layout-region-ocr/red-tests/ph5-test.md
 
 ### Implementation (GREEN)
 

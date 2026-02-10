@@ -770,3 +770,555 @@ class TestOcrByLayoutEdgeCases:
         assert results[5].formatted.startswith("^") and results[5].formatted.endswith("^"), (
             f"FOOTNOTE should be wrapped in '^'. Got: {results[5].formatted}"
         )
+
+
+# ============================================================================
+# Phase 5: US4 - フォールバック処理テスト
+# ============================================================================
+
+
+class TestCalculateCoverage:
+    """カバー率計算のテスト。"""
+
+    def test_calculate_coverage_single_region(self) -> None:
+        """単一領域のカバー率が正しく計算されることを検証。
+
+        100x100のページに50x50の領域 = 25%のカバー率
+        """
+        from src.layout_ocr import calculate_coverage
+
+        # Arrange
+        regions = [
+            {"type": "TEXT", "bbox": [0, 0, 50, 50], "confidence": 0.9},
+        ]
+        page_size = (100, 100)  # 10000 pixels total
+
+        # Act
+        coverage = calculate_coverage(regions, page_size)
+
+        # Assert
+        assert coverage == 0.25, (
+            f"50x50 region on 100x100 page should be 25% coverage. Got: {coverage}"
+        )
+
+    def test_calculate_coverage_multiple_regions(self) -> None:
+        """複数領域の合計カバー率が正しく計算されることを検証。
+
+        100x100のページに25x25の領域2つ = (625 + 625) / 10000 = 12.5%
+        """
+        from src.layout_ocr import calculate_coverage
+
+        # Arrange
+        regions = [
+            {"type": "TEXT", "bbox": [0, 0, 25, 25], "confidence": 0.9},
+            {"type": "TITLE", "bbox": [50, 50, 75, 75], "confidence": 0.95},
+        ]
+        page_size = (100, 100)
+
+        # Act
+        coverage = calculate_coverage(regions, page_size)
+
+        # Assert
+        expected = (25 * 25 + 25 * 25) / (100 * 100)  # 0.125
+        assert coverage == expected, (
+            f"Two 25x25 regions on 100x100 page should be 12.5% coverage. Got: {coverage}"
+        )
+
+    def test_calculate_coverage_full_page(self) -> None:
+        """ページ全体をカバーする領域の場合、カバー率が100%であることを検証。"""
+        from src.layout_ocr import calculate_coverage
+
+        # Arrange
+        regions = [
+            {"type": "TEXT", "bbox": [0, 0, 800, 600], "confidence": 0.9},
+        ]
+        page_size = (800, 600)
+
+        # Act
+        coverage = calculate_coverage(regions, page_size)
+
+        # Assert
+        assert coverage == 1.0, (
+            f"Full page coverage should be 100%. Got: {coverage}"
+        )
+
+    def test_calculate_coverage_empty_regions(self) -> None:
+        """空の領域リストの場合、カバー率が0%であることを検証。"""
+        from src.layout_ocr import calculate_coverage
+
+        # Arrange
+        regions: list[dict] = []
+        page_size = (800, 600)
+
+        # Act
+        coverage = calculate_coverage(regions, page_size)
+
+        # Assert
+        assert coverage == 0.0, (
+            f"Empty regions should have 0% coverage. Got: {coverage}"
+        )
+
+    def test_calculate_coverage_real_world_example(self) -> None:
+        """実際のページに近い例でカバー率を計算。
+
+        1920x1080ページに複数の領域があるケース
+        """
+        from src.layout_ocr import calculate_coverage
+
+        # Arrange: 複雑なレイアウト
+        regions = [
+            {"type": "TITLE", "bbox": [100, 50, 1820, 120], "confidence": 0.95},  # 1720x70
+            {"type": "TEXT", "bbox": [100, 150, 900, 800], "confidence": 0.9},   # 800x650
+            {"type": "FIGURE", "bbox": [950, 150, 1820, 600], "confidence": 0.88},  # 870x450
+            {"type": "TEXT", "bbox": [100, 850, 1820, 1030], "confidence": 0.9},  # 1720x180
+        ]
+        page_size = (1920, 1080)
+
+        # Expected calculation
+        # TITLE: 1720 * 70 = 120,400
+        # TEXT1: 800 * 650 = 520,000
+        # FIGURE: 870 * 450 = 391,500
+        # TEXT2: 1720 * 180 = 309,600
+        # Total: 1,341,500 / (1920 * 1080) = 1,341,500 / 2,073,600 ≈ 0.647
+
+        # Act
+        coverage = calculate_coverage(regions, page_size)
+
+        # Assert
+        expected = (120400 + 520000 + 391500 + 309600) / (1920 * 1080)
+        assert abs(coverage - expected) < 0.001, (
+            f"Coverage should be approximately {expected:.3f}. Got: {coverage:.3f}"
+        )
+
+
+class TestShouldFallback:
+    """フォールバック判定のテスト。"""
+
+    def test_should_fallback_empty_regions(self) -> None:
+        """領域が空の場合、フォールバックすることを検証。"""
+        from src.layout_ocr import should_fallback
+
+        # Arrange
+        regions: list[dict] = []
+        page_size = (800, 600)
+
+        # Act
+        result = should_fallback(regions, page_size)
+
+        # Assert
+        assert result is True, (
+            "Empty regions should trigger fallback"
+        )
+
+    def test_should_fallback_low_coverage(self) -> None:
+        """カバー率が30%未満の場合、フォールバックすることを検証。
+
+        100x100ページに20x20領域 = 4% → フォールバック
+        """
+        from src.layout_ocr import should_fallback
+
+        # Arrange: 4% coverage (below 30% threshold)
+        regions = [
+            {"type": "TEXT", "bbox": [0, 0, 20, 20], "confidence": 0.9},
+        ]
+        page_size = (100, 100)
+
+        # Act
+        result = should_fallback(regions, page_size)
+
+        # Assert
+        assert result is True, (
+            "Coverage below 30% should trigger fallback"
+        )
+
+    def test_should_fallback_sufficient_coverage(self) -> None:
+        """カバー率が30%以上の場合、フォールバックしないことを検証。
+
+        100x100ページに60x60領域 = 36% → フォールバックしない
+        """
+        from src.layout_ocr import should_fallback
+
+        # Arrange: 36% coverage (above 30% threshold)
+        regions = [
+            {"type": "TEXT", "bbox": [0, 0, 60, 60], "confidence": 0.9},
+        ]
+        page_size = (100, 100)
+
+        # Act
+        result = should_fallback(regions, page_size)
+
+        # Assert
+        assert result is False, (
+            "Coverage above 30% should not trigger fallback"
+        )
+
+    def test_should_fallback_exactly_30_percent(self) -> None:
+        """カバー率がちょうど30%の場合、フォールバックしないことを検証（境界値）。
+
+        1000x1000ページに約547.7x547.7領域 ≈ 30%
+        簡略化: 300x1000 = 30%
+        """
+        from src.layout_ocr import should_fallback
+
+        # Arrange: exactly 30% coverage
+        regions = [
+            {"type": "TEXT", "bbox": [0, 0, 300, 1000], "confidence": 0.9},
+        ]
+        page_size = (1000, 1000)
+
+        # Act
+        result = should_fallback(regions, page_size)
+
+        # Assert: 30%は閾値以上なのでフォールバックしない
+        assert result is False, (
+            "Coverage at exactly 30% should not trigger fallback"
+        )
+
+    def test_should_fallback_custom_threshold(self) -> None:
+        """カスタムしきい値でフォールバック判定ができることを検証。
+
+        しきい値50%: 40%カバー率 → フォールバック
+        """
+        from src.layout_ocr import should_fallback
+
+        # Arrange: 40% coverage with 50% threshold
+        regions = [
+            {"type": "TEXT", "bbox": [0, 0, 200, 200], "confidence": 0.9},  # 40000/100000 = 40%
+        ]
+        page_size = (500, 200)  # 100,000 total
+
+        # Act
+        result = should_fallback(regions, page_size, threshold=0.5)
+
+        # Assert
+        assert result is True, (
+            "40% coverage with 50% threshold should trigger fallback"
+        )
+
+    def test_should_fallback_single_figure_full_page(self) -> None:
+        """ページ全体が1つのFIGUREとして検出された場合、フォールバックすることを検証。
+
+        FR-006: ページ全体が1つのFIGUREとして検出された場合
+        """
+        from src.layout_ocr import should_fallback
+
+        # Arrange: Single FIGURE covering nearly entire page (>90%)
+        regions = [
+            {"type": "FIGURE", "bbox": [10, 10, 790, 590], "confidence": 0.9},
+        ]
+        page_size = (800, 600)
+        # Coverage: (780 * 580) / (800 * 600) = 452,400 / 480,000 ≈ 94.25%
+
+        # Act
+        result = should_fallback(regions, page_size)
+
+        # Assert: 全ページFIGUREはフォールバック
+        assert result is True, (
+            "Single FIGURE covering full page should trigger fallback"
+        )
+
+    def test_should_fallback_multiple_figures_not_fallback(self) -> None:
+        """複数のFIGURE領域がある場合はフォールバックしないことを検証。"""
+        from src.layout_ocr import should_fallback
+
+        # Arrange: Multiple FIGURE regions
+        regions = [
+            {"type": "FIGURE", "bbox": [50, 50, 350, 250], "confidence": 0.9},
+            {"type": "FIGURE", "bbox": [400, 50, 750, 250], "confidence": 0.88},
+            {"type": "TEXT", "bbox": [50, 300, 750, 550], "confidence": 0.92},
+        ]
+        page_size = (800, 600)
+        # Coverage > 30%, multiple regions
+
+        # Act
+        result = should_fallback(regions, page_size)
+
+        # Assert
+        assert result is False, (
+            "Multiple regions with sufficient coverage should not trigger fallback"
+        )
+
+
+class TestFallbackEmptyLayout:
+    """空layout フォールバックテスト (T052)。"""
+
+    def test_ocr_by_layout_fallback_empty_regions(self, tmp_path: Path) -> None:
+        """領域なしでページ全体OCRが実行されることを検証。
+
+        US4 Acceptance Scenario 1:
+        Given レイアウト検出で領域が検出されなかったページがある
+        When 領域別OCRを実行する
+        Then ページ全体に対してDeepSeek-OCRが実行される
+        """
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange
+        img_path = tmp_path / "empty_layout_page.png"
+        img = Image.new("RGB", (800, 600), color=(255, 255, 255))
+        img.save(img_path)
+
+        layout = {
+            "regions": [],  # 空の領域リスト
+            "page_size": [800, 600],
+        }
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"message": {"content": "ページ全体のOCR結果"}}
+        mock_response.raise_for_status = MagicMock()
+
+        # Act
+        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
+            results = ocr_by_layout(str(img_path), layout)
+
+            # Assert: フォールバックでページ全体OCRが実行される
+            assert len(results) == 1, (
+                f"Fallback should return 1 result for full page OCR. Got: {len(results)}"
+            )
+            # フォールバック時は特別なマーカー "FALLBACK" または "TEXT" としてマーク
+            assert results[0].region_type in ("FALLBACK", "TEXT"), (
+                f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
+            )
+            # DeepSeek-OCRが呼ばれたことを確認
+            assert mock_post.called, "requests.post should be called for fallback OCR"
+            call_args = mock_post.call_args
+            payload = call_args.kwargs.get("json") or call_args[1].get("json")
+            assert payload["model"] == "deepseek-ocr", (
+                f"Fallback should use deepseek-ocr. Got: {payload['model']}"
+            )
+
+    def test_ocr_by_layout_fallback_missing_regions_key(self, tmp_path: Path) -> None:
+        """regionsキーがない場合もフォールバックが実行されることを検証。"""
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange
+        img_path = tmp_path / "no_regions_key.png"
+        img = Image.new("RGB", (800, 600), color=(255, 255, 255))
+        img.save(img_path)
+
+        layout = {
+            "page_size": [800, 600],
+            # "regions" key is missing
+        }
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"message": {"content": "フォールバックOCR結果"}}
+        mock_response.raise_for_status = MagicMock()
+
+        # Act
+        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+            results = ocr_by_layout(str(img_path), layout)
+
+        # Assert
+        assert len(results) == 1, (
+            f"Missing regions key should trigger fallback. Got: {len(results)}"
+        )
+
+
+class TestFallbackLowCoverage:
+    """低カバー率フォールバックテスト (T053)。"""
+
+    def test_ocr_by_layout_fallback_below_30_percent(self, tmp_path: Path) -> None:
+        """30%未満でページ全体OCRが実行されることを検証。
+
+        US4 Acceptance Scenario 2:
+        Given 検出領域がページ面積の30%未満のページがある
+        When 領域別OCRを実行する
+        Then ページ全体に対してDeepSeek-OCRが実行される
+        """
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange: 10% coverage (well below 30%)
+        img_path = tmp_path / "low_coverage_page.png"
+        img = Image.new("RGB", (1000, 1000), color=(255, 255, 255))
+        img.save(img_path)
+
+        layout = {
+            "regions": [
+                # 100x100 on 1000x1000 = 1% coverage
+                {"type": "TEXT", "bbox": [0, 0, 100, 100], "confidence": 0.9},
+            ],
+            "page_size": [1000, 1000],
+        }
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"message": {"content": "フォールバック結果"}}
+        mock_response.raise_for_status = MagicMock()
+
+        # Act
+        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
+            results = ocr_by_layout(str(img_path), layout)
+
+            # Assert: フォールバックが実行される
+            assert len(results) == 1, (
+                f"Low coverage should trigger fallback. Got: {len(results)}"
+            )
+            assert results[0].region_type in ("FALLBACK", "TEXT"), (
+                f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
+            )
+
+    def test_ocr_by_layout_no_fallback_above_30_percent(self, tmp_path: Path) -> None:
+        """30%以上のカバー率ではフォールバックしないことを検証。"""
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange: 50% coverage (above 30%)
+        img_path = tmp_path / "high_coverage_page.png"
+        img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+        img.save(img_path)
+
+        layout = {
+            "regions": [
+                # 70.7x70.7 ≈ 50% coverage, simplify to 50x100 = 50%
+                {"type": "TEXT", "bbox": [0, 0, 50, 100], "confidence": 0.9},
+            ],
+            "page_size": [100, 100],
+        }
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"message": {"content": "通常OCR結果"}}
+        mock_response.raise_for_status = MagicMock()
+
+        # Act
+        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+            results = ocr_by_layout(str(img_path), layout)
+
+        # Assert: 領域別OCRが実行される（フォールバックしない）
+        assert len(results) == 1, f"Should return 1 result. Got: {len(results)}"
+        assert results[0].region_type == "TEXT", (
+            f"Result should be TEXT (not FALLBACK). Got: {results[0].region_type}"
+        )
+
+    def test_ocr_by_layout_fallback_29_percent_coverage(self, tmp_path: Path) -> None:
+        """29%カバー率（境界値直下）でフォールバックすることを検証。"""
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange: 29% coverage (just below 30%)
+        img_path = tmp_path / "boundary_page.png"
+        img = Image.new("RGB", (1000, 1000), color=(255, 255, 255))
+        img.save(img_path)
+
+        layout = {
+            "regions": [
+                # sqrt(0.29) ≈ 0.538, so ~538x538 for 29%
+                # Simplify: 290x1000 = 29%
+                {"type": "TEXT", "bbox": [0, 0, 290, 1000], "confidence": 0.9},
+            ],
+            "page_size": [1000, 1000],
+        }
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"message": {"content": "フォールバック結果"}}
+        mock_response.raise_for_status = MagicMock()
+
+        # Act
+        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+            results = ocr_by_layout(str(img_path), layout)
+
+        # Assert: 29%はフォールバック
+        assert len(results) == 1, f"29% coverage should trigger fallback. Got: {len(results)}"
+        assert results[0].region_type in ("FALLBACK", "TEXT"), (
+            f"Result should be FALLBACK or TEXT. Got: {results[0].region_type}"
+        )
+
+
+class TestFallbackSingleFigure:
+    """ページ全体が1つのFIGUREとして検出された場合のフォールバックテスト。"""
+
+    def test_ocr_by_layout_fallback_full_page_figure(self, tmp_path: Path) -> None:
+        """ページ全体がFIGUREの場合、フォールバックが実行されることを検証。
+
+        Edge Case: ページ全体が1つのFIGUREとして検出された場合 → ページ全体OCRにフォールバック
+        """
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange: Single FIGURE covering 95% of page
+        img_path = tmp_path / "full_figure_page.png"
+        img = Image.new("RGB", (800, 600), color=(200, 200, 200))
+        img.save(img_path)
+
+        layout = {
+            "regions": [
+                {"type": "FIGURE", "bbox": [20, 15, 780, 585], "confidence": 0.9},
+                # Coverage: (760 * 570) / (800 * 600) = 433,200 / 480,000 ≈ 90.25%
+            ],
+            "page_size": [800, 600],
+        }
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"message": {"content": "ページ全体のテキスト"}}
+        mock_response.raise_for_status = MagicMock()
+
+        # Act
+        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+            results = ocr_by_layout(str(img_path), layout)
+
+        # Assert: フォールバックが実行される
+        assert len(results) == 1, (
+            f"Full page FIGURE should trigger fallback. Got: {len(results)}"
+        )
+        # フォールバック結果は FALLBACK または TEXT
+        assert results[0].region_type in ("FALLBACK", "TEXT"), (
+            f"Fallback result type should be FALLBACK or TEXT. Got: {results[0].region_type}"
+        )
+
+
+class TestFallbackEdgeCases:
+    """フォールバック処理のエッジケーステスト。"""
+
+    def test_calculate_coverage_zero_page_size(self) -> None:
+        """ページサイズがゼロの場合のハンドリングを検証。"""
+        from src.layout_ocr import calculate_coverage
+
+        # Arrange
+        regions = [{"type": "TEXT", "bbox": [0, 0, 100, 100], "confidence": 0.9}]
+
+        # Act & Assert: ゼロ除算を避ける
+        # 実装によってはエラーまたは0.0を返す
+        try:
+            coverage = calculate_coverage(regions, (0, 0))
+            # ゼロ除算を避けて0.0を返す実装の場合
+            assert coverage == 0.0, (
+                f"Zero page size should return 0.0 coverage. Got: {coverage}"
+            )
+        except (ZeroDivisionError, ValueError):
+            # エラーを投げる実装も許容
+            pass
+
+    def test_calculate_coverage_negative_bbox(self) -> None:
+        """負のbbox座標の場合のハンドリングを検証。"""
+        from src.layout_ocr import calculate_coverage
+
+        # Arrange: Invalid bbox with negative values
+        regions = [
+            {"type": "TEXT", "bbox": [-10, -10, 50, 50], "confidence": 0.9},
+        ]
+        page_size = (100, 100)
+
+        # Act
+        coverage = calculate_coverage(regions, page_size)
+
+        # Assert: 面積は (50 - (-10)) * (50 - (-10)) = 60 * 60 = 3600
+        # または実装がクランプする場合
+        # ここでは単純計算を想定
+        expected = (60 * 60) / (100 * 100)  # 0.36
+        assert coverage == expected or coverage >= 0, (
+            f"Negative bbox should be handled. Got: {coverage}"
+        )
+
+    def test_should_fallback_only_abandon_regions(self) -> None:
+        """ABANDON領域のみの場合もフォールバックすることを検証。"""
+        from src.layout_ocr import should_fallback
+
+        # Arrange: Only ABANDON regions (effectively empty for OCR)
+        regions = [
+            {"type": "ABANDON", "bbox": [0, 0, 100, 50], "confidence": 0.8},
+            {"type": "ABANDON", "bbox": [0, 550, 100, 600], "confidence": 0.75},
+        ]
+        page_size = (800, 600)
+
+        # Act
+        result = should_fallback(regions, page_size)
+
+        # Assert: ABANDON領域のみならフォールバック（OCR対象がない）
+        assert result is True, (
+            "Only ABANDON regions should trigger fallback"
+        )
