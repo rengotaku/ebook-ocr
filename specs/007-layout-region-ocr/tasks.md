@@ -98,15 +98,15 @@
 
 ### Implementation (GREEN)
 
-- [ ] T028 Read RED tests: specs/007-layout-region-ocr/red-tests/ph3-test.md
-- [ ] T029 [P] [US3] sort_reading_order() 関数実装: src/reading_order.py - カラム検出 + Y座標ソート
-- [ ] T030 [P] [US3] remove_overlaps() 関数実装: src/reading_order.py - 重複領域の検出と除去
-- [ ] T031 Verify `make test` PASS (GREEN)
+- [x] T028 Read RED tests: specs/007-layout-region-ocr/red-tests/ph3-test.md
+- [x] T029 [P] [US3] sort_reading_order() 関数実装: src/reading_order.py - カラム検出 + Y座標ソート
+- [x] T030 [P] [US3] remove_overlaps() 関数実装: src/reading_order.py - 重複領域の検出と除去
+- [x] T031 Verify `make test` PASS (GREEN)
 
 ### Verification
 
-- [ ] T032 Verify `make test` passes all tests (including US1 regressions)
-- [ ] T033 Generate phase output: specs/007-layout-region-ocr/tasks/ph3-output.md
+- [x] T032 Verify `make test` passes all tests (including US1 regressions)
+- [x] T033 Generate phase output: specs/007-layout-region-ocr/tasks/ph3-output.md
 
 **Checkpoint**: US1 + US3 完了後、検出と読み順ソートが独立して動作
 
