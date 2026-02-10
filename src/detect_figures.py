@@ -7,12 +7,19 @@ from PIL import Image
 
 # DocLayout-YOLO class name → output TYPE mapping
 LABEL_TYPE_MAP = {
-    "table": "TABLE",
+    "title": "TITLE",
+    "plain text": "TEXT",
+    "abandon": "ABANDON",
     "figure": "FIGURE",
+    "figure_caption": "CAPTION",
+    "table": "TABLE",
+    "table_caption": "CAPTION",
+    "table_footnote": "FOOTNOTE",
     "isolated formula": "FORMULA",
+    "formula_caption": "CAPTION",
 }
 
-# Labels we care about (skip plain text, title, abandon, captions, etc.)
+# Labels we care about (all 10 classes from DocLayout-YOLO)
 TARGET_LABELS = set(LABEL_TYPE_MAP.keys())
 
 # HuggingFace model info
@@ -25,6 +32,7 @@ def detect_figures(
     output_dir: str,
     figures_dir: str | None = None,
     min_confidence: float = 0.3,
+    min_area: float = 0.01,
 ) -> dict:
     """Detect figures, tables, and formulas in page images.
 
@@ -34,6 +42,7 @@ def detect_figures(
         figures_dir: Directory to save cropped figure images.
             Defaults to output_dir/figures.
         min_confidence: Minimum confidence threshold for detection.
+        min_area: Minimum area threshold as a fraction of page area (default: 0.01 = 1%).
 
     Returns:
         Layout dict mapping page filenames to detected elements.
@@ -66,7 +75,11 @@ def detect_figures(
 
         page_name = page_path.name
         img = Image.open(page_path)
-        figures: list[dict] = []
+        page_width, page_height = img.size
+        page_area = page_width * page_height
+        min_area_px = page_area * min_area
+
+        regions: list[dict] = []
         type_counters: dict[str, int] = {}
 
         for r in results:
@@ -75,12 +88,16 @@ def detect_figures(
                 if cls_name not in TARGET_LABELS:
                     continue
 
+                bbox = [int(v) for v in box.xyxy[0].tolist()]
+                area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+                if area < min_area_px:
+                    continue  # Filter out small regions (noise)
+
                 conf = float(box.conf[0])
                 fig_type = LABEL_TYPE_MAP[cls_name]
                 type_counters[fig_type] = type_counters.get(fig_type, 0) + 1
                 count = type_counters[fig_type]
 
-                bbox = [int(v) for v in box.xyxy[0].tolist()]
                 type_suffix = fig_type.lower()
                 crop_name = f"{page_path.stem}_{type_suffix}{count}.png"
                 crop_path = fig_dir / crop_name
@@ -88,7 +105,7 @@ def detect_figures(
                 cropped = img.crop(bbox)
                 cropped.save(crop_path)
 
-                figures.append({
+                regions.append({
                     "type": fig_type,
                     "label": cls_name,
                     "bbox": bbox,
@@ -96,9 +113,12 @@ def detect_figures(
                     "cropped_path": f"figures/{crop_name}",
                 })
 
-        if figures:
-            layout_data[page_name] = {"figures": figures}
-            total_detected += len(figures)
+        if regions:
+            layout_data[page_name] = {
+                "regions": regions,
+                "page_size": [page_width, page_height],
+            }
+            total_detected += len(regions)
 
     layout_path = out / "layout.json"
     layout_path.write_text(

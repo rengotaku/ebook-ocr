@@ -61,16 +61,16 @@
 
 ### Implementation (GREEN)
 
-- [ ] T013 Read RED tests: specs/007-layout-region-ocr/red-tests/ph2-test.md
-- [ ] T014 [P] [US1] LABEL_TYPE_MAP を10クラスに拡張: src/detect_figures.py
-- [ ] T015 [P] [US1] layout.json出力を regions 構造に変更: src/detect_figures.py - figures → regions、page_size 追加
-- [ ] T016 [US1] 最小面積フィルタリング実装: src/detect_figures.py - min_area パラメータ追加
-- [ ] T017 Verify `make test` PASS (GREEN)
+- [x] T013 Read RED tests: specs/007-layout-region-ocr/red-tests/ph2-test.md
+- [x] T014 [P] [US1] LABEL_TYPE_MAP を10クラスに拡張: src/detect_figures.py
+- [x] T015 [P] [US1] layout.json出力を regions 構造に変更: src/detect_figures.py - figures → regions、page_size 追加
+- [x] T016 [US1] 最小面積フィルタリング実装: src/detect_figures.py - min_area パラメータ追加
+- [x] T017 Verify `make test` PASS (GREEN)
 
 ### Verification
 
-- [ ] T018 Verify `make test` passes all tests (no regressions)
-- [ ] T019 Generate phase output: specs/007-layout-region-ocr/tasks/ph2-output.md
+- [x] T018 Verify `make test` passes all tests (no regressions)
+- [x] T019 Generate phase output: specs/007-layout-region-ocr/tasks/ph2-output.md
 
 **Checkpoint**: US1完了後、全クラス検出と regions 構造出力が独立して動作
 
