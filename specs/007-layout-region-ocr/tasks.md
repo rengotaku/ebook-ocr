@@ -48,16 +48,16 @@
 
 ### Input
 
-- [ ] T006 Read previous phase output: specs/007-layout-region-ocr/tasks/ph1-output.md
+- [x] T006 Read previous phase output: specs/007-layout-region-ocr/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T007 [P] [US1] 全クラス検出テスト実装: tests/test_detect_figures.py - LABEL_TYPE_MAP に10クラス含まれることを検証
-- [ ] T008 [P] [US1] regions構造テスト実装: tests/test_detect_figures.py - layout.json出力が regions キーを持つことを検証
-- [ ] T009 [P] [US1] page_sizeテスト実装: tests/test_detect_figures.py - layout.json出力に page_size が含まれることを検証
-- [ ] T010 [P] [US1] ノイズ除外テスト実装: tests/test_detect_figures.py - 最小面積しきい値未満の領域が除外されることを検証
-- [ ] T011 Verify `make test` FAIL (RED)
-- [ ] T012 Generate RED output: specs/007-layout-region-ocr/red-tests/ph2-test.md
+- [x] T007 [P] [US1] 全クラス検出テスト実装: tests/test_detect_figures.py - LABEL_TYPE_MAP に10クラス含まれることを検証
+- [x] T008 [P] [US1] regions構造テスト実装: tests/test_detect_figures.py - layout.json出力が regions キーを持つことを検証
+- [x] T009 [P] [US1] page_sizeテスト実装: tests/test_detect_figures.py - layout.json出力に page_size が含まれることを検証
+- [x] T010 [P] [US1] ノイズ除外テスト実装: tests/test_detect_figures.py - 最小面積しきい値未満の領域が除外されることを検証
+- [x] T011 Verify `make test` FAIL (RED)
+- [x] T012 Generate RED output: specs/007-layout-region-ocr/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
