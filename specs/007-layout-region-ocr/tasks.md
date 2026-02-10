@@ -120,17 +120,17 @@
 
 ### Input
 
-- [ ] T034 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
-- [ ] T035 Read previous phase output: specs/007-layout-region-ocr/tasks/ph3-output.md
+- [x] T034 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
+- [x] T035 Read previous phase output: specs/007-layout-region-ocr/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T036 [P] [US2] TEXT領域OCRテスト実装: tests/test_layout_ocr.py - TEXT領域がDeepSeek-OCRで処理されることを検証
-- [ ] T037 [P] [US2] FIGURE領域OCRテスト実装: tests/test_layout_ocr.py - FIGURE領域がVLMで処理されることを検証（モック使用）
-- [ ] T038 [P] [US2] TITLE領域OCRテスト実装: tests/test_layout_ocr.py - TITLE領域が見出しマークアップで出力されることを検証
-- [ ] T039 [P] [US2] 結果連結テスト実装: tests/test_layout_ocr.py - 複数領域のOCR結果が正しく連結されることを検証
-- [ ] T040 Verify `make test` FAIL (RED)
-- [ ] T041 Generate RED output: specs/007-layout-region-ocr/red-tests/ph4-test.md
+- [x] T036 [P] [US2] TEXT領域OCRテスト実装: tests/test_layout_ocr.py - TEXT領域がDeepSeek-OCRで処理されることを検証
+- [x] T037 [P] [US2] FIGURE領域OCRテスト実装: tests/test_layout_ocr.py - FIGURE領域がVLMで処理されることを検証（モック使用）
+- [x] T038 [P] [US2] TITLE領域OCRテスト実装: tests/test_layout_ocr.py - TITLE領域が見出しマークアップで出力されることを検証
+- [x] T039 [P] [US2] 結果連結テスト実装: tests/test_layout_ocr.py - 複数領域のOCR結果が正しく連結されることを検証
+- [x] T040 Verify `make test` FAIL (RED)
+- [x] T041 Generate RED output: specs/007-layout-region-ocr/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
