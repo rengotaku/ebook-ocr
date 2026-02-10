@@ -330,3 +330,70 @@ def ocr_by_layout(
         results.append(result)
 
     return results
+
+
+def main() -> None:
+    """CLI interface for layout-aware OCR."""
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser(
+        description="Run layout-aware OCR on page images with detected regions."
+    )
+    parser.add_argument("pages_dir", help="Directory containing page images")
+    parser.add_argument("-o", "--output", required=True, help="Output text file")
+    parser.add_argument(
+        "--layout", required=True, help="Path to layout.json file"
+    )
+    parser.add_argument(
+        "--base-url",
+        default="http://localhost:11434",
+        help="Ollama API base URL",
+    )
+    parser.add_argument(
+        "--timeout", type=int, default=60, help="Per-region OCR timeout"
+    )
+    args = parser.parse_args()
+
+    # Load layout.json
+    with open(args.layout) as f:
+        layout_data = json.load(f)
+
+    # Process each page
+    pages_dir = Path(args.pages_dir)
+    pages = sorted(pages_dir.glob("*.png"))
+
+    all_results = []
+    for page_path in pages:
+        page_name = page_path.name
+        print(f"Processing {page_name}...")
+
+        page_layout = layout_data.get(page_name, {"regions": [], "page_size": [0, 0]})
+
+        ocr_results = ocr_by_layout(
+            str(page_path),
+            page_layout,
+            base_url=args.base_url,
+            timeout=args.timeout,
+        )
+
+        if ocr_results and ocr_results[0].region_type == "FALLBACK":
+            print(f"  → Fallback: page-level OCR")
+        else:
+            print(f"  → Processed {len(ocr_results)} regions")
+
+        all_results.append((page_name, ocr_results))
+
+    # Write results
+    with open(args.output, "w", encoding="utf-8") as f:
+        for page_name, ocr_results in all_results:
+            f.write(f"\n--- Page: {page_name} ---\n\n")
+            for result in ocr_results:
+                f.write(result.formatted)
+                f.write("\n\n")
+
+    print(f"\nOCR complete. Output saved to: {args.output}")
+
+
+if __name__ == "__main__":
+    main()

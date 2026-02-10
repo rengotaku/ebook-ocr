@@ -38,3 +38,7 @@ toc_classifier_model: gpt-oss:20b
 
 # Figure detection
 min_confidence: 0.7
+
+# Layout-aware OCR (007-layout-region-ocr)
+coverage_threshold: 0.3    # フォールバック判定しきい値（30%未満でページ全体OCR）
+min_region_area: 0.01      # 最小領域面積（ページ面積の1%未満を除外）

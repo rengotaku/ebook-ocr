@@ -16,7 +16,8 @@ from src.video_hash import compute_full_hash, write_source_info
 from src.extract_frames import extract_frames
 from src.deduplicate import deduplicate_frames
 from src.detect_figures import detect_figures
-from src.ocr_deepseek import ocr_pages_deepseek
+from src.reading_order import sort_reading_order, remove_overlaps
+from src.layout_ocr import ocr_by_layout
 from src.describe_figures import describe_figures
 
 
@@ -32,13 +33,15 @@ def run_pipeline(
     vlm_timeout: int = 120,
     skip_ocr: bool = False,
     min_confidence: float = 0.7,
+    coverage_threshold: float = 0.3,
+    min_region_area: float = 0.01,
     ocr_options: dict | None = None,
     vlm_options: dict | None = None,
 ) -> None:
-    """Run the full video-to-markdown pipeline (v3).
+    """Run the full video-to-markdown pipeline (v3 with layout-aware OCR).
 
-    Steps 0-2 are shared with v1/v2. Step 3 detects figures.
-    Step 4 uses DeepSeek-OCR (no preprocessing needed).
+    Steps 0-2 are shared with v1/v2. Step 3 detects layout regions.
+    Step 4 uses layout-aware OCR (region-based processing with fallback).
     Step 5 uses VLM to describe detected figures.
 
     Args:
@@ -53,6 +56,8 @@ def run_pipeline(
         vlm_timeout: Per-figure VLM timeout in seconds.
         skip_ocr: If True, stop after frame extraction + dedup.
         min_confidence: Minimum confidence for figure detection.
+        coverage_threshold: Fallback threshold for low coverage (default: 0.3).
+        min_region_area: Minimum region area ratio (default: 0.01).
         ocr_options: Ollama generation options for OCR model.
         vlm_options: Ollama generation options for VLM model.
     """
@@ -96,26 +101,61 @@ def run_pipeline(
         print(f"\nSkipping OCR. {len(unique_pages)} pages saved to {pages_dir}")
         return
 
-    # Step 3: Detect figures, tables, formulas
+    # Step 3: Detect layout regions (extended - all 10 classes)
     print("\n" + "=" * 60)
-    print("Step 3: Detecting figures, tables, and formulas")
+    print("Step 3: Detecting layout regions (title, text, figure, table, etc.)")
     print("=" * 60)
-    layout = detect_figures(pages_dir, str(out))
+    layout = detect_figures(pages_dir, str(out), min_confidence=min_confidence)
 
-    # Step 4: DeepSeek-OCR on raw pages (no preprocessing needed)
+    # Step 4: Layout-aware OCR (region-based processing)
     print("\n" + "=" * 60)
-    print(f"Step 4: Running DeepSeek-OCR ({ocr_model})")
+    print(f"Step 4: Running layout-aware OCR ({ocr_model})")
     print("=" * 60)
-    ocr_pages_deepseek(
-        pages_dir=pages_dir,
-        output_file=text_file,
-        layout=layout,
-        model=ocr_model,
-        base_url=ollama_url,
-        timeout=ocr_timeout,
-        min_confidence=min_confidence,
-        options=ocr_options,
-    )
+
+    # Process each page with layout-aware OCR
+    from pathlib import Path as PathLib
+
+    pages = sorted(PathLib(pages_dir).glob("*.png"))
+    all_ocr_results = []
+
+    for page_path in pages:
+        page_name = page_path.name
+        print(f"  Processing {page_name}...")
+
+        # Get layout for this page
+        page_layout = layout.get(page_name, {"regions": [], "page_size": [0, 0]})
+        regions = page_layout.get("regions", [])
+        page_size = page_layout.get("page_size", [0, 0])
+
+        # Sort regions in reading order & remove overlaps
+        if regions and page_size[0] > 0:
+            regions = remove_overlaps(regions)
+            regions = sort_reading_order(regions, page_size[0])
+            page_layout = {"regions": regions, "page_size": page_size}
+
+        # Run layout-aware OCR
+        ocr_results = ocr_by_layout(
+            str(page_path),
+            page_layout,
+            base_url=ollama_url,
+            timeout=ocr_timeout,
+        )
+
+        # Check if fallback was used
+        if ocr_results and ocr_results[0].region_type == "FALLBACK":
+            print(f"    → Fallback: page-level OCR (low coverage or detection failure)")
+        else:
+            print(f"    → Processed {len(ocr_results)} regions")
+
+        all_ocr_results.append((page_name, ocr_results))
+
+    # Write OCR results to file
+    with open(text_file, "w", encoding="utf-8") as f:
+        for page_name, ocr_results in all_ocr_results:
+            f.write(f"\n--- Page: {page_name} ---\n\n")
+            for result in ocr_results:
+                f.write(result.formatted)
+                f.write("\n\n")
 
     # Step 5: Describe figures with VLM
     print("\n" + "=" * 60)
@@ -167,6 +207,8 @@ def main() -> None:
     parser.add_argument("--vlm-timeout", type=int, default=cfg.get("vlm_timeout", 120), help="Per-figure VLM timeout")
     parser.add_argument("--skip-ocr", action="store_true", help="Stop after frame extraction (skip OCR)")
     parser.add_argument("--min-confidence", type=float, default=cfg.get("min_confidence", 0.7), help="Figure confidence threshold")
+    parser.add_argument("--coverage-threshold", type=float, default=cfg.get("coverage_threshold", 0.3), help="Fallback threshold for low coverage")
+    parser.add_argument("--min-region-area", type=float, default=cfg.get("min_region_area", 0.01), help="Minimum region area ratio")
     args = parser.parse_args()
 
     run_pipeline(
@@ -181,6 +223,8 @@ def main() -> None:
         vlm_timeout=args.vlm_timeout,
         skip_ocr=args.skip_ocr,
         min_confidence=args.min_confidence,
+        coverage_threshold=args.coverage_threshold,
+        min_region_area=args.min_region_area,
         ocr_options=cfg.get("ocr_options"),
         vlm_options=cfg.get("vlm_options"),
     )

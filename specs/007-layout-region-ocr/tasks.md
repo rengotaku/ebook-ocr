@@ -192,20 +192,20 @@
 
 ### Input
 
-- [ ] T064 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
-- [ ] T065 Read previous phase output: specs/007-layout-region-ocr/tasks/ph5-output.md
+- [x] T064 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
+- [x] T065 Read previous phase output: specs/007-layout-region-ocr/tasks/ph5-output.md
 
 ### Implementation
 
-- [ ] T066 [P] src/pipeline.py に領域別OCR統合: detect_figures → reading_order → layout_ocr の呼び出し順序
-- [ ] T067 [P] config.yaml にパラメータ追加: coverage_threshold, min_region_area
-- [ ] T068 Makefile 更新: 新規ターゲット追加（必要に応じて）
-- [ ] T069 quickstart.md の検証: 手順が動作することを確認
+- [x] T066 [P] src/pipeline.py に領域別OCR統合: detect_figures → reading_order → layout_ocr の呼び出し順序
+- [x] T067 [P] config.yaml にパラメータ追加: coverage_threshold, min_region_area
+- [x] T068 Makefile 更新: 新規ターゲット追加（必要に応じて）
+- [x] T069 quickstart.md の検証: 手順が動作することを確認
 
 ### Verification
 
-- [ ] T070 Run `make test` to verify all tests pass after integration
-- [ ] T071 Generate phase output: specs/007-layout-region-ocr/tasks/ph6-output.md
+- [x] T070 Run `make test` to verify all tests pass after integration
+- [x] T071 Generate phase output: specs/007-layout-region-ocr/tasks/ph6-output.md
 
 ---
 

@@ -43,6 +43,14 @@ run: setup ## Run full pipeline (DeepSeek-OCR + VLM figure description)
 extract: setup ## Extract frames only (skip OCR)
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --skip-ocr
 
+detect: setup ## Run layout detection (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/detect_figures.py "$(HASHDIR)/pages" -o "$(HASHDIR)"
+
+layout-ocr: setup ## Run layout-aware OCR (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make layout-ocr HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/layout_ocr.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt" --layout "$(HASHDIR)/layout.json"
+
 ocr: setup ## Run DeepSeek-OCR on pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make ocr HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_deepseek.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt"
