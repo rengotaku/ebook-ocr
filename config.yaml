@@ -32,5 +32,9 @@ vlm_options:
 # Ollama server (shared by OCR and VLM)
 ollama_url: http://localhost:11434
 
+# TOC Classification (LLM-based)
+use_llm_toc_classifier: true
+toc_classifier_model: gpt-oss:20b
+
 # Figure detection
 min_confidence: 0.7

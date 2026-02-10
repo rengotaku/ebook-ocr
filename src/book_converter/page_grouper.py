@@ -79,6 +79,31 @@ def parse_section_number(section_str: str | None) -> SectionNumber | None:
     return SectionNumber(raw=section_str, parts=parts, level=level)
 
 
+def normalize_for_matching(text: str) -> str:
+    """Normalize text for consistent matching.
+
+    Applies normalization to ensure TOC entries and page content
+    can be matched reliably:
+    1. Compress consecutive whitespace to single space
+    2. Strip leading/trailing whitespace
+
+    Args:
+        text: Text to normalize
+
+    Returns:
+        Normalized text
+
+    Example:
+        >>> normalize_for_matching("Text  with   spaces")
+        "Text with spaces"
+        >>> normalize_for_matching("  Line\\n  breaks  ")
+        "Line breaks"
+    """
+    # Compress consecutive whitespace (including newlines) to single space
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+
 def extract_section_from_page_metadata(metadata: str | None) -> str | None:
     """Extract section number from pageMetadata content.
 
@@ -90,6 +115,9 @@ def extract_section_from_page_metadata(metadata: str | None) -> str | None:
     """
     if not metadata:
         return None
+
+    # Normalize whitespace for consistent matching
+    metadata = normalize_for_matching(metadata)
 
     # Skip emphasis tags (front-matter)
     if '<emphasis>' in metadata:
@@ -122,6 +150,9 @@ def extract_section_from_heading(heading: str | None) -> str | None:
     """
     if not heading:
         return None
+
+    # Normalize whitespace for consistent matching
+    heading = normalize_for_matching(heading)
 
     # Try chapter pattern: "第1章 SREとは"
     chapter_match = re.match(r'^第(\d+)章', heading)

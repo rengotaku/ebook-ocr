@@ -24,6 +24,17 @@ from src.book_converter.models import (
     TableOfContents,
 )
 
+# Optional LLM-based TOC classifier
+try:
+    from src.book_converter.toc_classifier import (
+        classify_toc_entry_with_llm,
+        classify_toc_batch_with_llm,
+        is_llm_classification_enabled,
+    )
+    TOC_CLASSIFIER_AVAILABLE = True
+except ImportError:
+    TOC_CLASSIFIER_AVAILABLE = False
+
 
 def parse_toc_marker(line: str) -> MarkerType | None:
     """Parse a TOC marker line.
@@ -258,8 +269,84 @@ def merge_toc_lines(lines: list[str]) -> list[str]:
     return result
 
 
+def normalize_toc_text(lines: list[str]) -> str:
+    """Normalize TOC lines into a single text string.
+
+    Processes TOC marker content by:
+    1. Normalizing each line with normalize_toc_line
+    2. Replacing newlines with spaces
+    3. Compressing consecutive whitespace to single space
+
+    This ensures that entries split across multiple lines are properly merged.
+
+    Args:
+        lines: List of raw lines from TOC section
+
+    Returns:
+        Normalized text with compressed whitespace
+
+    Example:
+        >>> normalize_toc_text(["Episode 01", "Title here"])
+        "Episode 01 Title here"
+        >>> normalize_toc_text(["Chapter", "", "1 Title"])
+        "Chapter 1 Title"
+        >>> normalize_toc_text(["Line  with   spaces"])
+        "Line with spaces"
+    """
+    import re
+    # Normalize each line and join with space
+    normalized = [normalize_toc_line(line) for line in lines]
+    text = ' '.join(normalized)
+    # Compress consecutive whitespace to single space
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def split_toc_entries(normalized_text: str) -> list[str]:
+    """Split normalized TOC text into individual entries.
+
+    Detects entry boundaries by looking for patterns:
+    - Chapter N (case insensitive)
+    - Episode NN
+    - Column (case insensitive)
+    - 第N章
+
+    Args:
+        normalized_text: Normalized TOC text (from normalize_toc_text)
+
+    Returns:
+        List of individual entry strings
+
+    Example:
+        >>> split_toc_entries("Chapter 1 Title Episode 01 Text")
+        ["Chapter 1 Title", "Episode 01 Text"]
+        >>> split_toc_entries("第1章 タイトル 第2章 次")
+        ["第1章 タイトル", "第2章 次"]
+    """
+    import re
+    if not normalized_text.strip():
+        return []
+
+    # Pattern to match entry start markers
+    # Lookahead to split before these patterns:
+    # - Chapter N (case insensitive)
+    # - Episode NN (case insensitive)
+    # - Column (case insensitive)
+    # - 第N章
+    # - N.N (section)
+    # - N.N.N (subsection)
+    # - N (standalone chapter number)
+    pattern = r'(?=(?:Chapter|CHAPTER|chapter)\s+\d+|(?:Episode|EPISODE|episode)\s+\d+|(?:Column|COLUMN|column)\s+|第\d+章|\d+\.\d+\.\d+\s|\d+\.\d+\s|^\d+\s)'
+
+    entries = re.split(pattern, normalized_text)
+    # Filter empty entries and strip whitespace
+    return [e.strip() for e in entries if e.strip()]
+
+
 def parse_toc_entry(line: str) -> TocEntry | None:
     """Parse a TOC entry line.
+
+    Attempts LLM-based classification if enabled (via USE_LLM_TOC_CLASSIFIER env var),
+    then falls back to rule-based patterns.
 
     Patterns:
     - 第N章 タイトル ... ページ番号
@@ -283,6 +370,43 @@ def parse_toc_entry(line: str) -> TocEntry | None:
 
     if not line.strip():
         return None
+
+    # Try LLM classification first if enabled
+    if TOC_CLASSIFIER_AVAILABLE and is_llm_classification_enabled():
+        # Extract page number before LLM classification
+        page_number = ""
+        line_without_page = line
+
+        # Extract page number using existing patterns
+        dot_match = re.search(r"\.{2,}\s*(\d+)\s*$", line)
+        if dot_match:
+            page_number = dot_match.group(1)
+            line_without_page = line[: dot_match.start()]
+        else:
+            dash_match = re.search(r"[─\-]{2,}\s*(\d+)\s*$", line)
+            if dash_match:
+                page_number = dash_match.group(1)
+                line_without_page = line[: dash_match.start()]
+            else:
+                space_match = re.search(r"\s{3,}(\d+)\s*$", line)
+                if space_match:
+                    page_number = space_match.group(1)
+                    line_without_page = line[: space_match.start()]
+
+        # Normalize before LLM
+        line_normalized = normalize_toc_line(line_without_page)
+
+        llm_result = classify_toc_entry_with_llm(line_normalized)
+        if llm_result:
+            # Use LLM classification with extracted page number
+            return TocEntry(
+                text=llm_result.text,
+                level=llm_result.level,
+                number=llm_result.number,
+                page=page_number,
+            )
+
+    # Fallback to rule-based classification
 
     # Extract page number first (before removing it from title)
     page_number = ""
@@ -351,6 +475,18 @@ def parse_toc_entry(line: str) -> TocEntry | None:
         return TocEntry(
             text=match.group(2).strip(),
             level="section",
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Standalone chapter pattern: N タイトル (single digit, no "Chapter" prefix)
+    # Example: "4 「進捗管理」で失敗"
+    standalone_chapter_pattern = r"^(\d)\s+(.+)$"
+    match = re.match(standalone_chapter_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level="chapter",
             number=match.group(1),
             page=page_number,
         )
@@ -883,13 +1019,35 @@ def _parse_single_page_content(
             idx += 1
             continue
         elif toc_marker == MarkerType.TOC_END:
-            # Process collected TOC lines with merging
+            # Process collected TOC lines
             if toc_lines:
-                merged_toc_lines = merge_toc_lines(toc_lines)
-                for merged_line in merged_toc_lines:
-                    toc_entry = parse_toc_entry(merged_line)
-                    if toc_entry is not None:
-                        toc_entries.append(toc_entry)
+                # Try LLM batch processing first if enabled
+                if TOC_CLASSIFIER_AVAILABLE and is_llm_classification_enabled():
+                    # For LLM, normalize each line but preserve structure with newlines
+                    normalized_lines = [normalize_toc_line(line) for line in toc_lines]
+                    # Filter out empty lines
+                    normalized_lines = [line for line in normalized_lines if line.strip()]
+                    raw_text = '\n'.join(normalized_lines)
+                    llm_entries = classify_toc_batch_with_llm(raw_text, preserve_newlines=True)
+                    if llm_entries:
+                        # LLM succeeded - use its results directly
+                        toc_entries.extend(llm_entries)
+                    else:
+                        # LLM failed - fallback to rule-based
+                        normalized_text = normalize_toc_text(toc_lines)
+                        entry_strings = split_toc_entries(normalized_text)
+                        for entry_str in entry_strings:
+                            toc_entry = parse_toc_entry(entry_str)
+                            if toc_entry is not None:
+                                toc_entries.append(toc_entry)
+                else:
+                    # LLM not enabled - use rule-based
+                    normalized_text = normalize_toc_text(toc_lines)
+                    entry_strings = split_toc_entries(normalized_text)
+                    for entry_str in entry_strings:
+                        toc_entry = parse_toc_entry(entry_str)
+                        if toc_entry is not None:
+                            toc_entries.append(toc_entry)
             in_toc = False
             toc_lines = []
             idx += 1
@@ -1034,11 +1192,32 @@ def _parse_single_page_content(
 
     # If TOC is still open at end of page, process collected lines
     if in_toc and toc_lines:
-        merged_toc_lines = merge_toc_lines(toc_lines)
-        for merged_line in merged_toc_lines:
-            toc_entry = parse_toc_entry(merged_line)
-            if toc_entry is not None:
-                toc_entries.append(toc_entry)
+        # Try LLM batch processing first if enabled
+        if TOC_CLASSIFIER_AVAILABLE and is_llm_classification_enabled():
+            # For LLM, normalize each line but preserve structure with newlines
+            normalized_lines = [normalize_toc_line(line) for line in toc_lines]
+            # Filter out empty lines
+            normalized_lines = [line for line in normalized_lines if line.strip()]
+            raw_text = '\n'.join(normalized_lines)
+            llm_entries = classify_toc_batch_with_llm(raw_text, preserve_newlines=True)
+            if llm_entries:
+                toc_entries.extend(llm_entries)
+            else:
+                # LLM failed - fallback to rule-based
+                normalized_text = normalize_toc_text(toc_lines)
+                entry_strings = split_toc_entries(normalized_text)
+                for entry_str in entry_strings:
+                    toc_entry = parse_toc_entry(entry_str)
+                    if toc_entry is not None:
+                        toc_entries.append(toc_entry)
+        else:
+            # LLM not enabled - use rule-based
+            normalized_text = normalize_toc_text(toc_lines)
+            entry_strings = split_toc_entries(normalized_text)
+            for entry_str in entry_strings:
+                toc_entry = parse_toc_entry(entry_str)
+                if toc_entry is not None:
+                    toc_entries.append(toc_entry)
 
     # Create Page object
     # Content readAloud is true if ANY child element has readAloud=true
