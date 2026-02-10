@@ -654,25 +654,8 @@ class TestOcrResultDataclass:
 class TestOcrByLayoutEdgeCases:
     """ocr_by_layout のエッジケーステスト。"""
 
-    def test_ocr_by_layout_empty_regions(self, tmp_path: Path) -> None:
-        """空のregionsリストに対して空リストを返すことを検証。"""
-        from src.layout_ocr import ocr_by_layout
-
-        # Arrange
-        img_path = tmp_path / "test_page.png"
-        img = Image.new("RGB", (800, 600), color=(255, 255, 255))
-        img.save(img_path)
-
-        layout = {
-            "regions": [],
-            "page_size": [800, 600],
-        }
-
-        # Act
-        results = ocr_by_layout(str(img_path), layout)
-
-        # Assert
-        assert results == [], f"Empty regions should return empty list. Got: {results}"
+    # NOTE: test_ocr_by_layout_empty_regions removed - replaced by Phase 5 fallback tests
+    # Empty regions now trigger fallback (US4), not return empty list
 
     def test_ocr_by_layout_unicode_text(self, tmp_path: Path) -> None:
         """Unicode文字を含むOCR結果が正しく処理されることを検証。"""

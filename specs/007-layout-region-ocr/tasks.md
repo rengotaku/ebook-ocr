@@ -171,16 +171,16 @@
 
 ### Implementation (GREEN)
 
-- [ ] T057 Read RED tests: specs/007-layout-region-ocr/red-tests/ph5-test.md
-- [ ] T058 [P] [US4] calculate_coverage() 関数実装: src/layout_ocr.py - 検出領域のカバー率計算
-- [ ] T059 [US4] should_fallback() 関数実装: src/layout_ocr.py - フォールバック判定ロジック
-- [ ] T060 [US4] ocr_by_layout() にフォールバック統合: src/layout_ocr.py
-- [ ] T061 Verify `make test` PASS (GREEN)
+- [x] T057 Read RED tests: specs/007-layout-region-ocr/red-tests/ph5-test.md
+- [x] T058 [P] [US4] calculate_coverage() 関数実装: src/layout_ocr.py - 検出領域のカバー率計算
+- [x] T059 [US4] should_fallback() 関数実装: src/layout_ocr.py - フォールバック判定ロジック
+- [x] T060 [US4] ocr_by_layout() にフォールバック統合: src/layout_ocr.py
+- [x] T061 Verify `make test` PASS (GREEN)
 
 ### Verification
 
-- [ ] T062 Verify `make test` passes all tests (including US1-US3 regressions)
-- [ ] T063 Generate phase output: specs/007-layout-region-ocr/tasks/ph5-output.md
+- [x] T062 Verify `make test` passes all tests (including US1-US3 regressions)
+- [x] T063 Generate phase output: specs/007-layout-region-ocr/tasks/ph5-output.md
 
 **Checkpoint**: 全User Story完了、すべてのシナリオが独立して動作
 

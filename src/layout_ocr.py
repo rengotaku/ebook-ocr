@@ -191,6 +191,70 @@ def ocr_region(
     )
 
 
+def calculate_coverage(regions: list[dict], page_size: tuple[int, int]) -> float:
+    """検出領域がページをカバーする割合を計算。
+
+    Args:
+        regions: 領域リスト [{"bbox": [x1, y1, x2, y2], ...}, ...]
+        page_size: (width, height)
+
+    Returns:
+        カバー率 (0.0 - 1.0)
+    """
+    if not regions or page_size[0] <= 0 or page_size[1] <= 0:
+        return 0.0
+
+    page_area = page_size[0] * page_size[1]
+    total_region_area = sum(
+        (r["bbox"][2] - r["bbox"][0]) * (r["bbox"][3] - r["bbox"][1])
+        for r in regions
+    )
+    return total_region_area / page_area
+
+
+def should_fallback(
+    regions: list[dict],
+    page_size: tuple[int, int],
+    threshold: float = 0.3,
+) -> bool:
+    """フォールバックが必要かどうかを判定。
+
+    フォールバック条件 (research.md):
+    1. 領域が検出されなかった
+    2. 検出領域のカバー率が30%未満
+    3. ページ全体が1つのFIGUREとして検出された
+
+    Args:
+        regions: 領域リスト
+        page_size: (width, height)
+        threshold: カバー率しきい値 (デフォルト: 0.3)
+
+    Returns:
+        True: ページ全体OCRにフォールバック
+        False: 領域別OCRを実行
+    """
+    # 条件1: 領域なし
+    if not regions:
+        return True
+
+    # OCR対象領域のみをフィルタ（ABANDONを除外）
+    ocr_regions = [r for r in regions if r["type"] != "ABANDON"]
+    if not ocr_regions:
+        return True
+
+    # 条件2: カバー率が閾値未満
+    coverage = calculate_coverage(ocr_regions, page_size)
+    if coverage < threshold:
+        return True
+
+    # 条件3: 単一FIGUREがページの90%以上をカバー
+    if len(ocr_regions) == 1 and ocr_regions[0]["type"] == "FIGURE":
+        if coverage >= 0.9:
+            return True
+
+    return False
+
+
 def ocr_by_layout(
     page_path: str,
     layout: dict,
@@ -209,10 +273,48 @@ def ocr_by_layout(
         各領域のOCRResult リスト（領域順序を維持）
     """
     regions = layout.get("regions", [])
+    page_size = tuple(layout.get("page_size", [0, 0]))
 
-    # 空のregionsリストの場合は空リストを返す
-    if not regions:
-        return []
+    # フォールバック判定
+    if should_fallback(regions, page_size):
+        # ページ全体OCRを実行
+        img = Image.open(page_path)
+        image_b64 = encode_pil_image(img)
+
+        payload = {
+            "model": "deepseek-ocr",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "",
+                    "images": [image_b64],
+                },
+            ],
+            "stream": False,
+            "options": {
+                "temperature": 0.1,
+                "num_predict": 4096,
+            },
+        }
+
+        response = requests.post(
+            f"{base_url}/api/chat",
+            json=payload,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+
+        result_json = response.json()
+        ocr_text = result_json["message"]["content"]
+
+        # フォールバック結果を返す
+        return [
+            OCRResult(
+                region_type="FALLBACK",
+                text=ocr_text,
+                formatted=ocr_text,
+            )
+        ]
 
     # 画像を読み込み
     img = Image.open(page_path)
