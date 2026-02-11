@@ -18,7 +18,7 @@ from src.deduplicate import deduplicate_frames
 from src.split_spread import split_spread_pages, renumber_pages
 from src.detect_figures import detect_figures
 from src.reading_order import sort_reading_order, remove_overlaps
-from src.layout_ocr import ocr_by_layout
+from src.layout_ocr import ocr_by_layout, warm_up_model
 from src.describe_figures import describe_figures
 
 
@@ -134,6 +134,11 @@ def run_pipeline(
     print("\n" + "=" * 60)
     print(f"Step 4: Running layout-aware OCR ({ocr_model})")
     print("=" * 60)
+
+    # Warm up the OCR model before processing
+    print("  Warming up OCR model...")
+    warm_up_model(ocr_model, ollama_url, timeout=300)
+    print("  Model ready.")
 
     # Process each page with layout-aware OCR
     from pathlib import Path as PathLib
