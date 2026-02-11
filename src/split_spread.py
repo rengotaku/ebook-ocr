@@ -72,8 +72,9 @@ def split_spread_pages(
 ) -> list[Path]:
     """Split all spread images in a directory into separate pages.
 
-    Original page files are replaced with split versions:
-    - page_0001.png → page_0001_L.png, page_0001_R.png
+    Supports iterative adjustment:
+    - First run: moves originals to originals/ subfolder, splits to pages/
+    - Subsequent runs: re-splits from originals/ with new settings
 
     Args:
         pages_dir: Directory containing page images.
@@ -86,17 +87,40 @@ def split_spread_pages(
     Returns:
         List of output file paths (includes both split and non-split pages).
     """
-    src = Path(pages_dir)
-    out = Path(output_dir) if output_dir else src
+    pages_path = Path(pages_dir)
+    out = Path(output_dir) if output_dir else pages_path
+    originals_dir = pages_path.parent / "originals"
 
-    if out != src:
+    # Determine source directory
+    if originals_dir.exists() and list(originals_dir.glob("page_*.png")):
+        # Use existing originals (re-run with new settings)
+        src = originals_dir
+        print(f"  Using originals from: {originals_dir}")
+
+        # Clear existing split pages
+        for existing in pages_path.glob("page_*.png"):
+            existing.unlink()
+    else:
+        # First run: check if pages exist
+        pages = sorted(pages_path.glob("page_*.png"))
+        if not pages:
+            print("No page images found")
+            return []
+
+        # Move originals to originals/
+        originals_dir.mkdir(parents=True, exist_ok=True)
+        print(f"  Moving originals to: {originals_dir}")
+        for page_path in pages:
+            dest = originals_dir / page_path.name
+            page_path.rename(dest)
+
+        src = originals_dir
+
+    if out != pages_path:
         out.mkdir(parents=True, exist_ok=True)
 
+    # Process from source (originals)
     pages = sorted(src.glob("page_*.png"))
-    if not pages:
-        print("No page images found")
-        return []
-
     output_files: list[Path] = []
     split_count = 0
 
@@ -119,18 +143,11 @@ def split_spread_pages(
 
             output_files.extend([left_path, right_path])
             split_count += 1
-
-            # Remove original if output_dir is same as source
-            if out == src:
-                page_path.unlink()
         else:
-            # Not a spread, copy/keep as-is
-            if out != src:
-                dest = out / page_path.name
-                img.save(dest)
-                output_files.append(dest)
-            else:
-                output_files.append(page_path)
+            # Not a spread, copy as-is
+            dest = out / page_path.name
+            img.save(dest)
+            output_files.append(dest)
 
         img.close()
 

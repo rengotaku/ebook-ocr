@@ -132,67 +132,94 @@ class TestSplitSpreadPages:
 
     def test_split_spread_pages_creates_lr_files(self, tmp_path: Path) -> None:
         """Spread images are split into _L and _R files."""
-        # Create spread image
+        # Create directory structure: tmp_path/hash/pages/
+        hash_dir = tmp_path / "abc123"
+        pages_dir = hash_dir / "pages"
+        pages_dir.mkdir(parents=True)
+
         spread = Image.new("RGB", (2000, 1000), color="white")
-        spread.save(tmp_path / "page_0001.png")
+        spread.save(pages_dir / "page_0001.png")
 
-        split_spread_pages(str(tmp_path))
+        split_spread_pages(str(pages_dir))
 
-        # Original should be removed, L/R created
-        assert not (tmp_path / "page_0001.png").exists()
-        assert (tmp_path / "page_0001_L.png").exists()
-        assert (tmp_path / "page_0001_R.png").exists()
+        # Original should be moved to originals/, L/R created in pages/
+        assert not (pages_dir / "page_0001.png").exists()
+        assert (pages_dir / "page_0001_L.png").exists()
+        assert (pages_dir / "page_0001_R.png").exists()
+        # Original preserved in originals/
+        assert (hash_dir / "originals" / "page_0001.png").exists()
 
-    def test_non_spread_pages_unchanged(self, tmp_path: Path) -> None:
-        """Non-spread images are kept as-is."""
-        # Create single page image
+    def test_non_spread_pages_copied(self, tmp_path: Path) -> None:
+        """Non-spread images are copied from originals to pages."""
+        hash_dir = tmp_path / "abc123"
+        pages_dir = hash_dir / "pages"
+        pages_dir.mkdir(parents=True)
+
         single = Image.new("RGB", (800, 1200), color="white")
-        single.save(tmp_path / "page_0001.png")
+        single.save(pages_dir / "page_0001.png")
 
-        split_spread_pages(str(tmp_path))
+        split_spread_pages(str(pages_dir))
 
-        # Original should remain
-        assert (tmp_path / "page_0001.png").exists()
-        assert not (tmp_path / "page_0001_L.png").exists()
+        # Copy should exist in pages/
+        assert (pages_dir / "page_0001.png").exists()
+        assert not (pages_dir / "page_0001_L.png").exists()
+        # Original preserved in originals/
+        assert (hash_dir / "originals" / "page_0001.png").exists()
 
     def test_mixed_pages(self, tmp_path: Path) -> None:
         """Mix of spread and single pages processed correctly."""
-        # Create spread
+        hash_dir = tmp_path / "abc123"
+        pages_dir = hash_dir / "pages"
+        pages_dir.mkdir(parents=True)
+
         spread = Image.new("RGB", (2000, 1000), color="white")
-        spread.save(tmp_path / "page_0001.png")
+        spread.save(pages_dir / "page_0001.png")
 
-        # Create single page
         single = Image.new("RGB", (800, 1200), color="white")
-        single.save(tmp_path / "page_0002.png")
+        single.save(pages_dir / "page_0002.png")
 
-        result = split_spread_pages(str(tmp_path))
+        result = split_spread_pages(str(pages_dir))
 
         # Should have 3 files: 2 from spread + 1 single
         assert len(result) == 3
-        assert (tmp_path / "page_0001_L.png").exists()
-        assert (tmp_path / "page_0001_R.png").exists()
-        assert (tmp_path / "page_0002.png").exists()
+        assert (pages_dir / "page_0001_L.png").exists()
+        assert (pages_dir / "page_0001_R.png").exists()
+        assert (pages_dir / "page_0002.png").exists()
 
-    def test_output_to_different_directory(self, tmp_path: Path) -> None:
-        """Split pages can be saved to different directory."""
-        src_dir = tmp_path / "source"
-        out_dir = tmp_path / "output"
-        src_dir.mkdir()
+    def test_iterative_split_with_new_settings(self, tmp_path: Path) -> None:
+        """Re-running split uses originals and applies new settings."""
+        hash_dir = tmp_path / "abc123"
+        pages_dir = hash_dir / "pages"
+        originals_dir = hash_dir / "originals"
+        pages_dir.mkdir(parents=True)
 
         spread = Image.new("RGB", (2000, 1000), color="white")
-        spread.save(src_dir / "page_0001.png")
+        spread.save(pages_dir / "page_0001.png")
 
-        split_spread_pages(str(src_dir), str(out_dir))
+        # First run
+        split_spread_pages(str(pages_dir), left_trim_pct=0.0)
+        first_left = Image.open(pages_dir / "page_0001_L.png")
+        first_width = first_left.size[0]
+        first_left.close()
 
-        # Original should remain in source
-        assert (src_dir / "page_0001.png").exists()
-        # Split files in output
-        assert (out_dir / "page_0001_L.png").exists()
-        assert (out_dir / "page_0001_R.png").exists()
+        # Second run with different settings
+        split_spread_pages(str(pages_dir), left_trim_pct=0.1)
+        second_left = Image.open(pages_dir / "page_0001_L.png")
+        second_width = second_left.size[0]
+        second_left.close()
+
+        # Second run should have smaller width due to trim
+        assert second_width < first_width
+        # Original still preserved
+        assert (originals_dir / "page_0001.png").exists()
 
     def test_empty_directory(self, tmp_path: Path) -> None:
         """Empty directory returns empty list."""
-        result = split_spread_pages(str(tmp_path))
+        hash_dir = tmp_path / "abc123"
+        pages_dir = hash_dir / "pages"
+        pages_dir.mkdir(parents=True)
+
+        result = split_spread_pages(str(pages_dir))
         assert result == []
 
 
