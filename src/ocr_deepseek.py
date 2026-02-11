@@ -237,6 +237,10 @@ def ocr_pages_deepseek(
     errors: list[str] = []
     total_start = time.time()
 
+    # Create ocr_texts directory for individual page results
+    ocr_texts_dir = out_path.parent / "ocr_texts"
+    ocr_texts_dir.mkdir(parents=True, exist_ok=True)
+
     has_layout = bool(layout)
     if has_layout:
         print("  Figure masking enabled")
@@ -277,6 +281,11 @@ def ocr_pages_deepseek(
         markers = format_figure_markers(page_path.name, layout, min_confidence)
         header = f"--- Page {i} ({page_path.name}) ---\n"
         all_text.append(f"{header}{markers}{page_md}")
+
+        # Write individual page result immediately
+        page_text_file = ocr_texts_dir / f"{page_path.stem}.txt"
+        page_text_file.write_text(f"{markers}{page_md}", encoding="utf-8")
+        print(f"    → Saved: {page_text_file.name}")
 
     combined = "\n\n".join(all_text)
     out_path.write_text(combined, encoding="utf-8")

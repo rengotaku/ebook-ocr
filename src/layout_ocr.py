@@ -421,9 +421,15 @@ def main() -> None:
     pages_dir = Path(args.pages_dir)
     pages = sorted(pages_dir.glob("*.png"))
 
+    # Create ocr_texts directory for individual page results
+    output_path = Path(args.output)
+    ocr_texts_dir = output_path.parent / "ocr_texts"
+    ocr_texts_dir.mkdir(parents=True, exist_ok=True)
+
     all_results = []
     for page_path in pages:
         page_name = page_path.name
+        page_stem = page_path.stem
         print(f"Processing {page_name}...")
 
         page_layout = layout_data.get(page_name, {"regions": [], "page_size": [0, 0]})
@@ -440,9 +446,17 @@ def main() -> None:
         else:
             print(f"  → Processed {len(ocr_results)} regions")
 
+        # Write individual page result immediately
+        page_text_file = ocr_texts_dir / f"{page_stem}.txt"
+        with open(page_text_file, "w", encoding="utf-8") as f:
+            for result in ocr_results:
+                f.write(result.formatted)
+                f.write("\n\n")
+        print(f"  → Saved: {page_text_file.name}")
+
         all_results.append((page_name, ocr_results))
 
-    # Write results
+    # Write combined results
     with open(args.output, "w", encoding="utf-8") as f:
         for page_name, ocr_results in all_results:
             f.write(f"\n--- Page: {page_name} ---\n\n")
