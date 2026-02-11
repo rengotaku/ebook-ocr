@@ -43,9 +43,13 @@ run: setup ## Run full pipeline (DeepSeek-OCR + VLM figure description)
 extract: setup ## Extract frames only (skip OCR)
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --skip-ocr
 
+LEFT_TRIM ?= $(shell $(call CFG,spread_left_trim))
+RIGHT_TRIM ?= $(shell $(call CFG,spread_right_trim))
+ASPECT_RATIO ?= $(shell $(call CFG,spread_aspect_ratio))
+
 split-spreads: setup ## Split spread images into pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/split_spread.py "$(HASHDIR)/pages" --renumber
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/split_spread.py "$(HASHDIR)/pages" --left-trim $(LEFT_TRIM) --right-trim $(RIGHT_TRIM) --aspect-ratio $(ASPECT_RATIO) --renumber
 
 detect: setup ## Run layout detection (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect HASHDIR=output/<hash>"; exit 1; }
