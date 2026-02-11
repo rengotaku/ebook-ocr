@@ -5,3 +5,4 @@ requests
 pyyaml
 pytest
 pytest-cov
+pytesseract>=0.3.10
