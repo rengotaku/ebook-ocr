@@ -28,6 +28,8 @@ def is_spread_image(img: Image.Image, aspect_ratio_threshold: float = 1.2) -> bo
 def split_spread(
     img: Image.Image,
     overlap_px: int = 0,
+    left_trim_pct: float = 0.0,
+    right_trim_pct: float = 0.0,
 ) -> tuple[Image.Image, Image.Image]:
     """Split a spread image into left and right pages.
 
@@ -35,18 +37,27 @@ def split_spread(
         img: PIL Image of the spread.
         overlap_px: Pixels of overlap to include from center (for gutter text).
             Default 0 (exact split at center).
+        left_trim_pct: Percentage to trim from left edge of left page (0.0-1.0).
+            E.g., 0.03 = 3% trimmed from outer edge.
+        right_trim_pct: Percentage to trim from right edge of right page (0.0-1.0).
+            E.g., 0.03 = 3% trimmed from outer edge.
 
     Returns:
         Tuple of (left_page, right_page) as PIL Images.
     """
     width, height = img.size
     mid_x = width // 2
+    half_width = mid_x
 
-    # Left page: from 0 to mid_x + overlap
-    left_page = img.crop((0, 0, mid_x + overlap_px, height))
+    # Calculate trim pixels
+    left_trim_px = int(half_width * left_trim_pct)
+    right_trim_px = int(half_width * right_trim_pct)
 
-    # Right page: from mid_x - overlap to width
-    right_page = img.crop((mid_x - overlap_px, 0, width, height))
+    # Left page: from left_trim to mid_x + overlap
+    left_page = img.crop((left_trim_px, 0, mid_x + overlap_px, height))
+
+    # Right page: from mid_x - overlap to width - right_trim
+    right_page = img.crop((mid_x - overlap_px, 0, width - right_trim_px, height))
 
     return left_page, right_page
 
@@ -56,6 +67,8 @@ def split_spread_pages(
     output_dir: str | None = None,
     aspect_ratio_threshold: float = 1.2,
     overlap_px: int = 0,
+    left_trim_pct: float = 0.0,
+    right_trim_pct: float = 0.0,
 ) -> list[Path]:
     """Split all spread images in a directory into separate pages.
 
@@ -67,6 +80,8 @@ def split_spread_pages(
         output_dir: Output directory for split pages. Defaults to pages_dir.
         aspect_ratio_threshold: Width/height ratio for spread detection.
         overlap_px: Pixels of overlap from center.
+        left_trim_pct: Percentage to trim from left edge of left page (0.0-1.0).
+        right_trim_pct: Percentage to trim from right edge of right page (0.0-1.0).
 
     Returns:
         List of output file paths (includes both split and non-split pages).
@@ -90,7 +105,9 @@ def split_spread_pages(
 
         if is_spread_image(img, aspect_ratio_threshold):
             # Split into left and right
-            left_page, right_page = split_spread(img, overlap_px)
+            left_page, right_page = split_spread(
+                img, overlap_px, left_trim_pct, right_trim_pct
+            )
 
             # Generate output names: page_0001.png → page_0001_L.png, page_0001_R.png
             stem = page_path.stem
@@ -178,6 +195,18 @@ if __name__ == "__main__":
         help="Pixels of overlap from center (default: 0)",
     )
     parser.add_argument(
+        "--left-trim",
+        type=float,
+        default=0.0,
+        help="Percentage to trim from left edge of left page (default: 0.0, e.g., 0.03 = 3%%)",
+    )
+    parser.add_argument(
+        "--right-trim",
+        type=float,
+        default=0.0,
+        help="Percentage to trim from right edge of right page (default: 0.0, e.g., 0.03 = 3%%)",
+    )
+    parser.add_argument(
         "--renumber",
         action="store_true",
         help="Renumber pages sequentially after splitting",
@@ -189,6 +218,8 @@ if __name__ == "__main__":
         args.output,
         aspect_ratio_threshold=args.aspect_ratio,
         overlap_px=args.overlap,
+        left_trim_pct=args.left_trim,
+        right_trim_pct=args.right_trim,
     )
 
     if args.renumber:

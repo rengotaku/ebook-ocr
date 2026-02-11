@@ -38,6 +38,8 @@ def run_pipeline(
     min_region_area: float = 0.01,
     split_spreads: bool = True,
     spread_aspect_ratio: float = 1.2,
+    spread_left_trim: float = 0.0,
+    spread_right_trim: float = 0.0,
     ocr_options: dict | None = None,
     vlm_options: dict | None = None,
 ) -> None:
@@ -64,6 +66,8 @@ def run_pipeline(
         min_region_area: Minimum region area ratio (default: 0.01).
         split_spreads: If True, split spread images into left/right pages.
         spread_aspect_ratio: Aspect ratio threshold for spread detection (default: 1.2).
+        spread_left_trim: Percentage to trim from left edge of left page (default: 0.0).
+        spread_right_trim: Percentage to trim from right edge of right page (default: 0.0).
         ocr_options: Ollama generation options for OCR model.
         vlm_options: Ollama generation options for VLM model.
     """
@@ -112,7 +116,12 @@ def run_pipeline(
         print("\n" + "=" * 60)
         print("Step 2.5: Splitting spread images into separate pages")
         print("=" * 60)
-        split_spread_pages(pages_dir, aspect_ratio_threshold=spread_aspect_ratio)
+        split_spread_pages(
+            pages_dir,
+            aspect_ratio_threshold=spread_aspect_ratio,
+            left_trim_pct=spread_left_trim,
+            right_trim_pct=spread_right_trim,
+        )
         renumber_pages(pages_dir)
 
     # Step 3: Detect layout regions (extended - all 10 classes)
@@ -225,6 +234,8 @@ def main() -> None:
     parser.add_argument("--min-region-area", type=float, default=cfg.get("min_region_area", 0.01), help="Minimum region area ratio")
     parser.add_argument("--no-split-spreads", action="store_true", help="Disable spread splitting (見開き分割)")
     parser.add_argument("--spread-aspect-ratio", type=float, default=cfg.get("spread_aspect_ratio", 1.2), help="Aspect ratio threshold for spread detection")
+    parser.add_argument("--spread-left-trim", type=float, default=cfg.get("spread_left_trim", 0.0), help="Trim %% from left edge of left page (e.g., 0.03 = 3%%)")
+    parser.add_argument("--spread-right-trim", type=float, default=cfg.get("spread_right_trim", 0.0), help="Trim %% from right edge of right page (e.g., 0.03 = 3%%)")
     args = parser.parse_args()
 
     run_pipeline(
@@ -243,6 +254,8 @@ def main() -> None:
         min_region_area=args.min_region_area,
         split_spreads=not args.no_split_spreads,
         spread_aspect_ratio=args.spread_aspect_ratio,
+        spread_left_trim=args.spread_left_trim,
+        spread_right_trim=args.spread_right_trim,
         ocr_options=cfg.get("ocr_options"),
         vlm_options=cfg.get("vlm_options"),
     )

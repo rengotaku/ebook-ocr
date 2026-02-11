@@ -95,6 +95,37 @@ class TestSplitSpread:
         # Right page should be blue
         assert right.getpixel((50, 50)) == (0, 0, 255)
 
+    def test_split_with_left_trim(self) -> None:
+        """Left trim removes pixels from left edge of left page."""
+        img = Image.new("RGB", (2000, 1000), color="white")
+        left, right = split_spread(img, left_trim_pct=0.1)  # 10% trim
+
+        # Left page: original width 1000, trim 10% = 100px from left
+        # Result: 1000 - 100 = 900px wide
+        assert left.size == (900, 1000)
+        # Right page unchanged
+        assert right.size == (1000, 1000)
+
+    def test_split_with_right_trim(self) -> None:
+        """Right trim removes pixels from right edge of right page."""
+        img = Image.new("RGB", (2000, 1000), color="white")
+        left, right = split_spread(img, right_trim_pct=0.1)  # 10% trim
+
+        # Left page unchanged
+        assert left.size == (1000, 1000)
+        # Right page: original width 1000, trim 10% = 100px from right
+        # Result: 1000 - 100 = 900px wide
+        assert right.size == (900, 1000)
+
+    def test_split_with_both_trims(self) -> None:
+        """Both left and right trims work together."""
+        img = Image.new("RGB", (2000, 1000), color="white")
+        left, right = split_spread(img, left_trim_pct=0.03, right_trim_pct=0.03)
+
+        # Each page: 1000px wide, 3% = 30px trimmed
+        assert left.size == (970, 1000)
+        assert right.size == (970, 1000)
+
 
 class TestSplitSpreadPages:
     """Tests for split_spread_pages() directory processing."""
