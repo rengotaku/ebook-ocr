@@ -25,7 +25,7 @@ HASHDIR ?=
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract ocr test test-book-converter test-cov converter convert-sample clean clean-all
+.PHONY: help setup run extract split-spreads detect layout-ocr ocr test test-book-converter test-cov converter convert-sample clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -42,6 +42,10 @@ run: setup ## Run full pipeline (DeepSeek-OCR + VLM figure description)
 
 extract: setup ## Extract frames only (skip OCR)
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --skip-ocr
+
+split-spreads: setup ## Split spread images into pages (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/split_spread.py "$(HASHDIR)/pages" --renumber
 
 detect: setup ## Run layout detection (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect HASHDIR=output/<hash>"; exit 1; }

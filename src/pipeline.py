@@ -15,6 +15,7 @@ import yaml
 from src.video_hash import compute_full_hash, write_source_info
 from src.extract_frames import extract_frames
 from src.deduplicate import deduplicate_frames
+from src.split_spread import split_spread_pages, renumber_pages
 from src.detect_figures import detect_figures
 from src.reading_order import sort_reading_order, remove_overlaps
 from src.layout_ocr import ocr_by_layout
@@ -35,12 +36,15 @@ def run_pipeline(
     min_confidence: float = 0.7,
     coverage_threshold: float = 0.3,
     min_region_area: float = 0.01,
+    split_spreads: bool = True,
+    spread_aspect_ratio: float = 1.2,
     ocr_options: dict | None = None,
     vlm_options: dict | None = None,
 ) -> None:
     """Run the full video-to-markdown pipeline (v3 with layout-aware OCR).
 
-    Steps 0-2 are shared with v1/v2. Step 3 detects layout regions.
+    Steps 0-2 are shared with v1/v2. Step 2.5 splits spreads into pages.
+    Step 3 detects layout regions.
     Step 4 uses layout-aware OCR (region-based processing with fallback).
     Step 5 uses VLM to describe detected figures.
 
@@ -58,6 +62,8 @@ def run_pipeline(
         min_confidence: Minimum confidence for figure detection.
         coverage_threshold: Fallback threshold for low coverage (default: 0.3).
         min_region_area: Minimum region area ratio (default: 0.01).
+        split_spreads: If True, split spread images into left/right pages.
+        spread_aspect_ratio: Aspect ratio threshold for spread detection (default: 1.2).
         ocr_options: Ollama generation options for OCR model.
         vlm_options: Ollama generation options for VLM model.
     """
@@ -100,6 +106,14 @@ def run_pipeline(
     if skip_ocr:
         print(f"\nSkipping OCR. {len(unique_pages)} pages saved to {pages_dir}")
         return
+
+    # Step 2.5: Split spreads (見開き分割)
+    if split_spreads:
+        print("\n" + "=" * 60)
+        print("Step 2.5: Splitting spread images into separate pages")
+        print("=" * 60)
+        split_spread_pages(pages_dir, aspect_ratio_threshold=spread_aspect_ratio)
+        renumber_pages(pages_dir)
 
     # Step 3: Detect layout regions (extended - all 10 classes)
     print("\n" + "=" * 60)
@@ -209,6 +223,8 @@ def main() -> None:
     parser.add_argument("--min-confidence", type=float, default=cfg.get("min_confidence", 0.7), help="Figure confidence threshold")
     parser.add_argument("--coverage-threshold", type=float, default=cfg.get("coverage_threshold", 0.3), help="Fallback threshold for low coverage")
     parser.add_argument("--min-region-area", type=float, default=cfg.get("min_region_area", 0.01), help="Minimum region area ratio")
+    parser.add_argument("--no-split-spreads", action="store_true", help="Disable spread splitting (見開き分割)")
+    parser.add_argument("--spread-aspect-ratio", type=float, default=cfg.get("spread_aspect_ratio", 1.2), help="Aspect ratio threshold for spread detection")
     args = parser.parse_args()
 
     run_pipeline(
@@ -225,6 +241,8 @@ def main() -> None:
         min_confidence=args.min_confidence,
         coverage_threshold=args.coverage_threshold,
         min_region_area=args.min_region_area,
+        split_spreads=not args.no_split_spreads,
+        spread_aspect_ratio=args.spread_aspect_ratio,
         ocr_options=cfg.get("ocr_options"),
         vlm_options=cfg.get("vlm_options"),
     )
