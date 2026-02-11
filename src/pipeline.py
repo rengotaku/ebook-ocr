@@ -146,8 +146,13 @@ def run_pipeline(
     pages = sorted(PathLib(pages_dir).glob("*.png"))
     all_ocr_results = []
 
+    # Create ocr_texts directory for individual page results
+    ocr_texts_dir = out / "ocr_texts"
+    ocr_texts_dir.mkdir(parents=True, exist_ok=True)
+
     for page_path in pages:
         page_name = page_path.name
+        page_stem = page_path.stem  # page_0001
         print(f"  Processing {page_name}...")
 
         # Get layout for this page
@@ -175,9 +180,17 @@ def run_pipeline(
         else:
             print(f"    → Processed {len(ocr_results)} regions")
 
+        # Write individual page result immediately
+        page_text_file = ocr_texts_dir / f"{page_stem}.txt"
+        with open(page_text_file, "w", encoding="utf-8") as f:
+            for result in ocr_results:
+                f.write(result.formatted)
+                f.write("\n\n")
+        print(f"    → Saved: {page_text_file.name}")
+
         all_ocr_results.append((page_name, ocr_results))
 
-    # Write OCR results to file
+    # Write combined OCR results to book.txt
     with open(text_file, "w", encoding="utf-8") as f:
         for page_name, ocr_results in all_ocr_results:
             f.write(f"\n--- Page: {page_name} ---\n\n")
