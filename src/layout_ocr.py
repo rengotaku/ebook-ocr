@@ -21,6 +21,7 @@ OCR Engine Selection Rules (from research.md):
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,6 +29,55 @@ import requests
 from PIL import Image
 
 from src.utils import encode_pil_image
+
+
+def warm_up_model(
+    model: str,
+    base_url: str = "http://localhost:11434",
+    timeout: int = 300,
+) -> None:
+    """Warm up the model by sending a dummy request to load it into memory.
+
+    Args:
+        model: Ollama model name.
+        base_url: Ollama API base URL.
+        timeout: Request timeout in seconds (longer for initial load).
+    """
+    print(f"  Loading model {model}...", end="", flush=True)
+    start = time.time()
+
+    # Create a minimal 1x1 white image
+    dummy_img = Image.new("RGB", (1, 1), color="white")
+    image_b64 = encode_pil_image(dummy_img)
+
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": "test",
+                "images": [image_b64],
+            },
+        ],
+        "stream": False,
+        "options": {
+            "temperature": 0.0,
+            "num_predict": 1,
+        },
+    }
+
+    try:
+        response = requests.post(
+            f"{base_url}/api/chat",
+            json=payload,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        elapsed = time.time() - start
+        print(f" loaded in {elapsed:.1f}s")
+    except requests.RequestException as e:
+        print(f" failed: {e}")
+        print("  Continuing anyway (first request may timeout)...")
 
 
 @dataclass(frozen=True)
@@ -113,7 +163,7 @@ def ocr_region(
     img: Image.Image,
     region: dict,
     base_url: str = "http://localhost:11434",
-    timeout: int = 60,
+    timeout: int = 120,
 ) -> OCRResult:
     """単一領域のOCR処理。
 
@@ -259,7 +309,7 @@ def ocr_by_layout(
     page_path: str,
     layout: dict,
     base_url: str = "http://localhost:11434",
-    timeout: int = 60,
+    timeout: int = 120,
 ) -> list[OCRResult]:
     """ページ内の全領域をOCR処理。
 
@@ -351,9 +401,17 @@ def main() -> None:
         help="Ollama API base URL",
     )
     parser.add_argument(
-        "--timeout", type=int, default=60, help="Per-region OCR timeout"
+        "--timeout", type=int, default=120, help="Per-region OCR timeout (seconds)"
+    )
+    parser.add_argument(
+        "--no-warmup", action="store_true", help="Skip model warm-up"
     )
     args = parser.parse_args()
+
+    # Warm up models before processing
+    if not args.no_warmup:
+        print("Warming up OCR models...")
+        warm_up_model("deepseek-ocr", args.base_url, timeout=300)
 
     # Load layout.json
     with open(args.layout) as f:
