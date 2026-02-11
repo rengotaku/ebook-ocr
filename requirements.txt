@@ -6,3 +6,4 @@ pyyaml
 pytest
 pytest-cov
 pytesseract>=0.3.10
+easyocr>=1.7.0

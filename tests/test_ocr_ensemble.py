@@ -4,8 +4,11 @@ import pytest
 
 from src.ocr_ensemble import (
     calculate_similarity,
-    merge_texts,
+    calculate_similarity_matrix,
+    vote_best_result,
+    merge_by_voting,
     EnsembleResult,
+    EngineResult,
 )
 
 
@@ -44,57 +47,124 @@ class TestCalculateSimilarity:
         assert 0.5 < sim < 1.0
 
 
-class TestMergeTexts:
-    """Tests for merge_texts()."""
+class TestCalculateSimilarityMatrix:
+    """Tests for calculate_similarity_matrix()."""
 
-    def test_high_similarity_uses_deepseek(self) -> None:
-        """High similarity returns DeepSeek result."""
-        result, source = merge_texts(
-            "Hello World",
-            "Hello World",
-            similarity_threshold=0.8,
-        )
-        assert result == "Hello World"
-        assert source == "deepseek"
+    def test_three_engines(self) -> None:
+        """Matrix calculation for three engines."""
+        results = {
+            "deepseek": "Hello World",
+            "tesseract": "Hello World",
+            "easyocr": "Hello Wrold",  # typo
+        }
+        matrix = calculate_similarity_matrix(results)
 
-    def test_low_similarity_merges(self) -> None:
-        """Low similarity triggers merge."""
-        result, source = merge_texts(
-            "Line A\nLine B",
-            "Different\nLine B",
-            similarity_threshold=0.9,
-        )
-        # Should return merged since similarity is below threshold
-        assert source in ["deepseek", "tesseract", "merged"]
+        # Self-similarity is 1.0
+        assert matrix["deepseek"]["deepseek"] == 1.0
+        assert matrix["tesseract"]["tesseract"] == 1.0
 
-    def test_deepseek_much_longer(self) -> None:
-        """When DeepSeek is much longer, use it."""
-        result, source = merge_texts(
-            "This is a very long text with lots of content",
-            "Short",
-            similarity_threshold=0.9,
-        )
-        assert source == "deepseek"
+        # deepseek and tesseract are identical
+        assert matrix["deepseek"]["tesseract"] == 1.0
 
-    def test_tesseract_much_longer(self) -> None:
-        """When Tesseract is much longer, use it."""
-        result, source = merge_texts(
-            "Short",
-            "This is a very long text with lots of content",
-            similarity_threshold=0.9,
-        )
-        assert source == "tesseract"
+        # easyocr has typo, lower similarity
+        assert matrix["deepseek"]["easyocr"] < 1.0
+        assert matrix["deepseek"]["easyocr"] > 0.8  # still similar
 
-    def test_line_by_line_merge(self) -> None:
-        """Line-by-line merge prefers longer lines."""
-        result, source = merge_texts(
-            "Short\nMedium text",
-            "Longer line here\nMed",
-            similarity_threshold=0.9,
-        )
-        assert source == "merged"
-        lines = result.split("\n")
-        assert "Longer line here" in lines[0]  # Longer line preferred
+
+class TestVoteBestResult:
+    """Tests for vote_best_result()."""
+
+    def test_unanimous_agreement(self) -> None:
+        """All engines agree - winner has most votes."""
+        results = {
+            "deepseek": "Hello World",
+            "tesseract": "Hello World",
+            "easyocr": "Hello World",
+        }
+        matrix = calculate_similarity_matrix(results)
+        text, winner, votes = vote_best_result(results, matrix, threshold=0.7)
+
+        assert text == "Hello World"
+        assert votes["deepseek"] == 2  # agrees with 2 others
+        assert votes["tesseract"] == 2
+        assert votes["easyocr"] == 2
+
+    def test_two_agree_one_different(self) -> None:
+        """Two engines agree, one different - majority wins."""
+        results = {
+            "deepseek": "Hello World",
+            "tesseract": "Hello World",
+            "easyocr": "Completely Different Text",
+        }
+        matrix = calculate_similarity_matrix(results)
+        text, winner, votes = vote_best_result(results, matrix, threshold=0.7)
+
+        assert text == "Hello World"
+        assert winner in ["deepseek", "tesseract"]
+        assert votes["deepseek"] == 1  # agrees with tesseract
+        assert votes["tesseract"] == 1  # agrees with deepseek
+        assert votes["easyocr"] == 0  # agrees with none
+
+    def test_no_agreement_prefers_deepseek(self) -> None:
+        """No agreement - falls back to priority order."""
+        results = {
+            "deepseek": "Text A",
+            "tesseract": "Text B",
+            "easyocr": "Text C",
+        }
+        matrix = calculate_similarity_matrix(results)
+        text, winner, votes = vote_best_result(results, matrix, threshold=0.9)
+
+        # No agreement at 0.9 threshold, should prefer deepseek
+        assert winner == "deepseek"
+        assert text == "Text A"
+
+    def test_single_engine(self) -> None:
+        """Single engine returns its result."""
+        results = {"deepseek": "Only Result"}
+        matrix = calculate_similarity_matrix(results)
+        text, winner, votes = vote_best_result(results, matrix)
+
+        assert text == "Only Result"
+        assert winner == "deepseek"
+
+    def test_empty_results(self) -> None:
+        """Empty results returns empty."""
+        text, winner, votes = vote_best_result({}, {})
+        assert text == ""
+        assert winner == "none"
+
+
+class TestMergeByVoting:
+    """Tests for merge_by_voting()."""
+
+    def test_merge_three_engines(self) -> None:
+        """Merge with three engines."""
+        results = {
+            "deepseek": "Hello World",
+            "tesseract": "Hello World",
+            "easyocr": "Hello Wrold",
+        }
+        ensemble = merge_by_voting(results)
+
+        assert ensemble.merged == "Hello World"
+        assert ensemble.source in ["deepseek", "tesseract"]
+        assert "deepseek" in ensemble.results
+        assert "tesseract" in ensemble.results
+        assert "easyocr" in ensemble.results
+
+    def test_merge_with_empty_result(self) -> None:
+        """Merge handles engines with empty results."""
+        results = {
+            "deepseek": "Hello World",
+            "tesseract": "",
+            "easyocr": "Hello World",
+        }
+        ensemble = merge_by_voting(results)
+
+        assert ensemble.merged == "Hello World"
+        # Only deepseek and easyocr have valid results
+        assert ensemble.source in ["deepseek", "easyocr"]
 
 
 class TestEnsembleResult:
@@ -104,11 +174,36 @@ class TestEnsembleResult:
         """Can create EnsembleResult."""
         result = EnsembleResult(
             merged="merged text",
-            deepseek="deepseek text",
-            tesseract="tesseract text",
-            similarity=0.85,
+            results={"deepseek": "d", "tesseract": "t", "easyocr": "e"},
+            similarity_matrix={},
             source="deepseek",
+            votes={"deepseek": 2, "tesseract": 1, "easyocr": 1},
         )
         assert result.merged == "merged text"
-        assert result.similarity == 0.85
         assert result.source == "deepseek"
+        assert result.votes["deepseek"] == 2
+
+
+class TestEngineResult:
+    """Tests for EngineResult dataclass."""
+
+    def test_successful_result(self) -> None:
+        """Successful engine result."""
+        result = EngineResult(
+            engine="tesseract",
+            text="Hello",
+            success=True,
+        )
+        assert result.success
+        assert result.error is None
+
+    def test_failed_result(self) -> None:
+        """Failed engine result."""
+        result = EngineResult(
+            engine="tesseract",
+            text="",
+            success=False,
+            error="Timeout",
+        )
+        assert not result.success
+        assert result.error == "Timeout"
