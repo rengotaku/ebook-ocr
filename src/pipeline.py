@@ -17,8 +17,7 @@ from src.extract_frames import extract_frames
 from src.deduplicate import deduplicate_frames
 from src.split_spread import split_spread_pages, renumber_pages
 from src.detect_figures import detect_figures
-from src.reading_order import sort_reading_order, remove_overlaps
-from src.layout_ocr import ocr_by_layout, warm_up_model
+from src.layout_ocr import run_layout_ocr
 from src.describe_figures import describe_figures
 
 
@@ -135,68 +134,14 @@ def run_pipeline(
     print(f"Step 4: Running layout-aware OCR ({ocr_model})")
     print("=" * 60)
 
-    # Warm up the OCR model before processing
-    print("  Warming up OCR model...")
-    warm_up_model(ocr_model, ollama_url, timeout=300)
-    print("  Model ready.")
-
-    # Process each page with layout-aware OCR
-    from pathlib import Path as PathLib
-
-    pages = sorted(PathLib(pages_dir).glob("*.png"))
-    all_ocr_results = []
-
-    # Create ocr_texts directory for individual page results
-    ocr_texts_dir = out / "ocr_texts"
-    ocr_texts_dir.mkdir(parents=True, exist_ok=True)
-
-    for page_path in pages:
-        page_name = page_path.name
-        page_stem = page_path.stem  # page_0001
-        print(f"  Processing {page_name}...")
-
-        # Get layout for this page
-        page_layout = layout.get(page_name, {"regions": [], "page_size": [0, 0]})
-        regions = page_layout.get("regions", [])
-        page_size = page_layout.get("page_size", [0, 0])
-
-        # Sort regions in reading order & remove overlaps
-        if regions and page_size[0] > 0:
-            regions = remove_overlaps(regions)
-            regions = sort_reading_order(regions, page_size[0])
-            page_layout = {"regions": regions, "page_size": page_size}
-
-        # Run layout-aware OCR
-        ocr_results = ocr_by_layout(
-            str(page_path),
-            page_layout,
-            base_url=ollama_url,
-            timeout=ocr_timeout,
-        )
-
-        # Check if fallback was used
-        if ocr_results and ocr_results[0].region_type == "FALLBACK":
-            print(f"    → Fallback: page-level OCR (low coverage or detection failure)")
-        else:
-            print(f"    → Processed {len(ocr_results)} regions")
-
-        # Write individual page result immediately
-        page_text_file = ocr_texts_dir / f"{page_stem}.txt"
-        with open(page_text_file, "w", encoding="utf-8") as f:
-            for result in ocr_results:
-                f.write(result.formatted)
-                f.write("\n\n")
-        print(f"    → Saved: {page_text_file.name}")
-
-        all_ocr_results.append((page_name, ocr_results))
-
-    # Write combined OCR results to book.txt
-    with open(text_file, "w", encoding="utf-8") as f:
-        for page_name, ocr_results in all_ocr_results:
-            f.write(f"\n--- Page: {page_name} ---\n\n")
-            for result in ocr_results:
-                f.write(result.formatted)
-                f.write("\n\n")
+    run_layout_ocr(
+        pages_dir=pages_dir,
+        layout_data=layout,
+        output_file=text_file,
+        base_url=ollama_url,
+        timeout=ocr_timeout,
+        model=ocr_model,
+    )
 
     # Step 5: Describe figures with VLM
     print("\n" + "=" * 60)

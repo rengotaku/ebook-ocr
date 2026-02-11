@@ -29,6 +29,7 @@ import requests
 from PIL import Image
 
 from src.utils import encode_pil_image
+from src.reading_order import sort_reading_order, remove_overlaps
 
 
 def warm_up_model(
@@ -382,6 +383,106 @@ def ocr_by_layout(
     return results
 
 
+def run_layout_ocr(
+    pages_dir: str,
+    layout_data: dict,
+    output_file: str,
+    base_url: str = "http://localhost:11434",
+    timeout: int = 120,
+    model: str = "deepseek-ocr",
+    warmup: bool = True,
+    warmup_timeout: int = 300,
+) -> list[tuple[str, list[OCRResult]]]:
+    """Run layout-aware OCR on all pages in a directory.
+
+    This is the main entry point for OCR processing. It handles:
+    - Model warmup
+    - Reading order sorting
+    - Per-page OCR processing
+    - Individual and combined result output
+
+    Args:
+        pages_dir: Directory containing page images.
+        layout_data: Layout detection results (from layout.json).
+        output_file: Path for combined output text file.
+        base_url: Ollama API base URL.
+        timeout: Per-region OCR timeout in seconds.
+        model: OCR model name for warmup.
+        warmup: Whether to warm up the model before processing.
+        warmup_timeout: Warmup timeout in seconds.
+
+    Returns:
+        List of (page_name, ocr_results) tuples.
+    """
+    pages_path = Path(pages_dir)
+    output_path = Path(output_file)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Model warmup
+    if warmup:
+        print("  Warming up OCR model...")
+        warm_up_model(model, base_url, timeout=warmup_timeout)
+        print("  Model ready.")
+
+    # Create ocr_texts directory for individual page results
+    ocr_texts_dir = output_path.parent / "ocr_texts"
+    ocr_texts_dir.mkdir(parents=True, exist_ok=True)
+
+    pages = sorted(pages_path.glob("*.png"))
+    all_results: list[tuple[str, list[OCRResult]]] = []
+
+    for page_path in pages:
+        page_name = page_path.name
+        page_stem = page_path.stem
+        print(f"  Processing {page_name}...")
+
+        # Get layout for this page
+        page_layout = layout_data.get(page_name, {"regions": [], "page_size": [0, 0]})
+        regions = page_layout.get("regions", [])
+        page_size = page_layout.get("page_size", [0, 0])
+
+        # Sort regions in reading order & remove overlaps
+        if regions and page_size[0] > 0:
+            regions = remove_overlaps(regions)
+            regions = sort_reading_order(regions, page_size[0])
+            page_layout = {"regions": regions, "page_size": page_size}
+
+        # Run layout-aware OCR
+        ocr_results = ocr_by_layout(
+            str(page_path),
+            page_layout,
+            base_url=base_url,
+            timeout=timeout,
+        )
+
+        # Report status
+        if ocr_results and ocr_results[0].region_type == "FALLBACK":
+            print(f"    → Fallback: page-level OCR (low coverage or detection failure)")
+        else:
+            print(f"    → Processed {len(ocr_results)} regions")
+
+        # Write individual page result immediately
+        page_text_file = ocr_texts_dir / f"{page_stem}.txt"
+        with open(page_text_file, "w", encoding="utf-8") as f:
+            for result in ocr_results:
+                f.write(result.formatted)
+                f.write("\n\n")
+        print(f"    → Saved: {page_text_file.name}")
+
+        all_results.append((page_name, ocr_results))
+
+    # Write combined results
+    with open(output_file, "w", encoding="utf-8") as f:
+        for page_name, ocr_results in all_results:
+            f.write(f"\n--- Page: {page_name} ---\n\n")
+            for result in ocr_results:
+                f.write(result.formatted)
+                f.write("\n\n")
+
+    print(f"  OCR complete. Output saved to: {output_file}")
+    return all_results
+
+
 def main() -> None:
     """CLI interface for layout-aware OCR."""
     import argparse
@@ -408,63 +509,19 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Warm up models before processing
-    if not args.no_warmup:
-        print("Warming up OCR models...")
-        warm_up_model("deepseek-ocr", args.base_url, timeout=300)
-
     # Load layout.json
     with open(args.layout) as f:
         layout_data = json.load(f)
 
-    # Process each page
-    pages_dir = Path(args.pages_dir)
-    pages = sorted(pages_dir.glob("*.png"))
-
-    # Create ocr_texts directory for individual page results
-    output_path = Path(args.output)
-    ocr_texts_dir = output_path.parent / "ocr_texts"
-    ocr_texts_dir.mkdir(parents=True, exist_ok=True)
-
-    all_results = []
-    for page_path in pages:
-        page_name = page_path.name
-        page_stem = page_path.stem
-        print(f"Processing {page_name}...")
-
-        page_layout = layout_data.get(page_name, {"regions": [], "page_size": [0, 0]})
-
-        ocr_results = ocr_by_layout(
-            str(page_path),
-            page_layout,
-            base_url=args.base_url,
-            timeout=args.timeout,
-        )
-
-        if ocr_results and ocr_results[0].region_type == "FALLBACK":
-            print(f"  → Fallback: page-level OCR")
-        else:
-            print(f"  → Processed {len(ocr_results)} regions")
-
-        # Write individual page result immediately
-        page_text_file = ocr_texts_dir / f"{page_stem}.txt"
-        with open(page_text_file, "w", encoding="utf-8") as f:
-            for result in ocr_results:
-                f.write(result.formatted)
-                f.write("\n\n")
-        print(f"  → Saved: {page_text_file.name}")
-
-        all_results.append((page_name, ocr_results))
-
-    # Write combined results
-    with open(args.output, "w", encoding="utf-8") as f:
-        for page_name, ocr_results in all_results:
-            f.write(f"\n--- Page: {page_name} ---\n\n")
-            for result in ocr_results:
-                f.write(result.formatted)
-                f.write("\n\n")
-
-    print(f"\nOCR complete. Output saved to: {args.output}")
+    # Run OCR
+    run_layout_ocr(
+        pages_dir=args.pages_dir,
+        layout_data=layout_data,
+        output_file=args.output,
+        base_url=args.base_url,
+        timeout=args.timeout,
+        warmup=not args.no_warmup,
+    )
 
 
 if __name__ == "__main__":
