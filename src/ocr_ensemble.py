@@ -31,6 +31,7 @@ from src.utils import encode_pil_image
 # Lazy imports for optional dependencies
 _tesseract = None
 _easyocr_reader = None
+_paddleocr_reader = None
 
 
 def _get_tesseract():
@@ -50,6 +51,26 @@ def _get_easyocr_reader(lang_list: list[str] | None = None):
         langs = lang_list or ["ja", "en"]
         _easyocr_reader = easyocr.Reader(langs, gpu=False)
     return _easyocr_reader
+
+
+def _get_paddleocr_reader(lang: str = "japan"):
+    """Lazy import and initialization for PaddleOCR 3.x."""
+    global _paddleocr_reader
+    if _paddleocr_reader is None:
+        import logging
+        # Suppress PaddleOCR verbose logging
+        logging.getLogger("ppocr").setLevel(logging.WARNING)
+        from paddleocr import PaddleOCR
+        # PaddleOCR 3.x: disable oneDNN to avoid PIR conversion bug
+        # See: https://github.com/PaddlePaddle/PaddleOCR/issues/17539
+        _paddleocr_reader = PaddleOCR(
+            lang=lang,
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+            enable_mkldnn=False,  # Workaround for PaddlePaddle 3.3.0 bug
+        )
+    return _paddleocr_reader
 
 
 @dataclass
@@ -102,6 +123,101 @@ def ocr_easyocr(
         return EngineResult(engine="easyocr", text="", success=False, error=str(e))
 
 
+def ocr_paddleocr(
+    image: Image.Image,
+    lang: str = "japan",
+) -> EngineResult:
+    """Run PaddleOCR 3.x on an image.
+
+    Args:
+        image: PIL Image to process.
+        lang: Language code for PaddleOCR (japan, en, ch, etc.)
+
+    Returns:
+        EngineResult with OCR text.
+    """
+    try:
+        import numpy as np
+        reader = _get_paddleocr_reader(lang)
+        # Convert PIL to numpy array
+        img_array = np.array(image)
+
+        # PaddleOCR 3.x uses predict()
+        result = reader.predict(img_array)
+
+        # Extract text from PaddleOCR 3.x result
+        # Result is list of OCRResult (dict-like) with 'rec_texts' key
+        lines = []
+        if result:
+            for res in result:
+                # PaddleOCR 3.x: dict-like access with 'rec_texts' key
+                if "rec_texts" in res:
+                    lines.extend(res["rec_texts"])
+
+        text = "\n".join(lines)
+        return EngineResult(engine="paddleocr", text=text.strip(), success=True)
+    except Exception as e:
+        return EngineResult(engine="paddleocr", text="", success=False, error=str(e))
+
+
+@dataclass
+class TextWithBox:
+    """Text with bounding box information."""
+    text: str
+    bbox: list[int]  # [x1, y1, x2, y2]
+    confidence: float = 0.0
+
+
+def ocr_paddleocr_with_boxes(
+    image: Image.Image,
+    lang: str = "japan",
+) -> tuple[list[TextWithBox], bool, str | None]:
+    """Run PaddleOCR 3.x and return text with position info.
+
+    Args:
+        image: PIL Image to process.
+        lang: Language code for PaddleOCR.
+
+    Returns:
+        Tuple of (list of TextWithBox, success, error_message)
+    """
+    try:
+        import numpy as np
+        reader = _get_paddleocr_reader(lang)
+        img_array = np.array(image)
+
+        result = reader.predict(img_array)
+
+        items: list[TextWithBox] = []
+        if result:
+            for res in result:
+                texts = res.get("rec_texts", [])
+                scores = res.get("rec_scores", [])
+                polys = res.get("rec_polys", [])
+
+                for i, text in enumerate(texts):
+                    # Convert polygon to bbox [x1, y1, x2, y2]
+                    if i < len(polys):
+                        poly = polys[i]
+                        x_coords = [p[0] for p in poly]
+                        y_coords = [p[1] for p in poly]
+                        bbox = [min(x_coords), min(y_coords), max(x_coords), max(y_coords)]
+                    else:
+                        bbox = [0, 0, 0, 0]
+
+                    confidence = scores[i] if i < len(scores) else 0.0
+
+                    items.append(TextWithBox(
+                        text=text,
+                        bbox=bbox,
+                        confidence=confidence,
+                    ))
+
+        return items, True, None
+    except Exception as e:
+        return [], False, str(e)
+
+
 def ocr_deepseek(
     image: Image.Image,
     base_url: str = "http://localhost:11434",
@@ -137,6 +253,138 @@ def ocr_deepseek(
         return EngineResult(engine="deepseek", text=text, success=True)
     except Exception as e:
         return EngineResult(engine="deepseek", text="", success=False, error=str(e))
+
+
+def is_garbage(text: str, min_length: int = 50, ja_ratio_threshold: float = 0.1) -> bool:
+    """Check if OCR result is garbage/invalid.
+
+    Detection rules:
+    1. Same character repeated 10+ times
+    2. Japanese character ratio too low (for Japanese documents)
+    3. Too many special characters
+
+    Args:
+        text: OCR result text.
+        min_length: Minimum text length to check ratio (short texts are not checked).
+        ja_ratio_threshold: Minimum Japanese character ratio.
+
+    Returns:
+        True if text appears to be garbage.
+    """
+    import re
+
+    if not text:
+        return True
+
+    # Rule 1: Same character repeated 10+ times
+    if re.search(r'(.)\1{9,}', text):
+        return True
+
+    # Rule 2: Japanese character ratio too low (only for longer texts)
+    if len(text) >= min_length:
+        ja_chars = len(re.findall(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]', text))
+        ja_ratio = ja_chars / len(text)
+        if ja_ratio < ja_ratio_threshold:
+            return True
+
+    # Rule 3: Too many consecutive special characters
+    if re.search(r'[^\w\s\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]{10,}', text):
+        return True
+
+    return False
+
+
+def bbox_iou(bbox1: list[int], bbox2: list[int]) -> float:
+    """Calculate Intersection over Union (IoU) of two bboxes.
+
+    Args:
+        bbox1: [x1, y1, x2, y2]
+        bbox2: [x1, y1, x2, y2]
+
+    Returns:
+        IoU value (0.0 - 1.0)
+    """
+    x1 = max(bbox1[0], bbox2[0])
+    y1 = max(bbox1[1], bbox2[1])
+    x2 = min(bbox1[2], bbox2[2])
+    y2 = min(bbox1[3], bbox2[3])
+
+    if x2 <= x1 or y2 <= y1:
+        return 0.0
+
+    # Use float to avoid overflow
+    intersection = float(x2 - x1) * float(y2 - y1)
+    area1 = float(bbox1[2] - bbox1[0]) * float(bbox1[3] - bbox1[1])
+    area2 = float(bbox2[2] - bbox2[0]) * float(bbox2[3] - bbox2[1])
+    union = area1 + area2 - intersection
+
+    return intersection / union if union > 0 else 0.0
+
+
+def bbox_contains(outer: list[int], inner: list[int], threshold: float = 0.7) -> bool:
+    """Check if outer bbox contains inner bbox.
+
+    Args:
+        outer: [x1, y1, x2, y2] - the containing bbox
+        inner: [x1, y1, x2, y2] - the bbox to check
+        threshold: Minimum overlap ratio of inner bbox
+
+    Returns:
+        True if inner is mostly contained in outer
+    """
+    x1 = max(outer[0], inner[0])
+    y1 = max(outer[1], inner[1])
+    x2 = min(outer[2], inner[2])
+    y2 = min(outer[3], inner[3])
+
+    if x2 <= x1 or y2 <= y1:
+        return False
+
+    # Use float to avoid overflow
+    intersection = float(x2 - x1) * float(y2 - y1)
+    inner_area = float(inner[2] - inner[0]) * float(inner[3] - inner[1])
+
+    return (intersection / inner_area) >= threshold if inner_area > 0 else False
+
+
+def create_text_mask(
+    image: Image.Image,
+    regions: list[dict],
+    text_types: list[str] | None = None,
+    fill_color: str = "white",
+) -> Image.Image:
+    """Create masked image with only TEXT-like regions visible.
+
+    Strategy: Start with white canvas, paste only TEXT regions from original.
+    This ensures everything outside TEXT regions is masked.
+
+    Args:
+        image: Original PIL Image.
+        regions: List of region dicts with "type" and "bbox" keys.
+        text_types: Region types to keep visible. Default: ["TEXT", "TITLE", "CAPTION", "FOOTNOTE"]
+        fill_color: Color to fill masked areas.
+
+    Returns:
+        Masked PIL Image with only text regions visible.
+    """
+    if text_types is None:
+        text_types = ["TEXT", "TITLE", "CAPTION", "FOOTNOTE"]
+
+    # Start with white canvas
+    masked = Image.new("RGB", image.size, color=fill_color)
+
+    # Paste only TEXT regions from original image
+    for region in regions:
+        region_type = region.get("type", "")
+        if region_type in text_types:
+            bbox = region.get("bbox", [])
+            if len(bbox) == 4:
+                x1, y1, x2, y2 = bbox
+                # Crop from original and paste to masked
+                text_region = image.crop((x1, y1, x2, y2))
+                masked.paste(text_region, (x1, y1))
+
+    return masked
 
 
 def calculate_similarity(text1: str, text2: str) -> float:
@@ -267,18 +515,20 @@ def ocr_ensemble(
     timeout: int = 120,
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
+    paddleocr_lang: str = "japan",
     similarity_threshold: float = 0.7,
 ) -> EnsembleResult:
     """Run ensemble OCR with multiple engines.
 
     Args:
         image: PIL Image or path to image file.
-        engines: List of engines to use. Default: ["deepseek", "tesseract", "easyocr"]
+        engines: List of engines to use. Default: ["deepseek", "paddleocr", "tesseract", "easyocr"]
         base_url: Ollama API base URL for DeepSeek.
         model: DeepSeek model name.
         timeout: DeepSeek request timeout.
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
+        paddleocr_lang: PaddleOCR language code.
         similarity_threshold: Threshold for voting agreement.
 
     Returns:
@@ -288,7 +538,7 @@ def ocr_ensemble(
         image = Image.open(image)
 
     if engines is None:
-        engines = ["deepseek", "tesseract", "easyocr"]
+        engines = ["deepseek", "paddleocr", "tesseract", "easyocr"]
 
     results: dict[str, str] = {}
 
@@ -300,6 +550,8 @@ def ocr_ensemble(
             result = ocr_tesseract(image, tesseract_lang)
         elif engine == "easyocr":
             result = ocr_easyocr(image, easyocr_langs)
+        elif engine == "paddleocr":
+            result = ocr_paddleocr(image, paddleocr_lang)
         else:
             continue
 

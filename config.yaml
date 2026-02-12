@@ -13,7 +13,7 @@ threshold: 8
 
 # OCR (DeepSeek)
 ocr_model: deepseek-ocr
-ocr_timeout: 60
+ocr_timeout: 120
 ocr_options:
   temperature: 0.1
   num_predict: 4096
@@ -48,5 +48,5 @@ warmup_timeout: 300        # モデルウォームアップのタイムアウト
 # Spread splitting (見開き分割)
 split_spreads: true        # 見開き画像を左右に分割
 spread_aspect_ratio: 1.2   # 見開き判定の縦横比しきい値（幅/高さ >= 1.2 で見開き）
-spread_left_trim: 0.03     # 左ページの左端をトリム（3% = 0.03）
-spread_right_trim: 0.03    # 右ページの右端をトリム（3% = 0.03）
+spread_left_trim: 0.15     # 左ページの左端をトリム（3% = 0.03）
+spread_right_trim: 0.15    # 右ページの右端をトリム（3% = 0.03）

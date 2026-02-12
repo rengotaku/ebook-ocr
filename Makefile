@@ -25,7 +25,7 @@ HASHDIR ?=
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract split-spreads detect layout-ocr ocr ensemble-ocr test test-book-converter test-cov converter convert-sample clean clean-all
+.PHONY: help setup run extract split-spreads detect layout-ocr ocr ensemble-ocr integrated-ocr test test-book-converter test-cov converter convert-sample clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -63,9 +63,13 @@ ocr: setup ## Run DeepSeek-OCR on pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make ocr HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_deepseek.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt"
 
-ensemble-ocr: setup ## Run ensemble OCR (DeepSeek + Tesseract) (requires HASHDIR)
+ensemble-ocr: setup ## Run ensemble OCR (DeepSeek + Tesseract + EasyOCR + PaddleOCR) (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make ensemble-ocr HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_ensemble.py "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_texts"
+
+integrated-ocr: setup ## Run integrated OCR with layout masking (requires HASHDIR, optional SAVE_MASKS=1)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make integrated-ocr HASHDIR=output/<hash> [SAVE_MASKS=1]"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.ocr_integrated "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_texts" --layout "$(HASHDIR)/layout.json" $(if $(SAVE_MASKS),--save-masks)
 
 test: setup ## Run tests
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v
