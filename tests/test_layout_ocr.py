@@ -6,12 +6,12 @@ These tests will FAIL until src/layout_ocr.py is implemented.
 OCR Engine Selection Rules (from research.md):
 | Region Type | OCR Engine | Output Format |
 |-------------|------------|---------------|
-| TITLE | DeepSeek-OCR | `## {text}` |
-| TEXT | DeepSeek-OCR | `{text}` |
-| TABLE | DeepSeek-OCR | Markdown table |
+| TITLE | Yomitoku | `## {text}` |
+| TEXT | Yomitoku | `{text}` |
+| TABLE | Yomitoku | Markdown table |
 | FIGURE | VLM (gemma3:12b) | `[FIGURE: {description}]` |
-| CAPTION | DeepSeek-OCR | `*{text}*` |
-| FOOTNOTE | DeepSeek-OCR | `^{text}^` |
+| CAPTION | Yomitoku | `*{text}*` |
+| FOOTNOTE | Yomitoku | `^{text}^` |
 | FORMULA | Skip or OCR | `$${text}$$` |
 | ABANDON | Skip | None |
 """
@@ -28,28 +28,28 @@ from PIL import Image
 class TestSelectOcrEngine:
     """OCRエンジン選択ロジックのテスト。"""
 
-    def test_select_ocr_engine_text_returns_deepseek(self) -> None:
-        """TEXT領域に対してDeepSeek-OCRが選択されることを検証。"""
+    def test_select_ocr_engine_text_returns_yomitoku(self) -> None:
+        """TEXT領域に対してYomitokuが選択されることを検証。"""
         from src.layout_ocr import select_ocr_engine
 
         # Act
         engine = select_ocr_engine("TEXT")
 
         # Assert
-        assert engine == "deepseek-ocr", (
-            f"TEXT region should use deepseek-ocr engine. Got: {engine}"
+        assert engine == "yomitoku", (
+            f"TEXT region should use yomitoku engine. Got: {engine}"
         )
 
-    def test_select_ocr_engine_title_returns_deepseek(self) -> None:
-        """TITLE領域に対してDeepSeek-OCRが選択されることを検証。"""
+    def test_select_ocr_engine_title_returns_yomitoku(self) -> None:
+        """TITLE領域に対してYomitokuが選択されることを検証。"""
         from src.layout_ocr import select_ocr_engine
 
         # Act
         engine = select_ocr_engine("TITLE")
 
         # Assert
-        assert engine == "deepseek-ocr", (
-            f"TITLE region should use deepseek-ocr engine. Got: {engine}"
+        assert engine == "yomitoku", (
+            f"TITLE region should use yomitoku engine. Got: {engine}"
         )
 
     def test_select_ocr_engine_figure_returns_vlm(self) -> None:
@@ -64,52 +64,52 @@ class TestSelectOcrEngine:
             f"FIGURE region should use vlm engine. Got: {engine}"
         )
 
-    def test_select_ocr_engine_table_returns_deepseek(self) -> None:
-        """TABLE領域に対してDeepSeek-OCRが選択されることを検証。"""
+    def test_select_ocr_engine_table_returns_yomitoku(self) -> None:
+        """TABLE領域に対してYomitokuが選択されることを検証。"""
         from src.layout_ocr import select_ocr_engine
 
         # Act
         engine = select_ocr_engine("TABLE")
 
         # Assert
-        assert engine == "deepseek-ocr", (
-            f"TABLE region should use deepseek-ocr engine. Got: {engine}"
+        assert engine == "yomitoku", (
+            f"TABLE region should use yomitoku engine. Got: {engine}"
         )
 
-    def test_select_ocr_engine_caption_returns_deepseek(self) -> None:
-        """CAPTION領域に対してDeepSeek-OCRが選択されることを検証。"""
+    def test_select_ocr_engine_caption_returns_yomitoku(self) -> None:
+        """CAPTION領域に対してYomitokuが選択されることを検証。"""
         from src.layout_ocr import select_ocr_engine
 
         # Act
         engine = select_ocr_engine("CAPTION")
 
         # Assert
-        assert engine == "deepseek-ocr", (
-            f"CAPTION region should use deepseek-ocr engine. Got: {engine}"
+        assert engine == "yomitoku", (
+            f"CAPTION region should use yomitoku engine. Got: {engine}"
         )
 
-    def test_select_ocr_engine_footnote_returns_deepseek(self) -> None:
-        """FOOTNOTE領域に対してDeepSeek-OCRが選択されることを検証。"""
+    def test_select_ocr_engine_footnote_returns_yomitoku(self) -> None:
+        """FOOTNOTE領域に対してYomitokuが選択されることを検証。"""
         from src.layout_ocr import select_ocr_engine
 
         # Act
         engine = select_ocr_engine("FOOTNOTE")
 
         # Assert
-        assert engine == "deepseek-ocr", (
-            f"FOOTNOTE region should use deepseek-ocr engine. Got: {engine}"
+        assert engine == "yomitoku", (
+            f"FOOTNOTE region should use yomitoku engine. Got: {engine}"
         )
 
-    def test_select_ocr_engine_formula_returns_deepseek(self) -> None:
-        """FORMULA領域に対してDeepSeek-OCRが選択されることを検証。"""
+    def test_select_ocr_engine_formula_returns_yomitoku(self) -> None:
+        """FORMULA領域に対してYomitokuが選択されることを検証。"""
         from src.layout_ocr import select_ocr_engine
 
         # Act
         engine = select_ocr_engine("FORMULA")
 
         # Assert
-        assert engine == "deepseek-ocr", (
-            f"FORMULA region should use deepseek-ocr engine. Got: {engine}"
+        assert engine == "yomitoku", (
+            f"FORMULA region should use yomitoku engine. Got: {engine}"
         )
 
     def test_select_ocr_engine_abandon_returns_skip(self) -> None:
@@ -321,38 +321,26 @@ class TestCropRegion:
 
 
 class TestTextRegionOcr:
-    """TEXT領域のOCRテスト（DeepSeek-OCR使用）。"""
+    """TEXT領域のOCRテスト（Yomitoku使用）。"""
 
-    def test_text_region_uses_deepseek_ocr(self, tmp_path: Path) -> None:
-        """TEXT領域がDeepSeek-OCRで処理されることを検証。"""
+    def test_text_region_uses_yomitoku(self, tmp_path: Path) -> None:
+        """TEXT領域がYomitokuで処理されることを検証。"""
         from src.layout_ocr import ocr_region
 
         # Arrange
-        img_path = tmp_path / "test_page.png"
         img = Image.new("RGB", (500, 200), color=(255, 255, 255))
-        img.save(img_path)
-
         region = {
             "type": "TEXT",
             "bbox": [10, 10, 490, 190],
             "confidence": 0.9,
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "テキスト内容"}}
-        mock_response.raise_for_status = MagicMock()
-
-        # Act & Assert
-        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
+        # Act & Assert: ocr_page_yomitoku をモック
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="テキスト内容") as mock_ocr:
             result = ocr_region(img, region)
 
-            # DeepSeek-OCRが呼ばれたことを確認
-            call_args = mock_post.call_args
-            assert call_args is not None, "requests.post should be called"
-            payload = call_args.kwargs.get("json") or call_args[1].get("json")
-            assert payload["model"] == "deepseek-ocr", (
-                f"TEXT region should use deepseek-ocr model. Got: {payload['model']}"
-            )
+            # Yomitokuが呼ばれたことを確認
+            assert mock_ocr.called, "ocr_page_yomitoku should be called for TEXT region"
 
     def test_text_region_ocr_result_format(self, tmp_path: Path) -> None:
         """TEXT領域のOCR結果がフォーマットされることを検証。"""
@@ -366,12 +354,8 @@ class TestTextRegionOcr:
             "confidence": 0.9,
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "これは本文です。"}}
-        mock_response.raise_for_status = MagicMock()
-
-        # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        # Act: ocr_page_yomitoku をモック
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="これは本文です。"):
             result = ocr_region(img, region)
 
         # Assert: TEXTはそのまま出力
@@ -413,8 +397,8 @@ class TestFigureRegionOcr:
             assert call_args is not None, "requests.post should be called for VLM"
             payload = call_args.kwargs.get("json") or call_args[1].get("json")
             # VLMモデル（gemma3:12bなど）が使われることを確認
-            assert payload["model"] != "deepseek-ocr", (
-                f"FIGURE region should NOT use deepseek-ocr. Got: {payload['model']}"
+            assert payload["model"] != "yomitoku", (
+                f"FIGURE region should NOT use yomitoku. Got: {payload['model']}"
             )
 
     def test_figure_region_ocr_result_format(self) -> None:
@@ -451,8 +435,8 @@ class TestFigureRegionOcr:
 class TestTitleRegionOcr:
     """TITLE領域のOCRテスト。"""
 
-    def test_title_region_uses_deepseek_ocr(self) -> None:
-        """TITLE領域がDeepSeek-OCRで処理されることを検証。"""
+    def test_title_region_uses_yomitoku(self) -> None:
+        """TITLE領域がYomitokuで処理されることを検証。"""
         from src.layout_ocr import ocr_region
 
         # Arrange
@@ -463,19 +447,12 @@ class TestTitleRegionOcr:
             "confidence": 0.98,
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "第2章 システム設計"}}
-        mock_response.raise_for_status = MagicMock()
-
-        # Act & Assert
-        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
+        # Act & Assert: ocr_page_yomitoku をモック
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="第2章 システム設計") as mock_ocr:
             result = ocr_region(img, region)
 
-            call_args = mock_post.call_args
-            payload = call_args.kwargs.get("json") or call_args[1].get("json")
-            assert payload["model"] == "deepseek-ocr", (
-                f"TITLE region should use deepseek-ocr. Got: {payload['model']}"
-            )
+            # Yomitokuが呼ばれたことを確認
+            assert mock_ocr.called, "ocr_page_yomitoku should be called for TITLE region"
 
     def test_title_region_formatted_as_heading(self) -> None:
         """TITLE領域のOCR結果が見出しマークアップで出力されることを検証。"""
@@ -489,12 +466,8 @@ class TestTitleRegionOcr:
             "confidence": 0.98,
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "第3章 実装"}}
-        mock_response.raise_for_status = MagicMock()
-
-        # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        # Act: ocr_page_yomitoku をモック
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="第3章 実装"):
             result = ocr_region(img, region)
 
         # Assert
@@ -676,12 +649,8 @@ class TestOcrByLayoutEdgeCases:
         # Unicode text with various characters
         unicode_text = "日本語テキスト。\n絵文字テスト。\nSpecial: '\"\\/n"
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": unicode_text}}
-        mock_response.raise_for_status = MagicMock()
-
-        # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        # Act: ocr_page_yomitoku をモック
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=unicode_text):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert
@@ -1031,7 +1000,7 @@ class TestFallbackEmptyLayout:
         US4 Acceptance Scenario 1:
         Given レイアウト検出で領域が検出されなかったページがある
         When 領域別OCRを実行する
-        Then ページ全体に対してDeepSeek-OCRが実行される
+        Then ページ全体に対してYomitokuが実行される
         """
         from src.layout_ocr import ocr_by_layout
 
@@ -1045,12 +1014,8 @@ class TestFallbackEmptyLayout:
             "page_size": [800, 600],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "ページ全体のOCR結果"}}
-        mock_response.raise_for_status = MagicMock()
-
-        # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
+        # Act: ocr_page_yomitoku をモック
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="ページ全体のOCR結果") as mock_ocr:
             results = ocr_by_layout(str(img_path), layout)
 
             # Assert: フォールバックでページ全体OCRが実行される
@@ -1061,13 +1026,8 @@ class TestFallbackEmptyLayout:
             assert results[0].region_type in ("FALLBACK", "TEXT"), (
                 f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
             )
-            # DeepSeek-OCRが呼ばれたことを確認
-            assert mock_post.called, "requests.post should be called for fallback OCR"
-            call_args = mock_post.call_args
-            payload = call_args.kwargs.get("json") or call_args[1].get("json")
-            assert payload["model"] == "deepseek-ocr", (
-                f"Fallback should use deepseek-ocr. Got: {payload['model']}"
-            )
+            # Yomitokuが呼ばれたことを確認
+            assert mock_ocr.called, "ocr_page_yomitoku should be called for fallback OCR"
 
     def test_ocr_by_layout_fallback_missing_regions_key(self, tmp_path: Path) -> None:
         """regionsキーがない場合もフォールバックが実行されることを検証。"""
@@ -1083,12 +1043,8 @@ class TestFallbackEmptyLayout:
             # "regions" key is missing
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "フォールバックOCR結果"}}
-        mock_response.raise_for_status = MagicMock()
-
-        # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        # Act: ocr_page_yomitoku をモック
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="フォールバックOCR結果"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert
@@ -1106,7 +1062,7 @@ class TestFallbackLowCoverage:
         US4 Acceptance Scenario 2:
         Given 検出領域がページ面積の30%未満のページがある
         When 領域別OCRを実行する
-        Then ページ全体に対してDeepSeek-OCRが実行される
+        Then ページ全体に対してYomitokuが実行される
         """
         from src.layout_ocr import ocr_by_layout
 

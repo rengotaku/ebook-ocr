@@ -1,6 +1,6 @@
-"""V3 pipeline: video → frames → dedup → detect → DeepSeek-OCR → VLM figure description.
+"""V3 pipeline: video → frames → dedup → detect → Yomitoku OCR → VLM figure description.
 
-No preprocessing step needed - DeepSeek-OCR handles raw page images directly.
+No preprocessing step needed - Yomitoku handles raw page images directly.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ def run_pipeline(
     output_base: str = "output",
     interval: float = 1.5,
     hash_threshold: int = 8,
-    ocr_model: str = "deepseek-ocr",
+    yomitoku_device: str = "cpu",
     vlm_model: str = "gemma3:12b",
     ollama_url: str = "http://localhost:11434",
     ocr_timeout: int = 60,
@@ -39,7 +39,6 @@ def run_pipeline(
     spread_aspect_ratio: float = 1.2,
     spread_left_trim: float = 0.0,
     spread_right_trim: float = 0.0,
-    ocr_options: dict | None = None,
     vlm_options: dict | None = None,
 ) -> None:
     """Run the full video-to-markdown pipeline (v3 with layout-aware OCR).
@@ -54,7 +53,7 @@ def run_pipeline(
         output_base: Base output directory.
         interval: Frame extraction interval in seconds.
         hash_threshold: Perceptual hash threshold for dedup.
-        ocr_model: Ollama model for OCR (default: deepseek-ocr).
+        yomitoku_device: Device for Yomitoku OCR ("cpu" or "cuda").
         vlm_model: Ollama vision model for figure description.
         ollama_url: Ollama API base URL.
         ocr_timeout: Per-page OCR timeout in seconds.
@@ -67,7 +66,6 @@ def run_pipeline(
         spread_aspect_ratio: Aspect ratio threshold for spread detection (default: 1.2).
         spread_left_trim: Percentage to trim from left edge of left page (default: 0.0).
         spread_right_trim: Percentage to trim from right edge of right page (default: 0.0).
-        ocr_options: Ollama generation options for OCR model.
         vlm_options: Ollama generation options for VLM model.
     """
     if not Path(video_path).exists():
@@ -131,7 +129,7 @@ def run_pipeline(
 
     # Step 4: Layout-aware OCR (region-based processing)
     print("\n" + "=" * 60)
-    print(f"Step 4: Running layout-aware OCR ({ocr_model})")
+    print(f"Step 4: Running layout-aware OCR (Yomitoku, device={yomitoku_device})")
     print("=" * 60)
 
     run_layout_ocr(
@@ -140,7 +138,7 @@ def run_pipeline(
         output_file=text_file,
         base_url=ollama_url,
         timeout=ocr_timeout,
-        model=ocr_model,
+        yomitoku_device=yomitoku_device,
     )
 
     # Step 5: Describe figures with VLM
@@ -180,13 +178,13 @@ def main() -> None:
     cfg = load_config()
 
     parser = argparse.ArgumentParser(
-        description="Extract text from e-book screen recording (v3 - DeepSeek-OCR + VLM figures)",
+        description="Extract text from e-book screen recording (v3 - Yomitoku OCR + VLM figures)",
     )
     parser.add_argument("video", help="Input video file path")
     parser.add_argument("-o", "--output", default=cfg.get("output", "output"), help="Base output directory")
     parser.add_argument("-i", "--interval", type=float, default=cfg.get("interval", 1.5), help="Frame interval in seconds")
     parser.add_argument("-t", "--threshold", type=int, default=cfg.get("threshold", 8), help="Dedup hash threshold")
-    parser.add_argument("--ocr-model", default=cfg.get("ocr_model", "deepseek-ocr"), help="Ollama OCR model")
+    parser.add_argument("--device", default=cfg.get("yomitoku_device", "cpu"), choices=["cpu", "cuda"], help="Yomitoku device")
     parser.add_argument("--vlm-model", default=cfg.get("vlm_model", "gemma3:12b"), help="Ollama VLM for figures")
     parser.add_argument("--ollama-url", default=cfg.get("ollama_url", "http://localhost:11434"), help="Ollama API URL")
     parser.add_argument("--ocr-timeout", type=int, default=cfg.get("ocr_timeout", 60), help="Per-page OCR timeout")
@@ -206,7 +204,7 @@ def main() -> None:
         output_base=args.output,
         interval=args.interval,
         hash_threshold=args.threshold,
-        ocr_model=args.ocr_model,
+        yomitoku_device=args.device,
         vlm_model=args.vlm_model,
         ollama_url=args.ollama_url,
         ocr_timeout=args.ocr_timeout,
@@ -219,7 +217,6 @@ def main() -> None:
         spread_aspect_ratio=args.spread_aspect_ratio,
         spread_left_trim=args.spread_left_trim,
         spread_right_trim=args.spread_right_trim,
-        ocr_options=cfg.get("ocr_options"),
         vlm_options=cfg.get("vlm_options"),
     )
 

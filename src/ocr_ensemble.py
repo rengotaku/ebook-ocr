@@ -4,13 +4,14 @@ This module runs multiple OCR engines and merges results using voting
 to achieve higher accuracy than any single engine alone.
 
 Supported engines:
-- DeepSeek-OCR (LLM-based, via Ollama)
+- Yomitoku (Japanese-specialized Document AI)
 - Tesseract (traditional, system install required)
 - EasyOCR (neural network-based, pip install)
+- PaddleOCR (neural network-based)
 
 Output files:
 - ocr_texts/{page}.txt           - Final merged result
-- ocr_texts/{page}_deepseek.txt  - DeepSeek-OCR result
+- ocr_texts/{page}_yomitoku.txt  - Yomitoku result
 - ocr_texts/{page}_tesseract.txt - Tesseract result
 - ocr_texts/{page}_easyocr.txt   - EasyOCR result
 """
@@ -22,16 +23,14 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Callable
 
-import requests
 from PIL import Image
-
-from src.utils import encode_pil_image
 
 
 # Lazy imports for optional dependencies
 _tesseract = None
 _easyocr_reader = None
 _paddleocr_reader = None
+_yomitoku_analyzer = None
 
 
 def _get_tesseract():
@@ -71,6 +70,18 @@ def _get_paddleocr_reader(lang: str = "japan"):
             enable_mkldnn=False,  # Workaround for PaddlePaddle 3.3.0 bug
         )
     return _paddleocr_reader
+
+
+def _get_yomitoku_analyzer(device: str = "cpu"):
+    """Lazy import and initialization for Yomitoku."""
+    global _yomitoku_analyzer
+    if _yomitoku_analyzer is None:
+        from yomitoku import DocumentAnalyzer
+        _yomitoku_analyzer = DocumentAnalyzer(
+            visualize=False,
+            device=device,
+        )
+    return _yomitoku_analyzer
 
 
 @dataclass
@@ -160,6 +171,47 @@ def ocr_paddleocr(
         return EngineResult(engine="paddleocr", text="", success=False, error=str(e))
 
 
+def ocr_yomitoku_engine(
+    image: Image.Image,
+    device: str = "cpu",
+) -> EngineResult:
+    """Run Yomitoku OCR on an image.
+
+    Args:
+        image: PIL Image to process.
+        device: Device to use ("cuda" or "cpu").
+
+    Returns:
+        EngineResult with OCR text.
+    """
+    try:
+        import cv2
+        import numpy as np
+        analyzer = _get_yomitoku_analyzer(device)
+
+        # Convert PIL to cv2 format (BGR)
+        img_array = np.array(image.convert("RGB"))
+        cv_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+
+        # Run OCR
+        results, _, _ = analyzer(cv_img)
+
+        # Extract text from paragraphs
+        paragraphs = []
+        for p in results.paragraphs:
+            if hasattr(p, "contents"):
+                paragraphs.append(p.contents)
+            elif hasattr(p, "text"):
+                paragraphs.append(p.text)
+            else:
+                paragraphs.append(str(p))
+
+        text = "\n\n".join(paragraphs)
+        return EngineResult(engine="yomitoku", text=text.strip(), success=True)
+    except Exception as e:
+        return EngineResult(engine="yomitoku", text="", success=False, error=str(e))
+
+
 @dataclass
 class TextWithBox:
     """Text with bounding box information."""
@@ -216,43 +268,6 @@ def ocr_paddleocr_with_boxes(
         return items, True, None
     except Exception as e:
         return [], False, str(e)
-
-
-def ocr_deepseek(
-    image: Image.Image,
-    base_url: str = "http://localhost:11434",
-    model: str = "deepseek-ocr",
-    timeout: int = 120,
-) -> EngineResult:
-    """Run DeepSeek-OCR on an image."""
-    try:
-        image_b64 = encode_pil_image(image)
-        payload = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "",
-                    "images": [image_b64],
-                },
-            ],
-            "stream": False,
-            "options": {
-                "temperature": 0.1,
-                "num_predict": 4096,
-            },
-        }
-        response = requests.post(
-            f"{base_url}/api/chat",
-            json=payload,
-            timeout=timeout,
-        )
-        response.raise_for_status()
-        result = response.json()
-        text = result["message"]["content"].strip()
-        return EngineResult(engine="deepseek", text=text, success=True)
-    except Exception as e:
-        return EngineResult(engine="deepseek", text="", success=False, error=str(e))
 
 
 def is_garbage(text: str, min_length: int = 50, ja_ratio_threshold: float = 0.1) -> bool:
@@ -458,8 +473,8 @@ def vote_best_result(
         winner = max(winners, key=lambda e: scores.get(e, 0))
         return results[winner], winner, votes
     else:
-        # No agreement - prefer by priority: deepseek > easyocr > tesseract
-        priority = ["deepseek", "easyocr", "tesseract"]
+        # No agreement - prefer by priority: yomitoku > paddleocr > easyocr > tesseract
+        priority = ["yomitoku", "paddleocr", "easyocr", "tesseract"]
         for engine in priority:
             if engine in engines and results[engine]:
                 return results[engine], engine, votes
@@ -510,25 +525,21 @@ def merge_by_voting(
 def ocr_ensemble(
     image: Image.Image | str,
     engines: list[str] | None = None,
-    base_url: str = "http://localhost:11434",
-    model: str = "deepseek-ocr",
-    timeout: int = 120,
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
     paddleocr_lang: str = "japan",
+    yomitoku_device: str = "cpu",
     similarity_threshold: float = 0.7,
 ) -> EnsembleResult:
     """Run ensemble OCR with multiple engines.
 
     Args:
         image: PIL Image or path to image file.
-        engines: List of engines to use. Default: ["deepseek", "paddleocr", "tesseract", "easyocr"]
-        base_url: Ollama API base URL for DeepSeek.
-        model: DeepSeek model name.
-        timeout: DeepSeek request timeout.
+        engines: List of engines to use. Default: ["yomitoku", "paddleocr", "tesseract"]
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
         paddleocr_lang: PaddleOCR language code.
+        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
         similarity_threshold: Threshold for voting agreement.
 
     Returns:
@@ -538,14 +549,14 @@ def ocr_ensemble(
         image = Image.open(image)
 
     if engines is None:
-        engines = ["deepseek", "paddleocr", "tesseract", "easyocr"]
+        engines = ["yomitoku", "paddleocr", "tesseract"]
 
     results: dict[str, str] = {}
 
     # Run each engine
     for engine in engines:
-        if engine == "deepseek":
-            result = ocr_deepseek(image, base_url, model, timeout)
+        if engine == "yomitoku":
+            result = ocr_yomitoku_engine(image, yomitoku_device)
         elif engine == "tesseract":
             result = ocr_tesseract(image, tesseract_lang)
         elif engine == "easyocr":
@@ -569,11 +580,9 @@ def run_ensemble_ocr(
     pages_dir: str,
     output_dir: str,
     engines: list[str] | None = None,
-    base_url: str = "http://localhost:11434",
-    model: str = "deepseek-ocr",
-    timeout: int = 120,
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
+    yomitoku_device: str = "cpu",
 ) -> list[tuple[str, EnsembleResult]]:
     """Run ensemble OCR on all pages in a directory.
 
@@ -581,17 +590,15 @@ def run_ensemble_ocr(
         pages_dir: Directory containing page images.
         output_dir: Directory for output text files.
         engines: List of engines to use.
-        base_url: Ollama API base URL.
-        model: DeepSeek model name.
-        timeout: DeepSeek request timeout.
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
+        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
 
     Returns:
         List of (page_name, EnsembleResult) tuples.
     """
     if engines is None:
-        engines = ["deepseek", "tesseract", "easyocr"]
+        engines = ["yomitoku", "paddleocr", "tesseract"]
 
     pages_path = Path(pages_dir)
     output_path = Path(output_dir)
@@ -611,11 +618,9 @@ def run_ensemble_ocr(
             result = ocr_ensemble(
                 img,
                 engines=engines,
-                base_url=base_url,
-                model=model,
-                timeout=timeout,
                 tesseract_lang=tesseract_lang,
                 easyocr_langs=easyocr_langs,
+                yomitoku_device=yomitoku_device,
             )
 
         # Report
@@ -654,22 +659,20 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Ensemble OCR (DeepSeek + Tesseract + EasyOCR)"
+        description="Ensemble OCR (Yomitoku + PaddleOCR + Tesseract + EasyOCR)"
     )
     parser.add_argument("pages_dir", help="Directory containing page images")
     parser.add_argument("-o", "--output", default="ocr_texts", help="Output directory")
     parser.add_argument(
         "--engines",
-        default="deepseek,tesseract,easyocr",
-        help="Comma-separated list of engines (default: deepseek,tesseract,easyocr)",
+        default="yomitoku,paddleocr,tesseract",
+        help="Comma-separated list of engines (default: yomitoku,paddleocr,tesseract)",
     )
     parser.add_argument(
-        "--base-url",
-        default="http://localhost:11434",
-        help="Ollama API base URL",
-    )
-    parser.add_argument(
-        "--timeout", type=int, default=120, help="DeepSeek timeout (seconds)"
+        "--device",
+        default="cpu",
+        choices=["cpu", "cuda"],
+        help="Device for Yomitoku OCR (default: cpu)",
     )
     parser.add_argument(
         "--tesseract-lang", default="jpn+eng", help="Tesseract language code(s)"
@@ -686,10 +689,9 @@ def main() -> None:
         pages_dir=args.pages_dir,
         output_dir=args.output,
         engines=engines,
-        base_url=args.base_url,
-        timeout=args.timeout,
         tesseract_lang=args.tesseract_lang,
         easyocr_langs=easyocr_langs,
+        yomitoku_device=args.device,
     )
 
 

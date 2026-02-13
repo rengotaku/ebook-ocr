@@ -53,22 +53,22 @@ class TestCalculateSimilarityMatrix:
     def test_three_engines(self) -> None:
         """Matrix calculation for three engines."""
         results = {
-            "deepseek": "Hello World",
+            "yomitoku": "Hello World",
             "tesseract": "Hello World",
             "easyocr": "Hello Wrold",  # typo
         }
         matrix = calculate_similarity_matrix(results)
 
         # Self-similarity is 1.0
-        assert matrix["deepseek"]["deepseek"] == 1.0
+        assert matrix["yomitoku"]["yomitoku"] == 1.0
         assert matrix["tesseract"]["tesseract"] == 1.0
 
-        # deepseek and tesseract are identical
-        assert matrix["deepseek"]["tesseract"] == 1.0
+        # yomitoku and tesseract are identical
+        assert matrix["yomitoku"]["tesseract"] == 1.0
 
         # easyocr has typo, lower similarity
-        assert matrix["deepseek"]["easyocr"] < 1.0
-        assert matrix["deepseek"]["easyocr"] > 0.8  # still similar
+        assert matrix["yomitoku"]["easyocr"] < 1.0
+        assert matrix["yomitoku"]["easyocr"] > 0.8  # still similar
 
 
 class TestVoteBestResult:
@@ -77,7 +77,7 @@ class TestVoteBestResult:
     def test_unanimous_agreement(self) -> None:
         """All engines agree - winner has most votes."""
         results = {
-            "deepseek": "Hello World",
+            "yomitoku": "Hello World",
             "tesseract": "Hello World",
             "easyocr": "Hello World",
         }
@@ -85,14 +85,14 @@ class TestVoteBestResult:
         text, winner, votes = vote_best_result(results, matrix, threshold=0.7)
 
         assert text == "Hello World"
-        assert votes["deepseek"] == 2  # agrees with 2 others
+        assert votes["yomitoku"] == 2  # agrees with 2 others
         assert votes["tesseract"] == 2
         assert votes["easyocr"] == 2
 
     def test_two_agree_one_different(self) -> None:
         """Two engines agree, one different - majority wins."""
         results = {
-            "deepseek": "Hello World",
+            "yomitoku": "Hello World",
             "tesseract": "Hello World",
             "easyocr": "Completely Different Text",
         }
@@ -100,33 +100,33 @@ class TestVoteBestResult:
         text, winner, votes = vote_best_result(results, matrix, threshold=0.7)
 
         assert text == "Hello World"
-        assert winner in ["deepseek", "tesseract"]
-        assert votes["deepseek"] == 1  # agrees with tesseract
-        assert votes["tesseract"] == 1  # agrees with deepseek
+        assert winner in ["yomitoku", "tesseract"]
+        assert votes["yomitoku"] == 1  # agrees with tesseract
+        assert votes["tesseract"] == 1  # agrees with yomitoku
         assert votes["easyocr"] == 0  # agrees with none
 
-    def test_no_agreement_prefers_deepseek(self) -> None:
+    def test_no_agreement_prefers_yomitoku(self) -> None:
         """No agreement - falls back to priority order."""
         results = {
-            "deepseek": "Text A",
+            "yomitoku": "Text A",
             "tesseract": "Text B",
             "easyocr": "Text C",
         }
         matrix = calculate_similarity_matrix(results)
         text, winner, votes = vote_best_result(results, matrix, threshold=0.9)
 
-        # No agreement at 0.9 threshold, should prefer deepseek
-        assert winner == "deepseek"
+        # No agreement at 0.9 threshold, should prefer yomitoku
+        assert winner == "yomitoku"
         assert text == "Text A"
 
     def test_single_engine(self) -> None:
         """Single engine returns its result."""
-        results = {"deepseek": "Only Result"}
+        results = {"yomitoku": "Only Result"}
         matrix = calculate_similarity_matrix(results)
         text, winner, votes = vote_best_result(results, matrix)
 
         assert text == "Only Result"
-        assert winner == "deepseek"
+        assert winner == "yomitoku"
 
     def test_empty_results(self) -> None:
         """Empty results returns empty."""
@@ -141,30 +141,30 @@ class TestMergeByVoting:
     def test_merge_three_engines(self) -> None:
         """Merge with three engines."""
         results = {
-            "deepseek": "Hello World",
+            "yomitoku": "Hello World",
             "tesseract": "Hello World",
             "easyocr": "Hello Wrold",
         }
         ensemble = merge_by_voting(results)
 
         assert ensemble.merged == "Hello World"
-        assert ensemble.source in ["deepseek", "tesseract"]
-        assert "deepseek" in ensemble.results
+        assert ensemble.source in ["yomitoku", "tesseract"]
+        assert "yomitoku" in ensemble.results
         assert "tesseract" in ensemble.results
         assert "easyocr" in ensemble.results
 
     def test_merge_with_empty_result(self) -> None:
         """Merge handles engines with empty results."""
         results = {
-            "deepseek": "Hello World",
+            "yomitoku": "Hello World",
             "tesseract": "",
             "easyocr": "Hello World",
         }
         ensemble = merge_by_voting(results)
 
         assert ensemble.merged == "Hello World"
-        # Only deepseek and easyocr have valid results
-        assert ensemble.source in ["deepseek", "easyocr"]
+        # Only yomitoku and easyocr have valid results
+        assert ensemble.source in ["yomitoku", "easyocr"]
 
 
 class TestEnsembleResult:
@@ -174,14 +174,14 @@ class TestEnsembleResult:
         """Can create EnsembleResult."""
         result = EnsembleResult(
             merged="merged text",
-            results={"deepseek": "d", "tesseract": "t", "easyocr": "e"},
+            results={"yomitoku": "d", "tesseract": "t", "easyocr": "e"},
             similarity_matrix={},
-            source="deepseek",
-            votes={"deepseek": 2, "tesseract": 1, "easyocr": 1},
+            source="yomitoku",
+            votes={"yomitoku": 2, "tesseract": 1, "easyocr": 1},
         )
         assert result.merged == "merged text"
-        assert result.source == "deepseek"
-        assert result.votes["deepseek"] == 2
+        assert result.source == "yomitoku"
+        assert result.votes["yomitoku"] == 2
 
 
 class TestEngineResult:

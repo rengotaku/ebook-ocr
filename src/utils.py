@@ -1,7 +1,6 @@
 """Shared utility functions for image encoding and layout processing.
 
-This module contains functions extracted from multiple modules to eliminate
-duplication and reduce coupling between ocr_deepseek.py and ocr.py.
+This module contains shared utility functions for image processing and OCR.
 """
 
 from __future__ import annotations

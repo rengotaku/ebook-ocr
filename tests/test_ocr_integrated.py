@@ -122,24 +122,24 @@ class TestSelectBestEngine:
 
     def test_select_by_priority_text(self):
         results = {
-            "deepseek": "DeepSeek結果",
+            "yomitoku": "Yomitoku結果",
             "paddleocr": "PaddleOCR結果",
             "tesseract": "Tesseract結果",
         }
-        quality = {"deepseek": True, "paddleocr": True, "tesseract": True}
+        quality = {"yomitoku": True, "paddleocr": True, "tesseract": True}
 
         text, engine = select_best_engine(results, "TEXT", quality)
 
-        # TEXT priority: deepseek > paddleocr > tesseract
-        assert engine == "deepseek"
+        # TEXT priority: yomitoku > paddleocr > tesseract
+        assert engine == "yomitoku"
 
     def test_select_by_priority_figure(self):
         results = {
-            "deepseek": "DeepSeek結果",
+            "yomitoku": "Yomitoku結果",
             "easyocr": "EasyOCR結果",
             "paddleocr": "PaddleOCR結果",
         }
-        quality = {"deepseek": True, "easyocr": True, "paddleocr": True}
+        quality = {"yomitoku": True, "easyocr": True, "paddleocr": True}
 
         text, engine = select_best_engine(results, "FIGURE", quality)
 
@@ -148,27 +148,27 @@ class TestSelectBestEngine:
 
     def test_skip_garbage_engine(self):
         results = {
-            "deepseek": "ゴミデータ",
+            "yomitoku": "ゴミデータ",
             "paddleocr": "正常な結果",
         }
-        quality = {"deepseek": False, "paddleocr": True}
+        quality = {"yomitoku": False, "paddleocr": True}
 
         text, engine = select_best_engine(results, "TEXT", quality)
 
-        # deepseek is garbage, should select paddleocr
+        # yomitoku is garbage, should select paddleocr
         assert engine == "paddleocr"
         assert text == "正常な結果"
 
     def test_all_garbage_returns_longest(self):
         results = {
-            "deepseek": "短い",
+            "yomitoku": "短い",
             "paddleocr": "少し長めのテキスト",
         }
         # If all are valid, select by priority
-        quality = {"deepseek": True, "paddleocr": True}
+        quality = {"yomitoku": True, "paddleocr": True}
 
         text, engine = select_best_engine(results, "TEXT", quality)
-        assert engine == "deepseek"  # Priority wins
+        assert engine == "yomitoku"  # Priority wins
 
     def test_empty_results(self):
         results = {}
@@ -187,7 +187,7 @@ class TestSelectBestEngine:
 
         text, engine = select_best_engine(results, "UNKNOWN_TYPE", quality)
 
-        # FALLBACK priority: paddleocr > tesseract > deepseek
+        # FALLBACK priority: yomitoku > paddleocr > tesseract
         assert engine == "paddleocr"
 
 
@@ -195,13 +195,13 @@ class TestEnginePriority:
     """Tests for ENGINE_PRIORITY configuration."""
 
     def test_text_priority(self):
-        assert ENGINE_PRIORITY["TEXT"] == ["deepseek", "paddleocr", "tesseract"]
+        assert ENGINE_PRIORITY["TEXT"] == ["yomitoku", "paddleocr", "tesseract"]
 
     def test_figure_priority(self):
         assert ENGINE_PRIORITY["FIGURE"] == ["easyocr", "paddleocr", "tesseract"]
 
     def test_table_priority(self):
-        assert ENGINE_PRIORITY["TABLE"] == ["paddleocr", "deepseek", "tesseract"]
+        assert ENGINE_PRIORITY["TABLE"] == ["yomitoku", "paddleocr", "tesseract"]
 
     def test_fallback_priority(self):
-        assert ENGINE_PRIORITY["FALLBACK"] == ["paddleocr", "tesseract", "deepseek"]
+        assert ENGINE_PRIORITY["FALLBACK"] == ["yomitoku", "paddleocr", "tesseract"]

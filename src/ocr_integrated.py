@@ -1,15 +1,14 @@
 """Integrated OCR: Full-page OCR with layout-based structuring.
 
 This module implements the integrated OCR approach:
-1. Run multiple OCR engines on full page
-2. DeepSeek runs on masked image (TEXT regions only)
-3. Quality check and engine selection
-4. Structure output using layout region information
+1. Run multiple OCR engines on full page (Yomitoku, PaddleOCR, Tesseract, EasyOCR)
+2. Quality check and engine selection
+3. Structure output using layout region information
 
 Strategy:
 - Full page OCR for maximum information capture
 - Layout info for Markdown structuring (not region-level OCR)
-- DeepSeek for TEXT, PaddleOCR/Tesseract as fallback
+- Yomitoku for TEXT (Japanese-specialized), PaddleOCR/Tesseract as fallback
 - EasyOCR for FIGURE regions (better at embedded text)
 """
 
@@ -29,11 +28,11 @@ from src.ocr_ensemble import (
     calculate_similarity,
     create_text_mask,
     is_garbage,
-    ocr_deepseek,
     ocr_easyocr,
     ocr_paddleocr,
     ocr_paddleocr_with_boxes,
     ocr_tesseract,
+    ocr_yomitoku_engine,
 )
 
 
@@ -48,16 +47,16 @@ class IntegratedResult:
     quality_flags: dict[str, bool] = field(default_factory=dict)  # engine -> is_valid
 
 
-# Engine priority by region type
+# Engine priority by region type (yomitoku is preferred for Japanese text)
 ENGINE_PRIORITY = {
-    "TEXT": ["deepseek", "paddleocr", "tesseract"],
-    "TITLE": ["deepseek", "paddleocr", "tesseract"],
+    "TEXT": ["yomitoku", "paddleocr", "tesseract"],
+    "TITLE": ["yomitoku", "paddleocr", "tesseract"],
     "FIGURE": ["easyocr", "paddleocr", "tesseract"],
-    "TABLE": ["paddleocr", "deepseek", "tesseract"],
-    "CAPTION": ["deepseek", "paddleocr", "easyocr"],
-    "FOOTNOTE": ["deepseek", "paddleocr", "tesseract"],
-    "FORMULA": ["deepseek", "paddleocr", "tesseract"],
-    "FALLBACK": ["paddleocr", "tesseract", "deepseek"],
+    "TABLE": ["yomitoku", "paddleocr", "tesseract"],
+    "CAPTION": ["yomitoku", "paddleocr", "easyocr"],
+    "FOOTNOTE": ["yomitoku", "paddleocr", "tesseract"],
+    "FORMULA": ["yomitoku", "paddleocr", "tesseract"],
+    "FALLBACK": ["yomitoku", "paddleocr", "tesseract"],
 }
 
 
@@ -353,33 +352,25 @@ def select_best_engine(
 def run_integrated_ocr(
     image: Image.Image | str,
     regions: list[dict] | None = None,
-    base_url: str = "http://localhost:11434",
-    model: str = "deepseek-ocr",
-    timeout: int = 120,
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
     paddleocr_lang: str = "japan",
-    mask_output_path: str | None = None,
+    yomitoku_device: str = "cpu",
 ) -> IntegratedResult:
     """Run integrated OCR on a single page.
 
     Process:
-    1. Run PaddleOCR, Tesseract, EasyOCR on full page
-    2. Create masked image (TEXT regions only)
-    3. Run DeepSeek on masked image
-    4. Quality check all results
-    5. Select best result
+    1. Run Yomitoku, PaddleOCR, Tesseract, EasyOCR on full page
+    2. Quality check all results
+    3. Select best result
 
     Args:
         image: PIL Image or path to image file.
-        regions: Layout regions for masking. If None, run without masking.
-        base_url: Ollama API base URL for DeepSeek.
-        model: DeepSeek model name.
-        timeout: DeepSeek request timeout.
+        regions: Layout regions for structuring output.
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
         paddleocr_lang: PaddleOCR language code.
-        mask_output_path: If provided, save the masked image to this path.
+        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
 
     Returns:
         IntegratedResult with all engine results and selected output.
@@ -392,6 +383,18 @@ def run_integrated_ocr(
     paddle_items: list[TextWithBox] = []
 
     # 1. Run full-page OCR engines
+    print("    Running Yomitoku...", end="", flush=True)
+    yomi_result = ocr_yomitoku_engine(image, yomitoku_device)
+    if yomi_result.success:
+        results["yomitoku"] = yomi_result.text
+        quality_flags["yomitoku"] = not is_garbage(yomi_result.text)
+        status = "OK" if quality_flags["yomitoku"] else "GARBAGE"
+        print(f" {status} ({len(yomi_result.text)} chars)")
+    else:
+        print(f" FAIL: {yomi_result.error}")
+        results["yomitoku"] = ""
+        quality_flags["yomitoku"] = False
+
     print("    Running PaddleOCR...", end="", flush=True)
     paddle_items, paddle_success, paddle_error = ocr_paddleocr_with_boxes(image, paddleocr_lang)
     if paddle_success:
@@ -426,30 +429,7 @@ def run_integrated_ocr(
         results["easyocr"] = ""
         quality_flags["easyocr"] = False
 
-    # 2. Create masked image for DeepSeek (if regions provided)
-    if regions:
-        masked_image = create_text_mask(image, regions)
-        # Save masked image if output path provided
-        if mask_output_path:
-            masked_image.save(mask_output_path)
-        print("    Running DeepSeek (masked)...", end="", flush=True)
-    else:
-        masked_image = image
-        print("    Running DeepSeek (full page)...", end="", flush=True)
-
-    # 3. Run DeepSeek on masked image
-    ds_result = ocr_deepseek(masked_image, base_url, model, timeout)
-    if ds_result.success:
-        results["deepseek"] = ds_result.text
-        quality_flags["deepseek"] = not is_garbage(ds_result.text)
-        status = "OK" if quality_flags["deepseek"] else "GARBAGE"
-        print(f" {status} ({len(ds_result.text)} chars)")
-    else:
-        print(f" FAIL: {ds_result.error}")
-        results["deepseek"] = ""
-        quality_flags["deepseek"] = False
-
-    # 4. Determine dominant region type
+    # 2. Determine dominant region type
     dominant_type = "TEXT"
     if regions:
         type_counts: dict[str, int] = {}
@@ -460,12 +440,12 @@ def run_integrated_ocr(
         if type_counts:
             dominant_type = max(type_counts.items(), key=lambda x: x[1])[0]
 
-    # 5. Select best result
+    # 3. Select best result
     selected_text, selected_engine = select_best_engine(
         results, dominant_type, quality_flags
     )
 
-    # 6. Structure output by paragraphs using YOLO regions
+    # 4. Structure output by paragraphs using YOLO regions
     if regions and paddle_items:
         structured = structure_text_by_paragraphs(paddle_items, regions)
         # Count regions used
@@ -489,13 +469,10 @@ def run_integrated_ocr_batch(
     pages_dir: str,
     layout_file: str | None,
     output_dir: str,
-    base_url: str = "http://localhost:11434",
-    model: str = "deepseek-ocr",
-    timeout: int = 120,
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
     paddleocr_lang: str = "japan",
-    save_masks: bool = False,
+    yomitoku_device: str = "cpu",
 ) -> list[tuple[str, IntegratedResult]]:
     """Run integrated OCR on all pages in a directory.
 
@@ -503,13 +480,10 @@ def run_integrated_ocr_batch(
         pages_dir: Directory containing page images.
         layout_file: Path to layout.json file (optional).
         output_dir: Directory for output files.
-        base_url: Ollama API base URL.
-        model: DeepSeek model name.
-        timeout: Per-page OCR timeout.
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
         paddleocr_lang: PaddleOCR language code.
-        save_masks: If True, save masked images to masking/ directory.
+        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
 
     Returns:
         List of (page_name, IntegratedResult) tuples.
@@ -517,13 +491,6 @@ def run_integrated_ocr_batch(
     pages_path = Path(pages_dir)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-
-    # Create masking directory if needed
-    masking_path: Path | None = None
-    if save_masks:
-        masking_path = output_path.parent / "masking"
-        masking_path.mkdir(parents=True, exist_ok=True)
-        print(f"Saving masked images to: {masking_path}")
 
     # Load layout data if provided
     layout_data: dict = {}
@@ -545,23 +512,15 @@ def run_integrated_ocr_batch(
         page_layout = layout_data.get(page_name, {})
         regions = page_layout.get("regions", [])
 
-        # Determine mask output path if saving masks
-        mask_output: str | None = None
-        if masking_path and regions:
-            mask_output = str(masking_path / f"{page_stem}_masked.png")
-
         # Run OCR
         with Image.open(page_path) as img:
             result = run_integrated_ocr(
                 img,
                 regions=regions,
-                base_url=base_url,
-                model=model,
-                timeout=timeout,
                 tesseract_lang=tesseract_lang,
                 easyocr_langs=easyocr_langs,
                 paddleocr_lang=paddleocr_lang,
-                mask_output_path=mask_output,
+                yomitoku_device=yomitoku_device,
             )
 
         # Report
@@ -597,18 +556,16 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Integrated OCR (DeepSeek + PaddleOCR + Tesseract + EasyOCR)"
+        description="Integrated OCR (Yomitoku + PaddleOCR + Tesseract + EasyOCR)"
     )
     parser.add_argument("pages_dir", help="Directory containing page images")
     parser.add_argument("-o", "--output", default="ocr_texts", help="Output directory")
     parser.add_argument("--layout", help="Path to layout.json file (optional)")
     parser.add_argument(
-        "--base-url",
-        default="http://localhost:11434",
-        help="Ollama API base URL",
-    )
-    parser.add_argument(
-        "--timeout", type=int, default=120, help="DeepSeek timeout (seconds)"
+        "--device",
+        default="cpu",
+        choices=["cpu", "cuda"],
+        help="Device for Yomitoku OCR (default: cpu)",
     )
     parser.add_argument(
         "--tesseract-lang", default="jpn+eng", help="Tesseract language code(s)"
@@ -619,11 +576,6 @@ def main() -> None:
     parser.add_argument(
         "--paddleocr-lang", default="japan", help="PaddleOCR language code"
     )
-    parser.add_argument(
-        "--save-masks",
-        action="store_true",
-        help="Save masked images to masking/ directory for debugging",
-    )
     args = parser.parse_args()
 
     easyocr_langs = [lang.strip() for lang in args.easyocr_langs.split(",")]
@@ -632,12 +584,10 @@ def main() -> None:
         pages_dir=args.pages_dir,
         layout_file=args.layout,
         output_dir=args.output,
-        base_url=args.base_url,
-        timeout=args.timeout,
         tesseract_lang=args.tesseract_lang,
         easyocr_langs=easyocr_langs,
         paddleocr_lang=args.paddleocr_lang,
-        save_masks=args.save_masks,
+        yomitoku_device=args.device,
     )
 
 
