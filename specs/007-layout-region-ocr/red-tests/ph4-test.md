@@ -1,247 +1,146 @@
-# Phase 4 RED テスト結果: US2 - 領域別OCR処理
+# Phase 4 RED Output: US4 - フォールバック処理
 
-**日付**: 2026-02-11
-**Phase**: Phase 4 (US2 - 領域別OCR処理)
-**ステータス**: RED - 全テスト FAIL
+**Date**: 2026-02-13
+**Status**: GREEN (All tests pass - already implemented)
 
-## サマリ
+## 概要
 
 | 項目 | 値 |
 |------|-----|
-| Phase | Phase 4 (US2 - 領域別OCR処理) |
-| FAIL テスト数 | 33 |
+| Phase | 4 |
+| User Story | US4 - フォールバック処理 |
+| テスト対象 | calculate_coverage(), should_fallback(), ocr_by_layout() |
 | テストファイル | tests/test_layout_ocr.py |
-| 失敗理由 | `src/layout_ocr.py` が存在しない |
+| FAILテスト数 | 0 (全て GREEN) |
+| PASSテスト数 | 21 (US4関連) |
 
----
+## 分析結果
 
-## FAIL テストリスト
+Phase 1 分析 (`ph1-output.md`) で判明した通り、US4 の機能は既に実装済みでした。
 
-### TestSelectOcrEngine (8テスト)
+### 実装済みコード (`src/layout_ocr.py`)
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_select_ocr_engine_text_returns_deepseek | TEXT領域に対してDeepSeek-OCRが選択される |
-| test_select_ocr_engine_title_returns_deepseek | TITLE領域に対してDeepSeek-OCRが選択される |
-| test_select_ocr_engine_figure_returns_vlm | FIGURE領域に対してVLMが選択される |
-| test_select_ocr_engine_table_returns_deepseek | TABLE領域に対してDeepSeek-OCRが選択される |
-| test_select_ocr_engine_caption_returns_deepseek | CAPTION領域に対してDeepSeek-OCRが選択される |
-| test_select_ocr_engine_footnote_returns_deepseek | FOOTNOTE領域に対してDeepSeek-OCRが選択される |
-| test_select_ocr_engine_formula_returns_deepseek | FORMULA領域に対してDeepSeek-OCRが選択される |
-| test_select_ocr_engine_abandon_returns_skip | ABANDON領域に対してスキップが選択される |
+1. **`calculate_coverage()`** (lines 241-259)
+   - 領域面積の合計 / ページ面積 を計算
+   - 空領域リストまたはゼロページサイズの場合は 0.0 を返す
 
-### TestFormatOcrResult (8テスト)
+2. **`should_fallback()`** (lines 262-302)
+   - 条件1: 領域なし → フォールバック
+   - 条件2: OCR対象領域なし (ABANDONのみ) → フォールバック
+   - 条件3: カバー率が閾値未満 (デフォルト30%) → フォールバック
+   - 条件4: 単一FIGUREがページの90%以上をカバー → フォールバック
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_format_ocr_result_title_adds_heading | TITLE: `## {text}` 形式 |
-| test_format_ocr_result_text_unchanged | TEXT: `{text}` 形式（変更なし） |
-| test_format_ocr_result_figure_adds_marker | FIGURE: `[FIGURE: {description}]` 形式 |
-| test_format_ocr_result_caption_adds_italic | CAPTION: `*{text}*` 形式 |
-| test_format_ocr_result_footnote_adds_superscript | FOOTNOTE: `^{text}^` 形式 |
-| test_format_ocr_result_formula_adds_latex | FORMULA: `$${text}$$` 形式 |
-| test_format_ocr_result_table_unchanged | TABLE: `{text}` 形式（変更なし） |
-| test_format_ocr_result_abandon_returns_empty | ABANDON: 空文字を返す |
+3. **`ocr_by_layout()`** (lines 305-360)
+   - `should_fallback()` を呼び出し、フォールバック時は Yomitoku でページ全体OCR
+   - フォールバック結果は `region_type="FALLBACK"` として返される
 
-### TestCropRegion (3テスト)
+## テスト一覧
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_crop_region_basic | bbox に基づく基本クロップ |
-| test_crop_region_full_image | 全画像のクロップ |
-| test_crop_region_boundary_clamp | 境界外 bbox のクランプ処理 |
+### TestCalculateCoverage (5テスト)
 
-### TestTextRegionOcr (2テスト)
+| テストメソッド | 検証内容 | 状態 |
+|---------------|---------|------|
+| test_calculate_coverage_single_region | 単一領域のカバー率計算 (50x50 on 100x100 = 25%) | PASS |
+| test_calculate_coverage_multiple_regions | 複数領域の合計カバー率 | PASS |
+| test_calculate_coverage_full_page | ページ全体カバーで100% | PASS |
+| test_calculate_coverage_empty_regions | 空領域リストで0% | PASS |
+| test_calculate_coverage_real_world_example | 実際のページに近い複雑なレイアウト | PASS |
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_text_region_uses_deepseek_ocr | TEXT領域が DeepSeek-OCR で処理される |
-| test_text_region_ocr_result_format | TEXT領域の OCR 結果フォーマット |
+### TestShouldFallback (7テスト)
 
-### TestFigureRegionOcr (2テスト)
+| テストメソッド | 検証内容 | 状態 |
+|---------------|---------|------|
+| test_should_fallback_empty_regions | 空領域でフォールバック | PASS |
+| test_should_fallback_low_coverage | 30%未満でフォールバック (4%テスト) | PASS |
+| test_should_fallback_sufficient_coverage | 30%以上でフォールバックしない (36%テスト) | PASS |
+| test_should_fallback_exactly_30_percent | 境界値30%でフォールバックしない | PASS |
+| test_should_fallback_custom_threshold | カスタム閾値 (50%閾値で40%カバー率 → フォールバック) | PASS |
+| test_should_fallback_single_figure_full_page | 単一FIGUREが90%以上でフォールバック | PASS |
+| test_should_fallback_multiple_figures_not_fallback | 複数FIGURE+TEXTでフォールバックしない | PASS |
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_figure_region_uses_vlm | FIGURE領域が VLM で処理される |
-| test_figure_region_ocr_result_format | FIGURE領域の VLM 結果フォーマット |
+### TestFallbackEmptyLayout (2テスト)
 
-### TestTitleRegionOcr (2テスト)
+| テストメソッド | 検証内容 | 状態 |
+|---------------|---------|------|
+| test_ocr_by_layout_fallback_empty_regions | 領域なしでページ全体OCR実行 | PASS |
+| test_ocr_by_layout_fallback_missing_regions_key | regionsキーなしでフォールバック | PASS |
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_title_region_uses_deepseek_ocr | TITLE領域が DeepSeek-OCR で処理される |
-| test_title_region_formatted_as_heading | TITLE領域が見出しマークアップで出力される |
+### TestFallbackLowCoverage (3テスト)
 
-### TestResultConcatenation (3テスト)
+| テストメソッド | 検証内容 | 状態 |
+|---------------|---------|------|
+| test_ocr_by_layout_fallback_below_30_percent | 1%カバー率でフォールバック | PASS |
+| test_ocr_by_layout_no_fallback_above_30_percent | 50%カバー率でフォールバックしない | PASS |
+| test_ocr_by_layout_fallback_29_percent_coverage | 境界値直下29%でフォールバック | PASS |
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_ocr_by_layout_concatenates_results | 複数領域の OCR 結果が連結される |
-| test_ocr_by_layout_respects_region_order | 領域順序が維持される |
-| test_ocr_by_layout_skips_abandon_regions | ABANDON 領域がスキップされる |
+### TestFallbackSingleFigure (1テスト)
 
-### TestOcrResultDataclass (2テスト)
+| テストメソッド | 検証内容 | 状態 |
+|---------------|---------|------|
+| test_ocr_by_layout_fallback_full_page_figure | ページ全体がFIGUREでフォールバック | PASS |
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_ocr_result_has_required_fields | OCRResult に必要なフィールドがある |
-| test_ocr_result_immutable | OCRResult がイミュータブル |
+### TestFallbackEdgeCases (3テスト)
 
-### TestOcrByLayoutEdgeCases (3テスト)
+| テストメソッド | 検証内容 | 状態 |
+|---------------|---------|------|
+| test_calculate_coverage_zero_page_size | ゼロページサイズのハンドリング | PASS |
+| test_calculate_coverage_negative_bbox | 負のbbox座標のハンドリング | PASS |
+| test_should_fallback_only_abandon_regions | ABANDONのみでフォールバック | PASS |
 
-| テストメソッド | 検証内容 |
-|--------------|---------|
-| test_ocr_by_layout_empty_regions | 空の regions で空リスト返却 |
-| test_ocr_by_layout_unicode_text | Unicode 文字の正しい処理 |
-| test_ocr_by_layout_mixed_region_types | 混在する領域タイプの処理 |
-
----
-
-## 実装ヒント
-
-### 1. OCRResult データクラス
-
-```python
-from dataclasses import dataclass
-
-@dataclass(frozen=True)
-class OCRResult:
-    """1領域のOCR出力。"""
-    region_type: str   # 元の領域種類
-    text: str          # OCR出力テキスト
-    formatted: str     # フォーマット済みテキスト（Markdown形式）
-```
-
-### 2. select_ocr_engine() 関数
-
-```python
-def select_ocr_engine(region_type: str) -> str:
-    """領域種類に応じたOCRエンジンを選択。
-
-    Args:
-        region_type: 領域の種類（TITLE, TEXT, FIGURE, etc.）
-
-    Returns:
-        "deepseek-ocr" | "vlm" | "skip"
-    """
-    # FIGURE -> VLM
-    # ABANDON -> skip
-    # 他 -> DeepSeek-OCR
-```
-
-### 3. format_ocr_result() 関数
-
-```python
-def format_ocr_result(region_type: str, text: str) -> str:
-    """領域種類に応じたMarkdownフォーマットを適用。
-
-    フォーマットルール（research.md準拠）:
-    | Type | Format |
-    |------|--------|
-    | TITLE | `## {text}` |
-    | TEXT | `{text}` |
-    | TABLE | `{text}` |
-    | FIGURE | `[FIGURE: {text}]` |
-    | CAPTION | `*{text}*` |
-    | FOOTNOTE | `^{text}^` |
-    | FORMULA | `$${text}$$` |
-    | ABANDON | `` (empty) |
-    """
-```
-
-### 4. crop_region() 関数
-
-```python
-def crop_region(img: Image.Image, bbox: list[int]) -> Image.Image:
-    """画像から bbox 領域をクロップ。
-
-    Args:
-        img: PIL Image
-        bbox: [x1, y1, x2, y2]
-
-    Returns:
-        クロップされた PIL Image
-    """
-    x1, y1, x2, y2 = bbox
-    return img.crop((x1, y1, x2, y2))
-```
-
-### 5. ocr_region() 関数
-
-```python
-def ocr_region(img: Image.Image, region: dict) -> OCRResult:
-    """単一領域のOCR処理。
-
-    Args:
-        img: ページ全体の PIL Image
-        region: {"type": str, "bbox": list[int], "confidence": float}
-
-    Returns:
-        OCRResult with text and formatted output
-    """
-    # 1. crop_region() で領域を切り出し
-    # 2. select_ocr_engine() でエンジン選択
-    # 3. OCR実行（deepseek-ocr or VLM）
-    # 4. format_ocr_result() でフォーマット
-    # 5. OCRResult を返す
-```
-
-### 6. ocr_by_layout() 関数
-
-```python
-def ocr_by_layout(page_path: str, layout: dict) -> list[OCRResult]:
-    """ページ内の全領域をOCR処理。
-
-    Args:
-        page_path: ページ画像のパス
-        layout: {"regions": list[dict], "page_size": [w, h]}
-
-    Returns:
-        各領域のOCRResult リスト（領域順序を維持）
-    """
-    # 1. 画像を読み込み
-    # 2. regions をループ
-    # 3. ABANDON はスキップ
-    # 4. 各領域に ocr_region() を適用
-    # 5. 結果リストを返す
-```
-
----
-
-## FAIL 出力例
+## テスト実行結果
 
 ```
+$ python -m pytest tests/test_layout_ocr.py -v
+
 ============================= test session starts ==============================
 platform linux -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0
-...
-tests/test_layout_ocr.py::TestSelectOcrEngine::test_select_ocr_engine_text_returns_deepseek FAILED
-...
+collected 53 items
 
-=================================== FAILURES ===================================
-_______ TestSelectOcrEngine.test_select_ocr_engine_text_returns_deepseek _______
+tests/test_layout_ocr.py::TestCalculateCoverage::test_calculate_coverage_single_region PASSED
+tests/test_layout_ocr.py::TestCalculateCoverage::test_calculate_coverage_multiple_regions PASSED
+tests/test_layout_ocr.py::TestCalculateCoverage::test_calculate_coverage_full_page PASSED
+tests/test_layout_ocr.py::TestCalculateCoverage::test_calculate_coverage_empty_regions PASSED
+tests/test_layout_ocr.py::TestCalculateCoverage::test_calculate_coverage_real_world_example PASSED
+tests/test_layout_ocr.py::TestShouldFallback::test_should_fallback_empty_regions PASSED
+tests/test_layout_ocr.py::TestShouldFallback::test_should_fallback_low_coverage PASSED
+tests/test_layout_ocr.py::TestShouldFallback::test_should_fallback_sufficient_coverage PASSED
+tests/test_layout_ocr.py::TestShouldFallback::test_should_fallback_exactly_30_percent PASSED
+tests/test_layout_ocr.py::TestShouldFallback::test_should_fallback_custom_threshold PASSED
+tests/test_layout_ocr.py::TestShouldFallback::test_should_fallback_single_figure_full_page PASSED
+tests/test_layout_ocr.py::TestShouldFallback::test_should_fallback_multiple_figures_not_fallback PASSED
+tests/test_layout_ocr.py::TestFallbackEmptyLayout::test_ocr_by_layout_fallback_empty_regions PASSED
+tests/test_layout_ocr.py::TestFallbackEmptyLayout::test_ocr_by_layout_fallback_missing_regions_key PASSED
+tests/test_layout_ocr.py::TestFallbackLowCoverage::test_ocr_by_layout_fallback_below_30_percent PASSED
+tests/test_layout_ocr.py::TestFallbackLowCoverage::test_ocr_by_layout_no_fallback_above_30_percent PASSED
+tests/test_layout_ocr.py::TestFallbackLowCoverage::test_ocr_by_layout_fallback_29_percent_coverage PASSED
+tests/test_layout_ocr.py::TestFallbackSingleFigure::test_ocr_by_layout_fallback_full_page_figure PASSED
+tests/test_layout_ocr.py::TestFallbackEdgeCases::test_calculate_coverage_zero_page_size PASSED
+tests/test_layout_ocr.py::TestFallbackEdgeCases::test_calculate_coverage_negative_bbox PASSED
+tests/test_layout_ocr.py::TestFallbackEdgeCases::test_should_fallback_only_abandon_regions PASSED
 
-self = <tests.test_layout_ocr.TestSelectOcrEngine object at 0x...>
-
-    def test_select_ocr_engine_text_returns_deepseek(self) -> None:
-        """TEXT領域に対してDeepSeek-OCRが選択されることを検証。"""
->       from src.layout_ocr import select_ocr_engine
-E       ModuleNotFoundError: No module named 'src.layout_ocr'
-
-tests/test_layout_ocr.py:33: ModuleNotFoundError
-...
-============================== 33 failed in 0.20s ==============================
+============================= 53 passed in 17.49s ==============================
 ```
 
----
+## タスク完了状況
 
-## 次ステップ
+| Task | Status | Notes |
+|------|--------|-------|
+| T038 | ✅ | ph1-output.md 読み込み |
+| T039 | ✅ | ph3-output.md 読み込み |
+| T040 | ✅ | カバー率計算テスト - 既存テスト確認 (5テスト) |
+| T041 | ✅ | フォールバック判定テスト - 既存テスト確認 (7テスト) |
+| T042 | ✅ | 領域ゼロフォールバックテスト - 既存テスト確認 (2テスト) |
+| T043 | ✅ | 全体FIGUREフォールバックテスト - 既存テスト確認 (1テスト) |
+| T044 | ✅ | make test GREEN（既存実装済み）|
+| T045 | ✅ | このファイル生成 |
 
-1. **Implementation (GREEN)**: `src/layout_ocr.py` を実装
-   - T042: RED テスト結果読み取り
-   - T043: crop_region() 関数実装（src/utils.py へ追加も可）
-   - T044: select_ocr_engine() 関数実装
-   - T045: format_ocr_result() 関数実装
-   - T046: ocr_by_layout() 関数実装（統合）
-   - T047: `make test` PASS 確認
+## 結論
 
-2. **Verification**: 全テスト通過とリグレッションテスト確認
+- **Phase 4 (US4) の機能は既に実装済み**
+- 全21テストが PASS
+- 追加テスト実装は不要
+- Implementation (GREEN) フェーズをスキップ可能
+
+## 次のフェーズ
+
+Phase 4 Implementation (GREEN) → Verification → Phase 5: US2 - 領域別OCR処理 (TDD)

@@ -124,30 +124,30 @@
 
 ### Input
 
-- [ ] T038 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
-- [ ] T039 Read previous phase output: specs/007-layout-region-ocr/tasks/ph3-output.md
+- [x] T038 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
+- [x] T039 Read previous phase output: specs/007-layout-region-ocr/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T040 [P] [US4] カバー率計算テスト実装: tests/test_layout_ocr.py - calculate_coverage() の正確性検証
-- [ ] T041 [P] [US4] フォールバック判定テスト実装: tests/test_layout_ocr.py - should_fallback() が30%未満でTrueを返すことを検証
-- [ ] T042 [P] [US4] 領域ゼロフォールバックテスト実装: tests/test_layout_ocr.py - 領域が空の場合フォールバックすることを検証
-- [ ] T043 [P] [US4] 全体FIGURE検出フォールバックテスト実装: tests/test_layout_ocr.py - ページ全体が1つのFIGUREの場合フォールバック
-- [ ] T044 Verify `make test` FAIL (RED)
-- [ ] T045 Generate RED output: specs/007-layout-region-ocr/red-tests/ph4-test.md
+- [x] T040 [P] [US4] カバー率計算テスト実装: tests/test_layout_ocr.py - calculate_coverage() の正確性検証 - 既存テスト確認済み (5テスト)
+- [x] T041 [P] [US4] フォールバック判定テスト実装: tests/test_layout_ocr.py - should_fallback() が30%未満でTrueを返すことを検証 - 既存テスト確認済み (7テスト)
+- [x] T042 [P] [US4] 領域ゼロフォールバックテスト実装: tests/test_layout_ocr.py - 領域が空の場合フォールバックすることを検証 - 既存テスト確認済み (2テスト)
+- [x] T043 [P] [US4] 全体FIGURE検出フォールバックテスト実装: tests/test_layout_ocr.py - ページ全体が1つのFIGUREの場合フォールバック - 既存テスト確認済み (1テスト)
+- [x] T044 Verify `make test` FAIL (RED) or PASS if already implemented - GREEN状態（既存実装済み）
+- [x] T045 Generate RED output: specs/007-layout-region-ocr/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
-- [ ] T046 Read RED tests: specs/007-layout-region-ocr/red-tests/ph4-test.md
-- [ ] T047 [P] [US4] カバー率計算実装: src/layout_ocr.py - calculate_coverage() 関数
-- [ ] T048 [P] [US4] フォールバック判定実装: src/layout_ocr.py - should_fallback() 関数（coverage_threshold=0.3）
-- [ ] T049 [US4] ページ全体OCR統合: src/layout_ocr.py - フォールバック時に ocr_yomitoku.py を呼び出し
-- [ ] T050 Verify `make test` PASS (GREEN)
+- [x] T046 Read RED tests: specs/007-layout-region-ocr/red-tests/ph4-test.md
+- [x] T047 [P] [US4] カバー率計算実装: src/layout_ocr.py - 既に実装済み
+- [x] T048 [P] [US4] フォールバック判定実装: src/layout_ocr.py - 既に実装済み (should_fallback)
+- [x] T049 [US4] ページ全体OCR統合: src/layout_ocr.py - 既に実装済み
+- [x] T050 Verify `make test` PASS (GREEN) - 53/53 tests passed
 
 ### Verification
 
-- [ ] T051 Verify `make test` passes all tests (no regressions)
-- [ ] T052 Generate phase output: specs/007-layout-region-ocr/tasks/ph4-output.md
+- [x] T051 Verify `make test` passes all tests (no regressions)
+- [x] T052 Generate phase output: specs/007-layout-region-ocr/tasks/ph4-output.md
 
 **Checkpoint**: US4完了後、フォールバック処理が独立して動作
 
