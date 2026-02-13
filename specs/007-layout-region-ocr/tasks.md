@@ -161,19 +161,19 @@
 
 ### Input
 
-- [ ] T053 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
-- [ ] T054 Read previous phase output: specs/007-layout-region-ocr/tasks/ph4-output.md
+- [x] T053 Read setup analysis: specs/007-layout-region-ocr/tasks/ph1-output.md
+- [x] T054 Read previous phase output: specs/007-layout-region-ocr/tasks/ph4-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T055 [P] [US2] OCRエンジン選択テスト実装: tests/test_layout_ocr.py - select_ocr_engine() がTEXT→yomitoku、FIGURE→vlm を返すことを検証
-- [ ] T056 [P] [US2] TITLE判定テスト実装: tests/test_layout_ocr.py - YOLOのTITLE または Yomitokuのrole=section_headingsで##が付与されることを検証
-- [ ] T057 [P] [US2] OCRフォールバックテスト実装: tests/test_layout_ocr.py - Yomitoku低品質（空/10文字未満/非文字率>50%）でPaddleOCR→Tesseractフォールバック
-- [ ] T058 [P] [US2] FIGUREマスクテスト実装: tests/test_layout_ocr.py - FIGURE領域が白塗りされることを検証
-- [ ] T059 [P] [US2] FIGURE除外テスト実装: tests/test_layout_ocr.py - FIGURE領域がOCR出力から除外されることを検証
-- [ ] T060 [P] [US2] 結果連結テスト実装: tests/test_layout_ocr.py - 読み順ソート後の領域が正しく連結されることを検証
-- [ ] T061 Verify `make test` FAIL (RED)
-- [ ] T062 Generate RED output: specs/007-layout-region-ocr/red-tests/ph5-test.md
+- [x] T055 [P] [US2] OCRエンジン選択テスト実装: tests/test_layout_ocr.py - select_ocr_engine() がTEXT→yomitoku、FIGURE→vlm を返すことを検証 - 既存テスト確認済み
+- [x] T056 [P] [US2] TITLE判定テスト実装: tests/test_layout_ocr.py - YOLOのTITLE または Yomitokuのrole=section_headingsで##が付与されることを検証 - 5テスト追加（is_title関数）
+- [x] T057 [P] [US2] OCRフォールバックテスト実装: tests/test_layout_ocr.py - Yomitoku低品質（空/10文字未満/非文字率>50%）でPaddleOCR→Tesseractフォールバック - 17テスト追加（is_low_quality, calc_non_char_ratio, ocr_with_fallback）
+- [x] T058 [P] [US2] FIGUREマスクテスト実装: tests/test_layout_ocr.py - FIGURE領域が白塗りされることを検証 - 5テスト追加（mask_figures）
+- [x] T059 [P] [US2] FIGURE除外テスト実装: tests/test_layout_ocr.py - FIGURE領域がOCR出力から除外されることを検証 - 2テスト追加
+- [x] T060 [P] [US2] 結果連結テスト実装: tests/test_layout_ocr.py - 読み順ソート後の領域が正しく連結されることを検証 - 2テスト追加
+- [x] T061 Verify `make test` FAIL (RED) - 30 failed, 54 passed
+- [x] T062 Generate RED output: specs/007-layout-region-ocr/red-tests/ph5-test.md
 
 ### Implementation (GREEN)
 
