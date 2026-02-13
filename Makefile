@@ -37,8 +37,8 @@ $(VENV)/bin/activate: requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-run: setup ## Run full pipeline (DeepSeek-OCR + VLM figure description)
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --ocr-model $(OCR_MODEL) --vlm-model $(VLM_MODEL) --ollama-url $(VLM_URL) --ocr-timeout $(OCR_TIMEOUT) --vlm-timeout $(VLM_TIMEOUT) --min-confidence $(MIN_CONFIDENCE)
+run: setup ## Run full pipeline (Yomitoku + Layout-aware OCR + VLM figure description)
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --device cpu --vlm-model $(VLM_MODEL) --ollama-url $(VLM_URL) --ocr-timeout $(OCR_TIMEOUT) --vlm-timeout $(VLM_TIMEOUT) --min-confidence $(MIN_CONFIDENCE)
 
 extract: setup ## Extract frames only (skip OCR)
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --skip-ocr
@@ -55,21 +55,14 @@ detect: setup ## Run layout detection (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/detect_figures.py "$(HASHDIR)/pages" -o "$(HASHDIR)"
 
-layout-ocr: setup ## Run layout-aware OCR (requires HASHDIR)
+layout-ocr: setup ## Run layout-aware OCR (requires HASHDIR) - RECOMMENDED: use 'make run' for full pipeline
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make layout-ocr HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/layout_ocr.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt" --layout "$(HASHDIR)/layout.json"
 
-ocr: setup ## Run DeepSeek-OCR on pages (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_deepseek.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt"
-
-ensemble-ocr: setup ## Run ensemble OCR (DeepSeek + Tesseract + EasyOCR + PaddleOCR) (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make ensemble-ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_ensemble.py "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_texts"
-
-integrated-ocr: setup ## Run integrated OCR with layout masking (requires HASHDIR, optional SAVE_MASKS=1)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make integrated-ocr HASHDIR=output/<hash> [SAVE_MASKS=1]"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.ocr_integrated "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_texts" --layout "$(HASHDIR)/layout.json" $(if $(SAVE_MASKS),--save-masks)
+# OBSOLETE TARGETS (kept for reference, not maintained)
+# ocr: setup ## [OBSOLETE] Run DeepSeek-OCR on pages - file removed, use 'make run' instead
+# ensemble-ocr: setup ## [OBSOLETE] Run ensemble OCR - use 'make layout-ocr' instead
+# integrated-ocr: setup ## [OBSOLETE] Run integrated OCR - use 'make layout-ocr' instead
 
 test: setup ## Run tests
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v
