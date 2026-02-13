@@ -10,7 +10,6 @@ VIDEO ?= $(shell $(call CFG,video))
 OUTPUT ?= $(shell $(call CFG,output))
 INTERVAL ?= $(shell $(call CFG,interval))
 THRESHOLD ?= $(shell $(call CFG,threshold))
-OCR_MODEL ?= $(shell $(call CFG,ocr_model))
 VLM_MODEL ?= $(shell $(call CFG,vlm_model))
 VLM_URL ?= $(shell $(call CFG,ollama_url))
 OCR_TIMEOUT ?= $(shell $(call CFG,ocr_timeout))
@@ -25,7 +24,7 @@ HASHDIR ?=
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract split-spreads detect layout-ocr ocr ensemble-ocr integrated-ocr test test-book-converter test-cov converter convert-sample clean clean-all
+.PHONY: help setup run extract split-spreads yomitoku-detect yomitoku-ocr test test-book-converter test-cov converter convert-sample clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -37,7 +36,7 @@ $(VENV)/bin/activate: requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-run: setup ## Run full pipeline (Yomitoku + Layout-aware OCR + VLM figure description)
+run: setup ## Run full pipeline (Yomitoku-based: layout detection + OCR + VLM figure description)
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --device cpu --vlm-model $(VLM_MODEL) --ollama-url $(VLM_URL) --ocr-timeout $(OCR_TIMEOUT) --vlm-timeout $(VLM_TIMEOUT) --min-confidence $(MIN_CONFIDENCE)
 
 extract: setup ## Extract frames only (skip OCR)
@@ -51,18 +50,20 @@ split-spreads: setup ## Split spread images into pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/split_spread.py "$(HASHDIR)/pages" --left-trim $(LEFT_TRIM) --right-trim $(RIGHT_TRIM) --aspect-ratio $(ASPECT_RATIO) --renumber
 
-detect: setup ## Run layout detection (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/detect_figures.py "$(HASHDIR)/pages" -o "$(HASHDIR)"
+yomitoku-detect: setup ## Run yomitoku layout detection and visualization (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-detect HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.ocr_yomitoku import detect_layout_yomitoku; detect_layout_yomitoku('$(HASHDIR)/pages', '$(HASHDIR)', device='cpu')"
 
-layout-ocr: setup ## Run layout-aware OCR (requires HASHDIR) - RECOMMENDED: use 'make run' for full pipeline
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make layout-ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/layout_ocr.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt" --layout "$(HASHDIR)/layout.json"
+yomitoku-ocr: setup ## Re-run OCR on existing pages (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-ocr HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.layout_ocr import run_yomitoku_ocr; run_yomitoku_ocr('$(HASHDIR)/pages', '$(HASHDIR)/book.txt', device='cpu')"
 
 # OBSOLETE TARGETS (kept for reference, not maintained)
-# ocr: setup ## [OBSOLETE] Run DeepSeek-OCR on pages - file removed, use 'make run' instead
-# ensemble-ocr: setup ## [OBSOLETE] Run ensemble OCR - use 'make layout-ocr' instead
-# integrated-ocr: setup ## [OBSOLETE] Run integrated OCR - use 'make layout-ocr' instead
+# ocr: setup ## [OBSOLETE] Run DeepSeek-OCR - file removed, use 'make run' instead
+# detect: setup ## [OBSOLETE] Run YOLO-based layout detection - replaced by yomitoku-detect
+# layout-ocr: setup ## [OBSOLETE] Run region-based OCR with cropping - replaced by yomitoku-ocr
+# ensemble-ocr: setup ## [OBSOLETE] Run ensemble OCR - use 'make run' instead
+# integrated-ocr: setup ## [OBSOLETE] Run integrated OCR - use 'make run' instead
 
 test: setup ## Run tests
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v

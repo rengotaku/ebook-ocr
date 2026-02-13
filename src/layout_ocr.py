@@ -609,5 +609,114 @@ def main() -> None:
     )
 
 
+def run_yomitoku_ocr(
+    pages_dir: str,
+    output_file: str,
+    device: str = "cpu",
+) -> list[tuple[str, str]]:
+    """Run yomitoku-based OCR on all pages.
+
+    This function uses cached yomitoku results if available (from detect_layout_yomitoku).
+    If cache is not found, it will run yomitoku analysis.
+
+    Args:
+        pages_dir: Directory containing page images.
+        output_file: Path for combined output text file.
+        device: Device for yomitoku ("cpu" or "cuda").
+
+    Returns:
+        List of (page_name, formatted_text) tuples.
+    """
+    from src.ocr_yomitoku import _get_analyzer, load_yomitoku_results
+    import cv2
+    import numpy as np
+
+    pages_path = Path(pages_dir)
+    output_path = Path(output_file)
+    output_dir = output_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create ocr_texts directory
+    ocr_texts_dir = output_dir / "ocr_texts"
+    ocr_texts_dir.mkdir(parents=True, exist_ok=True)
+
+    pages = sorted(pages_path.glob("*.png"))
+    all_results: list[tuple[str, str]] = []
+
+    # Check if we need to initialize analyzer (for non-cached pages)
+    analyzer = None
+    cache_hits = 0
+    cache_misses = 0
+
+    for page_path in pages:
+        page_name = page_path.name
+        page_stem = page_path.stem
+        print(f"  Processing {page_name}...")
+
+        # Try to load from cache first
+        results = load_yomitoku_results(str(output_dir), page_stem)
+
+        if results is None:
+            # Cache miss - run analyzer
+            cache_misses += 1
+            if analyzer is None:
+                print("  Initializing Yomitoku OCR...")
+                start = time.time()
+                analyzer = _get_analyzer(device)
+                elapsed = time.time() - start
+                print(f"  Yomitoku ready in {elapsed:.1f}s")
+
+            cv_img = cv2.imread(str(page_path))
+            if cv_img is None:
+                print(f"    → Failed to load image")
+                continue
+
+            results, _, _ = analyzer(cv_img)
+            print(f"    → Analyzed (no cache)")
+        else:
+            cache_hits += 1
+            print(f"    → Loaded from cache")
+
+        # Format paragraphs based on role
+        formatted_parts = []
+        for p in results.paragraphs:
+            if not hasattr(p, 'contents') or not p.contents:
+                continue
+
+            text = p.contents.strip()
+            if not text:
+                continue
+
+            # Apply formatting based on role
+            if hasattr(p, 'role') and p.role == 'section_headings':
+                formatted_parts.append(f"## {text}")
+            else:
+                formatted_parts.append(text)
+
+        formatted_text = "\n\n".join(formatted_parts)
+        print(f"    → Processed {len(results.paragraphs)} paragraphs")
+
+        # Write individual page result
+        page_text_file = ocr_texts_dir / f"{page_stem}.txt"
+        with open(page_text_file, "w", encoding="utf-8") as f:
+            f.write(formatted_text)
+            f.write("\n\n")
+        print(f"    → Saved: {page_text_file.name}")
+
+        all_results.append((page_name, formatted_text))
+
+    # Write combined results
+    with open(output_file, "w", encoding="utf-8") as f:
+        for page_name, formatted_text in all_results:
+            f.write(f"\n--- Page: {page_name} ---\n\n")
+            f.write(formatted_text)
+            f.write("\n\n")
+
+    print(f"  OCR complete. Output saved to: {output_file}")
+    if cache_hits > 0 or cache_misses > 0:
+        print(f"  Cache: {cache_hits} hits, {cache_misses} misses")
+    return all_results
+
+
 if __name__ == "__main__":
     main()

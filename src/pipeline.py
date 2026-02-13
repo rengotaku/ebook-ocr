@@ -1,6 +1,7 @@
-"""V3 pipeline: video → frames → dedup → detect → Yomitoku OCR → VLM figure description.
+"""V4 pipeline: video → frames → dedup → Yomitoku (layout + OCR) → VLM figure description.
 
-No preprocessing step needed - Yomitoku handles raw page images directly.
+Yomitoku handles both layout detection and OCR in a unified process.
+No separate YOLO-based detection needed.
 """
 
 from __future__ import annotations
@@ -16,8 +17,8 @@ from src.video_hash import compute_full_hash, write_source_info
 from src.extract_frames import extract_frames
 from src.deduplicate import deduplicate_frames
 from src.split_spread import split_spread_pages, renumber_pages
-from src.detect_figures import detect_figures
-from src.layout_ocr import run_layout_ocr
+from src.ocr_yomitoku import detect_layout_yomitoku
+from src.layout_ocr import run_yomitoku_ocr
 from src.describe_figures import describe_figures
 
 
@@ -41,11 +42,10 @@ def run_pipeline(
     spread_right_trim: float = 0.0,
     vlm_options: dict | None = None,
 ) -> None:
-    """Run the full video-to-markdown pipeline (v3 with layout-aware OCR).
+    """Run the full video-to-markdown pipeline (v4 with Yomitoku).
 
     Steps 0-2 are shared with v1/v2. Step 2.5 splits spreads into pages.
-    Step 3 detects layout regions.
-    Step 4 uses layout-aware OCR (region-based processing with fallback).
+    Step 3+4 (unified) uses Yomitoku for layout detection and OCR.
     Step 5 uses VLM to describe detected figures.
 
     Args:
@@ -121,24 +121,23 @@ def run_pipeline(
         )
         renumber_pages(pages_dir)
 
-    # Step 3: Detect layout regions (extended - all 10 classes)
+    # Step 3+4: Yomitoku-based layout detection and OCR (unified)
     print("\n" + "=" * 60)
-    print("Step 3: Detecting layout regions (title, text, figure, table, etc.)")
-    print("=" * 60)
-    layout = detect_figures(pages_dir, str(out), min_confidence=min_confidence)
-
-    # Step 4: Layout-aware OCR (region-based processing)
-    print("\n" + "=" * 60)
-    print(f"Step 4: Running layout-aware OCR (Yomitoku, device={yomitoku_device})")
+    print(f"Step 3+4: Layout detection and OCR with Yomitoku (device={yomitoku_device})")
     print("=" * 60)
 
-    run_layout_ocr(
+    # Detect layout and create visualizations
+    layout = detect_layout_yomitoku(
         pages_dir=pages_dir,
-        layout_data=layout,
+        output_dir=str(out),
+        device=yomitoku_device,
+    )
+
+    # Run OCR
+    run_yomitoku_ocr(
+        pages_dir=pages_dir,
         output_file=text_file,
-        base_url=ollama_url,
-        timeout=ocr_timeout,
-        yomitoku_device=yomitoku_device,
+        device=yomitoku_device,
     )
 
     # Step 5: Describe figures with VLM
