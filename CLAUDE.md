@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-04
 - 設定ファイル（パターン定義）はYAMLまたはJSON形式 (003-heading-readaloud-rules)
 - Python 3.13+ (Constitution準拠) + xml.etree.ElementTree（標準ライブラリ）, re（正規表現） (004-toc-structure)
 - ファイルベース（入力: book.xml, 出力: book.xml） (005-toc-page-grouping)
+- Python 3.13+ + doclayout-yolo, Pillow, requests, pyyaml (007-layout-region-ocr)
+- ファイルベース（layout.json, book.txt, book.md） (007-layout-region-ocr)
 
 - Python 3.13+ + Pillow, imagehash, doclayout-yolo, requests (001-code-refactoring)
 
@@ -28,9 +30,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13+: Follow standard conventions
 
 ## Recent Changes
+- 007-layout-region-ocr: Added Python 3.13+ + doclayout-yolo, Pillow, requests, pyyaml
 - 006-fix-toc-line-merge: Added Python 3.13+ + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
 - 005-toc-page-grouping: Added Python 3.13+ (Constitution準拠) + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
-- 004-toc-structure: Added Python 3.13+ (Constitution準拠) + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
 
 
 <!-- MANUAL ADDITIONS START -->

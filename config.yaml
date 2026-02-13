@@ -13,7 +13,7 @@ threshold: 8
 
 # OCR (DeepSeek)
 ocr_model: deepseek-ocr
-ocr_timeout: 60
+ocr_timeout: 120
 ocr_options:
   temperature: 0.1
   num_predict: 4096
@@ -38,3 +38,15 @@ toc_classifier_model: gpt-oss:20b
 
 # Figure detection
 min_confidence: 0.7
+
+# Layout-aware OCR (007-layout-region-ocr)
+coverage_threshold: 0.3    # フォールバック判定しきい値（30%未満でページ全体OCR）
+min_region_area: 0.01      # 最小領域面積（ページ面積の1%未満を除外）
+region_ocr_timeout: 120    # 領域別OCRのタイムアウト（秒）
+warmup_timeout: 300        # モデルウォームアップのタイムアウト（秒）
+
+# Spread splitting (見開き分割)
+split_spreads: true        # 見開き画像を左右に分割
+spread_aspect_ratio: 1.2   # 見開き判定の縦横比しきい値（幅/高さ >= 1.2 で見開き）
+spread_left_trim: 0.15     # 左ページの左端をトリム（3% = 0.03）
+spread_right_trim: 0.15    # 右ページの右端をトリム（3% = 0.03）
