@@ -6,7 +6,10 @@
 ## Prerequisites
 
 - Python 3.13+
-- Ollama running with `deepseek-ocr` and `gemma3:12b` models
+- Yomitoku installed (`pip install yomitoku`)
+- Ollama running with `gemma3:12b` model (VLM)
+- PaddleOCR installed (optional, fallback)
+- Tesseract installed (optional, fallback)
 - Virtual environment setup (`make setup`)
 
 ## Quick Usage
@@ -44,13 +47,20 @@ min_confidence: 0.3          # 検出信頼度しきい値
 coverage_threshold: 0.3      # フォールバック判定しきい値（30%未満でフォールバック）
 min_region_area: 0.01        # 最小領域面積（ページ面積の1%）
 
-# OCR
-ocr_model: deepseek-ocr
+# OCR (Yomitokuがメイン)
+ocr_engine: yomitoku         # メインOCRエンジン
+ocr_fallback:                # フォールバック順序
+  - paddleocr
+  - tesseract
 ocr_timeout: 60
 
 # VLM
 vlm_model: gemma3:12b
 vlm_timeout: 120
+
+# FIGURE処理
+mask_figures: true           # FIGURE領域を白塗りマスク
+exclude_figures: true        # FIGURE領域をOCR出力から除外
 ```
 
 ## Output Files

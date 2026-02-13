@@ -5,7 +5,13 @@
 
 ## Summary
 
-YOLOによるレイアウト検出を拡張（3クラス→9クラス）し、検出した領域毎に適切なOCRエンジン（DeepSeek-OCR/VLM）を選択して処理する。領域は読み順にソートされ、結合されて最終出力となる。検出失敗時は従来のページ全体OCRにフォールバックする。
+YOLOによるレイアウト検出を拡張（3クラス→10クラス）し、検出した領域毎に適切なOCRエンジン（Yomitoku/VLM）を選択して処理する。領域は読み順にソートされ、結合されて最終出力となる。検出失敗時は従来のページ全体OCRにフォールバックする。
+
+**追加要件（2026-02-13）**:
+- FR-009: TITLE判定はYOLO + Yomitoku `role=section_headings` 併用
+- FR-010: Yomitoku失敗時のOCRフォールバック（PaddleOCR → Tesseract）
+- FR-011: FIGURE領域のみ白塗りマスク（Yomitoku入力画像）
+- FR-012: FIGURE領域はOCR出力から除外（figures/で管理）
 
 ## Technical Context
 
@@ -27,7 +33,7 @@ YOLOによるレイアウト検出を拡張（3クラス→9クラス）し、�
 |------|--------|----------|
 | I. Pipeline-First | ✅ Pass | 既存パイプラインのStep 3/4を拡張。各ステップは独立実行可能 |
 | II. Test-First (NON-NEGOTIABLE) | ✅ Pass | TDD: RED→GREEN→Refactor サイクルで実装 |
-| III. Ollama Integration | ✅ Pass | 既存のDeepSeek-OCR/VLMをそのまま使用 |
+| III. Ollama Integration | ✅ Pass | Yomitoku/VLMを使用。フォールバック時PaddleOCR/Tesseract |
 | IV. Immutability & Side-Effect Isolation | ✅ Pass | 領域ソート等は純粋関数で実装。ファイルI/Oは境界のみ |
 | V. Simplicity (YAGNI) | ✅ Pass | 既存モジュールを拡張。新規モジュールは1つのみ |
 
@@ -50,12 +56,13 @@ specs/007-layout-region-ocr/
 ```text
 src/
 ├── detect_figures.py    # 変更: LABEL_TYPE_MAP 拡張、regions 構造
-├── ocr_deepseek.py      # 変更なし（再利用）
+├── ocr_yomitoku.py      # 既存（Yomitoku統合済み）
+├── ocr_ensemble.py      # 既存（アンサンブルOCR）
 ├── describe_figures.py  # 変更なし（再利用）
 ├── layout_ocr.py        # 新規: 領域別OCR dispatcher
 ├── reading_order.py     # 新規: 読み順ソートアルゴリズム
 ├── pipeline.py          # 変更: 新OCR戦略の統合
-└── utils.py             # 変更: 領域クロップ関数追加
+└── utils.py             # 変更: 領域クロップ/マスク関数追加
 
 tests/
 ├── test_detect_figures.py  # 新規: 拡張検出テスト

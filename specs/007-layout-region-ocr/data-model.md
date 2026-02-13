@@ -43,6 +43,8 @@ Layout = dict[str, PageLayout]  # key: page_001.png
 | region_type | string | 元の領域種類 | Region.type と同じ |
 | text | string | OCR出力テキスト | 空文字列可 |
 | formatted | string | フォーマット済みテキスト | Markdown形式 |
+| ocr_engine | string | 使用したOCRエンジン | yomitoku, paddleocr, tesseract |
+| is_title | bool | TITLE判定結果 | YOLO or Yomitoku role |
 
 ---
 
@@ -67,21 +69,28 @@ Layout = dict[str, PageLayout]  # key: page_001.png
          │
          ▼
 ┌─────────────────┐
+│  FIGURE Mask    │  ←── FIGURE領域を白塗り (FR-011)
+│  (for Yomitoku) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
 │  Reading Order  │
 │     Sort        │
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  Region-based   │
-│      OCR        │
+│  Region-based   │  ←── Yomitoku → PaddleOCR → Tesseract (FR-010)
+│      OCR        │      TITLE判定: YOLO + role (FR-009)
 └────────┬────────┘
          │
-         ▼
-┌─────────────────┐
-│   OCRResult[]   │
-│   (per region)  │
-└────────┬────────┘
+         ├──────────────────────┐
+         ▼                      ▼
+┌─────────────────┐    ┌─────────────────┐
+│   OCRResult[]   │    │   FIGURE files  │ ←── FR-012: FIGURE除外
+│ (FIGURE除外)    │    │   (figures/)    │
+└────────┬────────┘    └─────────────────┘
          │
          ▼
 ┌─────────────────┐

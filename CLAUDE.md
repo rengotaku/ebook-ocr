@@ -31,8 +31,8 @@ Python 3.13+: Follow standard conventions
 
 ## Recent Changes
 - 007-layout-region-ocr: Added Python 3.13+ + doclayout-yolo, Pillow, requests, pyyaml
+- 007-layout-region-ocr: Added Python 3.13+ + doclayout-yolo, Pillow, requests, pyyaml
 - 006-fix-toc-line-merge: Added Python 3.13+ + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
-- 005-toc-page-grouping: Added Python 3.13+ (Constitution準拠) + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
 
 
 <!-- MANUAL ADDITIONS START -->
