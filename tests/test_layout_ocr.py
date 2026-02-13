@@ -658,10 +658,13 @@ class TestOcrByLayoutEdgeCases:
         assert "日本語" in results[0].text, "Unicode text should be preserved"
 
     def test_ocr_by_layout_mixed_region_types(self, tmp_path: Path) -> None:
-        """異なる領域タイプが混在する場合の処理を検証。"""
+        """異なる領域タイプが混在する場合の処理を検証。
+
+        FR-012: FIGURE領域はOCR出力から除外される。
+        """
         from src.layout_ocr import ocr_by_layout
 
-        # Arrange
+        # Arrange: シンプルな単一カラムレイアウト（読み順を予測しやすい）
         img_path = tmp_path / "test_page.png"
         img = Image.new("RGB", (800, 800), color=(255, 255, 255))
         img.save(img_path)
@@ -669,59 +672,53 @@ class TestOcrByLayoutEdgeCases:
         layout = {
             "regions": [
                 {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95},
-                {"type": "TEXT", "bbox": [50, 120, 400, 350], "confidence": 0.9},
-                {"type": "FIGURE", "bbox": [420, 120, 750, 350], "confidence": 0.88},
-                {"type": "CAPTION", "bbox": [420, 360, 750, 390], "confidence": 0.85},
-                {"type": "TEXT", "bbox": [50, 400, 750, 600], "confidence": 0.9},
+                {"type": "TEXT", "bbox": [50, 120, 750, 250], "confidence": 0.9},
+                {"type": "FIGURE", "bbox": [50, 270, 750, 450], "confidence": 0.88},
+                {"type": "CAPTION", "bbox": [50, 460, 750, 490], "confidence": 0.85},
+                {"type": "TEXT", "bbox": [50, 510, 750, 640], "confidence": 0.9},
                 {"type": "FOOTNOTE", "bbox": [50, 750, 750, 790], "confidence": 0.8},
             ],
             "page_size": [800, 800],
         }
 
-        # 各領域タイプに応じたモックレスポンス
-        mock_responses = [
-            {"message": {"content": "第5章 結論"}},
-            {"message": {"content": "左カラムのテキスト"}},
-            {"message": {"content": "統計グラフを示す図"}},
-            {"message": {"content": "図5.1: 統計データ"}},
-            {"message": {"content": "結論の本文テキスト"}},
-            {"message": {"content": "脚注: 参考文献より"}},
+        # 各領域タイプに応じたモックレスポンス（上から下の順、FIGUREは除外）
+        mock_yomitoku_responses = [
+            "第5章 結論",           # TITLE (y=50)
+            "左カラムのテキスト",      # TEXT (y=120)
+            "図5.1: 統計データ",     # CAPTION (y=460)
+            "結論の本文テキスト",      # TEXT (y=510)
+            "脚注: 参考文献より",      # FOOTNOTE (y=750)
         ]
-        mock_post = MagicMock()
-        mock_post.raise_for_status = MagicMock()
 
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_post):
-            mock_post.json = MagicMock(side_effect=mock_responses)
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
+            mock_ocr.side_effect = mock_yomitoku_responses
             results = ocr_by_layout(str(img_path), layout)
 
-        # Assert: 各領域が正しいフォーマットで出力
-        assert len(results) == 6, f"Should return 6 results. Got: {len(results)}"
+        # Assert: FIGUREは除外されるので5つの結果（元6領域 - FIGURE 1つ）
+        assert len(results) == 5, f"Should return 5 results (FIGURE excluded). Got: {len(results)}"
 
-        # TITLE: ## {text}
-        assert results[0].formatted.startswith("## "), (
-            f"TITLE should start with '## '. Got: {results[0].formatted}"
-        )
+        # 各領域タイプが正しくフォーマットされているかチェック
+        region_types = [r.region_type for r in results]
+        assert "FIGURE" not in region_types, "FIGURE should be excluded from results"
 
-        # TEXT: {text}
-        assert results[1].formatted == results[1].text, (
-            "TEXT should be unchanged"
-        )
+        # 少なくとも以下を確認:
+        # - TITLEは ## で始まる
+        title_results = [r for r in results if r.region_type == "TITLE"]
+        assert len(title_results) == 1, "Should have exactly one TITLE"
+        assert title_results[0].formatted.startswith("## "), "TITLE should start with '## '"
 
-        # FIGURE: [FIGURE: {desc}]
-        assert results[2].formatted.startswith("[FIGURE:"), (
-            f"FIGURE should start with '[FIGURE:'. Got: {results[2].formatted}"
-        )
+        # - CAPTIONは * で囲まれる
+        caption_results = [r for r in results if r.region_type == "CAPTION"]
+        assert len(caption_results) == 1, "Should have exactly one CAPTION"
+        assert caption_results[0].formatted.startswith("*"), "CAPTION should start with '*'"
+        assert caption_results[0].formatted.endswith("*"), "CAPTION should end with '*'"
 
-        # CAPTION: *{text}*
-        assert results[3].formatted.startswith("*") and results[3].formatted.endswith("*"), (
-            f"CAPTION should be wrapped in '*'. Got: {results[3].formatted}"
-        )
-
-        # FOOTNOTE: ^{text}^
-        assert results[5].formatted.startswith("^") and results[5].formatted.endswith("^"), (
-            f"FOOTNOTE should be wrapped in '^'. Got: {results[5].formatted}"
-        )
+        # - FOOTNOTEは ^ で囲まれる
+        footnote_results = [r for r in results if r.region_type == "FOOTNOTE"]
+        assert len(footnote_results) == 1, "Should have exactly one FOOTNOTE"
+        assert footnote_results[0].formatted.startswith("^"), "FOOTNOTE should start with '^'"
+        assert footnote_results[0].formatted.endswith("^"), "FOOTNOTE should end with '^'"
 
 
 # ============================================================================

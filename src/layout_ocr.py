@@ -28,7 +28,7 @@ from pathlib import Path
 import requests
 from PIL import Image
 
-from src.utils import encode_pil_image
+from src.utils import encode_pil_image, mask_figures
 from src.reading_order import sort_reading_order, remove_overlaps
 
 
@@ -88,6 +88,90 @@ class OCRResult:
     region_type: str  # 元の領域種類
     text: str  # OCR出力テキスト
     formatted: str  # フォーマット済みテキスト（Markdown形式）
+
+
+def is_title(region: dict, yomitoku_result: dict | None = None) -> bool:
+    """Check if region is a title based on YOLO detection or Yomitoku role.
+
+    Args:
+        region: Region dict with 'type' key
+        yomitoku_result: Optional Yomitoku result with 'role' key
+
+    Returns:
+        True if YOLO type is 'TITLE' or yomitoku role is 'section_headings'
+    """
+    # YOLOでTITLEとして検出
+    if region.get("type") == "TITLE":
+        return True
+    # Yomitokuの role が section_headings
+    if yomitoku_result and yomitoku_result.get("role") == "section_headings":
+        return True
+    return False
+
+
+def calc_non_char_ratio(text: str) -> float:
+    """Calculate the ratio of non-text characters.
+
+    Non-text: Not Japanese (hiragana/katakana/kanji), not alphanumeric, not common punctuation
+
+    Returns:
+        Ratio between 0.0 and 1.0
+    """
+    if not text:
+        return 0.0
+
+    import re
+    # 日本語（ひらがな/カタカナ/漢字）、英数字をカウント
+    char_pattern = r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\w]'
+    chars = len(re.findall(char_pattern, text))
+    return 1.0 - (chars / len(text))
+
+
+def is_low_quality(text: str, min_length: int = 10, max_non_char_ratio: float = 0.5) -> bool:
+    """Check if OCR result is low quality.
+
+    Low quality criteria:
+    - Empty string
+    - Less than min_length characters
+    - Non-char ratio > max_non_char_ratio
+    """
+    # 空文字列または空白のみ
+    if not text or not text.strip():
+        return True
+    # 10文字未満
+    if len(text.strip()) < min_length:
+        return True
+    # 非文字率 > 50%
+    if calc_non_char_ratio(text) > max_non_char_ratio:
+        return True
+    return False
+
+
+def ocr_with_fallback(image: Image.Image, device: str = "cpu") -> tuple[str, str]:
+    """OCR with fallback chain: Yomitoku → PaddleOCR → Tesseract.
+
+    Returns:
+        (text, engine_name) tuple where engine_name is 'yomitoku', 'paddleocr', or 'tesseract'
+    """
+    from src.ocr_yomitoku import ocr_page_yomitoku
+    from src.ocr_ensemble import ocr_paddleocr, ocr_tesseract
+
+    # 1. Yomitoku
+    text = ocr_page_yomitoku("", device=device, img=image)
+    if text and not is_low_quality(text):
+        return text, "yomitoku"
+
+    # 2. PaddleOCR
+    result = ocr_paddleocr(image)
+    if result.success and result.text and not is_low_quality(result.text):
+        return result.text, "paddleocr"
+
+    # 3. Tesseract
+    result = ocr_tesseract(image)
+    if result.success and result.text:
+        return result.text, "tesseract"
+
+    return "", "none"
 
 
 def select_ocr_engine(region_type: str) -> str:
@@ -319,7 +403,7 @@ def ocr_by_layout(
         yomitoku_device: Device for Yomitoku ("cpu" or "cuda")
 
     Returns:
-        各領域のOCRResult リスト（領域順序を維持）
+        各領域のOCRResult リスト（読み順ソート済み）
     """
     regions = layout.get("regions", [])
     page_size = tuple(layout.get("page_size", [0, 0]))
@@ -339,6 +423,11 @@ def ocr_by_layout(
             )
         ]
 
+    # 読み順ソート適用（US3統合）
+    if regions and page_size[0] > 0:
+        regions = remove_overlaps(regions)
+        regions = sort_reading_order(regions, page_size[0])
+
     # 画像を読み込み
     img = Image.open(page_path)
 
@@ -347,6 +436,10 @@ def ocr_by_layout(
     for region in regions:
         # ABANDON領域はスキップ
         if region["type"] == "ABANDON":
+            continue
+
+        # FIGURE領域は除外（FR-012: figures/で別管理）
+        if region["type"] == "FIGURE":
             continue
 
         result = ocr_region(
@@ -398,10 +491,13 @@ def run_layout_ocr(
     # Model warmup (initialize Yomitoku)
     if warmup:
         print("  Initializing Yomitoku OCR...")
-        from src.ocr_yomitoku import _get_analyzer
+        from src.ocr_yomitoku import ocr_page_yomitoku
+        from PIL import Image
         import time
         start = time.time()
-        _get_analyzer(yomitoku_device)
+        # Warm up by running a dummy OCR
+        dummy_img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+        ocr_page_yomitoku("", device=yomitoku_device, img=dummy_img)
         elapsed = time.time() - start
         print(f"  Yomitoku ready in {elapsed:.1f}s")
 

@@ -68,6 +68,30 @@ def format_figure_markers(
     return "\n".join(markers) + "\n" if markers else ""
 
 
+def mask_figures(image: Image.Image, regions: list[dict]) -> Image.Image:
+    """Mask FIGURE regions with white color.
+
+    Only regions with type='FIGURE' are masked.
+    Returns a copy of the image with FIGURE regions filled white.
+
+    Args:
+        image: PIL Image object
+        regions: List of region dicts with 'type' and 'bbox' keys
+
+    Returns:
+        Copy of image with FIGURE regions masked white
+    """
+    masked = image.copy()
+    draw = ImageDraw.Draw(masked)
+
+    for r in regions:
+        if r.get("type") == "FIGURE":
+            x1, y1, x2, y2 = r["bbox"]
+            draw.rectangle([x1, y1, x2, y2], fill="white")
+
+    return masked
+
+
 def mask_figure_regions(
     img: Image.Image,
     page_name: str,
