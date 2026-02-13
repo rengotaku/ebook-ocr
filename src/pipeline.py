@@ -1,7 +1,7 @@
-"""V4 pipeline: video → frames → dedup → Yomitoku (layout + OCR) → VLM figure description.
+"""V5 pipeline: video → frames → dedup → Yomitoku layout + ROVER multi-engine OCR → VLM figure description.
 
-Yomitoku handles both layout detection and OCR in a unified process.
-No separate YOLO-based detection needed.
+Yomitoku handles layout detection.
+ROVER combines multiple OCR engines (Yomitoku, PaddleOCR, EasyOCR, Tesseract) for improved accuracy.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from src.extract_frames import extract_frames
 from src.deduplicate import deduplicate_frames
 from src.split_spread import split_spread_pages, renumber_pages
 from src.ocr_yomitoku import detect_layout_yomitoku
-from src.layout_ocr import run_yomitoku_ocr
+from src.ocr_rover import run_rover_batch
 from src.describe_figures import describe_figures
 
 
@@ -42,10 +42,11 @@ def run_pipeline(
     spread_right_trim: float = 0.0,
     vlm_options: dict | None = None,
 ) -> None:
-    """Run the full video-to-markdown pipeline (v4 with Yomitoku).
+    """Run the full video-to-markdown pipeline (v5 with ROVER OCR).
 
     Steps 0-2 are shared with v1/v2. Step 2.5 splits spreads into pages.
-    Step 3+4 (unified) uses Yomitoku for layout detection and OCR.
+    Step 3 uses Yomitoku for layout detection.
+    Step 4 uses ROVER multi-engine OCR (Yomitoku + PaddleOCR + EasyOCR + Tesseract).
     Step 5 uses VLM to describe detected figures.
 
     Args:
@@ -121,9 +122,9 @@ def run_pipeline(
         )
         renumber_pages(pages_dir)
 
-    # Step 3+4: Yomitoku-based layout detection and OCR (unified)
+    # Step 3+4: Layout detection and ROVER multi-engine OCR
     print("\n" + "=" * 60)
-    print(f"Step 3+4: Layout detection and OCR with Yomitoku (device={yomitoku_device})")
+    print(f"Step 3+4: Layout detection and ROVER OCR (device={yomitoku_device})")
     print("=" * 60)
 
     # Detect layout and create visualizations
@@ -133,12 +134,23 @@ def run_pipeline(
         device=yomitoku_device,
     )
 
-    # Run OCR
-    run_yomitoku_ocr(
+    # Run ROVER multi-engine OCR
+    ocr_output_dir = str(out / "ocr_output")
+    run_rover_batch(
         pages_dir=pages_dir,
-        output_file=text_file,
-        device=yomitoku_device,
+        output_dir=ocr_output_dir,
+        yomitoku_device=yomitoku_device,
     )
+
+    # Consolidate ROVER results into book.txt
+    rover_dir = Path(ocr_output_dir) / "rover"
+    rover_pages = sorted(rover_dir.glob("*.txt"))
+    with open(text_file, "w", encoding="utf-8") as f:
+        for page_file in rover_pages:
+            page_text = page_file.read_text(encoding="utf-8")
+            f.write(f"\n--- {page_file.stem} ---\n\n")
+            f.write(page_text)
+            f.write("\n\n")
 
     # Step 5: Describe figures with VLM
     print("\n" + "=" * 60)
@@ -177,7 +189,7 @@ def main() -> None:
     cfg = load_config()
 
     parser = argparse.ArgumentParser(
-        description="Extract text from e-book screen recording (v3 - Yomitoku OCR + VLM figures)",
+        description="Extract text from e-book screen recording (v5 - ROVER multi-engine OCR + VLM figures)",
     )
     parser.add_argument("video", help="Input video file path")
     parser.add_argument("-o", "--output", default=cfg.get("output", "output"), help="Base output directory")

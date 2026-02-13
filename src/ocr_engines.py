@@ -1,0 +1,344 @@
+"""OCR engine wrappers with bounding box support.
+
+Provides unified interface for multiple OCR engines:
+- Yomitoku (Japanese-specialized)
+- PaddleOCR (high accuracy)
+- EasyOCR (neural network-based)
+- Tesseract (traditional)
+
+All engines return results with bounding box information.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from PIL import Image
+
+
+# Lazy imports for optional dependencies
+_tesseract = None
+_easyocr_reader = None
+_paddleocr_reader = None
+_yomitoku_analyzer = None
+
+
+def _get_tesseract():
+    """Lazy import for pytesseract."""
+    global _tesseract
+    if _tesseract is None:
+        import pytesseract
+        _tesseract = pytesseract
+    return _tesseract
+
+
+def _get_easyocr_reader(lang_list: list[str] | None = None):
+    """Lazy import and initialization for EasyOCR."""
+    global _easyocr_reader
+    if _easyocr_reader is None:
+        import easyocr
+        langs = lang_list or ["ja", "en"]
+        _easyocr_reader = easyocr.Reader(langs, gpu=False)
+    return _easyocr_reader
+
+
+def _get_paddleocr_reader(lang: str = "japan"):
+    """Lazy import and initialization for PaddleOCR 3.x."""
+    global _paddleocr_reader
+    if _paddleocr_reader is None:
+        import logging
+        logging.getLogger("ppocr").setLevel(logging.WARNING)
+        from paddleocr import PaddleOCR
+        _paddleocr_reader = PaddleOCR(
+            lang=lang,
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+            enable_mkldnn=False,
+        )
+    return _paddleocr_reader
+
+
+def _get_yomitoku_analyzer(device: str = "cpu"):
+    """Lazy import and initialization for Yomitoku."""
+    global _yomitoku_analyzer
+    if _yomitoku_analyzer is None:
+        from yomitoku import DocumentAnalyzer
+        _yomitoku_analyzer = DocumentAnalyzer(
+            visualize=False,
+            device=device,
+        )
+    return _yomitoku_analyzer
+
+
+@dataclass
+class TextWithBox:
+    """Text with bounding box and confidence."""
+    text: str
+    bbox: tuple[int, int, int, int]  # (x1, y1, x2, y2)
+    confidence: float
+
+    @property
+    def y_center(self) -> float:
+        """Vertical center position for line alignment."""
+        return (self.bbox[1] + self.bbox[3]) / 2.0
+
+
+@dataclass
+class EngineResult:
+    """Result from a single OCR engine."""
+    engine: str
+    items: list[TextWithBox]
+    success: bool
+    error: str | None = None
+
+    @property
+    def text(self) -> str:
+        """Concatenated text from all items."""
+        return "\n".join(item.text for item in self.items)
+
+
+def run_yomitoku_with_boxes(
+    image: Image.Image,
+    device: str = "cpu",
+) -> EngineResult:
+    """Run Yomitoku OCR with bounding boxes.
+
+    Args:
+        image: PIL Image to process.
+        device: Device to use ("cuda" or "cpu").
+
+    Returns:
+        EngineResult with text and bboxes.
+    """
+    try:
+        import cv2
+        import numpy as np
+        analyzer = _get_yomitoku_analyzer(device)
+
+        # Convert PIL to cv2 format (BGR)
+        img_array = np.array(image.convert("RGB"))
+        cv_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+
+        # Run OCR
+        results, _, _ = analyzer(cv_img)
+
+        items: list[TextWithBox] = []
+        for paragraph in results.paragraphs:
+            # Extract text
+            text = ""
+            if hasattr(paragraph, "contents"):
+                text = paragraph.contents
+            elif hasattr(paragraph, "text"):
+                text = paragraph.text
+
+            if not text:
+                continue
+
+            # Extract bbox
+            if hasattr(paragraph, "box") and paragraph.box:
+                # yomitoku box format: [x1, y1, x2, y2]
+                box = paragraph.box
+                bbox = (
+                    int(box[0]),
+                    int(box[1]),
+                    int(box[2]),
+                    int(box[3]),
+                )
+            else:
+                continue  # Skip paragraphs without box
+
+            confidence = 1.0  # yomitoku doesn't provide per-paragraph confidence
+            items.append(TextWithBox(
+                text=text,
+                bbox=bbox,
+                confidence=confidence,
+            ))
+
+        return EngineResult(engine="yomitoku", items=items, success=True)
+    except Exception as e:
+        return EngineResult(engine="yomitoku", items=[], success=False, error=str(e))
+
+
+def run_paddleocr_with_boxes(
+    image: Image.Image,
+    lang: str = "japan",
+) -> EngineResult:
+    """Run PaddleOCR 3.x with bounding boxes.
+
+    Args:
+        image: PIL Image to process.
+        lang: Language code for PaddleOCR.
+
+    Returns:
+        EngineResult with text and bboxes.
+    """
+    try:
+        import numpy as np
+        reader = _get_paddleocr_reader(lang)
+        img_array = np.array(image)
+
+        result = reader.predict(img_array)
+
+        items: list[TextWithBox] = []
+        if result:
+            for res in result:
+                texts = res.get("rec_texts", [])
+                scores = res.get("rec_scores", [])
+                polys = res.get("rec_polys", [])
+
+                for i, text in enumerate(texts):
+                    # Convert polygon to bbox
+                    if i < len(polys):
+                        poly = polys[i]
+                        x_coords = [p[0] for p in poly]
+                        y_coords = [p[1] for p in poly]
+                        bbox = (
+                            int(min(x_coords)),
+                            int(min(y_coords)),
+                            int(max(x_coords)),
+                            int(max(y_coords)),
+                        )
+                    else:
+                        bbox = (0, 0, 0, 0)
+
+                    confidence = float(scores[i]) if i < len(scores) else 0.0
+
+                    items.append(TextWithBox(
+                        text=text,
+                        bbox=bbox,
+                        confidence=confidence,
+                    ))
+
+        return EngineResult(engine="paddleocr", items=items, success=True)
+    except Exception as e:
+        return EngineResult(engine="paddleocr", items=[], success=False, error=str(e))
+
+
+def run_easyocr_with_boxes(
+    image: Image.Image,
+    lang_list: list[str] | None = None,
+) -> EngineResult:
+    """Run EasyOCR with bounding boxes.
+
+    Args:
+        image: PIL Image to process.
+        lang_list: Language list for EasyOCR.
+
+    Returns:
+        EngineResult with text and bboxes.
+    """
+    try:
+        import numpy as np
+        reader = _get_easyocr_reader(lang_list)
+        img_array = np.array(image)
+
+        # EasyOCR returns: [(bbox, text, confidence), ...]
+        results = reader.readtext(img_array, detail=1)
+
+        items: list[TextWithBox] = []
+        for bbox_points, text, confidence in results:
+            # bbox_points: [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+            x_coords = [p[0] for p in bbox_points]
+            y_coords = [p[1] for p in bbox_points]
+            bbox = (
+                int(min(x_coords)),
+                int(min(y_coords)),
+                int(max(x_coords)),
+                int(max(y_coords)),
+            )
+
+            items.append(TextWithBox(
+                text=text,
+                bbox=bbox,
+                confidence=float(confidence),
+            ))
+
+        return EngineResult(engine="easyocr", items=items, success=True)
+    except Exception as e:
+        return EngineResult(engine="easyocr", items=[], success=False, error=str(e))
+
+
+def run_tesseract_with_boxes(
+    image: Image.Image,
+    lang: str = "jpn+eng",
+) -> EngineResult:
+    """Run Tesseract OCR with bounding boxes.
+
+    Args:
+        image: PIL Image to process.
+        lang: Tesseract language code(s).
+
+    Returns:
+        EngineResult with text and bboxes.
+    """
+    try:
+        pytesseract = _get_tesseract()
+
+        # Get detailed data with boxes
+        data = pytesseract.image_to_data(
+            image,
+            lang=lang,
+            output_type=pytesseract.Output.DICT,
+        )
+
+        items: list[TextWithBox] = []
+        n_boxes = len(data["text"])
+
+        for i in range(n_boxes):
+            text = data["text"][i].strip()
+            if not text:
+                continue
+
+            confidence = float(data["conf"][i]) / 100.0 if data["conf"][i] != -1 else 0.0
+            x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+            bbox = (x, y, x + w, y + h)
+
+            items.append(TextWithBox(
+                text=text,
+                bbox=bbox,
+                confidence=confidence,
+            ))
+
+        return EngineResult(engine="tesseract", items=items, success=True)
+    except Exception as e:
+        return EngineResult(engine="tesseract", items=[], success=False, error=str(e))
+
+
+def run_all_engines(
+    image: Image.Image,
+    engines: list[str] | None = None,
+    yomitoku_device: str = "cpu",
+    tesseract_lang: str = "jpn+eng",
+    easyocr_langs: list[str] | None = None,
+    paddleocr_lang: str = "japan",
+) -> dict[str, EngineResult]:
+    """Run all specified OCR engines.
+
+    Args:
+        image: PIL Image to process.
+        engines: List of engine names. Default: ["yomitoku", "paddleocr", "easyocr", "tesseract"]
+        yomitoku_device: Device for Yomitoku.
+        tesseract_lang: Tesseract language code(s).
+        easyocr_langs: EasyOCR language list.
+        paddleocr_lang: PaddleOCR language code.
+
+    Returns:
+        Dict mapping engine name to EngineResult.
+    """
+    if engines is None:
+        engines = ["yomitoku", "paddleocr", "easyocr", "tesseract"]
+
+    results: dict[str, EngineResult] = {}
+
+    for engine in engines:
+        if engine == "yomitoku":
+            results[engine] = run_yomitoku_with_boxes(image, yomitoku_device)
+        elif engine == "paddleocr":
+            results[engine] = run_paddleocr_with_boxes(image, paddleocr_lang)
+        elif engine == "easyocr":
+            results[engine] = run_easyocr_with_boxes(image, easyocr_langs)
+        elif engine == "tesseract":
+            results[engine] = run_tesseract_with_boxes(image, tesseract_lang)
+
+    return results

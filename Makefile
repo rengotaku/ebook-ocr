@@ -24,7 +24,7 @@ HASHDIR ?=
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract split-spreads yomitoku-detect yomitoku-ocr test test-book-converter test-cov converter convert-sample clean clean-all
+.PHONY: help setup run extract split-spreads yomitoku-detect yomitoku-ocr rover-ocr test test-book-converter test-cov converter convert-sample clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -36,7 +36,7 @@ $(VENV)/bin/activate: requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-run: setup ## Run full pipeline (Yomitoku-based: layout detection + OCR + VLM figure description)
+run: setup ## Run full pipeline (ROVER multi-engine OCR: yomitoku+paddle+easyocr + VLM figures)
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --device cpu --vlm-model $(VLM_MODEL) --ollama-url $(VLM_URL) --ocr-timeout $(OCR_TIMEOUT) --vlm-timeout $(VLM_TIMEOUT) --min-confidence $(MIN_CONFIDENCE)
 
 extract: setup ## Extract frames only (skip OCR)
@@ -54,9 +54,13 @@ yomitoku-detect: setup ## Run yomitoku layout detection and visualization (requi
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-detect HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.ocr_yomitoku import detect_layout_yomitoku; detect_layout_yomitoku('$(HASHDIR)/pages', '$(HASHDIR)', device='cpu')"
 
-yomitoku-ocr: setup ## Re-run OCR on existing pages (requires HASHDIR)
+yomitoku-ocr: setup ## [LEGACY] Re-run single-engine Yomitoku OCR (use 'make run' for ROVER)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-ocr HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.layout_ocr import run_yomitoku_ocr; run_yomitoku_ocr('$(HASHDIR)/pages', '$(HASHDIR)/book.txt', device='cpu')"
+
+rover-ocr: setup ## Run ROVER multi-engine OCR only (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make rover-ocr HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_rover.py "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output"
 
 # OBSOLETE TARGETS (kept for reference, not maintained)
 # ocr: setup ## [OBSOLETE] Run DeepSeek-OCR - file removed, use 'make run' instead
