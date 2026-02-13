@@ -51,29 +51,29 @@
 
 ### Input
 
-- [ ] T009 Read previous phase output: specs/007-layout-region-ocr/tasks/ph1-output.md
+- [x] T009 Read previous phase output: specs/007-layout-region-ocr/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T010 [P] [US1] 全クラス検出テスト実装: tests/test_detect_figures.py - LABEL_TYPE_MAP に10クラス含まれることを検証
-- [ ] T011 [P] [US1] regions構造テスト実装: tests/test_detect_figures.py - layout.json出力が regions キーを持つことを検証
-- [ ] T012 [P] [US1] page_sizeテスト実装: tests/test_detect_figures.py - layout.json出力に page_size が含まれることを検証
-- [ ] T013 [P] [US1] ノイズ除外テスト実装: tests/test_detect_figures.py - 最小面積しきい値（1%）未満の領域が除外されることを検証
-- [ ] T014 Verify `make test` FAIL (RED)
-- [ ] T015 Generate RED output: specs/007-layout-region-ocr/red-tests/ph2-test.md
+- [x] T010 [P] [US1] 全クラス検出テスト実装: tests/test_detect_figures.py - LABEL_TYPE_MAP に10クラス含まれることを検証
+- [x] T011 [P] [US1] regions構造テスト実装: tests/test_detect_figures.py - layout.json出力が regions キーを持つことを検証
+- [x] T012 [P] [US1] page_sizeテスト実装: tests/test_detect_figures.py - layout.json出力に page_size が含まれることを検証
+- [x] T013 [P] [US1] ノイズ除外テスト実装: tests/test_detect_figures.py - 最小面積しきい値（1%）未満の領域が除外されることを検証
+- [x] T014 Verify `make test` FAIL (RED) - 実装済みのためGREEN状態
+- [x] T015 Generate RED output: specs/007-layout-region-ocr/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
-- [ ] T016 Read RED tests: specs/007-layout-region-ocr/red-tests/ph2-test.md
-- [ ] T017 [P] [US1] LABEL_TYPE_MAP を10クラスに拡張: src/detect_figures.py - research.md のマッピング参照
-- [ ] T018 [P] [US1] layout.json出力を regions 構造に変更: src/detect_figures.py - figures → regions、page_size 追加
-- [ ] T019 [US1] 最小面積フィルタリング実装: src/detect_figures.py - min_area パラメータ追加（デフォルト1%）
-- [ ] T020 Verify `make test` PASS (GREEN)
+- [x] T016 Read RED tests: specs/007-layout-region-ocr/red-tests/ph2-test.md
+- [x] T017 [P] [US1] LABEL_TYPE_MAP を10クラスに拡張: src/detect_figures.py - 既に実装済み
+- [x] T018 [P] [US1] layout.json出力を regions 構造に変更: src/detect_figures.py - 既に実装済み
+- [x] T019 [US1] 最小面積フィルタリング実装: src/detect_figures.py - 既に実装済み
+- [x] T020 Verify `make test` PASS (GREEN) - 13/13 tests passed
 
 ### Verification
 
-- [ ] T021 Verify `make test` passes all tests (no regressions)
-- [ ] T022 Generate phase output: specs/007-layout-region-ocr/tasks/ph2-output.md
+- [x] T021 Verify `make test` passes all tests (no regressions)
+- [x] T022 Generate phase output: specs/007-layout-region-ocr/tasks/ph2-output.md
 
 **Checkpoint**: US1完了後、全クラス検出と regions 構造出力が独立して動作
 

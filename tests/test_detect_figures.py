@@ -156,10 +156,16 @@ class TestLayoutJsonRegionsStructure:
         mock_model = MagicMock()
         mock_model.predict.return_value = [mock_result]
 
-        with patch("doclayout_yolo.YOLOv10", return_value=mock_model):
-            with patch("huggingface_hub.hf_hub_download", return_value="/tmp/model.pt"):
-                from src.detect_figures import detect_figures
-                layout = detect_figures(str(page_dir), str(output_dir))
+        # detect_figures imports inside the function, so we need to patch the modules
+        with patch.dict("sys.modules", {
+            "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
+            "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
+        }):
+            # Force reload to pick up mocked modules
+            import importlib
+            import src.detect_figures
+            importlib.reload(src.detect_figures)
+            layout = src.detect_figures.detect_figures(str(page_dir), str(output_dir))
 
         # layout.json を読み込み
         layout_path = output_dir / "layout.json"
@@ -228,10 +234,16 @@ class TestLayoutJsonPageSize:
         mock_model = MagicMock()
         mock_model.predict.return_value = [mock_result]
 
-        with patch("doclayout_yolo.YOLOv10", return_value=mock_model):
-            with patch("huggingface_hub.hf_hub_download", return_value="/tmp/model.pt"):
-                from src.detect_figures import detect_figures
-                layout = detect_figures(str(page_dir), str(output_dir))
+        # detect_figures imports inside the function, so we need to patch the modules
+        with patch.dict("sys.modules", {
+            "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
+            "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
+        }):
+            # Force reload to pick up mocked modules
+            import importlib
+            import src.detect_figures
+            importlib.reload(src.detect_figures)
+            layout = src.detect_figures.detect_figures(str(page_dir), str(output_dir))
 
         # layout.json を読み込み
         layout_path = output_dir / "layout.json"
@@ -317,10 +329,16 @@ class TestMinAreaFiltering:
         mock_model = MagicMock()
         mock_model.predict.return_value = [mock_result]
 
-        with patch("doclayout_yolo.YOLOv10", return_value=mock_model):
-            with patch("huggingface_hub.hf_hub_download", return_value="/tmp/model.pt"):
-                from src.detect_figures import detect_figures
-                layout = detect_figures(str(page_dir), str(output_dir))
+        # detect_figures imports inside the function, so we need to patch the modules
+        with patch.dict("sys.modules", {
+            "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
+            "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
+        }):
+            # Force reload to pick up mocked modules
+            import importlib
+            import src.detect_figures
+            importlib.reload(src.detect_figures)
+            layout = src.detect_figures.detect_figures(str(page_dir), str(output_dir))
 
         # layout.json を読み込み
         layout_path = output_dir / "layout.json"
