@@ -3,6 +3,7 @@
 **日付**: 2026-02-15
 **発見場所**: `output/157012a97dcbebed/ocr_output/rover/page_0005.txt`
 **重大度**: HIGH (出力品質に直接影響)
+**ステータス**: ✅ RESOLVED (commit: c2b71a5)
 
 ## 症状
 
@@ -164,4 +165,40 @@ def test_rover_no_duplicate_with_multiline_paragraph():
     """yomitoku段落が複数行でも重複しない"""
     # Setup: yomitoku 1段落 vs paddleocr 3行
     # Assert: 出力は3行のみ、重複なし
+```
+
+## 解決 (2026-02-15)
+
+**採用案**: 案B (yomitoku wordsの直接使用) のバリエーション
+
+### 実装内容
+
+1. `run_yomitoku_with_boxes` を `words` ベースに変更
+2. `_cluster_words_to_lines` 関数を追加 - words を y座標でクラスタリング
+3. 各物理行が個別の `TextWithBox` として返される
+
+### 修正ファイル
+
+- `src/ocr_engines.py`: `run_yomitoku_with_boxes`, `_cluster_words_to_lines`
+- `src/ocr_rover.py`: `split_multiline_items` (補助関数として残存)
+- `tests/test_ocr_rover.py`: 10件のテスト追加
+
+### 検証結果
+
+```
+修正前:
+  yomitoku Line 2: y_center=223.0, y_range=[169-277] (3行分)
+  yomitoku 行数: 20行
+  rover 出力: 32行 (重複あり)
+
+修正後:
+  yomitoku Line 2: y_center=181.5, y_range=[166-197] (1行)
+  yomitoku 行数: 26行 (paddleocr/easyocrと同等)
+  rover 出力: 26行 (重複なし)
+```
+
+### テスト結果
+
+```
+147 passed in 0.17s
 ```
