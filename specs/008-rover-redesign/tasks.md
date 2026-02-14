@@ -188,23 +188,23 @@
 
 ### Input
 
-- [ ] T063 セットアップ分析を読む: specs/008-rover-redesign/tasks/ph1-output.md
-- [ ] T064 前フェーズ出力を読む: specs/008-rover-redesign/tasks/ph4-output.md
+- [x] T063 セットアップ分析を読む: specs/008-rover-redesign/tasks/ph1-output.md
+- [x] T064 前フェーズ出力を読む: specs/008-rover-redesign/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T065 [P] 廃止されたコードを削除（tesseract関連）
-- [ ] T066 [P] 古いROVER実装を削除（行レベル投票のみの古いコード）
-- [ ] T067 [P] コードクリーンアップとリファクタリング
-- [ ] T068 Makefile `rover-ocr` ターゲットを更新
-- [ ] T069 quickstart.md の検証を実行
+- [x] T065 [P] 廃止されたコードを削除（tesseract関連）
+- [x] T066 [P] 古いROVER実装を削除（行レベル投票のみの古いコード）
+- [x] T067 [P] コードクリーンアップとリファクタリング
+- [x] T068 Makefile `rover-ocr` ターゲットを更新
+- [x] T069 quickstart.md の検証を実行
 
 ### Verification
 
-- [ ] T070 `make test` が全テスト通過することを確認
-- [ ] T071 `make coverage` ≥80% を確認
-- [ ] T072 パイプライン統合確認（実際の画像でROVER実行）
-- [ ] T073 フェーズ出力を生成: specs/008-rover-redesign/tasks/ph5-output.md
+- [x] T070 `make test` が全テスト通過することを確認
+- [x] T071 `make coverage` ≥80% を確認
+- [x] T072 パイプライン統合確認（実際の画像でROVER実行）
+- [x] T073 フェーズ出力を生成: specs/008-rover-redesign/tasks/ph5-output.md
 
 ---
 

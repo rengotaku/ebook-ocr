@@ -4,7 +4,7 @@ Provides unified interface for multiple OCR engines:
 - Yomitoku (Japanese-specialized)
 - PaddleOCR (high accuracy)
 - EasyOCR (neural network-based)
-- Tesseract (traditional)
+- Tesseract (legacy, excluded from ROVER by default)
 
 All engines return results with bounding box information.
 """

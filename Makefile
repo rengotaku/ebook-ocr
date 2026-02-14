@@ -58,7 +58,7 @@ yomitoku-ocr: setup ## [LEGACY] Re-run single-engine Yomitoku OCR (use 'make run
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-ocr HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.layout_ocr import run_yomitoku_ocr; run_yomitoku_ocr('$(HASHDIR)/pages', '$(HASHDIR)/book.txt', device='cpu')"
 
-rover-ocr: setup ## Run ROVER multi-engine OCR only (requires HASHDIR)
+rover-ocr: setup ## Run ROVER multi-engine OCR (yomitoku+paddle+easyocr) with character-level voting (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make rover-ocr HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_rover.py "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output"
 

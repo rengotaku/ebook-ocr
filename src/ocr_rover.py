@@ -12,7 +12,6 @@ Strategy:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from difflib import SequenceMatcher
 from pathlib import Path
 
 from PIL import Image
@@ -22,12 +21,11 @@ from ocr_output import ROVEROutput
 from ocr_alignment import align_texts_character_level, vote_aligned_text
 
 
-# Engine priority weights for voting
+# Engine priority weights for voting (Tesseract excluded from ROVER)
 ENGINE_WEIGHTS = {
     "yomitoku": 1.5,    # Best for Japanese
     "paddleocr": 1.2,   # High accuracy
     "easyocr": 1.0,     # Balanced
-    "tesseract": 0.8,   # Basic but useful
 }
 
 
@@ -261,23 +259,6 @@ def align_lines_by_y(
         i = j if j > i + 1 else i + 1
 
     return aligned
-
-
-def calculate_text_similarity(text1: str, text2: str) -> float:
-    """Calculate similarity between two texts.
-
-    Args:
-        text1: First text.
-        text2: Second text.
-
-    Returns:
-        Similarity ratio (0.0 - 1.0).
-    """
-    if not text1 and not text2:
-        return 1.0
-    if not text1 or not text2:
-        return 0.0
-    return SequenceMatcher(None, text1, text2).ratio()
 
 
 def vote_line_text(
@@ -536,8 +517,8 @@ def main() -> None:
     parser.add_argument("-o", "--output", default="ocr_output", help="Output directory")
     parser.add_argument(
         "--engines",
-        default="yomitoku,paddleocr,easyocr,tesseract",
-        help="Comma-separated list of engines",
+        default="yomitoku,paddleocr,easyocr",
+        help="Comma-separated list of engines (Tesseract excluded by default)",
     )
     parser.add_argument(
         "--primary",
