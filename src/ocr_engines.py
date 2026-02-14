@@ -148,7 +148,8 @@ def run_yomitoku_with_boxes(
             else:
                 continue  # Skip paragraphs without box
 
-            confidence = 1.0  # yomitoku doesn't provide per-paragraph confidence
+            # Get confidence from words.rec_score
+            confidence = _get_paragraph_confidence(paragraph, results.words)
             items.append(TextWithBox(
                 text=text,
                 bbox=bbox,
@@ -158,6 +159,32 @@ def run_yomitoku_with_boxes(
         return EngineResult(engine="yomitoku", items=items, success=True)
     except Exception as e:
         return EngineResult(engine="yomitoku", items=[], success=False, error=str(e))
+
+
+def _get_paragraph_confidence(paragraph, words) -> float:
+    """Get paragraph confidence from matching words.
+
+    Args:
+        paragraph: Yomitoku paragraph object
+        words: List of Yomitoku word objects
+
+    Returns:
+        Minimum rec_score from matching words, or 1.0 if no match found.
+    """
+    if not hasattr(paragraph, "contents") or not paragraph.contents:
+        return 1.0
+
+    para_text = paragraph.contents
+    matching_scores = []
+
+    for word in words:
+        if hasattr(word, "content") and hasattr(word, "rec_score"):
+            # Check if word is part of this paragraph
+            if word.content in para_text:
+                matching_scores.append(word.rec_score)
+
+    # Return minimum score (most conservative), or 1.0 if no matches
+    return min(matching_scores) if matching_scores else 1.0
 
 
 def run_paddleocr_with_boxes(
@@ -218,12 +245,14 @@ def run_paddleocr_with_boxes(
 def run_easyocr_with_boxes(
     image: Image.Image,
     lang_list: list[str] | None = None,
+    apply_preprocessing: bool = True,
 ) -> EngineResult:
     """Run EasyOCR with bounding boxes.
 
     Args:
         image: PIL Image to process.
         lang_list: Language list for EasyOCR.
+        apply_preprocessing: Apply CLAHE preprocessing (default: True).
 
     Returns:
         EngineResult with text and bboxes.
@@ -232,6 +261,11 @@ def run_easyocr_with_boxes(
         import numpy as np
         reader = _get_easyocr_reader(lang_list)
         img_array = np.array(image)
+
+        # Apply CLAHE preprocessing if enabled
+        if apply_preprocessing:
+            from ocr_preprocess import apply_clahe
+            img_array = apply_clahe(img_array)
 
         # EasyOCR returns: [(bbox, text, confidence), ...]
         results = reader.readtext(img_array, detail=1)
@@ -312,22 +346,24 @@ def run_all_engines(
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
     paddleocr_lang: str = "japan",
+    easyocr_preprocessing: bool = True,
 ) -> dict[str, EngineResult]:
     """Run all specified OCR engines.
 
     Args:
         image: PIL Image to process.
-        engines: List of engine names. Default: ["yomitoku", "paddleocr", "easyocr", "tesseract"]
+        engines: List of engine names. Default: ["yomitoku", "paddleocr", "easyocr"] (Tesseract excluded)
         yomitoku_device: Device for Yomitoku.
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
         paddleocr_lang: PaddleOCR language code.
+        easyocr_preprocessing: Apply CLAHE preprocessing to EasyOCR (default: True).
 
     Returns:
         Dict mapping engine name to EngineResult.
     """
     if engines is None:
-        engines = ["yomitoku", "paddleocr", "easyocr", "tesseract"]
+        engines = ["yomitoku", "paddleocr", "easyocr"]  # Tesseract excluded by default
 
     results: dict[str, EngineResult] = {}
 
@@ -337,7 +373,7 @@ def run_all_engines(
         elif engine == "paddleocr":
             results[engine] = run_paddleocr_with_boxes(image, paddleocr_lang)
         elif engine == "easyocr":
-            results[engine] = run_easyocr_with_boxes(image, easyocr_langs)
+            results[engine] = run_easyocr_with_boxes(image, easyocr_langs, easyocr_preprocessing)
         elif engine == "tesseract":
             results[engine] = run_tesseract_with_boxes(image, tesseract_lang)
 

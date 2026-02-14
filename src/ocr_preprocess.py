@@ -31,5 +31,19 @@ def apply_clahe(
         >>> result = apply_clahe(img)
         >>> assert result.shape == img.shape
     """
-    # TODO: Implement in Phase 4 (US4)
-    raise NotImplementedError("apply_clahe not yet implemented")
+    import cv2
+
+    # 1. RGB -> LAB変換
+    lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
+
+    # 2. CLAHE作成
+    clahe = cv2.createCLAHE(
+        clipLimit=clip_limit,
+        tileGridSize=(tile_size, tile_size)
+    )
+
+    # 3. Lチャンネルに適用
+    lab[:, :, 0] = clahe.apply(lab[:, :, 0])
+
+    # 4. LAB -> RGB変換
+    return cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)

@@ -164,19 +164,19 @@
 
 ### Implementation (GREEN)
 
-- [ ] T053 REDテストを読む: specs/008-rover-redesign/red-tests/ph4-test.md
-- [ ] T054 [P] [US4] apply_clahe関数を実装: src/ocr_preprocess.py
-- [ ] T055 [US4] run_yomitoku_with_boxesをwords信頼度対応に更新: src/ocr_engines.py
-- [ ] T056 [US4] run_easyocr_with_boxesをCLAHE前処理対応に更新: src/ocr_engines.py
-- [ ] T057 [US4] run_all_enginesをTesseract除外に更新: src/ocr_engines.py
-- [ ] T058 [US4] run_rover_batchを実装（raw/, rover/出力）: src/ocr_rover.py
-- [ ] T059 `make test` PASS (GREEN) を確認
+- [x] T053 REDテストを読む: specs/008-rover-redesign/red-tests/ph4-test.md
+- [x] T054 [P] [US4] apply_clahe関数を実装: src/ocr_preprocess.py
+- [x] T055 [US4] run_yomitoku_with_boxesをwords信頼度対応に更新: src/ocr_engines.py
+- [x] T056 [US4] run_easyocr_with_boxesをCLAHE前処理対応に更新: src/ocr_engines.py
+- [x] T057 [US4] run_all_enginesをTesseract除外に更新: src/ocr_engines.py
+- [x] T058 [US4] run_rover_batchを実装（raw/, rover/出力）: src/ocr_rover.py
+- [x] T059 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T060 `make test` が全テスト通過することを確認（全USリグレッションなし）
-- [ ] T061 `make coverage` ≥80% を確認
-- [ ] T062 フェーズ出力を生成: specs/008-rover-redesign/tasks/ph4-output.md
+- [x] T060 `make test` が全テスト通過することを確認（全USリグレッションなし）
+- [x] T061 `make coverage` ≥80% を確認
+- [x] T062 フェーズ出力を生成: specs/008-rover-redesign/tasks/ph4-output.md
 
 **Checkpoint**: US1, US2, US3, US4 が全て動作し、独立してテスト可能
 
