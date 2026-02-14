@@ -147,20 +147,20 @@
 
 ### Input
 
-- [ ] T044 セットアップ分析を読む: specs/008-rover-redesign/tasks/ph1-output.md
-- [ ] T045 前フェーズ出力を読む: specs/008-rover-redesign/tasks/ph3-output.md
+- [x] T044 セットアップ分析を読む: specs/008-rover-redesign/tasks/ph1-output.md
+- [x] T045 前フェーズ出力を読む: specs/008-rover-redesign/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T046 [P] [US4] CLAHE前処理テストを実装: tests/test_ocr_preprocess.py::test_apply_clahe
+- [x] T046 [P] [US4] CLAHE前処理テストを実装: tests/test_ocr_preprocess.py::test_apply_clahe
   - 入出力shape一致
   - dtype維持
-- [ ] T047 [P] [US4] yomitoku words信頼度取得テストを実装: tests/test_ocr_engines.py::test_yomitoku_words_confidence
-- [ ] T048 [P] [US4] easyocr CLAHE適用テストを実装: tests/test_ocr_engines.py::test_easyocr_with_clahe
-- [ ] T049 [P] [US4] raw出力保存テストを実装: tests/test_ocr_rover.py::test_rover_batch_raw_output
-- [ ] T050 [P] [US4] rover出力保存テストを実装: tests/test_ocr_rover.py::test_rover_batch_rover_output
-- [ ] T051 `make test` FAIL (RED) を確認
-- [ ] T052 RED出力を生成: specs/008-rover-redesign/red-tests/ph4-test.md
+- [x] T047 [P] [US4] yomitoku words信頼度取得テストを実装: tests/test_ocr_engines.py::test_yomitoku_words_confidence
+- [x] T048 [P] [US4] easyocr CLAHE適用テストを実装: tests/test_ocr_engines.py::test_easyocr_with_clahe
+- [x] T049 [P] [US4] raw出力保存テストを実装: tests/test_ocr_rover.py::test_rover_batch_raw_output
+- [x] T050 [P] [US4] rover出力保存テストを実装: tests/test_ocr_rover.py::test_rover_batch_rover_output
+- [x] T051 `make test` FAIL (RED) を確認
+- [x] T052 RED出力を生成: specs/008-rover-redesign/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 

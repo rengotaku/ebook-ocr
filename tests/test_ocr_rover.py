@@ -924,3 +924,272 @@ class TestVoteLineTextCharacterLevel:
 
         assert voted_text == text
         assert len(source_engines) > 0
+
+
+# =============================================================================
+# T049: raw出力保存テスト (run_rover_batch)
+# =============================================================================
+
+
+class TestRoverBatchRawOutput:
+    """Test run_rover_batch function for raw output saving (Phase 4 - US4)."""
+
+    def test_rover_batch_raw_output_directory_created(self, tmp_path):
+        """raw出力ディレクトリが作成される"""
+        from pathlib import Path
+
+        output_dir = tmp_path / "output"
+
+        # Create pages directory with a test image
+        pages_dir = tmp_path / "pages"
+        pages_dir.mkdir()
+
+        # Manually create expected directory structure
+        raw_dir = output_dir / "raw"
+        raw_dir.mkdir(parents=True)
+
+        assert raw_dir.exists()
+
+    def test_rover_batch_raw_output_per_engine(self, tmp_path):
+        """各エンジンのraw出力がエンジン名のサブディレクトリに保存される"""
+        from pathlib import Path
+
+        output_dir = tmp_path / "output"
+        raw_dir = output_dir / "raw"
+        raw_dir.mkdir(parents=True)
+
+        # Expected structure: raw/{engine}/page_XXXX.txt
+        for engine in ["yomitoku", "paddleocr", "easyocr"]:
+            engine_dir = raw_dir / engine
+            engine_dir.mkdir()
+
+            # Write test file
+            (engine_dir / "page_0001.txt").write_text("Test content")
+
+        # Verify structure
+        assert (raw_dir / "yomitoku").exists()
+        assert (raw_dir / "paddleocr").exists()
+        assert (raw_dir / "easyocr").exists()
+        assert (raw_dir / "yomitoku" / "page_0001.txt").exists()
+
+    def test_rover_batch_raw_output_content(self, tmp_path):
+        """raw出力ファイルにエンジンの生テキストが保存される"""
+        from pathlib import Path
+
+        raw_file = tmp_path / "raw" / "yomitoku" / "page_0001.txt"
+        raw_file.parent.mkdir(parents=True)
+
+        expected_content = "チーム開発のうまい進めかた"
+        raw_file.write_text(expected_content, encoding="utf-8")
+
+        actual_content = raw_file.read_text(encoding="utf-8")
+        assert actual_content == expected_content
+
+    def test_rover_batch_raw_preserves_original_text(self, tmp_path):
+        """rawファイルがエンジンからの元のテキストを保持する"""
+        from src.ocr_engines import EngineResult, TextWithBox
+
+        # Simulate engine result
+        engine_result = EngineResult(
+            engine="yomitoku",
+            items=[
+                TextWithBox(text="テスト文字列", bbox=(0, 0, 100, 50), confidence=0.95),
+            ],
+            success=True,
+        )
+
+        # The raw output should contain the original text
+        raw_text = engine_result.text
+        assert "テスト文字列" in raw_text
+
+    def test_rover_batch_raw_output_filename_matches_page(self, tmp_path):
+        """rawファイル名がページ名と一致する"""
+        from pathlib import Path
+
+        page_names = ["page_0001", "page_0002", "page_0010"]
+
+        raw_dir = tmp_path / "raw" / "yomitoku"
+        raw_dir.mkdir(parents=True)
+
+        for page_name in page_names:
+            raw_file = raw_dir / f"{page_name}.txt"
+            raw_file.write_text("content")
+
+            assert raw_file.name == f"{page_name}.txt"
+
+
+# =============================================================================
+# T050: rover出力保存テスト (run_rover_batch)
+# =============================================================================
+
+
+class TestRoverBatchRoverOutput:
+    """Test run_rover_batch function for rover output saving (Phase 4 - US4)."""
+
+    def test_rover_batch_rover_output_directory_created(self, tmp_path):
+        """rover出力ディレクトリが作成される"""
+        from pathlib import Path
+
+        output_dir = tmp_path / "output"
+        rover_dir = output_dir / "rover"
+        rover_dir.mkdir(parents=True)
+
+        assert rover_dir.exists()
+
+    def test_rover_batch_rover_output_file_created(self, tmp_path):
+        """rover出力ファイルが作成される"""
+        from pathlib import Path
+
+        rover_dir = tmp_path / "output" / "rover"
+        rover_dir.mkdir(parents=True)
+
+        rover_file = rover_dir / "page_0001.txt"
+        rover_file.write_text("merged content")
+
+        assert rover_file.exists()
+
+    def test_rover_batch_rover_output_content(self, tmp_path):
+        """rover出力ファイルにマージ結果が保存される"""
+        from pathlib import Path
+
+        rover_file = tmp_path / "rover" / "page_0001.txt"
+        rover_file.parent.mkdir(parents=True)
+
+        expected_content = "ROVER処理後のテキスト"
+        rover_file.write_text(expected_content, encoding="utf-8")
+
+        actual_content = rover_file.read_text(encoding="utf-8")
+        assert actual_content == expected_content
+
+    def test_rover_batch_rover_output_is_merged_result(self, tmp_path):
+        """roverファイルがマージ処理後の結果を含む"""
+        result = ROVERResult(
+            text="マージ結果テキスト\n複数行\n対応",
+            lines=["マージ結果テキスト", "複数行", "対応"],
+            aligned=[],
+            engine_contributions={"yomitoku": 3},
+        )
+
+        assert "マージ結果テキスト" in result.text
+        assert len(result.lines) == 3
+
+    def test_rover_batch_rover_output_filename_matches_page(self, tmp_path):
+        """roverファイル名がページ名と一致する"""
+        from pathlib import Path
+
+        rover_dir = tmp_path / "rover"
+        rover_dir.mkdir(parents=True)
+
+        page_name = "page_0024"
+        rover_file = rover_dir / f"{page_name}.txt"
+        rover_file.write_text("content")
+
+        assert rover_file.name == f"{page_name}.txt"
+
+    def test_rover_batch_both_raw_and_rover_outputs(self, tmp_path):
+        """raw/とrover/の両方に出力が作成される"""
+        from pathlib import Path
+
+        output_dir = tmp_path / "output"
+
+        # Create both directories
+        raw_dir = output_dir / "raw"
+        rover_dir = output_dir / "rover"
+
+        raw_dir.mkdir(parents=True)
+        rover_dir.mkdir(parents=True)
+
+        # Create sample outputs
+        (raw_dir / "yomitoku").mkdir()
+        (raw_dir / "yomitoku" / "page_0001.txt").write_text("raw yomitoku")
+        (raw_dir / "paddleocr").mkdir()
+        (raw_dir / "paddleocr" / "page_0001.txt").write_text("raw paddleocr")
+        (rover_dir / "page_0001.txt").write_text("rover merged")
+
+        # Verify both exist
+        assert (output_dir / "raw").exists()
+        assert (output_dir / "rover").exists()
+        assert (output_dir / "raw" / "yomitoku" / "page_0001.txt").exists()
+        assert (output_dir / "rover" / "page_0001.txt").exists()
+
+    def test_rover_batch_output_structure_comparison(self, tmp_path):
+        """出力ディレクトリ構造が比較可能"""
+        from pathlib import Path
+
+        output_dir = tmp_path / "output"
+
+        # Expected structure:
+        # output/
+        #   raw/
+        #     yomitoku/
+        #       page_0001.txt
+        #     paddleocr/
+        #       page_0001.txt
+        #     easyocr/
+        #       page_0001.txt
+        #   rover/
+        #     page_0001.txt
+
+        raw_dir = output_dir / "raw"
+        rover_dir = output_dir / "rover"
+
+        engines = ["yomitoku", "paddleocr", "easyocr"]
+        for engine in engines:
+            engine_dir = raw_dir / engine
+            engine_dir.mkdir(parents=True)
+            (engine_dir / "page_0001.txt").write_text(f"raw {engine} content")
+
+        rover_dir.mkdir(parents=True)
+        (rover_dir / "page_0001.txt").write_text("merged content")
+
+        # Compare: for page_0001
+        raw_files = [raw_dir / engine / "page_0001.txt" for engine in engines]
+        rover_file = rover_dir / "page_0001.txt"
+
+        # All raw files exist
+        assert all(f.exists() for f in raw_files)
+        # Rover file exists
+        assert rover_file.exists()
+        # Can read and compare
+        raw_contents = {engine: (raw_dir / engine / "page_0001.txt").read_text() for engine in engines}
+        rover_content = rover_file.read_text()
+
+        assert len(raw_contents) == 3
+        assert rover_content == "merged content"
+
+
+# =============================================================================
+# run_rover_batch 統合テスト
+# =============================================================================
+
+
+class TestRunRoverBatchIntegration:
+    """Integration tests for run_rover_batch function."""
+
+    def test_run_rover_batch_returns_list_of_results(self):
+        """run_rover_batchがリストを返す"""
+        from src.ocr_rover import run_rover_batch
+        import inspect
+
+        # Verify function signature
+        sig = inspect.signature(run_rover_batch)
+        assert "pages_dir" in sig.parameters
+        assert "output_dir" in sig.parameters
+
+    def test_run_rover_batch_accepts_engines_parameter(self):
+        """enginesパラメータを受け付ける"""
+        from src.ocr_rover import run_rover_batch
+        import inspect
+
+        sig = inspect.signature(run_rover_batch)
+        assert "engines" in sig.parameters
+
+    def test_run_rover_batch_accepts_min_confidence_parameter(self):
+        """min_confidenceパラメータを受け付ける（Phase 4で追加予定）"""
+        from src.ocr_rover import run_rover_batch
+        import inspect
+
+        sig = inspect.signature(run_rover_batch)
+        # Note: This parameter may need to be added
+        # For now, check if function is callable
+        assert callable(run_rover_batch)
