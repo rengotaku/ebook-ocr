@@ -104,12 +104,15 @@ def run_yomitoku_with_boxes(
 ) -> EngineResult:
     """Run Yomitoku OCR with bounding boxes.
 
+    Uses words instead of paragraphs to get accurate line-by-line output.
+    This prevents multi-line paragraphs from being returned as single items.
+
     Args:
         image: PIL Image to process.
         device: Device to use ("cuda" or "cpu").
 
     Returns:
-        EngineResult with text and bboxes.
+        EngineResult with text and bboxes (one per physical line).
     """
     try:
         import cv2
@@ -123,42 +126,114 @@ def run_yomitoku_with_boxes(
         # Run OCR
         results, _, _ = analyzer(cv_img)
 
-        items: list[TextWithBox] = []
-        for paragraph in results.paragraphs:
-            # Extract text
-            text = ""
-            if hasattr(paragraph, "contents"):
-                text = paragraph.contents
-            elif hasattr(paragraph, "text"):
-                text = paragraph.text
-
-            if not text:
-                continue
-
-            # Extract bbox
-            if hasattr(paragraph, "box") and paragraph.box:
-                # yomitoku box format: [x1, y1, x2, y2]
-                box = paragraph.box
-                bbox = (
-                    int(box[0]),
-                    int(box[1]),
-                    int(box[2]),
-                    int(box[3]),
-                )
-            else:
-                continue  # Skip paragraphs without box
-
-            # Get confidence from words.rec_score
-            confidence = _get_paragraph_confidence(paragraph, results.words)
-            items.append(TextWithBox(
-                text=text,
-                bbox=bbox,
-                confidence=confidence,
-            ))
+        # Use words for line-level output (not paragraphs)
+        items = _cluster_words_to_lines(results.words)
 
         return EngineResult(engine="yomitoku", items=items, success=True)
     except Exception as e:
         return EngineResult(engine="yomitoku", items=[], success=False, error=str(e))
+
+
+def _cluster_words_to_lines(
+    words: list,
+    y_tolerance: int = 15,
+) -> list[TextWithBox]:
+    """Cluster yomitoku words into lines by y-coordinate.
+
+    Args:
+        words: List of yomitoku word objects.
+        y_tolerance: Maximum y-distance to consider same line.
+
+    Returns:
+        List of TextWithBox, one per line.
+    """
+    if not words:
+        return []
+
+    # Extract word data
+    word_data = []
+    for word in words:
+        if not hasattr(word, "content") or not word.content:
+            continue
+
+        # Get y_center from points or box
+        y_center = 0.0
+        bbox = (0, 0, 0, 0)
+
+        if hasattr(word, "points") and word.points:
+            # points: [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+            pts = word.points
+            x_coords = [p[0] for p in pts]
+            y_coords = [p[1] for p in pts]
+            bbox = (
+                int(min(x_coords)),
+                int(min(y_coords)),
+                int(max(x_coords)),
+                int(max(y_coords)),
+            )
+            y_center = (bbox[1] + bbox[3]) / 2.0
+        elif hasattr(word, "box") and word.box:
+            box = word.box
+            bbox = (int(box[0]), int(box[1]), int(box[2]), int(box[3]))
+            y_center = (bbox[1] + bbox[3]) / 2.0
+        else:
+            continue
+
+        confidence = getattr(word, "rec_score", 1.0)
+        word_data.append({
+            "text": word.content,
+            "bbox": bbox,
+            "y_center": y_center,
+            "x_left": bbox[0],
+            "confidence": confidence,
+        })
+
+    if not word_data:
+        return []
+
+    # Sort by y_center
+    word_data.sort(key=lambda w: w["y_center"])
+
+    # Cluster into lines
+    lines: list[list[dict]] = []
+    current_line = [word_data[0]]
+
+    for wd in word_data[1:]:
+        current_y = sum(w["y_center"] for w in current_line) / len(current_line)
+        if abs(wd["y_center"] - current_y) <= y_tolerance:
+            current_line.append(wd)
+        else:
+            lines.append(current_line)
+            current_line = [wd]
+
+    if current_line:
+        lines.append(current_line)
+
+    # Convert lines to TextWithBox
+    items: list[TextWithBox] = []
+    for line_words in lines:
+        # Sort words by x-coordinate
+        line_words.sort(key=lambda w: w["x_left"])
+
+        # Combine text
+        text = "".join(w["text"] for w in line_words)
+
+        # Combined bbox
+        x1 = min(w["bbox"][0] for w in line_words)
+        y1 = min(w["bbox"][1] for w in line_words)
+        x2 = max(w["bbox"][2] for w in line_words)
+        y2 = max(w["bbox"][3] for w in line_words)
+
+        # Average confidence
+        avg_conf = sum(w["confidence"] for w in line_words) / len(line_words)
+
+        items.append(TextWithBox(
+            text=text,
+            bbox=(x1, y1, x2, y2),
+            confidence=avg_conf,
+        ))
+
+    return items
 
 
 def _get_paragraph_confidence(paragraph, words) -> float:

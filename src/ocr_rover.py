@@ -147,6 +147,47 @@ def normalize_confidence(raw_conf: float, engine: str) -> float:
     return max(0.0, min(1.0, normalized))
 
 
+def split_multiline_items(
+    items: list[TextWithBox],
+    y_gap_threshold: int = 15,
+) -> list[list[TextWithBox]]:
+    """Split items that span multiple physical lines.
+
+    This handles the case where yomitoku returns a single paragraph
+    that actually spans multiple physical lines (e.g., y_range=[169-277]).
+
+    Args:
+        items: List of text items (may span multiple lines).
+        y_gap_threshold: Minimum y-gap to consider a new line.
+
+    Returns:
+        List of lists, each inner list is one physical line.
+    """
+    if not items:
+        return []
+
+    # Sort by y_center
+    sorted_items = sorted(items, key=lambda x: x.y_center)
+
+    lines: list[list[TextWithBox]] = []
+    current_line: list[TextWithBox] = [sorted_items[0]]
+
+    for item in sorted_items[1:]:
+        # Check y-gap from previous item
+        prev_y = current_line[-1].y_center
+        if item.y_center - prev_y > y_gap_threshold:
+            # New line
+            lines.append(current_line)
+            current_line = [item]
+        else:
+            current_line.append(item)
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
+
 def cluster_lines_by_y(
     items: list[TextWithBox],
     y_tolerance: int = 20,

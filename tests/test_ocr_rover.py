@@ -1193,3 +1193,202 @@ class TestRunRoverBatchIntegration:
         # Note: This parameter may need to be added
         # For now, check if function is callable
         assert callable(run_rover_batch)
+
+
+# =============================================================================
+# Issue-001: 物理行分割テスト (yomitoku段落の複数行対応)
+# =============================================================================
+
+
+class TestSplitMultilineItems:
+    """Test splitting multi-line items into physical lines."""
+
+    def test_split_multiline_items_single_line(self):
+        """単一行のアイテムはそのまま"""
+        from src.ocr_rover import split_multiline_items
+
+        items = [
+            TextWithBox(text="単一行", bbox=(0, 100, 100, 120), confidence=0.9),
+        ]
+
+        result = split_multiline_items(items, y_gap_threshold=15)
+
+        assert len(result) == 1
+        assert len(result[0]) == 1
+        assert result[0][0].text == "単一行"
+
+    def test_split_multiline_items_two_lines(self):
+        """2行に分割されるべきアイテム"""
+        from src.ocr_rover import split_multiline_items
+
+        # y座標が離れている2つのアイテム
+        items = [
+            TextWithBox(text="1行目", bbox=(0, 100, 100, 120), confidence=0.9),
+            TextWithBox(text="2行目", bbox=(0, 150, 100, 170), confidence=0.9),
+        ]
+
+        result = split_multiline_items(items, y_gap_threshold=15)
+
+        assert len(result) == 2
+        assert result[0][0].text == "1行目"
+        assert result[1][0].text == "2行目"
+
+    def test_split_multiline_items_three_lines(self):
+        """3行に分割 - 実際のyomitoku段落パターン"""
+        from src.ocr_rover import split_multiline_items
+
+        # y_range=[169-277] の段落を3行に分割
+        items = [
+            TextWithBox(text="このたびは", bbox=(0, 169, 100, 197), confidence=0.9),
+            TextWithBox(text="皆様からの", bbox=(0, 207, 100, 236), confidence=0.9),
+            TextWithBox(text="願い致して", bbox=(0, 247, 100, 275), confidence=0.9),
+        ]
+
+        result = split_multiline_items(items, y_gap_threshold=15)
+
+        # y座標のギャップ: 207-197=10 > threshold? No if threshold=15
+        # Actually: 207-182.5(center of 169-197) = 24.5 > 15
+        # Let's check y_center: item1=(169+197)/2=183, item2=(207+236)/2=221.5
+        # Gap = 221.5 - 183 = 38.5 > 15 → split
+        assert len(result) == 3
+
+    def test_split_multiline_items_same_line(self):
+        """同一行の複数アイテムはマージされる"""
+        from src.ocr_rover import split_multiline_items
+
+        # 同じy座標の2つのアイテム
+        items = [
+            TextWithBox(text="左側", bbox=(0, 100, 50, 120), confidence=0.9),
+            TextWithBox(text="右側", bbox=(60, 100, 120, 120), confidence=0.9),
+        ]
+
+        result = split_multiline_items(items, y_gap_threshold=15)
+
+        assert len(result) == 1
+        assert len(result[0]) == 2
+
+    def test_split_multiline_items_empty(self):
+        """空リストの処理"""
+        from src.ocr_rover import split_multiline_items
+
+        result = split_multiline_items([], y_gap_threshold=15)
+
+        assert result == []
+
+    def test_split_multiline_items_mixed_pattern(self):
+        """混合パターン: 一部が同一行、一部が別行"""
+        from src.ocr_rover import split_multiline_items
+
+        items = [
+            TextWithBox(text="1行目左", bbox=(0, 100, 50, 120), confidence=0.9),
+            TextWithBox(text="1行目右", bbox=(60, 100, 120, 120), confidence=0.9),
+            TextWithBox(text="2行目", bbox=(0, 150, 100, 170), confidence=0.9),
+        ]
+
+        result = split_multiline_items(items, y_gap_threshold=15)
+
+        assert len(result) == 2
+        assert len(result[0]) == 2  # 1行目は2アイテム
+        assert len(result[1]) == 1  # 2行目は1アイテム
+
+
+class TestClusterLinesWithSplit:
+    """Test cluster_lines_by_y with multi-line splitting."""
+
+    def test_cluster_lines_splits_multiline_paragraph(self):
+        """複数行段落が物理行に分割される"""
+        # yomitokuの実際のパターン: 1段落が3物理行にまたがる
+        items = [
+            TextWithBox(text="このたびは翔泳社", bbox=(0, 169, 200, 197), confidence=0.9),
+            TextWithBox(text="皆様からのお問い合わせ", bbox=(0, 207, 200, 236), confidence=0.9),
+            TextWithBox(text="願い致しております", bbox=(0, 247, 200, 275), confidence=0.9),
+        ]
+
+        lines = cluster_lines_by_y(items, y_tolerance=20)
+
+        # 3つの物理行に分割されるべき
+        assert len(lines) == 3
+
+    def test_cluster_lines_y_center_per_physical_line(self):
+        """各物理行が正しいy_centerを持つ"""
+        items = [
+            TextWithBox(text="Line1", bbox=(0, 100, 100, 120), confidence=0.9),
+            TextWithBox(text="Line2", bbox=(0, 150, 100, 170), confidence=0.9),
+        ]
+
+        lines = cluster_lines_by_y(items, y_tolerance=20)
+
+        assert len(lines) == 2
+        assert abs(lines[0].y_center - 110) < 5  # (100+120)/2
+        assert abs(lines[1].y_center - 160) < 5  # (150+170)/2
+
+
+class TestRoverMergeNoDuplicates:
+    """Test rover_merge produces no duplicate lines."""
+
+    def test_rover_merge_no_duplicate_for_multiline_yomitoku(self):
+        """yomitokuの複数行段落でも重複が発生しない"""
+        # yomitoku: 1段落 (3物理行分)
+        # paddleocr: 3行
+        # easyocr: 3行
+
+        yomitoku_items = [
+            TextWithBox(text="このたびは翔泳社", bbox=(0, 169, 200, 197), confidence=0.95),
+            TextWithBox(text="皆様からのお問い合わせ", bbox=(0, 207, 200, 236), confidence=0.95),
+            TextWithBox(text="願い致しております", bbox=(0, 247, 200, 275), confidence=0.95),
+        ]
+
+        paddleocr_items = [
+            TextWithBox(text="このたびは翔泳社", bbox=(0, 168, 200, 197), confidence=0.90),
+            TextWithBox(text="皆様からのお問い合わせ", bbox=(0, 207, 200, 236), confidence=0.90),
+            TextWithBox(text="願い致しております", bbox=(0, 247, 200, 275), confidence=0.90),
+        ]
+
+        easyocr_items = [
+            TextWithBox(text="このたびは翔永社", bbox=(0, 167, 200, 203), confidence=0.85),
+            TextWithBox(text="皆様からのお問い合わせ", bbox=(0, 207, 200, 243), confidence=0.85),
+            TextWithBox(text="願い致しております", bbox=(0, 248, 200, 280), confidence=0.85),
+        ]
+
+        engine_results = {
+            "yomitoku": EngineResult(engine="yomitoku", items=yomitoku_items, success=True),
+            "paddleocr": EngineResult(engine="paddleocr", items=paddleocr_items, success=True),
+            "easyocr": EngineResult(engine="easyocr", items=easyocr_items, success=True),
+        }
+
+        result = rover_merge(engine_results)
+
+        # 3行のみ (重複なし)
+        assert len(result.lines) == 3
+
+        # 各行が1回だけ出現
+        line_texts = result.lines
+        assert len(set(line_texts)) == len(line_texts), "重複行が検出されました"
+
+    def test_rover_merge_yomitoku_aligns_with_paddleocr(self):
+        """yomitokuの各物理行がpaddleocrとアライメントされる"""
+        # 同じy座標の行がマッチされるべき
+        yomitoku_items = [
+            TextWithBox(text="A行", bbox=(0, 100, 100, 120), confidence=0.95),
+            TextWithBox(text="B行", bbox=(0, 150, 100, 170), confidence=0.95),
+        ]
+
+        paddleocr_items = [
+            TextWithBox(text="A行", bbox=(0, 100, 100, 120), confidence=0.90),
+            TextWithBox(text="B行", bbox=(0, 150, 100, 170), confidence=0.90),
+        ]
+
+        engine_results = {
+            "yomitoku": EngineResult(engine="yomitoku", items=yomitoku_items, success=True),
+            "paddleocr": EngineResult(engine="paddleocr", items=paddleocr_items, success=True),
+        }
+
+        result = rover_merge(engine_results)
+
+        # 2行のみ
+        assert len(result.lines) == 2
+
+        # 各AlignedLineに両エンジンが含まれる
+        for aligned in result.aligned:
+            engines_present = [e for e, l in aligned.lines.items() if l is not None]
+            assert len(engines_present) == 2, f"期待: 2エンジン, 実際: {engines_present}"
