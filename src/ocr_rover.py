@@ -19,6 +19,7 @@ from PIL import Image
 
 from ocr_engines import EngineResult, TextWithBox, run_all_engines
 from ocr_output import ROVEROutput
+from ocr_alignment import align_texts_character_level, vote_aligned_text
 
 
 # Engine priority weights for voting
@@ -283,16 +284,16 @@ def vote_line_text(
     aligned_line: AlignedLine,
     engine_weights: dict[str, float] | None = None,
     min_agreement: int = 2,
-) -> tuple[str, list[str]]:
-    """Vote for best text from aligned lines.
+) -> tuple[str, list[str], float]:
+    """Vote for best text from aligned lines using character-level voting.
 
     Args:
         aligned_line: Aligned line with multiple engine results.
         engine_weights: Weight for each engine (higher = more trusted).
-        min_agreement: Minimum number of engines that must agree.
+        min_agreement: Minimum number of engines that must agree (deprecated).
 
     Returns:
-        Tuple of (voted_text, source_engines).
+        Tuple of (voted_text, source_engines, final_confidence).
     """
     if engine_weights is None:
         engine_weights = ENGINE_WEIGHTS
@@ -305,44 +306,32 @@ def vote_line_text(
     }
 
     if not valid_lines:
-        return "", []
+        return "", [], 0.0
 
     # Single engine case
     if len(valid_lines) == 1:
         engine, line = list(valid_lines.items())[0]
-        return line.text, [engine]
+        return line.text, [engine], line.confidence
 
-    # Calculate weighted votes
+    # Character-level alignment and voting (Phase 3: True ROVER)
     texts = {engine: line.text for engine, line in valid_lines.items()}
-    text_votes: dict[str, float] = {}
-    text_engines: dict[str, list[str]] = {}
+    confidences = {engine: normalize_confidence(line.confidence, engine)
+                   for engine, line in valid_lines.items()}
 
-    for engine, text in texts.items():
-        # Find similar texts
-        similar_count = sum(
-            1 for other_text in texts.values()
-            if calculate_text_similarity(text, other_text) >= 0.8
-        )
+    # Align texts at character level
+    aligned_positions = align_texts_character_level(texts)
 
-        if similar_count >= min_agreement or len(valid_lines) < min_agreement:
-            weight = engine_weights.get(engine, 1.0) * (1 + valid_lines[engine].confidence)
-            if text in text_votes:
-                text_votes[text] += weight
-                text_engines[text].append(engine)
-            else:
-                text_votes[text] = weight
-                text_engines[text] = [engine]
+    # Vote across aligned positions
+    voted_text, avg_confidence = vote_aligned_text(
+        aligned_positions,
+        confidences,
+        engine_weights,
+    )
 
-    if not text_votes:
-        # No agreement - use highest priority engine
-        priority = ["yomitoku", "paddleocr", "easyocr", "tesseract"]
-        for engine in priority:
-            if engine in valid_lines:
-                return valid_lines[engine].text, [engine]
+    # Determine source engines (engines that contributed to the result)
+    source_engines = list(valid_lines.keys())
 
-    # Return text with highest vote
-    best_text = max(text_votes.items(), key=lambda x: x[1])[0]
-    return best_text, text_engines[best_text]
+    return voted_text, source_engines, avg_confidence
 
 
 def rover_merge(
@@ -394,9 +383,10 @@ def rover_merge(
     gaps_filled = 0
 
     for aligned_line in aligned:
-        voted_text, source_engines = vote_line_text(aligned_line, min_agreement=min_agreement)
+        voted_text, source_engines, final_confidence = vote_line_text(aligned_line, min_agreement=min_agreement)
         aligned_line.voted_text = voted_text
         aligned_line.source_engines = source_engines
+        aligned_line.final_confidence = final_confidence
 
         if voted_text:
             final_lines.append(voted_text)

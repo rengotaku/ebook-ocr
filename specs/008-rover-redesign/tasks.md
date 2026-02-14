@@ -121,19 +121,19 @@
 
 ### Implementation (GREEN)
 
-- [ ] T034 REDテストを読む: specs/008-rover-redesign/red-tests/ph3-test.md
-- [ ] T035 [P] [US3] AlignedPositionデータクラスを実装: src/ocr_alignment.py
-- [ ] T036 [P] [US3] align_texts_character_level関数を実装: src/ocr_alignment.py
-- [ ] T037 [US3] weighted_vote_character関数を実装: src/ocr_alignment.py
-- [ ] T038 [US3] vote_aligned_text関数を実装: src/ocr_alignment.py
-- [ ] T039 [US3] vote_line_textを文字レベル投票に更新: src/ocr_rover.py
-- [ ] T040 `make test` PASS (GREEN) を確認
+- [x] T034 REDテストを読む: specs/008-rover-redesign/red-tests/ph3-test.md
+- [x] T035 [P] [US3] AlignedPositionデータクラスを実装: src/ocr_alignment.py
+- [x] T036 [P] [US3] align_texts_character_level関数を実装: src/ocr_alignment.py
+- [x] T037 [US3] weighted_vote_character関数を実装: src/ocr_alignment.py
+- [x] T038 [US3] vote_aligned_text関数を実装: src/ocr_alignment.py
+- [x] T039 [US3] vote_line_textを文字レベル投票に更新: src/ocr_rover.py
+- [x] T040 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T041 `make test` が全テスト通過することを確認（US1, US2含むリグレッションなし）
-- [ ] T042 `make coverage` ≥80% を確認
-- [ ] T043 フェーズ出力を生成: specs/008-rover-redesign/tasks/ph3-output.md
+- [x] T041 `make test` が全テスト通過することを確認（US1, US2含むリグレッションなし）
+- [x] T042 `make coverage` ≥80% を確認
+- [x] T043 フェーズ出力を生成: specs/008-rover-redesign/tasks/ph3-output.md
 
 **Checkpoint**: US1, US2, US3 が全て動作し、独立してテスト可能
 
