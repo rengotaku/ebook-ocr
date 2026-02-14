@@ -74,19 +74,19 @@
 
 ### Implementation (GREEN)
 
-- [ ] T016 REDテストを読む: specs/008-rover-redesign/red-tests/ph2-test.md
-- [ ] T017 [P] [US2] is_garbage関数を実装: src/ocr_rover.py
-- [ ] T018 [P] [US2] normalize_confidence関数を実装: src/ocr_rover.py
-- [ ] T019 [P] [US1] TextWithBox, OCRLine データクラスを実装: src/ocr_rover.py
-- [ ] T020 [P] [US1] cluster_lines_by_y関数を実装: src/ocr_rover.py
-- [ ] T021 [US1] align_lines_by_y関数を実装: src/ocr_rover.py
-- [ ] T022 [US1] 基本的なrover_merge（行レベル投票）を実装: src/ocr_rover.py
-- [ ] T023 `make test` PASS (GREEN) を確認
+- [x] T016 REDテストを読む: specs/008-rover-redesign/red-tests/ph2-test.md
+- [x] T017 [P] [US2] is_garbage関数を実装: src/ocr_rover.py
+- [x] T018 [P] [US2] normalize_confidence関数を実装: src/ocr_rover.py
+- [x] T019 [P] [US1] TextWithBox, OCRLine データクラスを実装: src/ocr_rover.py
+- [x] T020 [P] [US1] cluster_lines_by_y関数を実装: src/ocr_rover.py
+- [x] T021 [US1] align_lines_by_y関数を実装: src/ocr_rover.py
+- [x] T022 [US1] 基本的なrover_merge（ゴミフィルタ統合）を実装: src/ocr_rover.py
+- [x] T023 `make test` PASS (GREEN) を確認
 
 ### Verification
 
-- [ ] T024 `make test` が全テスト通過することを確認（リグレッションなし）
-- [ ] T025 フェーズ出力を生成: specs/008-rover-redesign/tasks/ph2-output.md
+- [x] T024 `make test` が全テスト通過することを確認（リグレッションなし）
+- [x] T025 フェーズ出力を生成: specs/008-rover-redesign/tasks/ph2-output.md
 
 **Checkpoint**: US1 + US2 の基本機能が動作し、独立してテスト可能
 

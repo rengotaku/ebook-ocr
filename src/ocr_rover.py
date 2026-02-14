@@ -74,6 +74,80 @@ class ROVERResult:
     gaps_filled: int = 0
 
 
+def is_garbage(
+    text: str,
+    confidence: float,
+    min_confidence: float = 0.5,
+) -> bool:
+    """Check if text is garbage output.
+
+    Garbage criteria:
+    1. Empty or whitespace-only
+    2. confidence < min_confidence
+    3. No Japanese chars and len <= 5 (ASCII fragments)
+    4. Same character repeated >= 5 times
+    5. Punctuation only
+
+    Args:
+        text: Text to check.
+        confidence: Confidence score (0.0 - 1.0).
+        min_confidence: Minimum confidence threshold.
+
+    Returns:
+        True if text is garbage, False otherwise.
+    """
+    # 1. Empty or whitespace-only
+    if not text or not text.strip():
+        return True
+
+    # 2. Low confidence
+    if confidence < min_confidence:
+        return True
+
+    # 3. No Japanese chars and len <= 5
+    has_japanese = any('\u3040' <= ch <= '\u30ff' or '\u4e00' <= ch <= '\u9fff' for ch in text)
+    if not has_japanese and len(text) <= 5:
+        return True
+
+    # 4. Same character repeated >= 5 times
+    if len(text) >= 5:
+        for i in range(len(text) - 4):
+            if text[i] == text[i+1] == text[i+2] == text[i+3] == text[i+4]:
+                return True
+
+    # 5. Punctuation only
+    if all(not ch.isalnum() for ch in text):
+        return True
+
+    return False
+
+
+def normalize_confidence(raw_conf: float, engine: str) -> float:
+    """Normalize confidence to [0, 1] scale based on engine-specific range.
+
+    Ranges (from research):
+    - yomitoku: (0.4, 1.0)
+    - paddleocr: (0.85, 1.0)
+    - easyocr: (0.25, 1.0)
+    - unknown: (0.0, 1.0)
+
+    Args:
+        raw_conf: Raw confidence from engine.
+        engine: Engine name.
+
+    Returns:
+        Normalized confidence (0.0 - 1.0).
+    """
+    ranges = {
+        "yomitoku": (0.4, 1.0),
+        "paddleocr": (0.85, 1.0),
+        "easyocr": (0.25, 1.0),
+    }
+    min_conf, max_conf = ranges.get(engine, (0.0, 1.0))
+    normalized = (raw_conf - min_conf) / (max_conf - min_conf)
+    return max(0.0, min(1.0, normalized))
+
+
 def cluster_lines_by_y(
     items: list[TextWithBox],
     y_tolerance: int = 20,
@@ -288,14 +362,20 @@ def rover_merge(
     Returns:
         ROVERResult with merged text and metadata.
     """
-    # Convert to line-based structure
+    # Convert to line-based structure with garbage filtering
     lines_by_engine: dict[str, list[OCRLine]] = {}
     for engine, result in engine_results.items():
         if result.success and result.items:
-            lines = cluster_lines_by_y(result.items)
-            for line in lines:
-                line.engine = engine
-            lines_by_engine[engine] = lines
+            # Filter out garbage items
+            filtered_items = [
+                item for item in result.items
+                if not is_garbage(item.text, item.confidence)
+            ]
+            if filtered_items:
+                lines = cluster_lines_by_y(filtered_items)
+                for line in lines:
+                    line.engine = engine
+                lines_by_engine[engine] = lines
 
     if not lines_by_engine:
         return ROVERResult(
