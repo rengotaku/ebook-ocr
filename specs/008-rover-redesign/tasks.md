@@ -52,25 +52,25 @@
 
 ### Input
 
-- [ ] T008 前フェーズ出力を読む: specs/008-rover-redesign/tasks/ph1-output.md
+- [x] T008 前フェーズ出力を読む: specs/008-rover-redesign/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T009 [P] [US2] ゴミ判定テストを実装: tests/test_ocr_rover.py::test_is_garbage_*
+- [x] T009 [P] [US2] ゴミ判定テストを実装: tests/test_ocr_rover.py::test_is_garbage_*
   - 空文字列 → ゴミ
   - confidence < 0.5 → ゴミ
   - 日本語なし5文字以下ASCII → ゴミ
   - 同一文字5回以上繰り返し → ゴミ
-- [ ] T010 [P] [US2] 信頼度正規化テストを実装: tests/test_ocr_rover.py::test_normalize_confidence_*
+- [x] T010 [P] [US2] 信頼度正規化テストを実装: tests/test_ocr_rover.py::test_normalize_confidence_*
   - yomitoku: 0.4 → 0.0, 0.7 → 0.5, 1.0 → 1.0
   - paddleocr: 0.85 → 0.0, 0.925 → 0.5, 1.0 → 1.0
   - easyocr: 0.25 → 0.0, 0.625 → 0.5, 1.0 → 1.0
-- [ ] T011 [P] [US1] 行クラスタリングテストを実装: tests/test_ocr_rover.py::test_cluster_lines_by_y
-- [ ] T012 [P] [US1] 行アライメントテストを実装: tests/test_ocr_rover.py::test_align_lines_by_y
-- [ ] T013 [P] [US1] 基本的な補完テストを実装: tests/test_ocr_rover.py::test_rover_merge_basic
+- [x] T011 [P] [US1] 行クラスタリングテストを実装: tests/test_ocr_rover.py::test_cluster_lines_by_y
+- [x] T012 [P] [US1] 行アライメントテストを実装: tests/test_ocr_rover.py::test_align_lines_by_y
+- [x] T013 [P] [US1] 基本的な補完テストを実装: tests/test_ocr_rover.py::test_rover_merge_basic
   - yomitoku欠損行がpaddleocrから補完されることを確認
-- [ ] T014 `make test` FAIL (RED) を確認
-- [ ] T015 RED出力を生成: specs/008-rover-redesign/red-tests/ph2-test.md
+- [x] T014 `make test` FAIL (RED) を確認
+- [x] T015 RED出力を生成: specs/008-rover-redesign/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
