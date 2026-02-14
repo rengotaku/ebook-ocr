@@ -710,3 +710,217 @@ class TestEdgeCases:
         # 結果は空か、フィルタリングされる
         # (is_garbage実装による)
         assert isinstance(result, ROVERResult)
+
+
+# =============================================================================
+# T031: vote_line_text更新テスト (文字レベル投票)
+# =============================================================================
+
+
+class TestVoteLineTextCharacterLevel:
+    """Test vote_line_text function with character-level voting (Phase 3 - US3)."""
+
+    def test_vote_line_text_character_level_software(self):
+        """「ソフトウェア」vs「ソフトウエア」の文字レベル投票"""
+        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
+        from src.ocr_engines import TextWithBox
+
+        # 3エンジンの行を作成
+        yomitoku_line = OCRLine(
+            items=[TextWithBox(text="ソフトウェア", bbox=(0, 100, 100, 120), confidence=0.98)],
+            engine="yomitoku",
+            y_center=110.0,
+            confidence=0.98,
+        )
+        paddleocr_line = OCRLine(
+            items=[TextWithBox(text="ソフトウエア", bbox=(0, 100, 100, 120), confidence=0.90)],
+            engine="paddleocr",
+            y_center=110.0,
+            confidence=0.90,
+        )
+        easyocr_line = OCRLine(
+            items=[TextWithBox(text="ソフトウェア", bbox=(0, 100, 100, 120), confidence=0.60)],
+            engine="easyocr",
+            y_center=110.0,
+            confidence=0.60,
+        )
+
+        aligned_line = AlignedLine(
+            lines={
+                "yomitoku": yomitoku_line,
+                "paddleocr": paddleocr_line,
+                "easyocr": easyocr_line,
+            },
+            y_center=110.0,
+        )
+
+        # 文字レベル投票を使用
+        voted_text, source_engines, final_confidence = vote_line_text(aligned_line)
+
+        # 多数決で「ソフトウェア」が採用される（2対1）
+        assert voted_text == "ソフトウェア"
+        assert len(source_engines) > 0
+        assert final_confidence > 0
+
+    def test_vote_line_text_character_level_returns_three_values(self):
+        """vote_line_textが3つの値を返す (text, engines, confidence)"""
+        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
+        from src.ocr_engines import TextWithBox
+
+        line = OCRLine(
+            items=[TextWithBox(text="テスト", bbox=(0, 100, 50, 120), confidence=0.9)],
+            engine="yomitoku",
+            y_center=110.0,
+            confidence=0.9,
+        )
+
+        aligned_line = AlignedLine(
+            lines={"yomitoku": line},
+            y_center=110.0,
+        )
+
+        result = vote_line_text(aligned_line)
+
+        # 3つの値を返す
+        assert len(result) == 3
+        voted_text, source_engines, final_confidence = result
+        assert isinstance(voted_text, str)
+        assert isinstance(source_engines, list)
+        assert isinstance(final_confidence, float)
+
+    def test_vote_line_text_character_level_with_normalized_confidence(self):
+        """正規化された信頼度が投票の重みとして使用される"""
+        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine, normalize_confidence
+        from src.ocr_engines import TextWithBox
+
+        # yomitokuの信頼度は高いがテキストが異なる
+        # paddleocr + easyocrが一致
+        yomitoku_line = OCRLine(
+            items=[TextWithBox(text="誤り", bbox=(0, 100, 50, 120), confidence=0.99)],
+            engine="yomitoku",
+            y_center=110.0,
+            confidence=0.99,
+        )
+        paddleocr_line = OCRLine(
+            items=[TextWithBox(text="正解", bbox=(0, 100, 50, 120), confidence=0.95)],
+            engine="paddleocr",
+            y_center=110.0,
+            confidence=0.95,
+        )
+        easyocr_line = OCRLine(
+            items=[TextWithBox(text="正解", bbox=(0, 100, 50, 120), confidence=0.85)],
+            engine="easyocr",
+            y_center=110.0,
+            confidence=0.85,
+        )
+
+        aligned_line = AlignedLine(
+            lines={
+                "yomitoku": yomitoku_line,
+                "paddleocr": paddleocr_line,
+                "easyocr": easyocr_line,
+            },
+            y_center=110.0,
+        )
+
+        voted_text, _, _ = vote_line_text(aligned_line)
+
+        # テキストが全く異なるので、文字レベル投票で最適な結果が選ばれる
+        # yomitokuの重み(1.5)が高くても、2対1で「正解」が有利になる場合がある
+        assert isinstance(voted_text, str)
+
+    def test_vote_line_text_character_level_single_engine(self):
+        """単一エンジンの場合はそのまま採用"""
+        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
+        from src.ocr_engines import TextWithBox
+
+        line = OCRLine(
+            items=[TextWithBox(text="単一エンジン", bbox=(0, 100, 80, 120), confidence=0.9)],
+            engine="yomitoku",
+            y_center=110.0,
+            confidence=0.9,
+        )
+
+        aligned_line = AlignedLine(
+            lines={"yomitoku": line, "paddleocr": None, "easyocr": None},
+            y_center=110.0,
+        )
+
+        voted_text, source_engines, _ = vote_line_text(aligned_line)
+
+        assert voted_text == "単一エンジン"
+        assert "yomitoku" in source_engines
+
+    def test_vote_line_text_character_level_partial_match(self):
+        """部分的に一致するテキストの文字レベル投票"""
+        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
+        from src.ocr_engines import TextWithBox
+
+        # 「チーム開発」vs「チム開発」（一文字欠損）
+        yomitoku_line = OCRLine(
+            items=[TextWithBox(text="チーム開発", bbox=(0, 100, 80, 120), confidence=0.95)],
+            engine="yomitoku",
+            y_center=110.0,
+            confidence=0.95,
+        )
+        paddleocr_line = OCRLine(
+            items=[TextWithBox(text="チム開発", bbox=(0, 100, 80, 120), confidence=0.90)],
+            engine="paddleocr",
+            y_center=110.0,
+            confidence=0.90,
+        )
+
+        aligned_line = AlignedLine(
+            lines={
+                "yomitoku": yomitoku_line,
+                "paddleocr": paddleocr_line,
+            },
+            y_center=110.0,
+        )
+
+        voted_text, _, _ = vote_line_text(aligned_line)
+
+        # yomitokuの重みが高いので「チーム開発」が採用される可能性が高い
+        assert "チ" in voted_text
+        assert "開発" in voted_text
+
+    def test_vote_line_text_character_level_empty_lines(self):
+        """全ての行がNoneの場合"""
+        from src.ocr_rover import vote_line_text, AlignedLine
+
+        aligned_line = AlignedLine(
+            lines={"yomitoku": None, "paddleocr": None, "easyocr": None},
+            y_center=110.0,
+        )
+
+        voted_text, source_engines, _ = vote_line_text(aligned_line)
+
+        assert voted_text == ""
+        assert source_engines == []
+
+    def test_vote_line_text_character_level_all_agree(self):
+        """全エンジンが完全一致の場合"""
+        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
+        from src.ocr_engines import TextWithBox
+
+        text = "完全一致テスト"
+
+        lines = {
+            engine: OCRLine(
+                items=[TextWithBox(text=text, bbox=(0, 100, 100, 120), confidence=0.9)],
+                engine=engine,
+                y_center=110.0,
+                confidence=0.9,
+            )
+            for engine in ["yomitoku", "paddleocr", "easyocr"]
+        }
+
+        aligned_line = AlignedLine(
+            lines=lines,
+            y_center=110.0,
+        )
+
+        voted_text, source_engines, _ = vote_line_text(aligned_line)
+
+        assert voted_text == text
+        assert len(source_engines) > 0

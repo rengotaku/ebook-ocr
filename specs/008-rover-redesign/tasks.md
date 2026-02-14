@@ -100,24 +100,24 @@
 
 ### Input
 
-- [ ] T026 セットアップ分析を読む: specs/008-rover-redesign/tasks/ph1-output.md
-- [ ] T027 前フェーズ出力を読む: specs/008-rover-redesign/tasks/ph2-output.md
+- [x] T026 セットアップ分析を読む: specs/008-rover-redesign/tasks/ph1-output.md
+- [x] T027 前フェーズ出力を読む: specs/008-rover-redesign/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T028 [P] [US3] 文字レベルアライメントテストを実装: tests/test_ocr_alignment.py::test_align_texts_character_level
+- [x] T028 [P] [US3] 文字レベルアライメントテストを実装: tests/test_ocr_alignment.py::test_align_texts_character_level
   - 2テキストのアライメント
   - 3テキストのアライメント
   - ギャップを含むアライメント
-- [ ] T029 [P] [US3] 重み付き投票テストを実装: tests/test_ocr_alignment.py::test_weighted_vote_character
+- [x] T029 [P] [US3] 重み付き投票テストを実装: tests/test_ocr_alignment.py::test_weighted_vote_character
   - 全員一致 → その文字
   - 2対1 → 多数派
   - 重み付きで逆転 → 重み勝ち
-- [ ] T030 [P] [US3] アライメント統合テストを実装: tests/test_ocr_alignment.py::test_vote_aligned_text
+- [x] T030 [P] [US3] アライメント統合テストを実装: tests/test_ocr_alignment.py::test_vote_aligned_text
   - 「ソフトウェア」vs「ソフトウエア」→「ソフトウェア」
-- [ ] T031 [P] [US3] vote_line_text更新テストを実装: tests/test_ocr_rover.py::test_vote_line_text_character_level
-- [ ] T032 `make test` FAIL (RED) を確認
-- [ ] T033 RED出力を生成: specs/008-rover-redesign/red-tests/ph3-test.md
+- [x] T031 [P] [US3] vote_line_text更新テストを実装: tests/test_ocr_rover.py::test_vote_line_text_character_level
+- [x] T032 `make test` FAIL (RED) を確認
+- [x] T033 RED出力を生成: specs/008-rover-redesign/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
