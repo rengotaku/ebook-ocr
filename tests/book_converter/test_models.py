@@ -748,3 +748,208 @@ class TestStructureContainer:
 
             assert container.level == level
             assert isinstance(container.level, int)
+
+
+# =============================================================================
+# Phase 5 (009-converter-redesign): T057 List.list_type 属性テスト
+# =============================================================================
+
+
+class TestListTypeAttribute:
+    """T057: List.list_type 属性テスト
+
+    User Story 4 - list/figure要素の出力
+    List は list_type 属性（"unordered" または "ordered"）を持つ
+    """
+
+    def test_list_has_list_type_field(self) -> None:
+        """List dataclass に list_type フィールドが存在する"""
+        from src.book_converter.models import List
+
+        # list_type フィールドが存在することを確認
+        assert "list_type" in List.__dataclass_fields__, \
+            "List should have list_type field"
+
+    def test_list_type_unordered(self) -> None:
+        """List(list_type="unordered") が作成できる"""
+        from src.book_converter.models import List
+
+        lst = List(
+            items=("項目1", "項目2", "項目3"),
+            list_type="unordered",
+        )
+
+        assert lst.list_type == "unordered"
+        assert lst.items == ("項目1", "項目2", "項目3")
+
+    def test_list_type_ordered(self) -> None:
+        """List(list_type="ordered") が作成できる"""
+        from src.book_converter.models import List
+
+        lst = List(
+            items=("手順1", "手順2", "手順3"),
+            list_type="ordered",
+        )
+
+        assert lst.list_type == "ordered"
+        assert lst.items == ("手順1", "手順2", "手順3")
+
+    def test_list_type_default_value(self) -> None:
+        """list_type のデフォルト値は "unordered" """
+        from src.book_converter.models import List
+
+        # list_type を指定せずに作成
+        lst = List(items=("item1", "item2"))
+
+        # デフォルト値は unordered
+        assert lst.list_type == "unordered"
+
+    def test_list_type_field_type_annotation(self) -> None:
+        """list_type の型アノテーションが str である"""
+        from src.book_converter.models import List
+
+        field_type = List.__dataclass_fields__["list_type"].type
+        assert field_type == str or field_type == "str", \
+            f"List.list_type type should be str, but got {field_type}"
+
+    def test_list_is_immutable(self) -> None:
+        """List は frozen dataclass（イミュータブル）"""
+        from src.book_converter.models import List
+
+        lst = List(items=("item",), list_type="unordered")
+
+        with pytest.raises(Exception):  # FrozenInstanceError
+            lst.list_type = "ordered"
+
+    def test_list_type_with_unicode_items(self) -> None:
+        """Unicode 項目と list_type の組み合わせ"""
+        from src.book_converter.models import List
+
+        lst = List(
+            items=("日本語項目「テスト」", "特殊文字&記号<>"),
+            list_type="ordered",
+        )
+
+        assert lst.list_type == "ordered"
+        assert lst.items[0] == "日本語項目「テスト」"
+
+    def test_list_type_empty_items(self) -> None:
+        """空のアイテムリストでも list_type を指定できる"""
+        from src.book_converter.models import List
+
+        lst = List(items=(), list_type="unordered")
+
+        assert lst.list_type == "unordered"
+        assert lst.items == ()
+
+
+# =============================================================================
+# Phase 5 (009-converter-redesign): T059 Figure.path, marker 属性テスト
+# =============================================================================
+
+
+class TestFigurePathMarker:
+    """T059: Figure.path, marker 属性テスト
+
+    User Story 4 - list/figure要素の出力
+    Figure は path（必須）と marker（オプション）属性を持つ
+    """
+
+    def test_figure_has_path_field(self) -> None:
+        """Figure dataclass に path フィールドが存在する"""
+        from src.book_converter.models import Figure
+
+        assert "path" in Figure.__dataclass_fields__, \
+            "Figure should have path field"
+
+    def test_figure_has_marker_field(self) -> None:
+        """Figure dataclass に marker フィールドが存在する"""
+        from src.book_converter.models import Figure
+
+        assert "marker" in Figure.__dataclass_fields__, \
+            "Figure should have marker field"
+
+    def test_figure_path_required(self) -> None:
+        """Figure の path は必須フィールド"""
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/fig001.png")
+
+        assert fig.path == "figures/fig001.png"
+
+    def test_figure_path_and_marker(self) -> None:
+        """Figure(path="...", marker="図1") が作成できる"""
+        from src.book_converter.models import Figure
+
+        fig = Figure(
+            path="figures/fig001.png",
+            marker="図1",
+        )
+
+        assert fig.path == "figures/fig001.png"
+        assert fig.marker == "図1"
+
+    def test_figure_marker_optional(self) -> None:
+        """marker はオプションフィールド（デフォルト空文字列）"""
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/img.png")
+
+        # marker を指定しない場合は空文字列
+        assert fig.marker == ""
+
+    def test_figure_read_aloud_default_false(self) -> None:
+        """Figure の read_aloud はデフォルトで "false" """
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/fig001.png")
+
+        # 新形式では read_aloud="false" がデフォルト
+        assert fig.read_aloud == "false" or fig.read_aloud is False
+
+    def test_figure_is_immutable(self) -> None:
+        """Figure は frozen dataclass（イミュータブル）"""
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/fig001.png", marker="図1")
+
+        with pytest.raises(Exception):  # FrozenInstanceError
+            fig.path = "changed.png"
+
+    def test_figure_marker_with_various_formats(self) -> None:
+        """様々なマーカー形式をサポート"""
+        from src.book_converter.models import Figure
+
+        test_cases = [
+            ("図1", "figures/fig001.png"),
+            ("図 1", "figures/fig002.png"),
+            ("写真1", "figures/photo001.png"),
+            ("表1", "figures/table001.png"),
+            ("イラスト", "figures/illust001.png"),
+        ]
+
+        for marker, path in test_cases:
+            fig = Figure(path=path, marker=marker)
+            assert fig.marker == marker, f"Failed for marker: {marker}"
+            assert fig.path == path
+
+    def test_figure_path_various_extensions(self) -> None:
+        """様々なファイル拡張子をサポート"""
+        from src.book_converter.models import Figure
+
+        extensions = ["png", "jpg", "jpeg", "gif", "svg", "webp"]
+
+        for ext in extensions:
+            fig = Figure(path=f"figures/image.{ext}")
+            assert fig.path == f"figures/image.{ext}"
+
+    def test_figure_unicode_marker(self) -> None:
+        """Unicode マーカーをサポート"""
+        from src.book_converter.models import Figure
+
+        fig = Figure(
+            path="figures/fig001.png",
+            marker="図1「サンプル画像」",
+        )
+
+        assert fig.marker == "図1「サンプル画像」"

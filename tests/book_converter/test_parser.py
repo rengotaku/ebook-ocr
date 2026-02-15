@@ -3171,3 +3171,184 @@ class TestParagraphContinuationAcrossPages:
 
         # 空白を除去して判定するので結合しない
         assert len(result) == 2
+
+
+# =============================================================================
+# Phase 5 (009-converter-redesign): T060 図プレースホルダー検出テスト
+# =============================================================================
+
+
+class TestParseFigurePlaceholder:
+    """T060: 図プレースホルダー検出テスト
+
+    User Story 4 - list/figure要素の出力
+    "[図]", "[図1]", "[写真]", "[表]", "[イラスト]" などを検出する
+    """
+
+    def test_parse_figure_placeholder_exists(self) -> None:
+        """parse_figure_placeholder 関数が存在する"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        assert callable(parse_figure_placeholder)
+
+    def test_detect_simple_figure(self) -> None:
+        """[図] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図]")
+
+        assert result is not None
+        assert result["marker"] == "図"
+
+    def test_detect_figure_with_number(self) -> None:
+        """[図1] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図1]")
+
+        assert result is not None
+        assert result["marker"] == "図1"
+
+    def test_detect_figure_with_space_number(self) -> None:
+        """[図 1] を検出（スペース付き）"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図 1]")
+
+        assert result is not None
+        assert result["marker"] == "図 1"
+
+    def test_detect_figure_with_hyphen_number(self) -> None:
+        """[図1-1] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図1-1]")
+
+        assert result is not None
+        assert result["marker"] == "図1-1"
+
+    def test_detect_photo(self) -> None:
+        """[写真] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[写真]")
+
+        assert result is not None
+        assert result["marker"] == "写真"
+
+    def test_detect_photo_with_number(self) -> None:
+        """[写真1] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[写真1]")
+
+        assert result is not None
+        assert result["marker"] == "写真1"
+
+    def test_detect_table(self) -> None:
+        """[表] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[表]")
+
+        assert result is not None
+        assert result["marker"] == "表"
+
+    def test_detect_table_with_number(self) -> None:
+        """[表1] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[表1]")
+
+        assert result is not None
+        assert result["marker"] == "表1"
+
+    def test_detect_illustration(self) -> None:
+        """[イラスト] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[イラスト]")
+
+        assert result is not None
+        assert result["marker"] == "イラスト"
+
+    def test_detect_graph(self) -> None:
+        """[グラフ] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[グラフ]")
+
+        assert result is not None
+        assert result["marker"] == "グラフ"
+
+    def test_detect_chart(self) -> None:
+        """[チャート] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[チャート]")
+
+        assert result is not None
+        assert result["marker"] == "チャート"
+
+    def test_non_figure_returns_none(self) -> None:
+        """図プレースホルダーでない行はNoneを返す"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        non_figure_lines = [
+            "本文テキスト",
+            "# 見出し",
+            "- リスト項目",
+            "[リンク](url)",
+            "[注釈]",  # 図ではない
+            "図1",  # 括弧なし
+            "(図1)",  # 丸括弧
+        ]
+
+        for line in non_figure_lines:
+            result = parse_figure_placeholder(line)
+            assert result is None, f"Expected None for: {line!r}"
+
+    def test_detect_figure_in_line(self) -> None:
+        """行の中に含まれるプレースホルダーを検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("本文の途中に[図1]がある場合")
+
+        assert result is not None
+        assert result["marker"] == "図1"
+
+    def test_detect_multiple_figures_returns_first(self) -> None:
+        """複数プレースホルダーがある場合は最初のものを返す"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図1]と[図2]")
+
+        assert result is not None
+        # 最初のプレースホルダーを返す
+        assert result["marker"] == "図1"
+
+    def test_figure_with_label(self) -> None:
+        """[図1：キャプション] 形式を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図1：システム構成図]")
+
+        assert result is not None
+        # marker部分のみ抽出、またはラベル全体を含む
+        assert "図1" in result["marker"]
+
+    def test_empty_line_returns_none(self) -> None:
+        """空行はNoneを返す"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("")
+
+        assert result is None
+
+    def test_whitespace_only_returns_none(self) -> None:
+        """空白のみの行はNoneを返す"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("   ")
+
+        assert result is None

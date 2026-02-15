@@ -2812,3 +2812,271 @@ class TestHeadingReadAloudInStructureContainer:
         assert len(headings) == 2
         assert headings[0].get("readAloud") == "true"
         assert headings[1].get("readAloud") == "false"
+
+
+# =============================================================================
+# Phase 5 (009-converter-redesign): T058 リスト変換テスト
+# =============================================================================
+
+
+class TestTransformListType:
+    """T058: リスト変換テスト（unordered/ordered）
+
+    User Story 4 - list/figure要素の出力
+    transform_list が type="unordered" / type="ordered" 属性を出力
+    """
+
+    def test_transform_list_exists(self) -> None:
+        """transform_list 関数が存在する"""
+        from src.book_converter.transformer import transform_list
+
+        assert callable(transform_list)
+
+    def test_transform_list_unordered(self) -> None:
+        """unordered リストを変換"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+
+        lst = List(items=("項目1", "項目2"), list_type="unordered")
+        element = transform_list(lst)
+
+        assert element.tag == "list"
+        assert element.get("type") == "unordered"
+
+    def test_transform_list_ordered(self) -> None:
+        """ordered リストを変換"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+
+        lst = List(items=("手順1", "手順2"), list_type="ordered")
+        element = transform_list(lst)
+
+        assert element.tag == "list"
+        assert element.get("type") == "ordered"
+
+    def test_transform_list_has_item_children(self) -> None:
+        """リスト要素は <item> 子要素を持つ"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+
+        lst = List(items=("item1", "item2", "item3"), list_type="unordered")
+        element = transform_list(lst)
+
+        items = element.findall("item")
+        assert len(items) == 3
+        assert items[0].text == "item1"
+        assert items[1].text == "item2"
+        assert items[2].text == "item3"
+
+    def test_transform_list_xml_format(self) -> None:
+        """XML出力形式が正しい"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+        from xml.etree.ElementTree import tostring
+
+        lst = List(items=("項目A", "項目B"), list_type="unordered")
+        element = transform_list(lst)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert '<list type="unordered">' in xml_string
+        assert "<item>項目A</item>" in xml_string
+        assert "<item>項目B</item>" in xml_string
+        assert "</list>" in xml_string
+
+    def test_transform_list_ordered_xml_format(self) -> None:
+        """ordered リストのXML出力形式が正しい"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+        from xml.etree.ElementTree import tostring
+
+        lst = List(items=("手順1", "手順2"), list_type="ordered")
+        element = transform_list(lst)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert '<list type="ordered">' in xml_string
+
+    def test_transform_list_empty_items(self) -> None:
+        """空のリストを変換"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+
+        lst = List(items=(), list_type="unordered")
+        element = transform_list(lst)
+
+        assert element.tag == "list"
+        items = element.findall("item")
+        assert len(items) == 0
+
+    def test_transform_list_unicode_items(self) -> None:
+        """Unicode 項目を含むリストを変換"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+
+        lst = List(
+            items=("日本語項目", "特殊文字<>&\"'"),
+            list_type="unordered",
+        )
+        element = transform_list(lst)
+
+        items = element.findall("item")
+        assert len(items) == 2
+        assert items[0].text == "日本語項目"
+
+    def test_transform_list_single_item(self) -> None:
+        """単一項目のリストを変換"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+
+        lst = List(items=("単一項目",), list_type="ordered")
+        element = transform_list(lst)
+
+        items = element.findall("item")
+        assert len(items) == 1
+        assert items[0].text == "単一項目"
+
+    def test_transform_list_returns_element(self) -> None:
+        """戻り値は Element 型"""
+        from src.book_converter.transformer import transform_list
+        from src.book_converter.models import List
+        from xml.etree.ElementTree import Element
+
+        lst = List(items=("item",), list_type="unordered")
+        element = transform_list(lst)
+
+        assert isinstance(element, Element)
+
+
+# =============================================================================
+# Phase 5 (009-converter-redesign): T061 figure XML出力テスト
+# =============================================================================
+
+
+class TestTransformFigureNewFormat:
+    """T061: figure XML出力テスト（新形式）
+
+    User Story 4 - list/figure要素の出力
+    <figure readAloud="false" path="..." marker="..." /> 形式
+    """
+
+    def test_transform_figure_new_format_path_attribute(self) -> None:
+        """figure 要素は path 属性を持つ"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/fig001.png")
+        element = transform_figure(fig)
+
+        assert element.tag == "figure"
+        assert element.get("path") == "figures/fig001.png"
+
+    def test_transform_figure_new_format_marker_attribute(self) -> None:
+        """figure 要素は marker 属性を持つ"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/fig001.png", marker="図1")
+        element = transform_figure(fig)
+
+        assert element.get("marker") == "図1"
+
+    def test_transform_figure_new_format_read_aloud_false(self) -> None:
+        """figure 要素の readAloud は "false" """
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/fig001.png")
+        element = transform_figure(fig)
+
+        assert element.get("readAloud") == "false"
+
+    def test_transform_figure_new_format_xml(self) -> None:
+        """XML出力形式が正しい"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+        from xml.etree.ElementTree import tostring
+
+        fig = Figure(path="figures/fig001.png", marker="図1")
+        element = transform_figure(fig)
+        xml_string = tostring(element, encoding="unicode")
+
+        # 新形式の属性ベース出力
+        assert 'readAloud="false"' in xml_string
+        assert 'path="figures/fig001.png"' in xml_string
+        assert 'marker="図1"' in xml_string
+
+    def test_transform_figure_without_marker(self) -> None:
+        """marker なしの figure を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+        from xml.etree.ElementTree import tostring
+
+        fig = Figure(path="figures/fig001.png")
+        element = transform_figure(fig)
+        xml_string = tostring(element, encoding="unicode")
+
+        # path 属性は必須
+        assert 'path="figures/fig001.png"' in xml_string
+        # marker は空文字列またはなし
+        # marker="" または marker 属性なし
+
+    def test_transform_figure_path_required(self) -> None:
+        """path 属性は必須"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/image.png")
+        element = transform_figure(fig)
+
+        assert element.get("path") is not None
+        assert element.get("path") == "figures/image.png"
+
+    def test_transform_figure_self_closing_element(self) -> None:
+        """figure 要素は自己終了タグ（子要素なし）"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/fig001.png", marker="図1")
+        element = transform_figure(fig)
+
+        # 子要素がないことを確認
+        children = list(element)
+        assert len(children) == 0
+
+    def test_transform_figure_unicode_marker(self) -> None:
+        """Unicode マーカーを含む figure を変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        fig = Figure(path="figures/fig001.png", marker="図1：システム構成図")
+        element = transform_figure(fig)
+
+        assert element.get("marker") == "図1：システム構成図"
+
+    def test_transform_figure_various_paths(self) -> None:
+        """様々なファイルパスを変換"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+
+        test_paths = [
+            "figures/fig001.png",
+            "images/photo.jpg",
+            "assets/diagram.svg",
+            "../relative/path.png",
+            "/absolute/path.png",
+        ]
+
+        for path in test_paths:
+            fig = Figure(path=path)
+            element = transform_figure(fig)
+            assert element.get("path") == path, f"Failed for path: {path}"
+
+    def test_transform_figure_returns_element(self) -> None:
+        """戻り値は Element 型"""
+        from src.book_converter.transformer import transform_figure
+        from src.book_converter.models import Figure
+        from xml.etree.ElementTree import Element
+
+        fig = Figure(path="figures/fig001.png")
+        element = transform_figure(fig)
+
+        assert isinstance(element, Element)

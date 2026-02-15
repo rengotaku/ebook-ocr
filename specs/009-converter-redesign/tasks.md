@@ -169,13 +169,13 @@
 
 ### Test Implementation (RED)
 
-- [ ] T057 [P] [US4] List.list_type 属性テスト実装: tests/book_converter/test_models.py に test_list_type_attribute を追加
-- [ ] T058 [P] [US4] リスト変換テスト（unordered/ordered）実装: tests/book_converter/test_transformer.py に test_transform_list_type を追加
-- [ ] T059 [P] [US4] Figure.path, marker 属性テスト実装: tests/book_converter/test_models.py に test_figure_path_marker を追加
-- [ ] T060 [P] [US4] 図プレースホルダー検出テスト実装: tests/book_converter/test_parser.py に test_parse_figure_placeholder を追加
-- [ ] T061 [P] [US4] figure XML出力テスト実装: tests/book_converter/test_transformer.py に test_transform_figure_new_format を追加
-- [ ] T062 `make test` FAIL (RED) 確認
-- [ ] T063 RED出力生成: specs/009-converter-redesign/red-tests/ph5-test.md
+- [x] T057 [P] [US4] List.list_type 属性テスト実装: tests/book_converter/test_models.py に test_list_type_attribute を追加
+- [x] T058 [P] [US4] リスト変換テスト（unordered/ordered）実装: tests/book_converter/test_transformer.py に test_transform_list_type を追加
+- [x] T059 [P] [US4] Figure.path, marker 属性テスト実装: tests/book_converter/test_models.py に test_figure_path_marker を追加
+- [x] T060 [P] [US4] 図プレースホルダー検出テスト実装: tests/book_converter/test_parser.py に test_parse_figure_placeholder を追加
+- [x] T061 [P] [US4] figure XML出力テスト実装: tests/book_converter/test_transformer.py に test_transform_figure_new_format を追加
+- [x] T062 `make test` FAIL (RED) 確認
+- [x] T063 RED出力生成: specs/009-converter-redesign/red-tests/ph5-test.md
 
 ### Implementation (GREEN)
 
