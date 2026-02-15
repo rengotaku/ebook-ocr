@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 _yomitoku_analyzer: "DocumentAnalyzer | None" = None
 
 
-def _get_analyzer(device: str = "cpu") -> "DocumentAnalyzer":
+def get_analyzer(device: str = "cpu") -> "DocumentAnalyzer":
     """Lazy initialization of yomitoku DocumentAnalyzer.
 
     Args:
@@ -72,7 +72,7 @@ def ocr_page_yomitoku(
     Returns:
         Plain text extracted from the page.
     """
-    analyzer = _get_analyzer(device)
+    analyzer = get_analyzer(device)
 
     # Load image
     if img is not None:
@@ -116,7 +116,7 @@ def ocr_page_yomitoku_full(
     Returns:
         YomitokuResult with text, markdown, and metadata.
     """
-    analyzer = _get_analyzer(device)
+    analyzer = get_analyzer(device)
 
     # Load image
     if img is not None:
@@ -205,7 +205,7 @@ def ocr_pages_yomitoku(
     # Initialize analyzer (warm up)
     print("  Loading yomitoku models...", end="", flush=True)
     start = time.time()
-    _get_analyzer(device)
+    get_analyzer(device)
     elapsed = time.time() - start
     print(f" loaded in {elapsed:.1f}s")
 
@@ -457,7 +457,7 @@ def detect_layout_yomitoku(
         return {}
 
     print("Initializing yomitoku DocumentAnalyzer...")
-    analyzer = _get_analyzer(device)
+    analyzer = get_analyzer(device)
 
     layout_data = {}
 

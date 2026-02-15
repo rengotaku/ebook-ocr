@@ -191,3 +191,91 @@ class MarkerStats:
     toc: int = 0  # <!-- toc --> 開始マーカー数
     content: int = 0  # <!-- content --> 開始マーカー数
     skip: int = 0  # <!-- skip --> 開始マーカー数
+
+
+@dataclass(frozen=True)
+class HeaderLevelConfig:
+    """見出しレベルとキーワードのマッピング設定.
+
+    CLI引数から構築される設定。
+    例: --header-level1=chapter --header-level2=episode|column
+
+    Attributes:
+        level1: レベル1キーワード (e.g., ("chapter",))
+        level2: レベル2キーワード (e.g., ("episode", "column"))
+        level3: レベル3キーワード
+        level4: レベル4キーワード
+        level5: レベル5キーワード
+    """
+
+    level1: tuple[str, ...] = ()
+    level2: tuple[str, ...] = ()
+    level3: tuple[str, ...] = ()
+    level4: tuple[str, ...] = ()
+    level5: tuple[str, ...] = ()
+
+    def get_level_for_keyword(self, keyword: str) -> int | None:
+        """キーワードに対応するレベルを返す.
+
+        Args:
+            keyword: 検索するキーワード (case-insensitive)
+
+        Returns:
+            レベル (1-5) or None
+        """
+        keyword_lower = keyword.lower()
+        if keyword_lower in (k.lower() for k in self.level1):
+            return 1
+        if keyword_lower in (k.lower() for k in self.level2):
+            return 2
+        if keyword_lower in (k.lower() for k in self.level3):
+            return 3
+        if keyword_lower in (k.lower() for k in self.level4):
+            return 4
+        if keyword_lower in (k.lower() for k in self.level5):
+            return 5
+        return None
+
+    def get_keywords_for_level(self, level: int) -> tuple[str, ...]:
+        """レベルに対応するキーワードを返す.
+
+        Args:
+            level: レベル (1-5)
+
+        Returns:
+            キーワードのタプル
+        """
+        return getattr(self, f"level{level}", ())
+
+    def has_any_config(self) -> bool:
+        """設定が存在するかどうか."""
+        return bool(self.level1 or self.level2 or self.level3 or self.level4 or self.level5)
+
+    @staticmethod
+    def from_cli_args(
+        level1: str | None = None,
+        level2: str | None = None,
+        level3: str | None = None,
+        level4: str | None = None,
+        level5: str | None = None,
+    ) -> "HeaderLevelConfig":
+        """CLI引数から設定を構築.
+
+        Args:
+            level1-5: パイプ区切りのキーワード (e.g., "episode|column")
+
+        Returns:
+            HeaderLevelConfig
+        """
+        def parse(value: str | None) -> tuple[str, ...]:
+            if not value:
+                return ()
+            return tuple(k.strip() for k in value.split("|") if k.strip())
+
+        return HeaderLevelConfig(
+            level1=parse(level1),
+            level2=parse(level2),
+            level3=parse(level3),
+            level4=parse(level4),
+            level5=parse(level5),
+        )

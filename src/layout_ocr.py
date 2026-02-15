@@ -2,20 +2,20 @@
 
 This module implements User Story 2: Region-based OCR Processing.
 Each detected region is processed with the appropriate OCR engine:
-- TEXT/TITLE/TABLE/CAPTION/FOOTNOTE/FORMULA: DeepSeek-OCR
-- FIGURE: VLM (gemma3:12b)
+- TEXT/TITLE/TABLE/CAPTION/FOOTNOTE/FORMULA: Yomitoku
+- FIGURE: Skip (excluded from text output)
 - ABANDON: Skip
 
-OCR Engine Selection Rules (from research.md):
+OCR Engine Selection Rules:
 | Region Type | OCR Engine | Output Format |
 |-------------|------------|---------------|
-| TITLE | DeepSeek-OCR | `## {text}` |
-| TEXT | DeepSeek-OCR | `{text}` |
-| TABLE | DeepSeek-OCR | Markdown table |
-| FIGURE | VLM (gemma3:12b) | `[FIGURE: {description}]` |
-| CAPTION | DeepSeek-OCR | `*{text}*` |
-| FOOTNOTE | DeepSeek-OCR | `^{text}^` |
-| FORMULA | DeepSeek-OCR | `$${text}$$` |
+| TITLE | Yomitoku | `## {text}` |
+| TEXT | Yomitoku | `{text}` |
+| TABLE | Yomitoku | Markdown table |
+| FIGURE | Skip | (excluded) |
+| CAPTION | Yomitoku | `*{text}*` |
+| FOOTNOTE | Yomitoku | `^{text}^` |
+| FORMULA | Yomitoku | `$${text}$$` |
 | ABANDON | Skip | None |
 """
 
@@ -25,60 +25,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-import requests
 from PIL import Image
 
-from src.utils import encode_pil_image, mask_figures
 from src.reading_order import sort_reading_order, remove_overlaps
-
-
-def warm_up_model(
-    model: str,
-    base_url: str = "http://localhost:11434",
-    timeout: int = 300,
-) -> None:
-    """Warm up the model by sending a dummy request to load it into memory.
-
-    Args:
-        model: Ollama model name.
-        base_url: Ollama API base URL.
-        timeout: Request timeout in seconds (longer for initial load).
-    """
-    print(f"  Loading model {model}...", end="", flush=True)
-    start = time.time()
-
-    # Create a minimal 1x1 white image
-    dummy_img = Image.new("RGB", (1, 1), color="white")
-    image_b64 = encode_pil_image(dummy_img)
-
-    payload = {
-        "model": model,
-        "messages": [
-            {
-                "role": "user",
-                "content": "test",
-                "images": [image_b64],
-            },
-        ],
-        "stream": False,
-        "options": {
-            "temperature": 0.0,
-            "num_predict": 1,
-        },
-    }
-
-    try:
-        response = requests.post(
-            f"{base_url}/api/chat",
-            json=payload,
-            timeout=timeout,
-        )
-        response.raise_for_status()
-        elapsed = time.time() - start
-        print(f" loaded in {elapsed:.1f}s")
-    except requests.RequestException as e:
-        print(f" failed: {e}")
-        print("  Continuing anyway (first request may timeout)...")
 
 
 @dataclass(frozen=True)
@@ -181,11 +130,9 @@ def select_ocr_engine(region_type: str) -> str:
         region_type: 領域の種類（TITLE, TEXT, FIGURE, etc.）
 
     Returns:
-        "yomitoku" | "vlm" | "skip"
+        "yomitoku" | "skip"
     """
-    if region_type == "FIGURE":
-        return "vlm"
-    elif region_type == "ABANDON":
+    if region_type in ("FIGURE", "ABANDON"):
         return "skip"
     else:
         return "yomitoku"
@@ -194,17 +141,16 @@ def select_ocr_engine(region_type: str) -> str:
 def format_ocr_result(region_type: str, text: str) -> str:
     """領域種類に応じたMarkdownフォーマットを適用。
 
-    フォーマットルール（research.md準拠）:
+    フォーマットルール:
     | Type | Format |
     |------|--------|
     | TITLE | `## {text}` |
     | TEXT | `{text}` |
     | TABLE | `{text}` |
-    | FIGURE | `[FIGURE: {text}]` |
     | CAPTION | `*{text}*` |
     | FOOTNOTE | `^{text}^` |
     | FORMULA | `$${text}$$` |
-    | ABANDON | `` (empty) |
+    | FIGURE/ABANDON | `` (empty) |
 
     Args:
         region_type: 領域の種類
@@ -215,15 +161,13 @@ def format_ocr_result(region_type: str, text: str) -> str:
     """
     if region_type == "TITLE":
         return f"## {text}"
-    elif region_type == "FIGURE":
-        return f"[FIGURE: {text}]"
     elif region_type == "CAPTION":
         return f"*{text}*"
     elif region_type == "FOOTNOTE":
         return f"^{text}^"
     elif region_type == "FORMULA":
         return f"$${text}$$"
-    elif region_type == "ABANDON":
+    elif region_type in ("FIGURE", "ABANDON"):
         return ""
     else:
         # TEXT, TABLE: そのまま出力
@@ -247,8 +191,6 @@ def crop_region(img: Image.Image, bbox: list[int]) -> Image.Image:
 def ocr_region(
     img: Image.Image,
     region: dict,
-    base_url: str = "http://localhost:11434",
-    timeout: int = 120,
     yomitoku_device: str = "cpu",
 ) -> OCRResult:
     """単一領域のOCR処理。
@@ -256,8 +198,6 @@ def ocr_region(
     Args:
         img: ページ全体の PIL Image
         region: {"type": str, "bbox": list[int], "confidence": float}
-        base_url: Ollama API base URL
-        timeout: Request timeout in seconds
         yomitoku_device: Device for Yomitoku ("cpu" or "cuda")
 
     Returns:
@@ -272,7 +212,7 @@ def ocr_region(
     # 2. OCRエンジン選択
     engine = select_ocr_engine(region_type)
 
-    # 3. ABANDON領域はスキップ
+    # 3. FIGURE/ABANDON領域はスキップ
     if engine == "skip":
         return OCRResult(
             region_type=region_type,
@@ -280,37 +220,9 @@ def ocr_region(
             formatted="",
         )
 
-    # 4. OCR実行
-    if engine == "vlm":
-        # VLM (gemma3:12b) for FIGURE regions
-        image_b64 = encode_pil_image(cropped_img)
-        payload = {
-            "model": "gemma3:12b",
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "この画像を説明してください。",
-                    "images": [image_b64],
-                },
-            ],
-            "stream": False,
-            "options": {
-                "temperature": 0.1,
-                "num_predict": 4096,
-            },
-        }
-        response = requests.post(
-            f"{base_url}/api/chat",
-            json=payload,
-            timeout=timeout,
-        )
-        response.raise_for_status()
-        result_json = response.json()
-        ocr_text = result_json["message"]["content"]
-    else:
-        # Yomitoku for TEXT/TITLE/TABLE/etc.
-        from src.ocr_yomitoku import ocr_page_yomitoku
-        ocr_text = ocr_page_yomitoku("", device=yomitoku_device, img=cropped_img)
+    # 4. OCR実行 (Yomitoku)
+    from src.ocr_yomitoku import ocr_page_yomitoku
+    ocr_text = ocr_page_yomitoku("", device=yomitoku_device, img=cropped_img)
 
     # 5. フォーマット
     formatted_text = format_ocr_result(region_type, ocr_text)
@@ -350,7 +262,7 @@ def should_fallback(
 ) -> bool:
     """フォールバックが必要かどうかを判定。
 
-    フォールバック条件 (research.md):
+    フォールバック条件:
     1. 領域が検出されなかった
     2. 検出領域のカバー率が30%未満
     3. ページ全体が1つのFIGUREとして検出された
@@ -368,8 +280,8 @@ def should_fallback(
     if not regions:
         return True
 
-    # OCR対象領域のみをフィルタ（ABANDONを除外）
-    ocr_regions = [r for r in regions if r["type"] != "ABANDON"]
+    # OCR対象領域のみをフィルタ（ABANDON/FIGUREを除外）
+    ocr_regions = [r for r in regions if r["type"] not in ("ABANDON", "FIGURE")]
     if not ocr_regions:
         return True
 
@@ -378,19 +290,12 @@ def should_fallback(
     if coverage < threshold:
         return True
 
-    # 条件3: 単一FIGUREがページの90%以上をカバー
-    if len(ocr_regions) == 1 and ocr_regions[0]["type"] == "FIGURE":
-        if coverage >= 0.9:
-            return True
-
     return False
 
 
 def ocr_by_layout(
     page_path: str,
     layout: dict,
-    base_url: str = "http://localhost:11434",
-    timeout: int = 120,
     yomitoku_device: str = "cpu",
 ) -> list[OCRResult]:
     """ページ内の全領域をOCR処理。
@@ -398,8 +303,6 @@ def ocr_by_layout(
     Args:
         page_path: ページ画像のパス
         layout: {"regions": list[dict], "page_size": [w, h]}
-        base_url: Ollama API base URL
-        timeout: Request timeout in seconds
         yomitoku_device: Device for Yomitoku ("cpu" or "cuda")
 
     Returns:
@@ -423,7 +326,7 @@ def ocr_by_layout(
             )
         ]
 
-    # 読み順ソート適用（US3統合）
+    # 読み順ソート適用
     if regions and page_size[0] > 0:
         regions = remove_overlaps(regions)
         regions = sort_reading_order(regions, page_size[0])
@@ -434,18 +337,12 @@ def ocr_by_layout(
     # 各領域をOCR処理
     results = []
     for region in regions:
-        # ABANDON領域はスキップ
-        if region["type"] == "ABANDON":
-            continue
-
-        # FIGURE領域は除外（FR-012: figures/で別管理）
-        if region["type"] == "FIGURE":
+        # ABANDON/FIGURE領域はスキップ
+        if region["type"] in ("ABANDON", "FIGURE"):
             continue
 
         result = ocr_region(
             img, region,
-            base_url=base_url,
-            timeout=timeout,
             yomitoku_device=yomitoku_device,
         )
         results.append(result)
@@ -457,11 +354,8 @@ def run_layout_ocr(
     pages_dir: str,
     layout_data: dict,
     output_file: str,
-    base_url: str = "http://localhost:11434",
-    timeout: int = 120,
     yomitoku_device: str = "cpu",
     warmup: bool = True,
-    warmup_timeout: int = 300,
 ) -> list[tuple[str, list[OCRResult]]]:
     """Run layout-aware OCR on all pages in a directory.
 
@@ -475,11 +369,8 @@ def run_layout_ocr(
         pages_dir: Directory containing page images.
         layout_data: Layout detection results (from layout.json).
         output_file: Path for combined output text file.
-        base_url: Ollama API base URL (for VLM fallback).
-        timeout: Per-region OCR timeout in seconds.
         yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
         warmup: Whether to warm up the model before processing.
-        warmup_timeout: Warmup timeout in seconds.
 
     Returns:
         List of (page_name, ocr_results) tuples.
@@ -492,8 +383,6 @@ def run_layout_ocr(
     if warmup:
         print("  Initializing Yomitoku OCR...")
         from src.ocr_yomitoku import ocr_page_yomitoku
-        from PIL import Image
-        import time
         start = time.time()
         # Warm up by running a dummy OCR
         dummy_img = Image.new("RGB", (100, 100), color=(255, 255, 255))
@@ -528,8 +417,6 @@ def run_layout_ocr(
         ocr_results = ocr_by_layout(
             str(page_path),
             page_layout,
-            base_url=base_url,
-            timeout=timeout,
             yomitoku_device=yomitoku_device,
         )
 
@@ -575,18 +462,10 @@ def main() -> None:
         "--layout", required=True, help="Path to layout.json file"
     )
     parser.add_argument(
-        "--base-url",
-        default="http://localhost:11434",
-        help="Ollama API base URL (for VLM fallback)",
-    )
-    parser.add_argument(
         "--device",
         default="cpu",
         choices=["cpu", "cuda"],
         help="Device for Yomitoku OCR (default: cpu)",
-    )
-    parser.add_argument(
-        "--timeout", type=int, default=120, help="Per-region OCR timeout (seconds)"
     )
     parser.add_argument(
         "--no-warmup", action="store_true", help="Skip model warm-up"
@@ -602,8 +481,6 @@ def main() -> None:
         pages_dir=args.pages_dir,
         layout_data=layout_data,
         output_file=args.output,
-        base_url=args.base_url,
-        timeout=args.timeout,
         yomitoku_device=args.device,
         warmup=not args.no_warmup,
     )
@@ -627,9 +504,8 @@ def run_yomitoku_ocr(
     Returns:
         List of (page_name, formatted_text) tuples.
     """
-    from src.ocr_yomitoku import _get_analyzer, load_yomitoku_results
+    from src.ocr_yomitoku import get_analyzer, load_yomitoku_results
     import cv2
-    import numpy as np
 
     pages_path = Path(pages_dir)
     output_path = Path(output_file)
@@ -662,7 +538,7 @@ def run_yomitoku_ocr(
             if analyzer is None:
                 print("  Initializing Yomitoku OCR...")
                 start = time.time()
-                analyzer = _get_analyzer(device)
+                analyzer = get_analyzer(device)
                 elapsed = time.time() - start
                 print(f"  Yomitoku ready in {elapsed:.1f}s")
 

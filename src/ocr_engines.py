@@ -91,11 +91,117 @@ class EngineResult:
     items: list[TextWithBox]
     success: bool
     error: str | None = None
+    figures: list[tuple[int, int, int, int]] | None = None  # Figure bboxes (x1, y1, x2, y2)
+    headings: list[str] | None = None  # Section heading texts
 
     @property
     def text(self) -> str:
         """Concatenated text from all items."""
         return "\n".join(item.text for item in self.items)
+
+
+def _is_word_inside_figures(
+    word,
+    figures: list,
+    overlap_threshold: float = 0.5,
+) -> bool:
+    """Check if a word is inside any figure region.
+
+    Args:
+        word: Yomitoku word object with points or box attribute.
+        figures: List of yomitoku figure objects.
+        overlap_threshold: Minimum overlap ratio to consider word inside figure.
+
+    Returns:
+        True if word center is inside any figure bbox.
+    """
+    if not figures:
+        return False
+
+    # Get word bbox
+    if hasattr(word, "points") and word.points:
+        pts = word.points
+        w_x1 = min(p[0] for p in pts)
+        w_y1 = min(p[1] for p in pts)
+        w_x2 = max(p[0] for p in pts)
+        w_y2 = max(p[1] for p in pts)
+    elif hasattr(word, "box") and word.box:
+        w_x1, w_y1, w_x2, w_y2 = word.box
+    else:
+        return False
+
+    w_cx = (w_x1 + w_x2) / 2
+    w_cy = (w_y1 + w_y2) / 2
+
+    # Check against each figure
+    for fig in figures:
+        if not hasattr(fig, "box") or not fig.box:
+            continue
+        f_x1, f_y1, f_x2, f_y2 = fig.box
+
+        # Check if word center is inside figure bbox
+        if f_x1 <= w_cx <= f_x2 and f_y1 <= w_cy <= f_y2:
+            return True
+
+    return False
+
+
+def _is_item_inside_figures(
+    item: TextWithBox,
+    figure_bboxes: list[tuple[int, int, int, int]],
+) -> bool:
+    """Check if a TextWithBox item's center is inside any figure region.
+
+    Args:
+        item: TextWithBox with bbox.
+        figure_bboxes: List of figure bboxes (x1, y1, x2, y2).
+
+    Returns:
+        True if item center is inside any figure bbox.
+    """
+    if not figure_bboxes:
+        return False
+
+    # Get item center
+    i_cx = (item.bbox[0] + item.bbox[2]) / 2
+    i_cy = (item.bbox[1] + item.bbox[3]) / 2
+
+    # Check against each figure
+    for f_x1, f_y1, f_x2, f_y2 in figure_bboxes:
+        if f_x1 <= i_cx <= f_x2 and f_y1 <= i_cy <= f_y2:
+            return True
+
+    return False
+
+
+def _filter_items_by_figures(
+    result: EngineResult,
+    figure_bboxes: list[tuple[int, int, int, int]],
+) -> EngineResult:
+    """Filter out items that are inside figure regions.
+
+    Args:
+        result: EngineResult to filter.
+        figure_bboxes: List of figure bboxes to exclude.
+
+    Returns:
+        New EngineResult with items outside figures.
+    """
+    if not figure_bboxes or not result.items:
+        return result
+
+    filtered_items = [
+        item for item in result.items
+        if not _is_item_inside_figures(item, figure_bboxes)
+    ]
+
+    return EngineResult(
+        engine=result.engine,
+        items=filtered_items,
+        success=result.success,
+        error=result.error,
+        figures=result.figures,
+    )
 
 
 def run_yomitoku_with_boxes(
@@ -106,6 +212,7 @@ def run_yomitoku_with_boxes(
 
     Uses words instead of paragraphs to get accurate line-by-line output.
     This prevents multi-line paragraphs from being returned as single items.
+    Words inside figure regions are excluded from output.
 
     Args:
         image: PIL Image to process.
@@ -126,10 +233,43 @@ def run_yomitoku_with_boxes(
         # Run OCR
         results, _, _ = analyzer(cv_img)
 
-        # Use words for line-level output (not paragraphs)
-        items = _cluster_words_to_lines(results.words)
+        # Extract figure bboxes
+        figure_bboxes: list[tuple[int, int, int, int]] = []
+        for fig in results.figures:
+            if hasattr(fig, "box") and fig.box:
+                figure_bboxes.append((
+                    int(fig.box[0]),
+                    int(fig.box[1]),
+                    int(fig.box[2]),
+                    int(fig.box[3]),
+                ))
 
-        return EngineResult(engine="yomitoku", items=items, success=True)
+        # Extract section headings
+        headings: list[str] = []
+        for p in results.paragraphs:
+            if getattr(p, "role", None) == "section_headings":
+                contents = getattr(p, "contents", "")
+                if contents:
+                    # Normalize: remove newlines, strip whitespace
+                    heading_text = contents.replace("\n", " ").strip()
+                    headings.append(heading_text)
+
+        # Filter out words inside figures
+        filtered_words = [
+            w for w in results.words
+            if not _is_word_inside_figures(w, results.figures)
+        ]
+
+        # Use words for line-level output (not paragraphs)
+        items = _cluster_words_to_lines(filtered_words)
+
+        return EngineResult(
+            engine="yomitoku",
+            items=items,
+            success=True,
+            figures=figure_bboxes if figure_bboxes else None,
+            headings=headings if headings else None,
+        )
     except Exception as e:
         return EngineResult(engine="yomitoku", items=[], success=False, error=str(e))
 
@@ -425,6 +565,9 @@ def run_all_engines(
 ) -> dict[str, EngineResult]:
     """Run all specified OCR engines.
 
+    Yomitoku is run first to detect figures. Text inside figures is excluded
+    from all engine results.
+
     Args:
         image: PIL Image to process.
         engines: List of engine names. Default: ["yomitoku", "paddleocr", "easyocr"] (Tesseract excluded)
@@ -442,14 +585,29 @@ def run_all_engines(
 
     results: dict[str, EngineResult] = {}
 
+    # Run yomitoku first to get figure regions
+    figure_bboxes: list[tuple[int, int, int, int]] = []
+    if "yomitoku" in engines:
+        results["yomitoku"] = run_yomitoku_with_boxes(image, yomitoku_device)
+        if results["yomitoku"].figures:
+            figure_bboxes = results["yomitoku"].figures
+
+    # Run other engines and filter by figure regions
     for engine in engines:
         if engine == "yomitoku":
-            results[engine] = run_yomitoku_with_boxes(image, yomitoku_device)
+            continue  # Already run
         elif engine == "paddleocr":
-            results[engine] = run_paddleocr_with_boxes(image, paddleocr_lang)
+            result = run_paddleocr_with_boxes(image, paddleocr_lang)
         elif engine == "easyocr":
-            results[engine] = run_easyocr_with_boxes(image, easyocr_langs, easyocr_preprocessing)
+            result = run_easyocr_with_boxes(image, easyocr_langs, easyocr_preprocessing)
         elif engine == "tesseract":
-            results[engine] = run_tesseract_with_boxes(image, tesseract_lang)
+            result = run_tesseract_with_boxes(image, tesseract_lang)
+        else:
+            continue
+
+        # Filter out items inside figures
+        if figure_bboxes:
+            result = _filter_items_by_figures(result, figure_bboxes)
+        results[engine] = result
 
     return results

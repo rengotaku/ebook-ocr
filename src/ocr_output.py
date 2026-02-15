@@ -3,10 +3,12 @@
 Manages directory structure and file outputs for:
 - Raw engine outputs (before ROVER processing)
 - ROVER-processed outputs (after補完)
+- Metadata (headings, figures, etc.)
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 
@@ -79,3 +81,37 @@ class ROVEROutput:
         """
         file_path = self.rover_dir / f"{page}.txt"
         return file_path.read_text(encoding="utf-8") if file_path.exists() else ""
+
+    @property
+    def headings_file(self) -> Path:
+        """Path to headings metadata file."""
+        return self.base_dir / "headings.json"
+
+    def save_headings(self, page: str, headings: list[str]) -> None:
+        """Save headings for a page.
+
+        Args:
+            page: Page identifier (e.g., "page_001").
+            headings: List of heading texts detected on this page.
+        """
+        # Load existing data
+        data: dict[str, list[str]] = {}
+        if self.headings_file.exists():
+            data = json.loads(self.headings_file.read_text(encoding="utf-8"))
+
+        # Update and save
+        data[page] = headings
+        self.headings_file.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    def get_all_headings(self) -> dict[str, list[str]]:
+        """Read all headings from metadata file.
+
+        Returns:
+            Dict mapping page identifiers to heading lists.
+        """
+        if not self.headings_file.exists():
+            return {}
+        return json.loads(self.headings_file.read_text(encoding="utf-8"))

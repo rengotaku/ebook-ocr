@@ -10,11 +10,7 @@ VIDEO ?= $(shell $(call CFG,video))
 OUTPUT ?= $(shell $(call CFG,output))
 INTERVAL ?= $(shell $(call CFG,interval))
 THRESHOLD ?= $(shell $(call CFG,threshold))
-VLM_MODEL ?= $(shell $(call CFG,vlm_model))
-VLM_URL ?= $(shell $(call CFG,ollama_url))
 OCR_TIMEOUT ?= $(shell $(call CFG,ocr_timeout))
-VLM_TIMEOUT ?= $(shell $(call CFG,vlm_timeout))
-MIN_CONFIDENCE ?= $(shell $(call CFG,min_confidence))
 
 # Hash directory (set manually for individual targets)
 # Usage: make ocr HASHDIR=output/a3f8c2d1e5b7f9c0
@@ -24,7 +20,7 @@ HASHDIR ?=
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract split-spreads yomitoku-detect yomitoku-ocr rover-ocr test test-book-converter test-cov converter convert-sample clean clean-all
+.PHONY: help setup run extract split-spreads yomitoku-detect yomitoku-ocr rover-ocr build-book test test-book-converter test-cov converter convert-sample clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -36,8 +32,8 @@ $(VENV)/bin/activate: requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-run: setup ## Run full pipeline (ROVER multi-engine OCR: yomitoku+paddle+easyocr + VLM figures)
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --device cpu --vlm-model $(VLM_MODEL) --ollama-url $(VLM_URL) --ocr-timeout $(OCR_TIMEOUT) --vlm-timeout $(VLM_TIMEOUT) --min-confidence $(MIN_CONFIDENCE)
+run: setup ## Run full pipeline (ROVER multi-engine OCR: yomitoku+paddle+easyocr)
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --device cpu --ocr-timeout $(OCR_TIMEOUT)
 
 extract: setup ## Extract frames only (skip OCR)
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --skip-ocr
@@ -61,6 +57,10 @@ yomitoku-ocr: setup ## [LEGACY] Re-run single-engine Yomitoku OCR (use 'make run
 rover-ocr: setup ## Run ROVER multi-engine OCR (yomitoku+paddle+easyocr) with character-level voting (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make rover-ocr HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_rover.py "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output"
+
+build-book: setup ## Build book.txt and book.md from ROVER outputs (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make build-book HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/consolidate.py "$(HASHDIR)"
 
 # OBSOLETE TARGETS (kept for reference, not maintained)
 # ocr: setup ## [OBSOLETE] Run DeepSeek-OCR - file removed, use 'make run' instead

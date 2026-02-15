@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from xml.etree import ElementTree as ET
 
 from src.book_converter.errors import PageValidationError
+from src.book_converter.models import HeaderLevelConfig
 
 
 @dataclass(frozen=True)
@@ -104,11 +105,44 @@ def normalize_for_matching(text: str) -> str:
     return text.strip()
 
 
-def extract_section_from_page_metadata(metadata: str | None) -> str | None:
+def _extract_number_by_keyword(
+    text: str,
+    config: HeaderLevelConfig | None,
+) -> str | None:
+    """Extract section number using keyword-based patterns from config.
+
+    Args:
+        text: Text to search in
+        config: Header level configuration
+
+    Returns:
+        Extracted number string or None
+    """
+    if not config or not config.has_any_config():
+        return None
+
+    # Build pattern for each configured keyword
+    for level in range(1, 6):
+        keywords = config.get_keywords_for_level(level)
+        for keyword in keywords:
+            # Pattern: "Keyword N" or "Keyword NN" (e.g., "Chapter 2", "Episode 07")
+            pattern = rf'^{re.escape(keyword)}\s*(\d+)'
+            match = re.match(pattern, text, re.IGNORECASE)
+            if match:
+                return match.group(1).lstrip('0') or '0'
+
+    return None
+
+
+def extract_section_from_page_metadata(
+    metadata: str | None,
+    config: HeaderLevelConfig | None = None,
+) -> str | None:
     """Extract section number from pageMetadata content.
 
     Args:
         metadata: pageMetadata text like "1.1 SREの概要 ― 1 / 3"
+        config: Header level configuration for keyword-based extraction
 
     Returns:
         Section number string like "1.1" or None
@@ -123,27 +157,23 @@ def extract_section_from_page_metadata(metadata: str | None) -> str | None:
     if '<emphasis>' in metadata:
         return None
 
-    # Try chapter pattern first: "第1章 SREとは — 1 / 1"
-    chapter_match = re.match(r'^第(\d+)章', metadata)
-    if chapter_match:
-        return chapter_match.group(1)
+    # Config-based keyword extraction (required)
+    if config and config.has_any_config():
+        return _extract_number_by_keyword(metadata, config)
 
-    # Try standard section pattern: "1.1 SREの概要 ― 1 / 3"
-    # Support both half-width and full-width spaces
-    # Must have a section number followed by space, but NOT followed by "/" or digit
-    # (to avoid matching "1 / 1" which is just page count)
-    section_match = re.match(r'^(\d+(?:\.\d+)*)[\s　]+(?![/\d])', metadata)
-    if section_match:
-        return section_match.group(1)
-
+    # No config provided - return None
     return None
 
 
-def extract_section_from_heading(heading: str | None) -> str | None:
+def extract_section_from_heading(
+    heading: str | None,
+    config: HeaderLevelConfig | None = None,
+) -> str | None:
     """Extract section number from heading content.
 
     Args:
         heading: Heading text like "Section 1.1 SREの概要"
+        config: Header level configuration for keyword-based extraction
 
     Returns:
         Section number string like "1.1" or None
@@ -154,21 +184,11 @@ def extract_section_from_heading(heading: str | None) -> str | None:
     # Normalize whitespace for consistent matching
     heading = normalize_for_matching(heading)
 
-    # Try chapter pattern: "第1章 SREとは"
-    chapter_match = re.match(r'^第(\d+)章', heading)
-    if chapter_match:
-        return chapter_match.group(1)
+    # Config-based keyword extraction (required)
+    if config and config.has_any_config():
+        return _extract_number_by_keyword(heading, config)
 
-    # Try "Section X.Y" prefix pattern
-    section_prefix_match = re.match(r'^Section\s+(\d+(?:\.\d+)*)', heading)
-    if section_prefix_match:
-        return section_prefix_match.group(1)
-
-    # Try direct section number pattern: "1.1.1 サイトとは何か"
-    direct_match = re.match(r'^(\d+(?:\.\d+)*)\s', heading)
-    if direct_match:
-        return direct_match.group(1)
-
+    # No config provided - return None
     return None
 
 
@@ -255,11 +275,15 @@ def validate_page_count(input_count: int, output_count: int) -> None:
         )
 
 
-def group_pages_by_toc(xml_input: str) -> str:
+def group_pages_by_toc(
+    xml_input: str,
+    header_level_config: HeaderLevelConfig | None = None,
+) -> str:
     """Group pages in book XML by TOC structure.
 
     Args:
         xml_input: Input book XML string with flat pages
+        header_level_config: Header level keyword mapping configuration
 
     Returns:
         Output book XML string with hierarchical page grouping
@@ -323,7 +347,9 @@ def group_pages_by_toc(xml_input: str) -> str:
             new_book.append(front_matter_elem)
 
         # Assign content pages to sections
-        page_assignments = _assign_pages_to_sections(content_pages, toc_lookup)
+        page_assignments = _assign_pages_to_sections(
+            content_pages, toc_lookup, header_level_config
+        )
 
         # Build hierarchical structure
         _build_hierarchical_structure(new_book, page_assignments, toc_lookup)
@@ -338,13 +364,16 @@ def group_pages_by_toc(xml_input: str) -> str:
 
 
 def _assign_pages_to_sections(
-    pages: list[ET.Element], toc_lookup: dict[str, TOCEntry]
+    pages: list[ET.Element],
+    toc_lookup: dict[str, TOCEntry],
+    config: HeaderLevelConfig | None = None,
 ) -> dict[str, list[ET.Element]]:
     """Assign pages to sections based on extracted section numbers.
 
     Args:
         pages: List of page elements
         toc_lookup: Dict mapping section number to TOCEntry
+        config: Header level configuration
 
     Returns:
         Dict mapping section number to list of pages
@@ -354,7 +383,7 @@ def _assign_pages_to_sections(
 
     for page in pages:
         # Try to extract section number from page
-        section_num = _extract_section_from_page(page)
+        section_num = _extract_section_from_page(page, config)
 
         if section_num and section_num in toc_lookup:
             current_section = section_num
@@ -390,11 +419,15 @@ def _find_first_chapter(toc_lookup: dict[str, TOCEntry]) -> str | None:
     return min(chapter_numbers, key=lambda x: int(x))
 
 
-def _extract_section_from_page(page: ET.Element) -> str | None:
+def _extract_section_from_page(
+    page: ET.Element,
+    config: HeaderLevelConfig | None = None,
+) -> str | None:
     """Extract section number from a page element.
 
     Args:
         page: Page element
+        config: Header level configuration
 
     Returns:
         Section number string or None
@@ -403,7 +436,7 @@ def _extract_section_from_page(page: ET.Element) -> str | None:
     page_metadata = page.find('pageMetadata')
     if page_metadata is not None:
         metadata_text = ''.join(page_metadata.itertext())
-        section = extract_section_from_page_metadata(metadata_text)
+        section = extract_section_from_page_metadata(metadata_text, config)
         if section:
             return section
 
@@ -413,7 +446,7 @@ def _extract_section_from_page(page: ET.Element) -> str | None:
         heading = content.find('heading')
         if heading is not None:
             heading_text = ''.join(heading.itertext())
-            section = extract_section_from_heading(heading_text)
+            section = extract_section_from_heading(heading_text, config)
             if section:
                 return section
 

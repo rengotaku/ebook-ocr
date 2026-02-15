@@ -512,11 +512,15 @@ def run_rover_batch(
                 yomitoku_device=yomitoku_device,
             )
 
-            # Save raw outputs
+            # Save raw outputs and extract headings from yomitoku
             for engine, result in engine_results.items():
                 if result.success:
                     output.save_raw(engine, page_name, result.text)
                     print(f"  {engine}: {len(result.items)} items")
+                    # Save headings from yomitoku
+                    if engine == "yomitoku" and result.headings:
+                        output.save_headings(page_name, result.headings)
+                        print(f"    headings: {result.headings}")
                 else:
                     print(f"  {engine}: FAILED - {result.error}")
 

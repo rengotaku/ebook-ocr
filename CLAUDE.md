@@ -77,4 +77,37 @@ specs/              # Feature specifications
 5. **Implement**: Execute with `/speckit.implement`
 6. **Analyze**: Verify consistency with `/speckit.analyze`
 
+## CRITICAL: No Hardcoded Domain-Specific Values
+
+**書籍構造（chapter, section, episode等）をハードコードするな。**
+
+書籍ごとに構造は異なる。今日の書籍が「Chapter」を使っていても、明日の書籍は「第N章」や「Episode」を使う。
+
+### 絶対に禁止
+
+```python
+# これは糞コード
+if re.match(r'^Chapter\s+(\d+)', text):  # ハードコード
+if re.match(r'^第(\d+)章', text):        # ハードコード
+level = "chapter"                         # ハードコード
+```
+
+### 正しい実装
+
+```python
+# CLI引数で設定を受け取る
+--header-level1=chapter
+--header-level2=episode|column
+
+# 設定駆動で動的にパターン生成
+for keyword in config.get_keywords_for_level(level):
+    pattern = rf'^{re.escape(keyword)}\s*(\d+)'
+```
+
+### 原則
+
+1. **ドメイン固有の値は外部設定化**: CLI引数、設定ファイル、環境変数
+2. **後方互換性のためのフォールバックは不要**: 古い糞コードを残すな
+3. **「今回だけ」のハードコードは次回の負債**: 最初から設定駆動で作れ
+
 <!-- MANUAL ADDITIONS END -->

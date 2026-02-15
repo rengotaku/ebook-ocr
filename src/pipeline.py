@@ -1,7 +1,7 @@
-"""V5 pipeline: video → frames → dedup → Yomitoku layout + ROVER multi-engine OCR → VLM figure description.
+"""V5 pipeline: video → frames → dedup → Yomitoku layout + ROVER multi-engine OCR.
 
 Yomitoku handles layout detection.
-ROVER combines multiple OCR engines (Yomitoku, PaddleOCR, EasyOCR, Tesseract) for improved accuracy.
+ROVER combines multiple OCR engines (Yomitoku, PaddleOCR, EasyOCR) for improved accuracy.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from src.deduplicate import deduplicate_frames
 from src.split_spread import split_spread_pages, renumber_pages
 from src.ocr_yomitoku import detect_layout_yomitoku
 from src.ocr_rover import run_rover_batch
-from src.describe_figures import describe_figures
+from src.consolidate import consolidate_rover_output
 
 
 def run_pipeline(
@@ -28,26 +28,19 @@ def run_pipeline(
     interval: float = 1.5,
     hash_threshold: int = 8,
     yomitoku_device: str = "cpu",
-    vlm_model: str = "gemma3:12b",
-    ollama_url: str = "http://localhost:11434",
     ocr_timeout: int = 60,
-    vlm_timeout: int = 120,
     skip_ocr: bool = False,
-    min_confidence: float = 0.7,
-    coverage_threshold: float = 0.3,
-    min_region_area: float = 0.01,
     split_spreads: bool = True,
     spread_aspect_ratio: float = 1.2,
     spread_left_trim: float = 0.0,
     spread_right_trim: float = 0.0,
-    vlm_options: dict | None = None,
 ) -> None:
     """Run the full video-to-markdown pipeline (v5 with ROVER OCR).
 
     Steps 0-2 are shared with v1/v2. Step 2.5 splits spreads into pages.
     Step 3 uses Yomitoku for layout detection.
-    Step 4 uses ROVER multi-engine OCR (Yomitoku + PaddleOCR + EasyOCR + Tesseract).
-    Step 5 uses VLM to describe detected figures.
+    Step 4 uses ROVER multi-engine OCR (Yomitoku + PaddleOCR + EasyOCR).
+    Step 5 consolidates OCR results into book.txt and book.md.
 
     Args:
         video_path: Path to input video file.
@@ -55,19 +48,12 @@ def run_pipeline(
         interval: Frame extraction interval in seconds.
         hash_threshold: Perceptual hash threshold for dedup.
         yomitoku_device: Device for Yomitoku OCR ("cpu" or "cuda").
-        vlm_model: Ollama vision model for figure description.
-        ollama_url: Ollama API base URL.
         ocr_timeout: Per-page OCR timeout in seconds.
-        vlm_timeout: Per-figure VLM timeout in seconds.
         skip_ocr: If True, stop after frame extraction + dedup.
-        min_confidence: Minimum confidence for figure detection.
-        coverage_threshold: Fallback threshold for low coverage (default: 0.3).
-        min_region_area: Minimum region area ratio (default: 0.01).
         split_spreads: If True, split spread images into left/right pages.
         spread_aspect_ratio: Aspect ratio threshold for spread detection (default: 1.2).
         spread_left_trim: Percentage to trim from left edge of left page (default: 0.0).
         spread_right_trim: Percentage to trim from right edge of right page (default: 0.0).
-        vlm_options: Ollama generation options for VLM model.
     """
     if not Path(video_path).exists():
         print(f"Error: Video file not found: {video_path}", file=sys.stderr)
@@ -87,9 +73,6 @@ def run_pipeline(
     out = Path(output_base) / hash_prefix
     frames_dir = str(out / "frames")
     pages_dir = str(out / "pages")
-    figures_dir = str(out / "figures")
-    text_file = str(out / "book.txt")
-    md_file = str(out / "book.md")
 
     write_source_info(str(out), video_path, full_hash)
 
@@ -128,7 +111,7 @@ def run_pipeline(
     print("=" * 60)
 
     # Detect layout and create visualizations
-    layout = detect_layout_yomitoku(
+    detect_layout_yomitoku(
         pages_dir=pages_dir,
         output_dir=str(out),
         device=yomitoku_device,
@@ -142,31 +125,11 @@ def run_pipeline(
         yomitoku_device=yomitoku_device,
     )
 
-    # Consolidate ROVER results into book.txt
-    rover_dir = Path(ocr_output_dir) / "rover"
-    rover_pages = sorted(rover_dir.glob("*.txt"))
-    with open(text_file, "w", encoding="utf-8") as f:
-        for page_file in rover_pages:
-            page_text = page_file.read_text(encoding="utf-8")
-            f.write(f"\n--- {page_file.stem} ---\n\n")
-            f.write(page_text)
-            f.write("\n\n")
-
-    # Step 5: Describe figures with VLM
+    # Step 5: Consolidate OCR results
     print("\n" + "=" * 60)
-    print(f"Step 5: Describing figures with VLM ({vlm_model})")
+    print("Step 5: Consolidating OCR results")
     print("=" * 60)
-    describe_figures(
-        text_file=text_file,
-        output_file=md_file,
-        figures_dir=figures_dir,
-        layout=layout,
-        model=vlm_model,
-        base_url=ollama_url,
-        timeout=vlm_timeout,
-        min_confidence=min_confidence,
-        options=vlm_options,
-    )
+    text_file, md_file = consolidate_rover_output(str(out))
 
     elapsed = time.time() - start
     print(f"\nPipeline complete in {elapsed:.1f}s")
@@ -189,21 +152,15 @@ def main() -> None:
     cfg = load_config()
 
     parser = argparse.ArgumentParser(
-        description="Extract text from e-book screen recording (v5 - ROVER multi-engine OCR + VLM figures)",
+        description="Extract text from e-book screen recording (v5 - ROVER multi-engine OCR)",
     )
     parser.add_argument("video", help="Input video file path")
     parser.add_argument("-o", "--output", default=cfg.get("output", "output"), help="Base output directory")
     parser.add_argument("-i", "--interval", type=float, default=cfg.get("interval", 1.5), help="Frame interval in seconds")
     parser.add_argument("-t", "--threshold", type=int, default=cfg.get("threshold", 8), help="Dedup hash threshold")
     parser.add_argument("--device", default=cfg.get("yomitoku_device", "cpu"), choices=["cpu", "cuda"], help="Yomitoku device")
-    parser.add_argument("--vlm-model", default=cfg.get("vlm_model", "gemma3:12b"), help="Ollama VLM for figures")
-    parser.add_argument("--ollama-url", default=cfg.get("ollama_url", "http://localhost:11434"), help="Ollama API URL")
     parser.add_argument("--ocr-timeout", type=int, default=cfg.get("ocr_timeout", 60), help="Per-page OCR timeout")
-    parser.add_argument("--vlm-timeout", type=int, default=cfg.get("vlm_timeout", 120), help="Per-figure VLM timeout")
     parser.add_argument("--skip-ocr", action="store_true", help="Stop after frame extraction (skip OCR)")
-    parser.add_argument("--min-confidence", type=float, default=cfg.get("min_confidence", 0.7), help="Figure confidence threshold")
-    parser.add_argument("--coverage-threshold", type=float, default=cfg.get("coverage_threshold", 0.3), help="Fallback threshold for low coverage")
-    parser.add_argument("--min-region-area", type=float, default=cfg.get("min_region_area", 0.01), help="Minimum region area ratio")
     parser.add_argument("--no-split-spreads", action="store_true", help="Disable spread splitting (見開き分割)")
     parser.add_argument("--spread-aspect-ratio", type=float, default=cfg.get("spread_aspect_ratio", 1.2), help="Aspect ratio threshold for spread detection")
     parser.add_argument("--spread-left-trim", type=float, default=cfg.get("spread_left_trim", 0.0), help="Trim %% from left edge of left page (e.g., 0.03 = 3%%)")
@@ -216,19 +173,12 @@ def main() -> None:
         interval=args.interval,
         hash_threshold=args.threshold,
         yomitoku_device=args.device,
-        vlm_model=args.vlm_model,
-        ollama_url=args.ollama_url,
         ocr_timeout=args.ocr_timeout,
-        vlm_timeout=args.vlm_timeout,
         skip_ocr=args.skip_ocr,
-        min_confidence=args.min_confidence,
-        coverage_threshold=args.coverage_threshold,
-        min_region_area=args.min_region_area,
         split_spreads=not args.no_split_spreads,
         spread_aspect_ratio=args.spread_aspect_ratio,
         spread_left_trim=args.spread_left_trim,
         spread_right_trim=args.spread_right_trim,
-        vlm_options=cfg.get("vlm_options"),
     )
 
 

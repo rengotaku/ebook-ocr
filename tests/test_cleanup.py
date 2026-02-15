@@ -49,33 +49,11 @@ class TestNoLegacyOcrImport:
 
 
 class TestNoUnusedDependencies:
-    """requirements.txt にレガシー依存が含まれないこと。"""
+    """requirements.txt にレガシー依存が含まれないこと。
 
-    def test_no_easyocr(self) -> None:
-        """requirements.txt に easyocr が含まれないこと。"""
-        content = REQUIREMENTS_TXT.read_text(encoding="utf-8")
-        lines = [
-            line.strip().lower()
-            for line in content.splitlines()
-            if line.strip() and not line.strip().startswith("#")
-        ]
-        matching = [l for l in lines if l == "easyocr" or l.startswith("easyocr")]
-        assert matching == [], (
-            f"Legacy dependency 'easyocr' found in requirements.txt: {matching}"
-        )
-
-    def test_no_pytesseract(self) -> None:
-        """requirements.txt に pytesseract が含まれないこと。"""
-        content = REQUIREMENTS_TXT.read_text(encoding="utf-8")
-        lines = [
-            line.strip().lower()
-            for line in content.splitlines()
-            if line.strip() and not line.strip().startswith("#")
-        ]
-        matching = [l for l in lines if l == "pytesseract" or l.startswith("pytesseract")]
-        assert matching == [], (
-            f"Legacy dependency 'pytesseract' found in requirements.txt: {matching}"
-        )
+    Note: easyocr と pytesseract は ROVER multi-engine OCR で使用されるため、
+    現在は有効な依存関係です（008-rover-redesign で追加）。
+    """
 
     def test_no_opencv_python(self) -> None:
         """requirements.txt に opencv-python が含まれないこと。"""

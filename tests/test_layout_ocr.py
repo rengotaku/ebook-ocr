@@ -1,19 +1,21 @@
 """Tests for src.layout_ocr region-based OCR processing.
 
 Phase 4 RED tests for US2 - Region-based OCR Processing.
-These tests will FAIL until src/layout_ocr.py is implemented.
 
-OCR Engine Selection Rules (from research.md):
+OCR Engine Selection Rules:
 | Region Type | OCR Engine | Output Format |
 |-------------|------------|---------------|
 | TITLE | Yomitoku | `## {text}` |
 | TEXT | Yomitoku | `{text}` |
 | TABLE | Yomitoku | Markdown table |
-| FIGURE | VLM (gemma3:12b) | `[FIGURE: {description}]` |
+| FIGURE | Skip | (excluded from output) |
 | CAPTION | Yomitoku | `*{text}*` |
 | FOOTNOTE | Yomitoku | `^{text}^` |
 | FORMULA | Skip or OCR | `$${text}$$` |
 | ABANDON | Skip | None |
+
+Note: VLM support was removed in 008-rover-redesign.
+FIGURE regions are now skipped instead of processed by VLM.
 """
 
 from __future__ import annotations
@@ -52,16 +54,16 @@ class TestSelectOcrEngine:
             f"TITLE region should use yomitoku engine. Got: {engine}"
         )
 
-    def test_select_ocr_engine_figure_returns_vlm(self) -> None:
-        """FIGURE領域に対してVLMが選択されることを検証。"""
+    def test_select_ocr_engine_figure_returns_skip(self) -> None:
+        """FIGURE領域がスキップされることを検証。"""
         from src.layout_ocr import select_ocr_engine
 
         # Act
         engine = select_ocr_engine("FIGURE")
 
         # Assert
-        assert engine == "vlm", (
-            f"FIGURE region should use vlm engine. Got: {engine}"
+        assert engine == "skip", (
+            f"FIGURE region should be skipped. Got: {engine}"
         )
 
     def test_select_ocr_engine_table_returns_yomitoku(self) -> None:
@@ -164,10 +166,10 @@ class TestFormatOcrResult:
             f"TEXT should remain unchanged. Got: {formatted}"
         )
 
-    def test_format_ocr_result_figure_adds_marker(self) -> None:
-        """FIGURE領域のVLM説明が[FIGURE: ...]で出力されることを検証。
+    def test_format_ocr_result_figure_returns_empty(self) -> None:
+        """FIGURE領域に対して空文字が返されることを検証（VLM削除後）。
 
-        期待フォーマット: `[FIGURE: {description}]`
+        FIGURE領域はスキップされるため、空文字を返す。
         """
         from src.layout_ocr import format_ocr_result
 
@@ -178,8 +180,8 @@ class TestFormatOcrResult:
         formatted = format_ocr_result("FIGURE", description)
 
         # Assert
-        assert formatted == "[FIGURE: 棒グラフで売上推移を示している]", (
-            f"FIGURE should be formatted as '[FIGURE: {{description}}]'. Got: {formatted}"
+        assert formatted == "", (
+            f"FIGURE should return empty string (skipped). Got: {formatted}"
         )
 
     def test_format_ocr_result_caption_adds_italic(self) -> None:
@@ -368,10 +370,10 @@ class TestTextRegionOcr:
 
 
 class TestFigureRegionOcr:
-    """FIGURE領域のOCRテスト（VLM使用）。"""
+    """FIGURE領域のOCRテスト（VLM削除後：スキップされる）。"""
 
-    def test_figure_region_uses_vlm(self, tmp_path: Path) -> None:
-        """FIGURE領域がVLMで処理されることを検証（モック使用）。"""
+    def test_figure_region_is_skipped(self) -> None:
+        """FIGURE領域がスキップされることを検証（VLM削除後）。"""
         from src.layout_ocr import ocr_region
 
         # Arrange
@@ -381,54 +383,16 @@ class TestFigureRegionOcr:
             "bbox": [10, 10, 390, 290],
             "confidence": 0.95,
         }
-
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "message": {"content": "棒グラフで売上推移を示している図"}
-        }
-        mock_response.raise_for_status = MagicMock()
-
-        # Act & Assert
-        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
-            result = ocr_region(img, region)
-
-            # VLMが呼ばれたことを確認
-            call_args = mock_post.call_args
-            assert call_args is not None, "requests.post should be called for VLM"
-            payload = call_args.kwargs.get("json") or call_args[1].get("json")
-            # VLMモデル（gemma3:12bなど）が使われることを確認
-            assert payload["model"] != "yomitoku", (
-                f"FIGURE region should NOT use yomitoku. Got: {payload['model']}"
-            )
-
-    def test_figure_region_ocr_result_format(self) -> None:
-        """FIGURE領域のVLM結果が[FIGURE: ...]でフォーマットされることを検証。"""
-        from src.layout_ocr import ocr_region
-
-        # Arrange
-        img = Image.new("RGB", (400, 300), color=(200, 200, 200))
-        region = {
-            "type": "FIGURE",
-            "bbox": [10, 10, 390, 290],
-            "confidence": 0.95,
-        }
-
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "message": {"content": "円グラフで構成比を示している"}
-        }
-        mock_response.raise_for_status = MagicMock()
 
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
-            result = ocr_region(img, region)
+        result = ocr_region(img, region)
 
-        # Assert
-        assert result.text == "円グラフで構成比を示している", (
-            f"VLM description should be extracted. Got: {result.text}"
+        # Assert: FIGUREはスキップされ、空文字を返す
+        assert result.text == "", (
+            f"FIGURE region should return empty text (skipped). Got: {result.text}"
         )
-        assert result.formatted == "[FIGURE: 円グラフで構成比を示している]", (
-            f"FIGURE should be formatted as '[FIGURE: ...]'. Got: {result.formatted}"
+        assert result.formatted == "", (
+            f"FIGURE should return empty formatted text. Got: {result.formatted}"
         )
 
 
@@ -497,19 +461,11 @@ class TestResultConcatenation:
             "page_size": [800, 600],
         }
 
-        # Mock OCR responses
-        mock_responses = [
-            {"message": {"content": "第1章 概要"}},
-            {"message": {"content": "これは最初の段落です。"}},
-            {"message": {"content": "これは2番目の段落です。"}},
-        ]
-        mock_post = MagicMock()
-        mock_post.raise_for_status = MagicMock()
-        mock_post.json.side_effect = mock_responses
+        # Mock Yomitoku OCR responses
+        ocr_responses = ["第1章 概要", "これは最初の段落です。", "これは2番目の段落です。"]
 
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_post):
-            mock_post.json = MagicMock(side_effect=mock_responses)
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=ocr_responses):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert
@@ -537,17 +493,11 @@ class TestResultConcatenation:
             "page_size": [800, 600],
         }
 
-        mock_responses = [
-            {"message": {"content": "表1のタイトル"}},
-            {"message": {"content": "表1: サンプルデータ"}},
-            {"message": {"content": "本文テキスト"}},
-        ]
-        mock_post = MagicMock()
-        mock_post.raise_for_status = MagicMock()
+        # Mock Yomitoku OCR responses
+        ocr_responses = ["表1のタイトル", "表1: サンプルデータ", "本文テキスト"]
 
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_post):
-            mock_post.json = MagicMock(side_effect=mock_responses)
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=ocr_responses):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 順序が維持されている
@@ -574,12 +524,8 @@ class TestResultConcatenation:
             "page_size": [800, 600],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "本文テキスト"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="本文テキスト"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: ABANDONは結果に含まれない
@@ -1076,21 +1022,17 @@ class TestFallbackLowCoverage:
             "page_size": [1000, 1000],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "フォールバック結果"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="フォールバック結果"):
             results = ocr_by_layout(str(img_path), layout)
 
-            # Assert: フォールバックが実行される
-            assert len(results) == 1, (
-                f"Low coverage should trigger fallback. Got: {len(results)}"
-            )
-            assert results[0].region_type in ("FALLBACK", "TEXT"), (
-                f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
-            )
+        # Assert: フォールバックが実行される
+        assert len(results) == 1, (
+            f"Low coverage should trigger fallback. Got: {len(results)}"
+        )
+        assert results[0].region_type in ("FALLBACK", "TEXT"), (
+            f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
+        )
 
     def test_ocr_by_layout_no_fallback_above_30_percent(self, tmp_path: Path) -> None:
         """30%以上のカバー率ではフォールバックしないことを検証。"""
@@ -1109,12 +1051,8 @@ class TestFallbackLowCoverage:
             "page_size": [100, 100],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "通常OCR結果"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="通常OCR結果"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 領域別OCRが実行される（フォールバックしない）
@@ -1141,12 +1079,8 @@ class TestFallbackLowCoverage:
             "page_size": [1000, 1000],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "フォールバック結果"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="フォールバック結果"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 29%はフォールバック
@@ -1179,12 +1113,8 @@ class TestFallbackSingleFigure:
             "page_size": [800, 600],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "ページ全体のテキスト"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="ページ全体のテキスト"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: フォールバックが実行される
@@ -1786,26 +1716,19 @@ class TestFigureExclusion:
             "page_size": [800, 600],
         }
 
-        # Act: モックでOCR結果を設定
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="テキスト内容"):
-            # FIGUREはVLMで処理されるのでrequests.postをモック
-            mock_response = MagicMock()
-            mock_response.json.return_value = {"message": {"content": "図の説明"}}
-            mock_response.raise_for_status = MagicMock()
+        # Act: モックでOCR結果を設定（FIGUREはスキップされるため2つの応答のみ）
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=["タイトル", "テキスト内容"]):
+            results = ocr_by_layout(str(img_path), layout)
 
-            with patch("src.layout_ocr.requests.post", return_value=mock_response):
-                results = ocr_by_layout(str(img_path), layout)
-
-        # Assert: 結果にFIGUREが含まれない（またはFIGUREは除外される設計の場合）
-        # 注: 現在の実装ではFIGUREもVLMで処理され結果に含まれる
-        # FR-012の要件は「FIGURE領域がOCR出力から除外」なので、これをテスト
+        # Assert: 結果にFIGUREが含まれない
         figure_results = [r for r in results if r.region_type == "FIGURE"]
 
         # FR-012要件: FIGUREはbook.txtから除外される
-        # ここでは「除外される」ことを期待するテスト
         assert len(figure_results) == 0, (
             f"FIGURE regions should be excluded from OCR output. Found: {len(figure_results)}"
         )
+        # TITLE と TEXT のみが結果に含まれる
+        assert len(results) == 2, f"Should have 2 results (TITLE and TEXT). Got: {len(results)}"
 
     def test_figure_saved_to_separate_directory(self, tmp_path: Path) -> None:
         """FIGURE領域がfigures/ディレクトリに保存されることを検証。"""

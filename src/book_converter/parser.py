@@ -516,33 +516,47 @@ def parse_page_marker(line: str) -> tuple[str, str] | None:
     Example:
         >>> parse_page_marker("--- Page 1 (page_0001.png) ---")
         ("1", "page_0001.png")
+        >>> parse_page_marker("--- page_0001 ---")
+        ("1", "page_0001")
     """
     import re
 
-    # Pattern: --- Page N (filename) ---
+    # Pattern 1: --- Page N (filename) ---
     # Case-insensitive, handles extra spaces
     # Page number is required (at least one digit)
-    pattern = r"---\s+[Pp]age\s+(\d+)\s+\((.+?)\)\s+---"
-    match = re.search(pattern, line)
-
+    pattern1 = r"---\s+[Pp]age\s+(\d+)\s+\((.+?)\)\s+---"
+    match = re.search(pattern1, line)
     if match:
         page_number = match.group(1)
         source_file = match.group(2)
         return (page_number, source_file)
 
+    # Pattern 2: --- page_XXXX --- (simple format)
+    # Extracts page number from page_XXXX identifier
+    pattern2 = r"---\s+page_(\d+)\s+---"
+    match = re.search(pattern2, line)
+    if match:
+        page_num_str = match.group(1)
+        # Remove leading zeros for page number, keep original for source_file
+        page_number = str(int(page_num_str))
+        source_file = f"page_{page_num_str}"
+        return (page_number, source_file)
+
     return None
 
 
-def extract_page_number(line: str) -> tuple[str, str]:
+def extract_page_number(line: str, verbose: bool = False) -> tuple[str, str]:
     """Extract page number and source file from a page marker line.
 
     Args:
         line: A page marker line.
+        verbose: If True, print debug info for unrecognized potential markers.
 
     Returns:
         Tuple of (page_number, source_file). Returns ("", "") if invalid.
     """
     import re
+    import sys
 
     # First try the standard pattern with page number
     result = parse_page_marker(line)
@@ -555,6 +569,10 @@ def extract_page_number(line: str) -> tuple[str, str]:
     if match:
         source_file = match.group(1)
         return ("", source_file)
+
+    # Debug: check if this looks like a page marker but wasn't recognized
+    if verbose and line.strip().startswith("---") and "page" in line.lower():
+        print(f"[DEBUG] Unrecognized potential page marker: {line.strip()!r}", file=sys.stderr)
 
     return ("", "")
 
@@ -864,16 +882,24 @@ def parse_pages(input_path: Path) -> Iterator[Page]:
 
 
 def parse_pages_with_errors(
-    input_path: Path
+    input_path: Path,
+    verbose: bool = False,
 ) -> tuple[list[Page], list[ConversionError], TableOfContents | None]:
     """Parse a Markdown file into Page objects with error tracking.
 
     Args:
         input_path: Path to the Markdown file.
+        verbose: If True, print debug info during parsing.
 
     Returns:
         Tuple of (pages, errors, toc). TOC is built from all pages with TOC markers.
     """
+    import os
+    import sys
+
+    # Enable verbose mode via environment variable
+    verbose = verbose or os.environ.get("BOOK_CONVERTER_DEBUG", "").lower() in ("1", "true")
+
     with open(input_path, encoding="utf-8") as f:
         content = f.read()
 
@@ -892,9 +918,17 @@ def parse_pages_with_errors(
     toc_begin_page = ""
     toc_end_page = ""
 
+    # Debug: show first few lines to help diagnose format issues
+    if verbose:
+        print(f"[DEBUG] Parsing file: {input_path}", file=sys.stderr)
+        print(f"[DEBUG] Total lines: {len(lines)}", file=sys.stderr)
+        print(f"[DEBUG] First 5 lines:", file=sys.stderr)
+        for i, l in enumerate(lines[:5], start=1):
+            print(f"  {i}: {l!r}", file=sys.stderr)
+
     for line_idx, line in enumerate(lines, start=1):
         # Check if this is a page marker (including those with missing numbers)
-        page_num, source_file = extract_page_number(line)
+        page_num, source_file = extract_page_number(line, verbose=verbose)
         if page_num or source_file:
             # This is a page marker
             # Save previous page if any
