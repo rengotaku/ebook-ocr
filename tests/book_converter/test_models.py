@@ -439,3 +439,312 @@ class TestTocEntryLevelInt:
         assert entry.level != "chapter"
         assert entry.level != "1"
         assert isinstance(entry.level, int)
+
+
+# =============================================================================
+# Phase 3 (009-converter-redesign): T024 StructureContainer モデルテスト
+# =============================================================================
+
+
+class TestStructureContainer:
+    """T024: StructureContainer dataclass テスト
+
+    User Story 2 - chapter/heading タグの役割明確化
+    StructureContainer は構造コンテナ（chapter, section, subsection）を表す
+    """
+
+    def test_structure_container_exists(self) -> None:
+        """StructureContainer dataclass が存在する"""
+        from src.book_converter.models import StructureContainer
+
+        # dataclass としてインポート可能
+        assert StructureContainer is not None
+
+    def test_structure_container_has_container_type(self) -> None:
+        """StructureContainer は container_type 属性を持つ"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(),
+        )
+
+        assert container.container_type == "chapter"
+
+    def test_structure_container_has_level(self) -> None:
+        """StructureContainer は level 属性（1-5）を持つ"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Section Title",
+            children=(),
+        )
+
+        assert container.level == 2
+        assert isinstance(container.level, int)
+
+    def test_structure_container_has_number(self) -> None:
+        """StructureContainer は number 属性を持つ"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(),
+        )
+
+        assert container.number == "1"
+
+    def test_structure_container_has_title(self) -> None:
+        """StructureContainer は title 属性を持つ"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(),
+        )
+
+        assert container.title == "Chapter Title"
+
+    def test_structure_container_has_children(self) -> None:
+        """StructureContainer は children 属性を持つ"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(),
+        )
+
+        assert container.children == ()
+
+    def test_structure_container_chapter_type(self) -> None:
+        """container_type="chapter" のコンテナを作成できる"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter 1 Introduction",
+            children=(),
+        )
+
+        assert container.container_type == "chapter"
+        assert container.level == 1
+
+    def test_structure_container_section_type(self) -> None:
+        """container_type="section" のコンテナを作成できる"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Episode 01 Title",
+            children=(),
+        )
+
+        assert container.container_type == "section"
+        assert container.level == 2
+
+    def test_structure_container_subsection_type(self) -> None:
+        """container_type="subsection" のコンテナを作成できる"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="subsection",
+            level=3,
+            number="1.1",
+            title="Subsection Title",
+            children=(),
+        )
+
+        assert container.container_type == "subsection"
+        assert container.level == 3
+
+    def test_structure_container_level_4(self) -> None:
+        """level=4 の subsection コンテナを作成できる"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="subsection",
+            level=4,
+            number="1.1.1",
+            title="Deep Subsection",
+            children=(),
+        )
+
+        assert container.level == 4
+        assert container.container_type == "subsection"
+
+    def test_structure_container_level_5(self) -> None:
+        """level=5 の subsection コンテナを作成できる"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="subsection",
+            level=5,
+            number="1.1.1.1",
+            title="Deepest Subsection",
+            children=(),
+        )
+
+        assert container.level == 5
+        assert container.container_type == "subsection"
+
+    def test_structure_container_is_immutable(self) -> None:
+        """StructureContainer は frozen dataclass（イミュータブル）"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Test",
+            children=(),
+        )
+
+        # frozen=True なので属性変更で FrozenInstanceError が発生する
+        with pytest.raises(Exception):  # FrozenInstanceError
+            container.title = "changed"
+
+    def test_structure_container_children_with_content_element(self) -> None:
+        """children に ContentElement（Paragraph等）を含めることができる"""
+        from src.book_converter.models import StructureContainer, Paragraph
+
+        paragraph = Paragraph(text="This is a paragraph.")
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter with content",
+            children=(paragraph,),
+        )
+
+        assert len(container.children) == 1
+        assert isinstance(container.children[0], Paragraph)
+
+    def test_structure_container_children_with_nested_structure(self) -> None:
+        """children に StructureContainer（入れ子構造）を含めることができる"""
+        from src.book_converter.models import StructureContainer
+
+        section = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Section Title",
+            children=(),
+        )
+
+        chapter = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(section,),
+        )
+
+        assert len(chapter.children) == 1
+        assert isinstance(chapter.children[0], StructureContainer)
+        assert chapter.children[0].container_type == "section"
+
+    def test_structure_container_children_mixed(self) -> None:
+        """children に ContentElement と StructureContainer を混在させることができる"""
+        from src.book_converter.models import StructureContainer, Heading, Paragraph
+
+        heading = Heading(level=1, text="Chapter 1 Title")
+        paragraph = Paragraph(text="Introduction text.")
+        section = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Section Title",
+            children=(),
+        )
+
+        chapter = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(heading, paragraph, section),
+        )
+
+        assert len(chapter.children) == 3
+        assert isinstance(chapter.children[0], Heading)
+        assert isinstance(chapter.children[1], Paragraph)
+        assert isinstance(chapter.children[2], StructureContainer)
+
+    def test_structure_container_unicode_title(self) -> None:
+        """title にUnicode文字を使用できる"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="日本語タイトル「テスト」",
+            children=(),
+        )
+
+        assert container.title == "日本語タイトル「テスト」"
+
+    def test_structure_container_empty_number(self) -> None:
+        """number は空文字列も許容する"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="",
+            title="Preface",
+            children=(),
+        )
+
+        assert container.number == ""
+
+    def test_structure_container_empty_title(self) -> None:
+        """title は空文字列も許容する"""
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="",
+            children=(),
+        )
+
+        assert container.title == ""
+
+    def test_structure_container_all_levels_1_to_5(self) -> None:
+        """全レベル（1-5）の StructureContainer を作成できる"""
+        from src.book_converter.models import StructureContainer
+
+        for level in range(1, 6):
+            container_type = "chapter" if level == 1 else "section" if level == 2 else "subsection"
+            container = StructureContainer(
+                container_type=container_type,
+                level=level,
+                number=str(level),
+                title=f"Level {level} Title",
+                children=(),
+            )
+
+            assert container.level == level
+            assert isinstance(container.level, int)

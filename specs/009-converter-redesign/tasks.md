@@ -92,12 +92,12 @@
 
 ### Test Implementation (RED)
 
-- [ ] T024 [P] [US2] StructureContainer モデルテスト実装: tests/book_converter/test_models.py に test_structure_container を追加
-- [ ] T025 [P] [US2] 構造コンテナ変換テスト実装: tests/book_converter/test_transformer.py に test_transform_structure_container を追加
-- [ ] T026 [P] [US2] ページコメント生成テスト実装: tests/book_converter/test_xml_builder.py に test_page_comment を追加
-- [ ] T027 [P] [US2] heading readAloud属性テスト実装: tests/book_converter/test_transformer.py に test_heading_read_aloud を追加
-- [ ] T028 `make test` FAIL (RED) 確認
-- [ ] T029 RED出力生成: specs/009-converter-redesign/red-tests/ph3-test.md
+- [x] T024 [P] [US2] StructureContainer モデルテスト実装: tests/book_converter/test_models.py に test_structure_container を追加
+- [x] T025 [P] [US2] 構造コンテナ変換テスト実装: tests/book_converter/test_transformer.py に test_transform_structure_container を追加
+- [x] T026 [P] [US2] ページコメント生成テスト実装: tests/book_converter/test_xml_builder.py に test_page_comment を追加
+- [x] T027 [P] [US2] heading readAloud属性テスト実装: tests/book_converter/test_transformer.py に test_heading_read_aloud を追加
+- [x] T028 `make test` FAIL (RED) 確認
+- [x] T029 RED出力生成: specs/009-converter-redesign/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 

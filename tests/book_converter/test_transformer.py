@@ -2202,3 +2202,613 @@ class TestTransformTocEntryLevelNumeric:
         assert entry_elems[0].get("level") == "1"
         assert entry_elems[1].get("level") == "2"
         assert entry_elems[2].get("level") == "3"
+
+
+# =============================================================================
+# Phase 3 (009-converter-redesign): T025 構造コンテナ変換テスト
+# =============================================================================
+
+
+class TestTransformStructureContainer:
+    """T025: 構造コンテナ変換テスト (transform_structure_container)
+
+    User Story 2 - chapter/heading タグの役割明確化
+    StructureContainer を chapter/section/subsection XML要素に変換
+    """
+
+    def test_transform_structure_container_exists(self) -> None:
+        """transform_structure_container 関数が存在する"""
+        from src.book_converter.transformer import transform_structure_container
+
+        assert transform_structure_container is not None
+
+    def test_transform_structure_container_chapter_basic(self) -> None:
+        """chapter コンテナを <chapter> 要素に変換"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert element is not None
+        assert element.tag == "chapter"
+
+    def test_transform_structure_container_chapter_number_attribute(self) -> None:
+        """chapter 要素に number 属性が設定される"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="2",
+            title="Second Chapter",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert element.get("number") == "2"
+
+    def test_transform_structure_container_chapter_title_attribute(self) -> None:
+        """chapter 要素に title 属性が設定される"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Introduction to SRE",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert element.get("title") == "Introduction to SRE"
+
+    def test_transform_structure_container_section(self) -> None:
+        """section コンテナを <section> 要素に変換"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Episode Title",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert element is not None
+        assert element.tag == "section"
+        assert element.get("number") == "1"
+        assert element.get("title") == "Episode Title"
+
+    def test_transform_structure_container_subsection_level_3(self) -> None:
+        """subsection (level 3) コンテナを <subsection> 要素に変換"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="subsection",
+            level=3,
+            number="1.1",
+            title="Subsection Title",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert element is not None
+        assert element.tag == "subsection"
+        assert element.get("level") == "3"
+
+    def test_transform_structure_container_subsection_level_4(self) -> None:
+        """subsection (level 4) コンテナに level 属性が設定される"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="subsection",
+            level=4,
+            number="1.1.1",
+            title="Deep Subsection",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert element is not None
+        assert element.tag == "subsection"
+        assert element.get("level") == "4"
+
+    def test_transform_structure_container_subsection_level_5(self) -> None:
+        """subsection (level 5) コンテナに level 属性が設定される"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="subsection",
+            level=5,
+            number="1.1.1.1",
+            title="Deepest Subsection",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert element is not None
+        assert element.tag == "subsection"
+        assert element.get("level") == "5"
+
+    def test_transform_structure_container_with_paragraph_child(self) -> None:
+        """コンテナに段落を子要素として含める"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Paragraph
+
+        paragraph = Paragraph(text="This is paragraph text.")
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter with Paragraph",
+            children=(paragraph,),
+        )
+
+        element = transform_structure_container(container)
+
+        para_elem = element.find("paragraph")
+        assert para_elem is not None
+        assert para_elem.text == "This is paragraph text."
+
+    def test_transform_structure_container_with_heading_child(self) -> None:
+        """コンテナに見出しを子要素として含める"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        heading = Heading(level=1, text="Chapter 1 Title", read_aloud=True)
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(heading,),
+        )
+
+        element = transform_structure_container(container)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.text == "Chapter 1 Title"
+
+    def test_transform_structure_container_nested_structure(self) -> None:
+        """入れ子構造: chapter > section"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        section = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Section Title",
+            children=(),
+        )
+
+        chapter = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(section,),
+        )
+
+        element = transform_structure_container(chapter)
+
+        assert element.tag == "chapter"
+        section_elem = element.find("section")
+        assert section_elem is not None
+        assert section_elem.get("number") == "1"
+        assert section_elem.get("title") == "Section Title"
+
+    def test_transform_structure_container_deep_nesting(self) -> None:
+        """深い入れ子構造: chapter > section > subsection"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        subsection = StructureContainer(
+            container_type="subsection",
+            level=3,
+            number="1",
+            title="Subsection Title",
+            children=(),
+        )
+
+        section = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Section Title",
+            children=(subsection,),
+        )
+
+        chapter = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(section,),
+        )
+
+        element = transform_structure_container(chapter)
+
+        assert element.tag == "chapter"
+        section_elem = element.find("section")
+        assert section_elem is not None
+        subsection_elem = section_elem.find("subsection")
+        assert subsection_elem is not None
+        assert subsection_elem.get("level") == "3"
+
+    def test_transform_structure_container_unicode_title(self) -> None:
+        """Unicode タイトルが正しく変換される"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="日本語タイトル「テスト」",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert element.get("title") == "日本語タイトル「テスト」"
+
+    def test_transform_structure_container_empty_number(self) -> None:
+        """空の number は属性を出力しないまたは空文字列"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="",
+            title="Preface",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        # number が空の場合は属性なしまたは空文字列
+        number = element.get("number")
+        assert number is None or number == ""
+
+    def test_transform_structure_container_returns_element(self) -> None:
+        """戻り値は Element 型"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Test",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+
+        assert isinstance(element, Element)
+
+    def test_transform_structure_container_xml_serialization(self) -> None:
+        """XML にシリアライズ可能"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(),
+        )
+
+        element = transform_structure_container(container)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert "<chapter " in xml_string
+        assert 'number="1"' in xml_string
+        assert 'title="Chapter Title"' in xml_string
+
+    def test_transform_structure_container_complete_example(self) -> None:
+        """完全な例: chapter > heading + section > heading + paragraph"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading, Paragraph
+
+        section = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Episode Title",
+            children=(
+                Heading(level=2, text="Episode 01 Episode Title", read_aloud=True),
+                Paragraph(text="Section content."),
+            ),
+        )
+
+        chapter = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(
+                Heading(level=1, text="Chapter 1 Chapter Title", read_aloud=True),
+                section,
+            ),
+        )
+
+        element = transform_structure_container(chapter)
+
+        # chapter 構造
+        assert element.tag == "chapter"
+        assert element.get("number") == "1"
+        assert element.get("title") == "Chapter Title"
+
+        # chapter 直下の heading
+        chapter_heading = element.find("heading")
+        assert chapter_heading is not None
+        assert chapter_heading.text == "Chapter 1 Chapter Title"
+
+        # section 構造
+        section_elem = element.find("section")
+        assert section_elem is not None
+        assert section_elem.get("number") == "1"
+
+        # section 内の heading
+        section_heading = section_elem.find("heading")
+        assert section_heading is not None
+        assert section_heading.text == "Episode 01 Episode Title"
+
+        # section 内の paragraph
+        para = section_elem.find("paragraph")
+        assert para is not None
+
+
+# =============================================================================
+# Phase 3 (009-converter-redesign): T027 heading readAloud属性テスト
+# =============================================================================
+
+
+class TestHeadingReadAloudInStructureContainer:
+    """T027: heading readAloud属性テスト
+
+    User Story 2 - chapter/heading タグの役割明確化
+    構造コンテナ内の heading 要素は readAloud="true" を出力する
+    """
+
+    def test_heading_in_structure_container_has_read_aloud_true(self) -> None:
+        """構造コンテナ内の heading は readAloud="true" を出力"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(
+                Heading(level=1, text="Chapter 1 Title", read_aloud=True),
+            ),
+        )
+
+        element = transform_structure_container(container)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.get("readAloud") == "true"
+
+    def test_heading_read_aloud_true_attribute_value(self) -> None:
+        """readAloud 属性の値は "true" 文字列"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        container = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Section Title",
+            children=(
+                Heading(level=2, text="Section 1 Title", read_aloud=True),
+            ),
+        )
+
+        element = transform_structure_container(container)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        # 属性値は文字列 "true"
+        assert heading_elem.get("readAloud") == "true"
+
+    def test_heading_in_nested_structure_has_read_aloud_true(self) -> None:
+        """入れ子構造内の heading も readAloud='true'"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        section = StructureContainer(
+            container_type="section",
+            level=2,
+            number="1",
+            title="Section Title",
+            children=(
+                Heading(level=2, text="Episode 01 Title", read_aloud=True),
+            ),
+        )
+
+        chapter = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(
+                Heading(level=1, text="Chapter 1 Title", read_aloud=True),
+                section,
+            ),
+        )
+
+        element = transform_structure_container(chapter)
+
+        # chapter 直下の heading
+        chapter_heading = element.find("heading")
+        assert chapter_heading is not None
+        assert chapter_heading.get("readAloud") == "true"
+
+        # section 内の heading
+        section_elem = element.find("section")
+        section_heading = section_elem.find("heading")
+        assert section_heading is not None
+        assert section_heading.get("readAloud") == "true"
+
+    def test_heading_read_aloud_xml_serialization(self) -> None:
+        """readAloud 属性が XML にシリアライズされる"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(
+                Heading(level=1, text="Chapter 1 Title", read_aloud=True),
+            ),
+        )
+
+        element = transform_structure_container(container)
+        xml_string = tostring(element, encoding="unicode")
+
+        assert 'readAloud="true"' in xml_string
+
+    def test_heading_text_preserved_in_structure_container(self) -> None:
+        """heading テキストが構造コンテナ内で保持される"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(
+                Heading(level=1, text="Chapter 1 Introduction to Python", read_aloud=True),
+            ),
+        )
+
+        element = transform_structure_container(container)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.text == "Chapter 1 Introduction to Python"
+
+    def test_heading_unicode_text_with_read_aloud(self) -> None:
+        """Unicode テキストの heading に readAloud 属性"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="日本語タイトル",
+            children=(
+                Heading(level=1, text="第1章 日本語タイトル「テスト」", read_aloud=True),
+            ),
+        )
+
+        element = transform_structure_container(container)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.text == "第1章 日本語タイトル「テスト」"
+        assert heading_elem.get("readAloud") == "true"
+
+    def test_multiple_headings_in_structure_container(self) -> None:
+        """複数の heading が全て readAloud="true" を持つ"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading, Paragraph
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(
+                Heading(level=1, text="Main Heading", read_aloud=True),
+                Paragraph(text="Some text."),
+                Heading(level=2, text="Subheading", read_aloud=True),
+            ),
+        )
+
+        element = transform_structure_container(container)
+
+        headings = element.findall("heading")
+        assert len(headings) == 2
+
+        for h in headings:
+            assert h.get("readAloud") == "true"
+
+    def test_heading_without_read_aloud_gets_false(self) -> None:
+        """read_aloud=False の heading は readAloud="false" を出力"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(
+                Heading(level=1, text="Non-readable heading", read_aloud=False),
+            ),
+        )
+
+        element = transform_structure_container(container)
+
+        heading_elem = element.find("heading")
+        assert heading_elem is not None
+        assert heading_elem.get("readAloud") == "false"
+
+    def test_heading_read_aloud_mixed_values(self) -> None:
+        """read_aloud が混在する場合、各 heading が正しい値を持つ"""
+        from src.book_converter.transformer import transform_structure_container
+        from src.book_converter.models import StructureContainer, Heading
+
+        container = StructureContainer(
+            container_type="chapter",
+            level=1,
+            number="1",
+            title="Chapter Title",
+            children=(
+                Heading(level=1, text="Readable heading", read_aloud=True),
+                Heading(level=2, text="Non-readable heading", read_aloud=False),
+            ),
+        )
+
+        element = transform_structure_container(container)
+
+        headings = element.findall("heading")
+        assert len(headings) == 2
+        assert headings[0].get("readAloud") == "true"
+        assert headings[1].get("readAloud") == "false"
