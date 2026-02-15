@@ -301,3 +301,141 @@ class TestHeadingAnalysis:
             is_running_head=False,
         )
         assert analysis.text == "日本語見出し「テスト」"
+
+
+# =============================================================================
+# Phase 2 (009-converter-redesign): T008 TocEntry.level int化テスト
+# =============================================================================
+
+
+class TestTocEntryLevelInt:
+    """T008: TocEntry.level int化テスト
+
+    User Story 1 - TOC階層構造の正確な反映
+    TocEntry.level は int型（1-5）である必要がある
+    """
+
+    def test_toc_entry_level_type_annotation_is_int(self) -> None:
+        """TocEntry.level の型アノテーションが int である"""
+        from src.book_converter.models import TocEntry
+
+        # dataclass の型アノテーションを検証
+        field_type = TocEntry.__dataclass_fields__["level"].type
+        # 型アノテーションが int であること
+        assert field_type == int or field_type == "int", \
+            f"TocEntry.level type should be int, but got {field_type}"
+
+    def test_toc_entry_level_int_basic(self) -> None:
+        """TocEntry.level が int 型で作成できる"""
+        from src.book_converter.models import TocEntry
+
+        # level=1 で作成
+        entry = TocEntry(
+            text="Chapter 1 タイトル",
+            level=1,
+            number="1",
+            page="15",
+        )
+
+        assert entry.level == 1
+        assert isinstance(entry.level, int)
+
+    def test_toc_entry_level_int_level_2(self) -> None:
+        """TocEntry.level=2 が作成できる"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="Episode 01 タイトル",
+            level=2,
+            number="1",
+            page="20",
+        )
+
+        assert entry.level == 2
+        assert isinstance(entry.level, int)
+
+    def test_toc_entry_level_int_level_3(self) -> None:
+        """TocEntry.level=3 が作成できる"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="Subsection タイトル",
+            level=3,
+            number="1.1",
+            page="25",
+        )
+
+        assert entry.level == 3
+        assert isinstance(entry.level, int)
+
+    def test_toc_entry_level_int_level_4(self) -> None:
+        """TocEntry.level=4 が作成できる"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="深い階層の見出し",
+            level=4,
+            number="1.1.1",
+            page="30",
+        )
+
+        assert entry.level == 4
+        assert isinstance(entry.level, int)
+
+    def test_toc_entry_level_int_level_5(self) -> None:
+        """TocEntry.level=5 が作成できる"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="最深階層の見出し",
+            level=5,
+            number="1.1.1.1",
+            page="35",
+        )
+
+        assert entry.level == 5
+        assert isinstance(entry.level, int)
+
+    def test_toc_entry_level_int_all_levels(self) -> None:
+        """TocEntry で全レベル（1-5）が int として作成できる"""
+        from src.book_converter.models import TocEntry
+
+        for level in range(1, 6):
+            entry = TocEntry(
+                text=f"Level {level} 見出し",
+                level=level,
+                number=str(level),
+                page=str(level * 10),
+            )
+            assert entry.level == level
+            assert isinstance(entry.level, int)
+
+    def test_toc_entry_level_int_unicode_text(self) -> None:
+        """Unicode テキストと int level の組み合わせ"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="日本語「テスト」見出し",
+            level=1,
+            number="1",
+            page="10",
+        )
+
+        assert entry.level == 1
+        assert entry.text == "日本語「テスト」見出し"
+
+    def test_toc_entry_level_not_string(self) -> None:
+        """TocEntry.level は文字列ではない"""
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="テスト",
+            level=1,
+            number="1",
+            page="10",
+        )
+
+        # level は "chapter" などの文字列ではなく int
+        assert entry.level != "chapter"
+        assert entry.level != "1"
+        assert isinstance(entry.level, int)

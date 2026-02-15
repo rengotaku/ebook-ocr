@@ -54,12 +54,12 @@
 
 ### Test Implementation (RED)
 
-- [ ] T008 [P] [US1] TocEntry.level int化テスト実装: tests/book_converter/test_models.py に test_toc_entry_level_int を追加
-- [ ] T009 [P] [US1] parse_toc_entry level数値化テスト実装: tests/book_converter/test_parser.py に test_parse_toc_entry_level_numeric を追加
-- [ ] T010 [P] [US1] TOC階層3レベル以上テスト実装: tests/book_converter/test_parser.py に test_toc_hierarchy_multi_level を追加
-- [ ] T011 [P] [US1] TOC XML出力テスト実装: tests/book_converter/test_transformer.py に test_transform_toc_entry_level_numeric を追加
-- [ ] T012 `make test` FAIL (RED) 確認
-- [ ] T013 RED出力生成: specs/009-converter-redesign/red-tests/ph2-test.md
+- [x] T008 [P] [US1] TocEntry.level int化テスト実装: tests/book_converter/test_models.py に test_toc_entry_level_int を追加
+- [x] T009 [P] [US1] parse_toc_entry level数値化テスト実装: tests/book_converter/test_parser.py に test_parse_toc_entry_level_numeric を追加
+- [x] T010 [P] [US1] TOC階層3レベル以上テスト実装: tests/book_converter/test_parser.py に test_toc_hierarchy_multi_level を追加
+- [x] T011 [P] [US1] TOC XML出力テスト実装: tests/book_converter/test_transformer.py に test_transform_toc_entry_level_numeric を追加
+- [x] T012 `make test` FAIL (RED) 確認
+- [x] T013 RED出力生成: specs/009-converter-redesign/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 

@@ -2524,3 +2524,234 @@ class TestMergeTocLinesMixed:
 
         assert len(result) == 1
         assert result[0] == "第1章 SREとは ... 15"
+
+
+# =============================================================================
+# Phase 2 (009-converter-redesign): T009 parse_toc_entry level数値化テスト
+# =============================================================================
+
+
+class TestParseTocEntryLevelNumeric:
+    """T009: parse_toc_entry level数値化テスト
+
+    User Story 1 - TOC階層構造の正確な反映
+    parse_toc_entry が level を int (1-5) で返すことを確認
+    """
+
+    def test_parse_toc_entry_level_numeric_chapter(self) -> None:
+        """parse_toc_entry が Chapter を level=1 (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 SREとは ... 15")
+
+        assert result is not None
+        assert result.level == 1
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_level_numeric_section(self) -> None:
+        """parse_toc_entry が Section を level=2 (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1 SLOの理解 ... 30")
+
+        assert result is not None
+        assert result.level == 2
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_level_numeric_subsection(self) -> None:
+        """parse_toc_entry が Subsection を level=3 (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1.1 SLI ... 35")
+
+        assert result is not None
+        assert result.level == 3
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_level_numeric_episode(self) -> None:
+        """parse_toc_entry が Episode を適切な level (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        # Episode は level 2 相当
+        result = parse_toc_entry("Episode 01 ソフトウェアの話 ... 20")
+
+        assert result is not None
+        assert isinstance(result.level, int)
+        assert result.level >= 1
+        assert result.level <= 5
+
+    def test_parse_toc_entry_level_numeric_other(self) -> None:
+        """parse_toc_entry が その他 を適切な level (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("はじめに ... 1")
+
+        assert result is not None
+        assert isinstance(result.level, int)
+        # その他でも 1-5 の範囲
+        assert result.level >= 1
+        assert result.level <= 5
+
+    def test_parse_toc_entry_level_not_string(self) -> None:
+        """parse_toc_entry の level は文字列ではない"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 テスト ... 10")
+
+        assert result is not None
+        # level は "chapter" ではなく int
+        assert result.level != "chapter"
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_level_1_for_chapter_en(self) -> None:
+        """parse_toc_entry が Chapter (英語) を level=1 (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("Chapter 1 Introduction ... 5")
+
+        assert result is not None
+        assert result.level == 1
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_preserves_text_and_number(self) -> None:
+        """parse_toc_entry が text, number, page を正しく保持"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第2章 設計パターン ... 50")
+
+        assert result is not None
+        assert result.text == "設計パターン"
+        assert result.number == "2"
+        assert result.page == "50"
+        assert result.level == 1
+        assert isinstance(result.level, int)
+
+
+# =============================================================================
+# Phase 2 (009-converter-redesign): T010 TOC階層3レベル以上テスト
+# =============================================================================
+
+
+class TestTocHierarchyMultiLevel:
+    """T010: TOC階層3レベル以上テスト
+
+    User Story 1 - TOC階層構造の正確な反映
+    複数階層（3レベル以上）のTOCが正しくパースされることを確認
+    """
+
+    def test_toc_hierarchy_3_levels(self) -> None:
+        """3レベルの階層を持つTOCをパース"""
+        from src.book_converter.parser import parse_toc_entry
+
+        # Level 1: Chapter
+        level1 = parse_toc_entry("第1章 SREとは ... 15")
+        # Level 2: Section
+        level2 = parse_toc_entry("1.1 SREの定義 ... 16")
+        # Level 3: Subsection
+        level3 = parse_toc_entry("1.1.1 歴史的背景 ... 17")
+
+        assert level1 is not None
+        assert level2 is not None
+        assert level3 is not None
+
+        assert level1.level == 1
+        assert level2.level == 2
+        assert level3.level == 3
+
+        assert isinstance(level1.level, int)
+        assert isinstance(level2.level, int)
+        assert isinstance(level3.level, int)
+
+    def test_toc_hierarchy_4_levels(self) -> None:
+        """4レベルの階層を持つTOCをパース"""
+        from src.book_converter.parser import parse_toc_entry
+
+        level1 = parse_toc_entry("第1章 概要 ... 10")
+        level2 = parse_toc_entry("1.1 導入 ... 11")
+        level3 = parse_toc_entry("1.1.1 背景 ... 12")
+        level4 = parse_toc_entry("1.1.1.1 詳細 ... 13")
+
+        assert level1 is not None
+        assert level2 is not None
+        assert level3 is not None
+        assert level4 is not None
+
+        assert level1.level == 1
+        assert level2.level == 2
+        assert level3.level == 3
+        assert level4.level == 4
+
+    def test_toc_hierarchy_5_levels(self) -> None:
+        """5レベルの階層を持つTOCをパース"""
+        from src.book_converter.parser import parse_toc_entry
+
+        level1 = parse_toc_entry("第1章 概要 ... 10")
+        level2 = parse_toc_entry("1.1 導入 ... 11")
+        level3 = parse_toc_entry("1.1.1 背景 ... 12")
+        level4 = parse_toc_entry("1.1.1.1 詳細 ... 13")
+        level5 = parse_toc_entry("1.1.1.1.1 補足 ... 14")
+
+        assert level1 is not None
+        assert level2 is not None
+        assert level3 is not None
+        assert level4 is not None
+        assert level5 is not None
+
+        assert level1.level == 1
+        assert level2.level == 2
+        assert level3.level == 3
+        assert level4.level == 4
+        assert level5.level == 5
+
+    def test_toc_hierarchy_mixed_levels_order(self) -> None:
+        """混在した階層順序でのパース"""
+        from src.book_converter.parser import parse_toc_entry
+
+        # Level 1 -> 2 -> 3 -> 2 -> 1 の順序
+        entries = [
+            ("第1章 はじめに ... 1", 1),
+            ("1.1 概要 ... 2", 2),
+            ("1.1.1 詳細 ... 3", 3),
+            ("1.2 まとめ ... 10", 2),
+            ("第2章 本編 ... 20", 1),
+        ]
+
+        for line, expected_level in entries:
+            result = parse_toc_entry(line)
+            assert result is not None, f"Failed to parse: {line}"
+            assert result.level == expected_level, f"Expected level {expected_level} for: {line}"
+            assert isinstance(result.level, int)
+
+    def test_toc_hierarchy_level_values_are_integers(self) -> None:
+        """全ての階層レベルが整数値である"""
+        from src.book_converter.parser import parse_toc_entry
+
+        test_cases = [
+            "第1章 テスト ... 10",
+            "1.1 テスト ... 11",
+            "1.1.1 テスト ... 12",
+            "1.1.1.1 テスト ... 13",
+            "1.1.1.1.1 テスト ... 14",
+        ]
+
+        for line in test_cases:
+            result = parse_toc_entry(line)
+            if result is not None:
+                assert isinstance(result.level, int), f"level should be int for: {line}"
+                assert 1 <= result.level <= 5, f"level should be 1-5 for: {line}"
+
+    def test_toc_hierarchy_unicode_titles(self) -> None:
+        """Unicode タイトルを含む多階層TOC"""
+        from src.book_converter.parser import parse_toc_entry
+
+        entries = [
+            ("第1章 日本語タイトル「テスト」 ... 10", 1),
+            ("1.1 サブセクション ... 11", 2),
+            ("1.1.1 詳細な説明 ... 12", 3),
+        ]
+
+        for line, expected_level in entries:
+            result = parse_toc_entry(line)
+            assert result is not None
+            assert result.level == expected_level
+            assert isinstance(result.level, int)

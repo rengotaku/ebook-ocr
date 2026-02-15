@@ -1987,3 +1987,218 @@ class TestContentReadAloudXMLSerialization:
         xml_string = tostring(para_elem, encoding="unicode")
 
         assert 'readAloud="false"' in xml_string
+
+
+# =============================================================================
+# Phase 2 (009-converter-redesign): T011 TOC XML出力テスト
+# =============================================================================
+
+
+class TestTransformTocEntryLevelNumeric:
+    """T011: TOC XML出力テスト (transform_toc_entry level数値文字列)
+
+    User Story 1 - TOC階層構造の正確な反映
+    transform_toc_entry が level="1" 等の数値文字列を出力することを確認
+    """
+
+    def test_transform_toc_entry_level_numeric_1(self) -> None:
+        """transform_toc_entry が level="1" を出力する"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="Chapter 1 タイトル",
+            level=1,
+            number="1",
+            page="15",
+        )
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        assert element.get("level") == "1"
+
+    def test_transform_toc_entry_level_numeric_2(self) -> None:
+        """transform_toc_entry が level="2" を出力する"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="Section タイトル",
+            level=2,
+            number="1.1",
+            page="20",
+        )
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        assert element.get("level") == "2"
+
+    def test_transform_toc_entry_level_numeric_3(self) -> None:
+        """transform_toc_entry が level="3" を出力する"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="Subsection タイトル",
+            level=3,
+            number="1.1.1",
+            page="25",
+        )
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        assert element.get("level") == "3"
+
+    def test_transform_toc_entry_level_numeric_4(self) -> None:
+        """transform_toc_entry が level="4" を出力する"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="深い階層の見出し",
+            level=4,
+            number="1.1.1.1",
+            page="30",
+        )
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        assert element.get("level") == "4"
+
+    def test_transform_toc_entry_level_numeric_5(self) -> None:
+        """transform_toc_entry が level="5" を出力する"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="最深階層の見出し",
+            level=5,
+            number="1.1.1.1.1",
+            page="35",
+        )
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        assert element.get("level") == "5"
+
+    def test_transform_toc_entry_level_not_chapter_string(self) -> None:
+        """transform_toc_entry が level="chapter" ではなく数値文字列を出力する"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="テスト",
+            level=1,
+            number="1",
+            page="10",
+        )
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        # "chapter" ではなく "1" を出力
+        assert element.get("level") != "chapter"
+        assert element.get("level") == "1"
+
+    def test_transform_toc_entry_level_not_section_string(self) -> None:
+        """transform_toc_entry が level="section" ではなく数値文字列を出力する"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="テスト",
+            level=2,
+            number="1.1",
+            page="10",
+        )
+
+        element = transform_toc_entry(entry)
+
+        assert element is not None
+        # "section" ではなく "2" を出力
+        assert element.get("level") != "section"
+        assert element.get("level") == "2"
+
+    def test_transform_toc_entry_level_numeric_xml_serialization(self) -> None:
+        """数値レベルがXMLにシリアライズされる"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="SREとは",
+            level=1,
+            number="1",
+            page="15",
+        )
+
+        element = transform_toc_entry(entry)
+        xml_string = tostring(element, encoding="unicode")
+
+        # level="1" がXMLに含まれる
+        assert 'level="1"' in xml_string
+        # level="chapter" は含まれない
+        assert 'level="chapter"' not in xml_string
+
+    def test_transform_toc_entry_all_levels_xml_serialization(self) -> None:
+        """全レベル（1-5）がXMLにシリアライズされる"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        for level in range(1, 6):
+            entry = TocEntry(
+                text=f"Level {level} 見出し",
+                level=level,
+                number=str(level),
+                page=str(level * 10),
+            )
+
+            element = transform_toc_entry(entry)
+            xml_string = tostring(element, encoding="unicode")
+
+            assert f'level="{level}"' in xml_string
+
+    def test_transform_toc_entry_preserves_other_attributes(self) -> None:
+        """数値レベル出力時に他の属性も保持される"""
+        from src.book_converter.transformer import transform_toc_entry
+        from src.book_converter.models import TocEntry
+
+        entry = TocEntry(
+            text="日本語タイトル",
+            level=2,
+            number="1.1",
+            page="25",
+        )
+
+        element = transform_toc_entry(entry)
+
+        assert element.get("level") == "2"
+        assert element.get("title") == "日本語タイトル"
+        assert element.get("number") == "1.1"
+        assert element.get("page") == "25"
+
+    def test_transform_table_of_contents_with_numeric_levels(self) -> None:
+        """transform_table_of_contents が数値レベルを持つエントリを変換する"""
+        from src.book_converter.transformer import transform_table_of_contents
+        from src.book_converter.models import TocEntry, TableOfContents
+
+        entries = (
+            TocEntry(text="Chapter 1", level=1, number="1", page="10"),
+            TocEntry(text="Section 1.1", level=2, number="1.1", page="11"),
+            TocEntry(text="Subsection 1.1.1", level=3, number="1.1.1", page="12"),
+        )
+        toc = TableOfContents(entries=entries)
+
+        element = transform_table_of_contents(toc)
+
+        assert element is not None
+        entry_elems = element.findall("entry")
+        assert len(entry_elems) == 3
+
+        assert entry_elems[0].get("level") == "1"
+        assert entry_elems[1].get("level") == "2"
+        assert entry_elems[2].get("level") == "3"
