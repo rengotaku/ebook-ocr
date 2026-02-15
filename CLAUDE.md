@@ -13,6 +13,7 @@ Auto-generated from all feature plans. Last updated: 2026-02-04
 - ファイルベース（layout.json, book.txt, book.md） (007-layout-region-ocr)
 - Python 3.13+ + yomitoku>=0.10.0, paddleocr>=2.7.0, easyocr>=1.7.0, opencv-python (CLAHE用), difflib (文字アライメント) (008-rover-redesign)
 - ファイルベース（raw/{engine}/, rover/） (008-rover-redesign)
+- ファイルベース（入力: book.md, 出力: book.xml, figures/） (009-converter-redesign)
 
 - Python 3.13+ + Pillow, imagehash, doclayout-yolo, requests (001-code-refactoring)
 
@@ -32,8 +33,8 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13+: Follow standard conventions
 
 ## Recent Changes
+- 009-converter-redesign: Added Python 3.13+ + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
 - 008-rover-redesign: Added Python 3.13+ + yomitoku>=0.10.0, paddleocr>=2.7.0, easyocr>=1.7.0, opencv-python (CLAHE用), difflib (文字アライメント)
-- 007-layout-region-ocr: Added Python 3.13+ + doclayout-yolo, Pillow, requests, pyyaml
 - 007-layout-region-ocr: Added Python 3.13+ + doclayout-yolo, Pillow, requests, pyyaml
 
 
