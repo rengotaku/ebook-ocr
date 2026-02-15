@@ -141,16 +141,16 @@
 
 ### Implementation (GREEN)
 
-- [ ] T048 REDテスト確認: specs/009-converter-redesign/red-tests/ph4-test.md
-- [ ] T049 [P] [US3] parse_paragraph で改行を除去し連続テキスト化: src/book_converter/parser.py
-- [ ] T050 [P] [US3] 空行検出ロジック追加（スペース/タブのみも空行扱い）: src/book_converter/parser.py
-- [ ] T051 [US3] ページまたぎ段落結合ロジック追加（句点で終わらない段落）: src/book_converter/parser.py
-- [ ] T052 `make test` PASS (GREEN) 確認
+- [x] T048 REDテスト確認: specs/009-converter-redesign/red-tests/ph4-test.md
+- [x] T049 [P] [US3] parse_paragraph で改行を除去し連続テキスト化: src/book_converter/parser.py
+- [x] T050 [P] [US3] 空行検出ロジック追加（スペース/タブのみも空行扱い）: src/book_converter/parser.py
+- [x] T051 [US3] ページまたぎ段落結合ロジック追加（句点で終わらない段落）: src/book_converter/parser.py
+- [x] T052 `make test` PASS (GREEN) 確認
 
 ### Verification
 
-- [ ] T053 `make test` で全テストパス確認（US1,2含むリグレッションなし）
-- [ ] T054 フェーズ出力生成: specs/009-converter-redesign/tasks/ph4-output.md
+- [x] T053 `make test` で全テストパス確認（US1,2含むリグレッションなし）
+- [x] T054 フェーズ出力生成: specs/009-converter-redesign/tasks/ph4-output.md
 
 **Checkpoint**: User Story 1, 2, 3 がともに独立して機能すること
 
