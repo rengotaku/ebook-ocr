@@ -64,6 +64,17 @@ class List:
     read_aloud: bool = True
 
 
+@dataclass(frozen=True)
+class StructureContainer:
+    """構造コンテナ（chapter, section, subsection）"""
+
+    container_type: str  # "chapter", "section", "subsection"
+    level: int  # 1-5
+    number: str  # 章番号（空許容）
+    title: str  # タイトル（ナビゲーション用）
+    children: tuple  # StructureContainer or ContentElement のタプル
+
+
 # Union type for content elements
 ContentElement = Union[Heading, Paragraph, List]
 
@@ -137,8 +148,10 @@ class Book:
     """書籍全体"""
 
     metadata: BookMetadata
-    pages: tuple[Page, ...]  # イミュータブルなタプル
+    pages: tuple[Page, ...] = ()  # イミュータブルなタプル（既存実装との互換性維持）
     toc: TableOfContents | None = None  # 目次（book直下、metadata の次）
+    chapters: tuple[StructureContainer, ...] | None = None  # 章構造（新設計）
+    front_matter: tuple[ContentElement, ...] | None = None  # 前付け（TOC前のコンテンツ）
 
 
 @dataclass(frozen=True)

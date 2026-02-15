@@ -19,6 +19,7 @@ from src.book_converter.models import (
     PageMetadata,
     TocEntry,
     TableOfContents,
+    StructureContainer,
 )
 
 
@@ -385,5 +386,75 @@ def transform_page_metadata(metadata: PageMetadata | None) -> Element | None:
     elem.set("type", metadata.meta_type)
     elem.set("readAloud", "false")  # Always false for metadata
     apply_emphasis(metadata.text, elem)
+
+    return elem
+
+
+def transform_structure_container(container: StructureContainer) -> Element:
+    """Transform StructureContainer to XML element.
+
+    - container_type="chapter" → <chapter number="N" title="...">
+    - container_type="section" → <section number="N" title="...">
+    - container_type="subsection" → <subsection level="N" number="..." title="...">
+    - 子要素の heading は readAloud="true" または "false" を出力
+
+    Args:
+        container: The StructureContainer object to transform.
+
+    Returns:
+        An XML Element representing the structure container.
+
+    Example:
+        >>> from src.book_converter.models import Heading, Paragraph
+        >>> container = StructureContainer(
+        ...     container_type="chapter",
+        ...     level=1,
+        ...     number="1",
+        ...     title="Chapter Title",
+        ...     children=(Heading(level=1, text="Chapter 1 Title", read_aloud=True),)
+        ... )
+        >>> elem = transform_structure_container(container)
+        >>> elem.tag
+        'chapter'
+        >>> elem.get("number")
+        '1'
+        >>> elem.get("title")
+        'Chapter Title'
+    """
+    # Create element based on container_type
+    elem = Element(container.container_type)
+
+    # Set attributes
+    if container.container_type in ("chapter", "section"):
+        if container.number:
+            elem.set("number", container.number)
+        elem.set("title", container.title)
+    elif container.container_type == "subsection":
+        elem.set("level", str(container.level))
+        if container.number:
+            elem.set("number", container.number)
+        elem.set("title", container.title)
+
+    # Transform children
+    for child in container.children:
+        if isinstance(child, StructureContainer):
+            child_elem = transform_structure_container(child)
+            elem.append(child_elem)
+        elif isinstance(child, Heading):
+            heading_elem = Element("heading")
+            heading_elem.set("readAloud", "true" if child.read_aloud else "false")
+            apply_emphasis(child.text, heading_elem)
+            elem.append(heading_elem)
+        elif isinstance(child, Paragraph):
+            para_elem = Element("paragraph")
+            apply_emphasis(child.text, para_elem)
+            elem.append(para_elem)
+        elif isinstance(child, List):
+            list_elem = Element("list")
+            for item in child.items:
+                item_elem = Element("item")
+                apply_emphasis(item, item_elem)
+                list_elem.append(item_elem)
+            elem.append(list_elem)
 
     return elem
