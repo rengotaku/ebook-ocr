@@ -132,12 +132,12 @@
 
 ### Test Implementation (RED)
 
-- [ ] T042 [P] [US3] paragraph改行除去テスト実装: tests/book_converter/test_parser.py に test_parse_paragraph_remove_newlines を追加
-- [ ] T043 [P] [US3] 空行による段落分離テスト実装: tests/book_converter/test_parser.py に test_paragraph_split_by_blank_lines を追加
-- [ ] T044 [P] [US3] スペースのみの行を空行として扱うテスト実装: tests/book_converter/test_parser.py に test_whitespace_only_line_as_blank を追加
-- [ ] T045 [P] [US3] ページまたぎ段落結合テスト実装: tests/book_converter/test_parser.py に test_paragraph_continuation_across_pages を追加
-- [ ] T046 `make test` FAIL (RED) 確認
-- [ ] T047 RED出力生成: specs/009-converter-redesign/red-tests/ph4-test.md
+- [x] T042 [P] [US3] paragraph改行除去テスト実装: tests/book_converter/test_parser.py に test_parse_paragraph_remove_newlines を追加
+- [x] T043 [P] [US3] 空行による段落分離テスト実装: tests/book_converter/test_parser.py に test_paragraph_split_by_blank_lines を追加
+- [x] T044 [P] [US3] スペースのみの行を空行として扱うテスト実装: tests/book_converter/test_parser.py に test_whitespace_only_line_as_blank を追加
+- [x] T045 [P] [US3] ページまたぎ段落結合テスト実装: tests/book_converter/test_parser.py に test_paragraph_continuation_across_pages を追加
+- [x] T046 `make test` FAIL (RED) 確認
+- [x] T047 RED出力生成: specs/009-converter-redesign/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 

@@ -2755,3 +2755,419 @@ class TestTocHierarchyMultiLevel:
             assert result is not None
             assert result.level == expected_level
             assert isinstance(result.level, int)
+
+
+# =============================================================================
+# Phase 4: User Story 3 - paragraph の論理的分離 (T042-T045)
+# =============================================================================
+
+
+class TestParseParagraphRemoveNewlines:
+    """T042: paragraph改行除去テスト (parse_paragraph_lines)
+
+    段落内の改行を除去し、連続テキストとして結合する。
+    空白の圧縮も行う。
+    """
+
+    def test_parse_paragraph_remove_newlines_basic(self) -> None:
+        """複数行が改行なしで結合される"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        lines = ["Line 1", "Line 2", "Line 3"]
+        result = parse_paragraph_lines(lines)
+
+        assert result is not None
+        # 改行を除去し、スペースで結合
+        assert result.text == "Line 1 Line 2 Line 3"
+        assert "\n" not in result.text
+
+    def test_parse_paragraph_remove_newlines_japanese(self) -> None:
+        """日本語段落の改行除去"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        lines = [
+            "これは段落の最初の行です。",
+            "これは段落の2行目です。",
+            "これは段落の3行目です。",
+        ]
+        result = parse_paragraph_lines(lines)
+
+        assert result is not None
+        # 日本語はスペースなしで直接結合するか、1スペースで結合
+        # 仕様: 空白1文字で結合
+        expected = "これは段落の最初の行です。 これは段落の2行目です。 これは段落の3行目です。"
+        assert result.text == expected
+        assert "\n" not in result.text
+
+    def test_parse_paragraph_remove_newlines_single_line(self) -> None:
+        """1行の段落は改行なしでそのまま"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        result = parse_paragraph_lines(["Single line paragraph."])
+
+        assert result is not None
+        assert result.text == "Single line paragraph."
+
+    def test_parse_paragraph_consecutive_spaces_compression(self) -> None:
+        """連続空白を1つに圧縮"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        lines = ["Text with   multiple", "spaces    here"]
+        result = parse_paragraph_lines(lines)
+
+        assert result is not None
+        # 行末と行頭の空白、および連続空白を圧縮
+        assert "   " not in result.text
+        assert "    " not in result.text
+        # 適切に結合されている
+        assert "Text with" in result.text
+        assert "spaces" in result.text
+
+    def test_parse_paragraph_empty_list_returns_none(self) -> None:
+        """空リストはNoneを返す"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        result = parse_paragraph_lines([])
+
+        assert result is None
+
+    def test_parse_paragraph_whitespace_only_returns_none(self) -> None:
+        """空白のみの行リストはNoneを返す"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        result = parse_paragraph_lines(["   ", "  ", "\t"])
+
+        assert result is None
+
+    def test_parse_paragraph_preserves_content(self) -> None:
+        """内容は保持される（Unicode含む）"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        lines = ["Unicode: 日本語、「括弧」、絵文字テスト。"]
+        result = parse_paragraph_lines(lines)
+
+        assert result is not None
+        assert "日本語" in result.text
+        assert "「括弧」" in result.text
+
+    def test_parse_paragraph_read_aloud_default_true(self) -> None:
+        """デフォルトでread_aloud=True"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        result = parse_paragraph_lines(["Test paragraph."])
+
+        assert result is not None
+        assert result.read_aloud is True
+
+
+class TestParagraphSplitByBlankLines:
+    """T043: 空行による段落分離テスト (split_paragraphs)
+
+    空行で区切られたテキストが複数のParagraphになることを確認。
+    """
+
+    def test_split_paragraphs_by_blank_lines_basic(self) -> None:
+        """空行で区切られた3段落"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1の内容。\n\n段落2の内容。\n\n段落3の内容。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 3
+        assert result[0].text == "段落1の内容。"
+        assert result[1].text == "段落2の内容。"
+        assert result[2].text == "段落3の内容。"
+
+    def test_split_paragraphs_multiple_blank_lines(self) -> None:
+        """複数の空行も単一の区切りとして扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n\n\n\n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_split_paragraphs_single_paragraph(self) -> None:
+        """空行がない場合は1つの段落"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "これは1つの段落です。改行はあるけど空行はない。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 1
+        assert result[0].text == "これは1つの段落です。改行はあるけど空行はない。"
+
+    def test_split_paragraphs_multiline_in_paragraph(self) -> None:
+        """段落内の改行は除去される"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "行1\n行2\n行3\n\n段落2行1\n段落2行2"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        # 段落内の改行は除去（スペースに変換）
+        assert result[0].text == "行1 行2 行3"
+        assert result[1].text == "段落2行1 段落2行2"
+
+    def test_split_paragraphs_empty_text(self) -> None:
+        """空テキストは空リスト"""
+        from src.book_converter.parser import split_paragraphs
+
+        result = split_paragraphs("")
+
+        assert len(result) == 0
+
+    def test_split_paragraphs_only_blank_lines(self) -> None:
+        """空行のみは空リスト"""
+        from src.book_converter.parser import split_paragraphs
+
+        result = split_paragraphs("\n\n\n")
+
+        assert len(result) == 0
+
+    def test_split_paragraphs_returns_paragraph_objects(self) -> None:
+        """Paragraphオブジェクトのリストを返す"""
+        from src.book_converter.parser import split_paragraphs
+        from src.book_converter.models import Paragraph
+
+        result = split_paragraphs("テスト。")
+
+        assert len(result) == 1
+        assert isinstance(result[0], Paragraph)
+
+    def test_split_paragraphs_leading_trailing_blank_lines(self) -> None:
+        """先頭・末尾の空行は無視"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "\n\n段落1。\n\n段落2。\n\n"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+
+
+class TestWhitespaceOnlyLineAsBlank:
+    """T044: スペースのみの行を空行として扱うテスト
+
+    スペースやタブのみの行も空行として扱い、段落を区切る。
+    """
+
+    def test_space_only_line_as_blank(self) -> None:
+        """スペースのみの行は空行として扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        # "   " はスペース3つ
+        text = "段落1。\n   \n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_tab_only_line_as_blank(self) -> None:
+        """タブのみの行は空行として扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n\t\n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_mixed_whitespace_line_as_blank(self) -> None:
+        """スペースとタブの混在も空行として扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n \t  \t \n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_full_width_space_as_blank(self) -> None:
+        """全角スペースのみの行も空行として扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n\u3000\n段落2。"  # \u3000 = 全角スペース
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_consecutive_whitespace_lines(self) -> None:
+        """複数の空白行が連続しても1つの区切り"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n   \n\t\n  \n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+
+    def test_whitespace_line_does_not_create_empty_paragraph(self) -> None:
+        """空白行は空の段落を生成しない"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n   \n\n   \n段落2。"
+        result = split_paragraphs(text)
+
+        # 2つの段落のみ、空の段落は生成されない
+        assert len(result) == 2
+        for para in result:
+            assert para.text.strip() != ""
+
+
+class TestParagraphContinuationAcrossPages:
+    """T045: ページまたぎ段落結合テスト (merge_continuation_paragraphs)
+
+    句点で終わらない段落は次ページの段落と結合する。
+    """
+
+    def test_continuation_basic(self) -> None:
+        """句点なしの段落は次と結合"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="継続する文章の途中", read_aloud=True),
+            Paragraph(text="続きの文。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 1
+        assert result[0].text == "継続する文章の途中続きの文。"
+
+    def test_no_continuation_with_period(self) -> None:
+        """句点で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="完結する文章。", read_aloud=True),
+            Paragraph(text="新しい段落。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+        assert result[0].text == "完結する文章。"
+        assert result[1].text == "新しい段落。"
+
+    def test_continuation_multiple_paragraphs(self) -> None:
+        """複数の継続段落を結合"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="段落1の途中", read_aloud=True),
+            Paragraph(text="段落1の続き", read_aloud=True),
+            Paragraph(text="段落1の終わり。", read_aloud=True),
+            Paragraph(text="新しい段落2。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1の途中段落1の続き段落1の終わり。"
+        assert result[1].text == "新しい段落2。"
+
+    def test_continuation_exclamation_mark(self) -> None:
+        """感嘆符で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="感嘆の文章!", read_aloud=True),
+            Paragraph(text="次の段落。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+
+    def test_continuation_question_mark(self) -> None:
+        """疑問符で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="疑問の文章?", read_aloud=True),
+            Paragraph(text="次の段落。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+
+    def test_continuation_japanese_period(self) -> None:
+        """日本語句点（。）で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="日本語の文章。", read_aloud=True),
+            Paragraph(text="次の文章。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+
+    def test_continuation_closing_bracket_period(self) -> None:
+        """閉じ括弧+句点で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="引用（テスト）。", read_aloud=True),
+            Paragraph(text="次の文章。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+
+    def test_continuation_empty_list(self) -> None:
+        """空リストは空リストを返す"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+
+        result = merge_continuation_paragraphs([])
+
+        assert len(result) == 0
+
+    def test_continuation_single_paragraph(self) -> None:
+        """1つの段落はそのまま"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [Paragraph(text="単独の段落。", read_aloud=True)]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 1
+        assert result[0].text == "単独の段落。"
+
+    def test_continuation_preserves_read_aloud(self) -> None:
+        """結合時にread_aloud属性を保持（先頭の値を使用）"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="途中", read_aloud=True),
+            Paragraph(text="終わり。", read_aloud=False),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 1
+        # 先頭の段落のread_aloudを使用
+        assert result[0].read_aloud is True
+
+    def test_continuation_trailing_whitespace_period(self) -> None:
+        """句点の後に空白がある場合も結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="文章。   ", read_aloud=True),  # 末尾に空白
+            Paragraph(text="次の文。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        # 空白を除去して判定するので結合しない
+        assert len(result) == 2
