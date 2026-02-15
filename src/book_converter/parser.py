@@ -881,7 +881,7 @@ def parse_list(lines: list[str]) -> List | None:
 
     Example:
         >>> parse_list(["- Item 1", "- Item 2"])
-        List(items=("Item 1", "Item 2"), read_aloud=True)
+        List(items=("Item 1", "Item 2"), list_type="unordered", read_aloud=True)
     """
     import re
 
@@ -889,11 +889,25 @@ def parse_list(lines: list[str]) -> List | None:
         return None
 
     items = []
-    # Pattern: optional leading spaces, then - or *, then space, then content
-    pattern = r"^\s*[-*]\s+(.*)$"
+    list_type = "unordered"  # デフォルト
+
+    # Pattern for unordered list: optional leading spaces, then - or *, then space, then content
+    unordered_pattern = r"^\s*[-*]\s+(.*)$"
+    # Pattern for ordered list: optional leading spaces, then digit(s), then ., then space, then content
+    ordered_pattern = r"^\s*\d+\.\s+(.*)$"
 
     for line in lines:
-        match = re.match(pattern, line)
+        # 最初の行でリストタイプを判定
+        if not items:
+            if re.match(ordered_pattern, line):
+                list_type = "ordered"
+
+        # リストタイプに応じてパターンマッチ
+        if list_type == "ordered":
+            match = re.match(ordered_pattern, line)
+        else:
+            match = re.match(unordered_pattern, line)
+
         if match:
             item_text = match.group(1)
             items.append(item_text)
@@ -903,7 +917,7 @@ def parse_list(lines: list[str]) -> List | None:
 
     from src.book_converter.models import List
 
-    return List(items=tuple(items), read_aloud=True)
+    return List(items=tuple(items), list_type=list_type, read_aloud=True)
 
 
 def parse_figure_comment(line: str) -> str | None:
@@ -930,6 +944,39 @@ def parse_figure_comment(line: str) -> str | None:
     if match:
         path = match.group(1).strip()
         return path if path else None
+
+    return None
+
+
+def parse_figure_placeholder(line: str) -> dict | None:
+    """図プレースホルダーを検出.
+
+    [図], [図1], [図 1], [写真], [表], [イラスト], [グラフ], [チャート] を検出
+
+    Args:
+        line: テキスト行
+
+    Returns:
+        {"marker": "図1"} or None
+
+    Example:
+        >>> parse_figure_placeholder("[図1]")
+        {"marker": "図1"}
+        >>> parse_figure_placeholder("テキスト [写真3] テキスト")
+        {"marker": "写真3"}
+        >>> parse_figure_placeholder("通常のテキスト")
+        None
+    """
+    import re
+
+    # Pattern: [図|写真|表|イラスト|グラフ|チャート][番号・記号] ]
+    pattern = r"\[(図|写真|表|イラスト|グラフ|チャート)([^\]]*)\]"
+    match = re.search(pattern, line)
+
+    if match:
+        # 括弧を除去してマーカーテキストを返す
+        marker = f"{match.group(1)}{match.group(2)}"
+        return {"marker": marker}
 
     return None
 

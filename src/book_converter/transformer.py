@@ -316,7 +316,12 @@ def transform_content_with_continued(
 
 
 def transform_figure(figure: Figure) -> Element:
-    """Transform a Figure object into an XML Element.
+    """Transform a Figure object into an XML Element (新形式).
+
+    新形式:
+    <figure readAloud="false" path="figures/fig001.png" marker="図1" />
+
+    後方互換性のため、file/caption/description属性もサポート。
 
     Args:
         figure: The Figure object to transform.
@@ -325,24 +330,41 @@ def transform_figure(figure: Figure) -> Element:
         An XML Element representing the figure.
 
     Example:
-        >>> fig = Figure(file="image.png", caption="Title", description="Desc")
+        >>> fig = Figure(path="image.png", marker="図1")
         >>> elem = transform_figure(fig)
         >>> elem.tag
         'figure'
         >>> elem.get("readAloud")
-        'optional'
+        'false'
+        >>> elem.get("path")
+        'image.png'
     """
     elem = Element("figure")
-    elem.set("readAloud", figure.read_aloud)
 
+    # readAloud属性（新形式: bool, 旧形式: str）
+    if isinstance(figure.read_aloud, bool):
+        elem.set("readAloud", "true" if figure.read_aloud else "false")
+    else:
+        elem.set("readAloud", figure.read_aloud)
+
+    # 新形式: path属性（自己終了タグ）
+    if figure.path:
+        elem.set("path", figure.path)
+        if figure.marker:
+            elem.set("marker", figure.marker)
+        # 新形式は自己終了タグのため、子要素なし
+        return elem
+
+    # 旧形式: file/caption/description 子要素
     if figure.continued:
         elem.set("continued", "true")
 
     # file element (always readAloud="false")
-    file_elem = Element("file")
-    file_elem.text = figure.file
-    file_elem.set("readAloud", "false")
-    elem.append(file_elem)
+    if figure.file:
+        file_elem = Element("file")
+        file_elem.text = figure.file
+        file_elem.set("readAloud", "false")
+        elem.append(file_elem)
 
     # caption element (readAloud="true" if present)
     if figure.caption:
@@ -456,5 +478,31 @@ def transform_structure_container(container: StructureContainer) -> Element:
                 apply_emphasis(item, item_elem)
                 list_elem.append(item_elem)
             elem.append(list_elem)
+
+    return elem
+
+
+def transform_list(lst: List) -> Element:
+    """List を XML Element に変換.
+
+    出力例:
+    <list type="unordered">
+      <item>項目1</item>
+      <item>項目2</item>
+    </list>
+
+    Args:
+        lst: List オブジェクト
+
+    Returns:
+        XML Element
+    """
+    elem = Element("list")
+    elem.set("type", lst.list_type)
+
+    for item_text in lst.items:
+        item_elem = Element("item")
+        item_elem.text = item_text
+        elem.append(item_elem)
 
     return elem

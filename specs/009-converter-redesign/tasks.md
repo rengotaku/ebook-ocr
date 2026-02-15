@@ -179,19 +179,19 @@
 
 ### Implementation (GREEN)
 
-- [ ] T064 REDテスト確認: specs/009-converter-redesign/red-tests/ph5-test.md
-- [ ] T065 [P] [US4] List に list_type 属性追加: src/book_converter/models.py
-- [ ] T066 [P] [US4] Figure を path, marker 属性に変更: src/book_converter/models.py
-- [ ] T067 [P] [US4] parse_list で list_type (unordered/ordered) を判定: src/book_converter/parser.py
-- [ ] T068 [P] [US4] 図プレースホルダー検出パターン追加（[図], [写真], [表]等）: src/book_converter/parser.py
-- [ ] T069 [P] [US4] transform_list で type 属性出力: src/book_converter/transformer.py
-- [ ] T070 [P] [US4] transform_figure を新形式に改修: src/book_converter/transformer.py
-- [ ] T071 `make test` PASS (GREEN) 確認
+- [x] T064 REDテスト確認: specs/009-converter-redesign/red-tests/ph5-test.md
+- [x] T065 [P] [US4] List に list_type 属性追加: src/book_converter/models.py
+- [x] T066 [P] [US4] Figure を path, marker 属性に変更: src/book_converter/models.py
+- [x] T067 [P] [US4] parse_list で list_type (unordered/ordered) を判定: src/book_converter/parser.py
+- [x] T068 [P] [US4] 図プレースホルダー検出パターン追加（[図], [写真], [表]等）: src/book_converter/parser.py
+- [x] T069 [P] [US4] transform_list で type 属性出力: src/book_converter/transformer.py
+- [x] T070 [P] [US4] transform_figure を新形式に改修: src/book_converter/transformer.py
+- [x] T071 `make test` PASS (GREEN) 確認
 
 ### Verification
 
-- [ ] T072 `make test` で全テストパス確認（US1,2,3含むリグレッションなし）
-- [ ] T073 フェーズ出力生成: specs/009-converter-redesign/tasks/ph5-output.md
+- [x] T072 `make test` で全テストパス確認（US1,2,3含むリグレッションなし）
+- [x] T073 フェーズ出力生成: specs/009-converter-redesign/tasks/ph5-output.md
 
 **Checkpoint**: 全 User Story が独立して機能すること
 

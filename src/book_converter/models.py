@@ -61,6 +61,7 @@ class List:
     """リスト"""
 
     items: tuple[str, ...]
+    list_type: str = "unordered"  # "unordered" or "ordered"
     read_aloud: bool = True
 
 
@@ -91,10 +92,13 @@ class Content:
 class Figure:
     """図表"""
 
-    file: str
+    path: str  # 必須: 画像ファイルパス
+    marker: str = ""  # オプション: 元のマーカーテキスト
+    read_aloud: bool = False  # 常に False
+    # 後方互換性のための属性（オプション）
+    file: str = ""
     caption: str = ""
     description: str = ""
-    read_aloud: str = "optional"  # "true", "false", "optional"
     continued: bool = False
 
 
