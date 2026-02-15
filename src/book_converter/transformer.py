@@ -25,7 +25,7 @@ from src.book_converter.models import (
 def transform_toc_entry(entry: TocEntry) -> Element:
     """Transform TocEntry to XML element.
 
-    <entry level="chapter" number="1" title="SREとは" page="15"/>
+    <entry level="1" number="1" title="SREとは" page="15"/>
 
     Args:
         entry: The TocEntry object to transform.
@@ -34,17 +34,17 @@ def transform_toc_entry(entry: TocEntry) -> Element:
         An XML Element representing the TOC entry.
 
     Example:
-        >>> entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
+        >>> entry = TocEntry(text="SREとは", level=1, number="1", page="15")
         >>> elem = transform_toc_entry(entry)
         >>> elem.tag
         'entry'
         >>> elem.get("level")
-        'chapter'
+        '1'
         >>> elem.get("title")
         'SREとは'
     """
     elem = Element("entry")
-    elem.set("level", entry.level)
+    elem.set("level", str(entry.level))
     if entry.number:
         elem.set("number", entry.number)
     elem.set("title", entry.text)

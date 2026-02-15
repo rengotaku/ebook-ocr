@@ -103,7 +103,7 @@ class TocEntry:
     """Table of Contents entry."""
 
     text: str  # エントリのタイトルテキスト
-    level: str  # "chapter", "section", "subsection", "other"
+    level: int  # 階層レベル（1-5）
     number: str = ""  # 章番号（例: "1", "2.1", "2.1.1"）
     page: str = ""  # 参照ページ番号
 

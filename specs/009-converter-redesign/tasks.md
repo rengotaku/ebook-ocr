@@ -63,17 +63,17 @@
 
 ### Implementation (GREEN)
 
-- [ ] T014 REDテスト確認: specs/009-converter-redesign/red-tests/ph2-test.md
-- [ ] T015 [P] [US1] TocEntry.level を int に変更: src/book_converter/models.py
-- [ ] T016 [P] [US1] parse_toc_entry で level を int (1-5) で返すよう修正: src/book_converter/parser.py
-- [ ] T017 [P] [US1] transform_toc_entry で level を数値文字列として出力: src/book_converter/transformer.py
-- [ ] T018 [US1] 既存コードの level 文字列参照箇所を修正（依存: T015,T016,T017）
-- [ ] T019 `make test` PASS (GREEN) 確認
+- [x] T014 REDテスト確認: specs/009-converter-redesign/red-tests/ph2-test.md
+- [x] T015 [P] [US1] TocEntry.level を int に変更: src/book_converter/models.py
+- [x] T016 [P] [US1] parse_toc_entry で level を int (1-5) で返すよう修正: src/book_converter/parser.py
+- [x] T017 [P] [US1] transform_toc_entry で level を数値文字列として出力: src/book_converter/transformer.py
+- [x] T018 [US1] 既存コードの level 文字列参照箇所を修正（依存: T015,T016,T017）
+- [x] T019 `make test` PASS (GREEN) 確認
 
 ### Verification
 
-- [ ] T020 `make test` で全テストパス確認（リグレッションなし）
-- [ ] T021 フェーズ出力生成: specs/009-converter-redesign/tasks/ph2-output.md
+- [x] T020 `make test` で全テストパス確認（リグレッションなし）
+- [x] T021 フェーズ出力生成: specs/009-converter-redesign/tasks/ph2-output.md
 
 **Checkpoint**: User Story 1 が独立して機能しテスト可能であること
 

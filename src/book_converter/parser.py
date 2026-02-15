@@ -440,7 +440,7 @@ def parse_toc_entry(line: str) -> TocEntry | None:
     if match:
         return TocEntry(
             text=match.group(2).strip(),
-            level="chapter",
+            level=1,
             number=match.group(1),
             page=page_number,
         )
@@ -452,29 +452,51 @@ def parse_toc_entry(line: str) -> TocEntry | None:
         title = match.group(2).strip() if match.group(2) else ""
         return TocEntry(
             text=title,
-            level="chapter",
+            level=1,
             number=match.group(1),
             page=page_number,
         )
 
-    # Subsection pattern (must come before section): N.N.N タイトル
+    # Level 5 pattern (must come first): N.N.N.N.N タイトル
+    level5_pattern = r"^(\d+\.\d+\.\d+\.\d+\.\d+)\s+(.+)$"
+    match = re.match(level5_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level=5,
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Level 4 pattern: N.N.N.N タイトル
+    level4_pattern = r"^(\d+\.\d+\.\d+\.\d+)\s+(.+)$"
+    match = re.match(level4_pattern, line)
+    if match:
+        return TocEntry(
+            text=match.group(2).strip(),
+            level=4,
+            number=match.group(1),
+            page=page_number,
+        )
+
+    # Subsection pattern (level 3): N.N.N タイトル
     subsection_pattern = r"^(\d+\.\d+\.\d+)\s+(.+)$"
     match = re.match(subsection_pattern, line)
     if match:
         return TocEntry(
             text=match.group(2).strip(),
-            level="subsection",
+            level=3,
             number=match.group(1),
             page=page_number,
         )
 
-    # Section pattern: N.N タイトル
+    # Section pattern (level 2): N.N タイトル
     section_pattern = r"^(\d+\.\d+)\s+(.+)$"
     match = re.match(section_pattern, line)
     if match:
         return TocEntry(
             text=match.group(2).strip(),
-            level="section",
+            level=2,
             number=match.group(1),
             page=page_number,
         )
@@ -486,16 +508,17 @@ def parse_toc_entry(line: str) -> TocEntry | None:
     if match:
         return TocEntry(
             text=match.group(2).strip(),
-            level="chapter",
+            level=1,
             number=match.group(1),
             page=page_number,
         )
 
     # Other pattern (no number prefix)
+    # Default to level 1 for entries without clear hierarchy markers
     if line:
         return TocEntry(
             text=line,
-            level="other",
+            level=1,
             number="",
             page=page_number,
         )
