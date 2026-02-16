@@ -544,11 +544,12 @@ class TestTransformFigure:
     """T053: Figure XML変換テスト (<figure readAloud="optional"> 生成)"""
 
     def test_transform_figure_basic(self) -> None:
-        """基本的な図をXMLに変換"""
+        """基本的な図をXMLに変換（旧形式: file引数）"""
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(file="images/fig1.png")
+        # Phase 5: path は必須引数だが、旧形式では空にして file を使用
+        figure = Figure(path="", file="images/fig1.png")
         element = transform_figure(figure)
 
         assert element.tag == "figure"
@@ -562,6 +563,7 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
+            path="",
             file="chart.png",
             caption="図1: 売上推移",
         )
@@ -577,6 +579,7 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
+            path="",
             file="diagram.png",
             description="システム構成を表す図です。",
         )
@@ -591,7 +594,7 @@ class TestTransformFigure:
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(file="test.png", read_aloud="optional")
+        figure = Figure(path="", file="test.png", read_aloud="optional")
         element = transform_figure(figure)
 
         assert element.get("readAloud") == "optional"
@@ -601,7 +604,7 @@ class TestTransformFigure:
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(file="test.png", read_aloud="true")
+        figure = Figure(path="", file="test.png", read_aloud="true")
         element = transform_figure(figure)
 
         assert element.get("readAloud") == "true"
@@ -611,7 +614,7 @@ class TestTransformFigure:
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(file="test.png", read_aloud="false")
+        figure = Figure(path="", file="test.png", read_aloud="false")
         element = transform_figure(figure)
 
         assert element.get("readAloud") == "false"
@@ -621,7 +624,7 @@ class TestTransformFigure:
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(file="test.png")
+        figure = Figure(path="", file="test.png")
         element = transform_figure(figure)
 
         assert isinstance(element, Element)
@@ -632,6 +635,7 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
+            path="",
             file="images/architecture.png",
             caption="図2-1: システムアーキテクチャ",
             description="本システムの全体構成を示す図です。主要コンポーネント間の関係を表しています。",
@@ -651,6 +655,7 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
+            path="",
             file="test.png",
             caption="テスト図",
             read_aloud="optional",
@@ -669,6 +674,7 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
+            path="",
             file="large_diagram.png",
             continued=True,
         )
@@ -682,6 +688,7 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
+            path="",
             file="日本語/図表.png",
             caption="日本語キャプション「テスト」",
             description="日本語の説明文です。",
@@ -837,7 +844,7 @@ class TestReadAloudInheritance:
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(file="test.png")
+        figure = Figure(path="", file="test.png")
         element = transform_figure(figure)
 
         file_elem = element.find("file")
@@ -850,7 +857,7 @@ class TestReadAloudInheritance:
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(file="test.png", caption="図1")
+        figure = Figure(path="", file="test.png", caption="図1")
         element = transform_figure(figure)
 
         caption_elem = element.find("caption")
@@ -865,6 +872,7 @@ class TestReadAloudInheritance:
 
         # 親がoptionalの場合
         figure_optional = Figure(
+            path="",
             file="test.png",
             description="説明文",
             read_aloud="optional",
@@ -882,6 +890,7 @@ class TestReadAloudInheritance:
         from src.book_converter.models import Figure
 
         figure = Figure(
+            path="",
             file="test.png",
             description="この図は重要です",
             read_aloud="true",
@@ -899,6 +908,7 @@ class TestReadAloudInheritance:
         from src.book_converter.models import Figure
 
         figure = Figure(
+            path="",
             file="test.png",
             description="この図は読み上げません",
             read_aloud="false",
@@ -929,8 +939,8 @@ class TestReadAloudInheritance:
             source_file="page_0001.png",
             content=Content(elements=()),
             figures=(
-                Figure(file="fig1.png", read_aloud="optional"),
-                Figure(file="fig2.png", read_aloud="true"),
+                Figure(path="", file="fig1.png", read_aloud="optional"),
+                Figure(path="", file="fig2.png", read_aloud="true"),
             ),
         )
 

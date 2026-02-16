@@ -1041,11 +1041,14 @@ def parse_figure(lines: list[str]) -> Figure | None:
 
     description = "\n".join(description_lines) if description_lines else ""
 
+    # Phase 5: Use new format (path) with backward compatibility (file, caption, description)
     return Figure(
+        path="",  # 旧形式では path は空（後方互換性）
+        marker="",
+        read_aloud=False,  # Phase 5: read_aloud is bool now
         file=file_path,
         caption=caption,
         description=description,
-        read_aloud="optional",
     )
 
 

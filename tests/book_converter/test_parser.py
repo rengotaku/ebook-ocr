@@ -713,14 +713,14 @@ class TestParseFigureDescription:
         assert isinstance(result, Figure)
 
     def test_parse_figure_default_read_aloud(self) -> None:
-        """デフォルトのreadAloudは'optional'"""
+        """デフォルトのreadAloudはFalse（Phase 5: bool型に変更）"""
         from src.book_converter.parser import parse_figure
 
         lines = ["<!-- FIGURE: test.png -->"]
         result = parse_figure(lines)
 
         assert result is not None
-        assert result.read_aloud == "optional"
+        assert result.read_aloud is False  # Phase 5: str → bool
 
     def test_parse_figure_empty_lines_returns_none(self) -> None:
         """空のラインリストはNoneを返す"""
@@ -1287,7 +1287,7 @@ class TestParseTocEntry:
 
         assert result is not None
         assert isinstance(result, TocEntry)
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == "SREとは"
 
@@ -1298,7 +1298,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("第1章 SREとは ... 15")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == "SREとは"
         assert result.page == "15"
@@ -1310,7 +1310,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("第2章 信頼性の定義 ─── 25")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "2"
         assert result.text == "信頼性の定義"
         assert result.page == "25"
@@ -1322,7 +1322,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("第10章 まとめ ... 200")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "10"
         assert result.text == "まとめ"
         assert result.page == "200"
@@ -1336,7 +1336,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("2.1 SLOの理解")
 
         assert result is not None
-        assert result.level == "section"
+        assert result.level == 2  # Phase 2: str → int
         assert result.number == "2.1"
         assert result.text == "SLOの理解"
 
@@ -1347,7 +1347,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("2.1 SLOの理解 ... 30")
 
         assert result is not None
-        assert result.level == "section"
+        assert result.level == 2  # Phase 2: str → int
         assert result.number == "2.1"
         assert result.text == "SLOの理解"
         assert result.page == "30"
@@ -1359,7 +1359,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("2.1.1 SLA")
 
         assert result is not None
-        assert result.level == "subsection"
+        assert result.level == 3  # Phase 2: str → int
         assert result.number == "2.1.1"
         assert result.text == "SLA"
 
@@ -1370,7 +1370,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("2.1.1 SLA ─── 35")
 
         assert result is not None
-        assert result.level == "subsection"
+        assert result.level == 3  # Phase 2: str → int
         assert result.number == "2.1.1"
         assert result.text == "SLA"
         assert result.page == "35"
@@ -1382,7 +1382,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("10.12 高度な設定 ... 150")
 
         assert result is not None
-        assert result.level == "section"
+        assert result.level == 2  # Phase 2: str → int
         assert result.number == "10.12"
         assert result.text == "高度な設定"
         assert result.page == "150"
@@ -1461,7 +1461,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("はじめに ... 1")
 
         assert result is not None
-        assert result.level == "other"
+        assert result.level == 1  # Phase 2: str → int (other → 1)
         assert result.number == ""
         assert result.text == "はじめに"
         assert result.page == "1"
@@ -1473,7 +1473,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("おわりに ─── 300")
 
         assert result is not None
-        assert result.level == "other"
+        assert result.level == 1  # Phase 2: str → int (other → 1)
         assert result.number == ""
         assert result.text == "おわりに"
         assert result.page == "300"
@@ -1485,7 +1485,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("索引 ... 320")
 
         assert result is not None
-        assert result.level == "other"
+        assert result.level == 1  # Phase 2: str → int (other → 1)
         assert result.text == "索引"
         assert result.page == "320"
 
@@ -1538,7 +1538,7 @@ class TestTocModels:
         """TocEntryはイミュータブル"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+        entry = TocEntry(text="テスト", level=1, number="1", page="10")  # Phase 2: int level
 
         with pytest.raises(Exception):
             entry.text = "変更"  # type: ignore
@@ -1547,54 +1547,54 @@ class TestTocModels:
         """TocEntryの必須フィールド"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="SREとは", level="chapter")
+        entry = TocEntry(text="SREとは", level=1)  # Phase 2: int level
 
         assert entry.text == "SREとは"
-        assert entry.level == "chapter"
+        assert entry.level == 1  # Phase 2: str → int
 
     def test_toc_entry_optional_fields_defaults(self) -> None:
         """TocEntryのオプションフィールドのデフォルト値"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="テスト", level="other")
+        entry = TocEntry(text="テスト", level=1)  # Phase 2: int level
 
         assert entry.number == ""
         assert entry.page == ""
 
     def test_toc_entry_level_chapter(self) -> None:
-        """level='chapter'のエントリ"""
+        """level=1のエントリ（旧 'chapter'）"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        entry = TocEntry(text="第1章", level=1, number="1", page="15")  # Phase 2: int level
 
-        assert entry.level == "chapter"
+        assert entry.level == 1  # Phase 2: str → int
         assert entry.number == "1"
 
     def test_toc_entry_level_section(self) -> None:
-        """level='section'のエントリ"""
+        """level=2のエントリ（旧 'section'）"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="節タイトル", level="section", number="1.2", page="20")
+        entry = TocEntry(text="節タイトル", level=2, number="1.2", page="20")  # Phase 2: int level
 
-        assert entry.level == "section"
+        assert entry.level == 2  # Phase 2: str → int
         assert entry.number == "1.2"
 
     def test_toc_entry_level_subsection(self) -> None:
-        """level='subsection'のエントリ"""
+        """level=3のエントリ（旧 'subsection'）"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="項タイトル", level="subsection", number="1.2.3", page="25")
+        entry = TocEntry(text="項タイトル", level=3, number="1.2.3", page="25")  # Phase 2: int level
 
-        assert entry.level == "subsection"
+        assert entry.level == 3  # Phase 2: str → int
         assert entry.number == "1.2.3"
 
     def test_toc_entry_level_other(self) -> None:
-        """level='other'のエントリ"""
+        """level=1のエントリ（旧 'other'）"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="はじめに", level="other", page="1")
+        entry = TocEntry(text="はじめに", level=1, page="1")  # Phase 2: int level
 
-        assert entry.level == "other"
+        assert entry.level == 1  # Phase 2: str → int (other → 1)
         assert entry.number == ""
 
     def test_table_of_contents_exists(self) -> None:
@@ -2383,7 +2383,7 @@ class TestParseTocEntryChapterFormat:
 
         assert result is not None
         assert isinstance(result, TocEntry)
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == "「企画」で失敗"
 
@@ -2394,7 +2394,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("Chapter 10 まとめ")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "10"
         assert result.text == "まとめ"
 
@@ -2405,7 +2405,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("Chapter 1 タイトル ... 15")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == "タイトル"
         assert result.page == "15"
@@ -2417,7 +2417,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("Chapter 2 タイトル --- 25")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "2"
         assert result.text == "タイトル"
         assert result.page == "25"
@@ -2429,7 +2429,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("CHAPTER 1 タイトル")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
 
     def test_parse_chapter_lowercase(self) -> None:
@@ -2439,7 +2439,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("chapter 1 タイトル")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
 
     def test_parse_chapter_preserves_unicode_title(self) -> None:
@@ -2449,7 +2449,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("Chapter 3 「日本語」タイトル「テスト」")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "3"
         assert result.text == "「日本語」タイトル「テスト」"
 
@@ -2461,7 +2461,7 @@ class TestParseTocEntryChapterFormat:
 
         # タイトルなしの場合も認識すべき
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == ""
 

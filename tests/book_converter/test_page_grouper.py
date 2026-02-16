@@ -30,13 +30,13 @@ from src.book_converter.page_grouper import (
 def sample_toc_xml() -> str:
     """Sample TOC XML element for testing."""
     return """<toc begin="7" end="13">
-        <entry level="chapter" number="1" title="SREとは" page="14" />
-        <entry level="section" number="1.1" title="SREの概要" page="15" />
-        <entry level="subsection" number="1.1.1" title="サイトとは何か" page="18" />
-        <entry level="section" number="1.2" title="なぜSREが重要なのか" page="20" />
-        <entry level="chapter" number="2" title="信頼性を定義して計測する" page="30" />
-        <entry level="section" number="2.1" title="SLOを理解するための基礎概念" page="31" />
-        <entry level="subsection" number="2.1.1" title="SLA" page="32" />
+        <entry level="1" number="1" title="SREとは" page="14" />
+        <entry level="2" number="1.1" title="SREの概要" page="15" />
+        <entry level="3" number="1.1.1" title="サイトとは何か" page="18" />
+        <entry level="2" number="1.2" title="なぜSREが重要なのか" page="20" />
+        <entry level="1" number="2" title="信頼性を定義して計測する" page="30" />
+        <entry level="2" number="2.1" title="SLOを理解するための基礎概念" page="31" />
+        <entry level="3" number="2.1.1" title="SLA" page="32" />
     </toc>"""
 
 
@@ -47,9 +47,9 @@ def sample_book_xml() -> str:
 <book>
     <metadata><title>Converted Book</title></metadata>
     <toc begin="7" end="13">
-        <entry level="chapter" number="1" title="SREとは" page="14" />
-        <entry level="section" number="1.1" title="SREの概要" page="15" />
-        <entry level="subsection" number="1.1.1" title="サイトとは何か" page="18" />
+        <entry level="1" number="1" title="SREとは" page="14" />
+        <entry level="2" number="1.1" title="SREの概要" page="15" />
+        <entry level="3" number="1.1.1" title="サイトとは何か" page="18" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content readAloud="false">
@@ -219,7 +219,7 @@ class TestParseSectionNumber:
         assert result is not None
         assert result.raw == "1"
         assert result.parts == (1,)
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
 
     def test_parse_section_number(self) -> None:
         """Parse section number '2.1' into SectionNumber."""
@@ -227,7 +227,7 @@ class TestParseSectionNumber:
         assert result is not None
         assert result.raw == "2.1"
         assert result.parts == (2, 1)
-        assert result.level == "section"
+        assert result.level == 2  # Phase 2: str → int
 
     def test_parse_subsection_number(self) -> None:
         """Parse subsection number '2.1.1' into SectionNumber."""
@@ -235,7 +235,7 @@ class TestParseSectionNumber:
         assert result is not None
         assert result.raw == "2.1.1"
         assert result.parts == (2, 1, 1)
-        assert result.level == "subsection"
+        assert result.level == 3  # Phase 2: str → int
 
     def test_parse_deep_section_number(self) -> None:
         """Parse deep section number '1.2.3.4' into SectionNumber (level=subsection)."""
@@ -243,7 +243,7 @@ class TestParseSectionNumber:
         assert result is not None
         assert result.raw == "1.2.3.4"
         assert result.parts == (1, 2, 3, 4)
-        assert result.level == "subsection"
+        assert result.level == 3  # Phase 2: str → int
 
     def test_parse_invalid_returns_none(self) -> None:
         """Return None for invalid section number."""
@@ -313,7 +313,7 @@ class TestParseToc:
         entries = parse_toc(toc_element)
 
         chapter1 = entries[0]
-        assert chapter1.level == "chapter"
+        assert chapter1.level == 1  # Phase 2: str → int
         assert chapter1.number == "1"
         assert chapter1.title == "SREとは"
 
@@ -323,7 +323,7 @@ class TestParseToc:
         entries = parse_toc(toc_element)
 
         section1_1 = entries[1]
-        assert section1_1.level == "section"
+        assert section1_1.level == 2  # Phase 2: str → int
         assert section1_1.number == "1.1"
         assert section1_1.title == "SREの概要"
 
@@ -333,7 +333,7 @@ class TestParseToc:
         entries = parse_toc(toc_element)
 
         subsection1_1_1 = entries[2]
-        assert subsection1_1_1.level == "subsection"
+        assert subsection1_1_1.level == 3  # Phase 2: str → int
         assert subsection1_1_1.number == "1.1.1"
         assert subsection1_1_1.title == "サイトとは何か"
 
@@ -346,7 +346,7 @@ class TestParseToc:
 
     def test_parse_toc_begin_end_attributes(self) -> None:
         """Parse TOC returns begin/end attributes."""
-        toc_xml = '<toc begin="7" end="13"><entry level="chapter" number="1" title="Test" /></toc>'
+        toc_xml = '<toc begin="7" end="13"><entry level="1" number="1" title="Test" /></toc>'
         toc_element = ET.fromstring(toc_xml)
         entries = parse_toc(toc_element)
 
@@ -604,7 +604,7 @@ class TestEdgeCases:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Empty Chapter" page="10" />
+        <entry level="1" number="1" title="Empty Chapter" page="10" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC page</paragraph></content>
@@ -624,7 +624,7 @@ class TestEdgeCases:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="日本語タイトル" page="2" />
+        <entry level="1" number="1" title="日本語タイトル" page="2" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -731,8 +731,8 @@ class TestChapterTitlePageTypeAttribute:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="SREとは" page="2" />
-        <entry level="section" number="1.1" title="SREの概要" page="3" />
+        <entry level="1" number="1" title="SREとは" page="2" />
+        <entry level="2" number="1.1" title="SREの概要" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -763,8 +763,8 @@ class TestChapterTitlePageTypeAttribute:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="第一章" page="2" />
-        <entry level="chapter" number="2" title="第二章" page="5" />
+        <entry level="1" number="1" title="第一章" page="2" />
+        <entry level="1" number="2" title="第二章" page="5" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -801,9 +801,9 @@ class TestChapterTitlePageTypeAttribute:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="SREとは" page="2" />
-        <entry level="section" number="1.1" title="SREの概要" page="3" />
-        <entry level="subsection" number="1.1.1" title="サイトとは" page="4" />
+        <entry level="1" number="1" title="SREとは" page="2" />
+        <entry level="2" number="1.1" title="SREの概要" page="3" />
+        <entry level="3" number="1.1.1" title="サイトとは" page="4" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -847,7 +847,7 @@ class TestChapterTitlePageTypeAttribute:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="2">
-        <entry level="chapter" number="1" title="Test" page="3" />
+        <entry level="1" number="1" title="Test" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>Cover</paragraph></content>
@@ -881,7 +881,7 @@ class TestChapterTitlePageEdgeCases:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Empty Chapter" page="2" />
+        <entry level="1" number="1" title="Empty Chapter" page="2" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -906,9 +906,9 @@ class TestChapterTitlePageEdgeCases:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter One" page="2" />
-        <entry level="chapter" number="2" title="Chapter Two" page="3" />
-        <entry level="chapter" number="3" title="Chapter Three" page="4" />
+        <entry level="1" number="1" title="Chapter One" page="2" />
+        <entry level="1" number="2" title="Chapter Two" page="3" />
+        <entry level="1" number="3" title="Chapter Three" page="4" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -962,8 +962,8 @@ class TestFallbackToPreviousSection:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="SREとは" page="2" />
-        <entry level="section" number="1.1" title="SREの概要" page="3" />
+        <entry level="1" number="1" title="SREとは" page="2" />
+        <entry level="2" number="1.1" title="SREの概要" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -1024,8 +1024,8 @@ class TestFallbackToPreviousSection:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter One" page="2" />
-        <entry level="section" number="1.1" title="Section One" page="3" />
+        <entry level="1" number="1" title="Chapter One" page="2" />
+        <entry level="2" number="1.1" title="Section One" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -1088,8 +1088,8 @@ class TestFallbackToPreviousSection:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter One" page="2" />
-        <entry level="section" number="1.1" title="Section One" page="4" />
+        <entry level="1" number="1" title="Chapter One" page="2" />
+        <entry level="2" number="1.1" title="Section One" page="4" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -1142,8 +1142,8 @@ class TestFallbackToPreviousSection:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter One" page="2" />
-        <entry level="section" number="1.1" title="Section One" page="3" />
+        <entry level="1" number="1" title="Chapter One" page="2" />
+        <entry level="2" number="1.1" title="Section One" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -1193,8 +1193,8 @@ class TestFallbackToPreviousSection:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter One" page="2" />
-        <entry level="section" number="1.1" title="Section One" page="3" />
+        <entry level="1" number="1" title="Chapter One" page="2" />
+        <entry level="2" number="1.1" title="Section One" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -1247,9 +1247,9 @@ class TestFallbackToPreviousSection:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter One" page="2" />
-        <entry level="section" number="1.1" title="Section One" page="3" />
-        <entry level="section" number="1.2" title="Section Two" page="5" />
+        <entry level="1" number="1" title="Chapter One" page="2" />
+        <entry level="2" number="1.1" title="Section One" page="3" />
+        <entry level="2" number="1.2" title="Section Two" page="5" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -1310,8 +1310,8 @@ class TestFallbackToPreviousSection:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter One" page="2" />
-        <entry level="section" number="1.1" title="Section One" page="3" />
+        <entry level="1" number="1" title="Chapter One" page="2" />
+        <entry level="2" number="1.1" title="Section One" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -1470,7 +1470,7 @@ class TestGroupPagesPreservation:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="2">
-        <entry level="chapter" number="1" title="Chapter One" page="3" />
+        <entry level="1" number="1" title="Chapter One" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>Cover</paragraph></content>
@@ -1502,8 +1502,8 @@ class TestGroupPagesPreservation:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter One" page="2" />
-        <entry level="section" number="1.1" title="Section 1.1" page="3" />
+        <entry level="1" number="1" title="Chapter One" page="2" />
+        <entry level="2" number="1.1" title="Section 1.1" page="3" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC</paragraph></content>
@@ -1535,7 +1535,7 @@ class TestGroupPagesPreservation:
 <book>
     <metadata><title>Test</title></metadata>
     <toc begin="1" end="1">
-        <entry level="chapter" number="1" title="Chapter" page="2" />
+        <entry level="1" number="1" title="Chapter" page="2" />
     </toc>
     <page number="1" sourceFile="page_0001.png">
         <content><paragraph>TOC content here</paragraph></content>
@@ -1581,8 +1581,8 @@ class TestGroupPagesPreservation:
 <book>
     <metadata><title>181 Page Book</title></metadata>
     <toc begin="1" end="5">
-        <entry level="chapter" number="1" title="Chapter One" page="6" />
-        <entry level="chapter" number="2" title="Chapter Two" page="100" />
+        <entry level="1" number="1" title="Chapter One" page="6" />
+        <entry level="1" number="2" title="Chapter Two" page="100" />
     </toc>
     {''.join(pages_xml)}
 </book>"""

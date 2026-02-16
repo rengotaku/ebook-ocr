@@ -19,7 +19,7 @@ class SectionNumber:
 
     raw: str
     parts: tuple[int, ...]
-    level: str  # "chapter", "section", "subsection"
+    level: int  # 1=chapter, 2=section, 3=subsection
 
     @property
     def chapter_num(self) -> int:
@@ -46,7 +46,7 @@ class SectionNumber:
 class TOCEntry:
     """TOC entry from XML."""
 
-    level: str  # "chapter", "section", "subsection"
+    level: int  # 1=chapter, 2=section, 3=subsection
     number: str  # "1", "1.1", "1.1.1"
     title: str
 
@@ -69,13 +69,13 @@ def parse_section_number(section_str: str | None) -> SectionNumber | None:
 
     parts = tuple(int(x) for x in section_str.split('.'))
 
-    # Determine level
+    # Determine level (1=chapter, 2=section, 3=subsection)
     if len(parts) == 1:
-        level = "chapter"
+        level = 1
     elif len(parts) == 2:
-        level = "section"
+        level = 2
     else:
-        level = "subsection"
+        level = 3  # 3+ levels are all subsection
 
     return SectionNumber(raw=section_str, parts=parts, level=level)
 
@@ -231,6 +231,30 @@ def is_chapter_title_page(page: ET.Element) -> bool:
     return False
 
 
+def _normalize_level(level: str) -> int:
+    """Normalize level attribute from numeric or string format.
+
+    Args:
+        level: Level attribute value ("1", "2", "3" or "chapter", "section", etc.)
+
+    Returns:
+        Normalized level as int (1=chapter, 2=section, 3=subsection)
+    """
+    # Numeric string to int
+    if level.isdigit():
+        level_int = int(level)
+        return min(level_int, 3)  # Cap at 3 for subsection
+
+    # String to int mapping
+    string_map = {
+        "chapter": 1,
+        "section": 2,
+        "subsection": 3,
+        "other": 1,  # "other" maps to chapter level
+    }
+    return string_map.get(level, 1)
+
+
 def parse_toc(toc_element: ET.Element) -> list[TOCEntry]:
     """Parse TOC XML element into list of TOCEntry.
 
@@ -242,7 +266,8 @@ def parse_toc(toc_element: ET.Element) -> list[TOCEntry]:
     """
     entries = []
     for entry in toc_element.findall('entry'):
-        level = entry.get('level', '')
+        level_raw = entry.get('level', '')
+        level = _normalize_level(level_raw)
         number = entry.get('number', '')
         title = entry.get('title', '')
         entries.append(TOCEntry(level=level, number=number, title=title))
@@ -409,8 +434,8 @@ def _find_first_chapter(toc_lookup: dict[str, TOCEntry]) -> str | None:
     Returns:
         First chapter number or None if no chapters exist
     """
-    # Find all chapter entries (single digit section numbers)
-    chapter_numbers = [num for num, entry in toc_lookup.items() if entry.level == 'chapter']
+    # Find all chapter entries (level=1)
+    chapter_numbers = [num for num, entry in toc_lookup.items() if entry.level == 1]
 
     if not chapter_numbers:
         return None
@@ -500,7 +525,7 @@ def _build_hierarchical_structure(
 
     # Handle chapters from TOC that don't have pages yet
     for entry in toc_lookup.values():
-        if entry.level == 'chapter':
+        if entry.level == 1:  # chapter level
             chapter_num = entry.number
             if chapter_num not in chapters:
                 # Create empty chapter

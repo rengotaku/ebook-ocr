@@ -99,6 +99,14 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Level 5 keywords (pipe-separated)"
     )
 
+    # Figure marker options
+    parser.add_argument(
+        "--figure-markers",
+        metavar="KEYWORDS",
+        default="図|写真|表",
+        help="Figure marker keywords (pipe-separated, default: '図|写真|表')"
+    )
+
     return parser.parse_args(args)
 
 

@@ -92,33 +92,33 @@ SREはGoogleが提唱したプラクティスです。
         entries = toc.findall("entry")
         assert len(entries) == 5
 
-        # Verify entry attributes
+        # Verify entry attributes (level is now numeric: "1"=chapter, "2"=section, etc.)
         entry1 = entries[0]
-        assert entry1.get("level") == "chapter"
+        assert entry1.get("level") == "1"  # chapter
         assert entry1.get("number") == "1"
         assert entry1.get("title") == "SREとは"
         assert entry1.get("page") == "15"
 
         entry2 = entries[1]
-        assert entry2.get("level") == "section"
+        assert entry2.get("level") == "2"  # section
         assert entry2.get("number") == "1.1"
         assert entry2.get("title") == "SREの定義"
         assert entry2.get("page") == "16"
 
         entry3 = entries[2]
-        assert entry3.get("level") == "subsection"
+        assert entry3.get("level") == "3"  # subsection
         assert entry3.get("number") == "1.1.1"
         assert entry3.get("title") == "歴史"
         assert entry3.get("page") == "17"
 
         entry4 = entries[3]
-        assert entry4.get("level") == "chapter"
+        assert entry4.get("level") == "1"  # chapter
         assert entry4.get("number") == "2"
         assert entry4.get("title") == "信頼性の定義"
         assert entry4.get("page") == "25"
 
         entry5 = entries[4]
-        assert entry5.get("level") == "other"
+        assert entry5.get("level") == "1"  # other → level 1
         assert entry5.get("number") is None
         assert entry5.get("title") == "おわりに"
         assert entry5.get("page") == "100"
@@ -603,8 +603,8 @@ class TestE2ENormalFileConversion:
         entries = toc.findall("entry")
         assert len(entries) > 0, "TOCエントリがありません"
 
-        # チャプターエントリを抽出
-        chapter_entries = [e for e in entries if e.get("level") == "chapter"]
+        # チャプターエントリを抽出 (level="1" がchapter)
+        chapter_entries = [e for e in entries if e.get("level") == "1"]
         assert len(chapter_entries) >= 9, f"チャプター数が不足: {len(chapter_entries)}"
 
         # 主要チャプターの存在を確認
@@ -675,12 +675,12 @@ class TestE2ENormalFileConversion:
         assert toc is not None
 
         entries = toc.findall("entry")
-        chapter_entries = [e for e in entries if e.get("level") == "chapter"]
+        chapter_entries = [e for e in entries if e.get("level") == "1"]  # level="1" is chapter
 
         # 第1章が存在し、正しい属性を持つ
         chapter1 = [e for e in chapter_entries if e.get("number") == "1"]
         assert len(chapter1) > 0, "第1章が見つかりません"
-        assert chapter1[0].get("level") == "chapter"
+        assert chapter1[0].get("level") == "1"  # chapter
 
     def test_section_format_recognized(
         self, normal_file_path: Path, tmp_path: Path
@@ -699,7 +699,7 @@ class TestE2ENormalFileConversion:
         assert toc is not None
 
         entries = toc.findall("entry")
-        section_entries = [e for e in entries if e.get("level") == "section"]
+        section_entries = [e for e in entries if e.get("level") == "2"]  # level="2" is section
 
         # セクションエントリが存在する
         assert len(section_entries) > 0, "セクションエントリがありません"
