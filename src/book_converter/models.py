@@ -32,20 +32,12 @@ class BookMetadata:
 
 
 @dataclass(frozen=True)
-class PageAnnouncement:
-    """ページ読み上げ"""
-
-    text: str  # "42ページ"
-    format: str = "simple"  # "simple", "chapter"
-
-
-@dataclass(frozen=True)
 class Heading:
-    """見出し"""
+    """見出し（TOC外の見出し用）"""
 
     level: int  # 1, 2, 3（0=エラー）
     text: str
-    read_aloud: bool = True
+    read_aloud: bool = True  # skip区間ではFalse
 
 
 @dataclass(frozen=True)
@@ -53,7 +45,7 @@ class Paragraph:
     """段落"""
 
     text: str
-    read_aloud: bool = True
+    read_aloud: bool = True  # skip区間ではFalse
 
 
 @dataclass(frozen=True)
@@ -62,30 +54,7 @@ class List:
 
     items: tuple[str, ...]
     list_type: str = "unordered"  # "unordered" or "ordered"
-    read_aloud: bool = True
-
-
-@dataclass(frozen=True)
-class StructureContainer:
-    """構造コンテナ（chapter, section, subsection）"""
-
-    container_type: str  # "chapter", "section", "subsection"
-    level: int  # 1-5
-    number: str  # 章番号（空許容）
-    title: str  # タイトル（ナビゲーション用）
-    children: tuple  # StructureContainer or ContentElement のタプル
-
-
-# Union type for content elements
-ContentElement = Union[Heading, Paragraph, List]
-
-
-@dataclass(frozen=True)
-class Content:
-    """本文コンテンツ"""
-
-    elements: tuple[ContentElement, ...]
-    read_aloud: bool = False
+    read_aloud: bool = True  # skip区間ではFalse
 
 
 @dataclass(frozen=True)
@@ -93,24 +62,8 @@ class Figure:
     """図表"""
 
     path: str  # 必須: 画像ファイルパス
+    caption: str = ""  # 図の説明
     marker: str = ""  # オプション: 元のマーカーテキスト
-    read_aloud: bool = False  # 常に False
-    # 後方互換性のための属性（オプション）
-    file: str = ""
-    caption: str = ""
-    description: str = ""
-    continued: bool = False
-
-
-@dataclass(frozen=True)
-class PageMetadata:
-    """ページメタデータ"""
-
-    text: str  # 元の表記 "はじめに 1 / 3"
-    meta_type: str = "chapter-page"  # "chapter-page", "section-page", "unknown"
-    section_name: str = ""  # "はじめに"
-    current: int = 0  # 1
-    total: int = 0  # 3
 
 
 @dataclass(frozen=True)
@@ -130,21 +83,28 @@ class TableOfContents:
     entries: tuple[TocEntry, ...]
     begin_page: str = ""  # TOCが開始するページ番号
     end_page: str = ""  # TOCが終了するページ番号
-    read_aloud: bool = False
+
+
+# Section の子要素
+SectionElement = Union[Heading, Paragraph, List, Figure]
 
 
 @dataclass(frozen=True)
-class Page:
-    """1ページ"""
+class Section:
+    """セクション（chapter直下）"""
 
-    number: str  # 空文字列許容（エラー時）
-    source_file: str
-    content: Content
-    announcement: PageAnnouncement | None = None
-    figures: tuple[Figure, ...] = ()
-    metadata: PageMetadata | None = None
-    continued: bool = False
-    page_type: str = "normal"  # "normal", "cover", "colophon", "toc"
+    number: str  # セクション番号（例: "1.1"）
+    title: str  # タイトル（ナビゲーション用）
+    elements: tuple[SectionElement, ...] = ()
+
+
+@dataclass(frozen=True)
+class Chapter:
+    """章"""
+
+    number: str  # 章番号（例: "1"）
+    title: str  # タイトル（ナビゲーション用）
+    sections: tuple[Section, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -152,10 +112,10 @@ class Book:
     """書籍全体"""
 
     metadata: BookMetadata
-    pages: tuple[Page, ...] = ()  # イミュータブルなタプル（既存実装との互換性維持）
-    toc: TableOfContents | None = None  # 目次（book直下、metadata の次）
-    chapters: tuple[StructureContainer, ...] | None = None  # 章構造（新設計）
-    front_matter: tuple[ContentElement, ...] | None = None  # 前付け（TOC前のコンテンツ）
+    toc: TableOfContents | None = None
+    chapters: tuple[Chapter, ...] = ()
+    # Legacy: pages 属性（段階的に削除予定）
+    pages: tuple["Page", ...] = ()
 
 
 @dataclass(frozen=True)
@@ -296,3 +256,63 @@ class HeaderLevelConfig:
             level4=parse(level4),
             level5=parse(level5),
         )
+
+
+# ============================================================
+# Legacy models (parser.py との互換性用、段階的に削除予定)
+# ============================================================
+
+@dataclass(frozen=True)
+class PageAnnouncement:
+    """ページ読み上げ (Legacy)"""
+
+    text: str
+    format: str = "simple"
+
+
+@dataclass(frozen=True)
+class Content:
+    """本文コンテンツ (Legacy)"""
+
+    elements: tuple[Union[Heading, Paragraph, List], ...]
+    read_aloud: bool = False
+
+
+@dataclass(frozen=True)
+class PageMetadata:
+    """ページメタデータ (Legacy)"""
+
+    text: str
+    meta_type: str = "chapter-page"
+    section_name: str = ""
+    current: int = 0
+    total: int = 0
+
+
+@dataclass(frozen=True)
+class Page:
+    """1ページ (Legacy)"""
+
+    number: str
+    source_file: str
+    content: Content
+    announcement: PageAnnouncement | None = None
+    figures: tuple[Figure, ...] = ()
+    metadata: PageMetadata | None = None
+    continued: bool = False
+    page_type: str = "normal"
+
+
+@dataclass(frozen=True)
+class StructureContainer:
+    """構造コンテナ (Legacy)"""
+
+    container_type: str
+    level: int
+    number: str
+    title: str
+    children: tuple  # StructureContainer or ContentElement
+
+
+# Legacy union type
+ContentElement = Union[Heading, Paragraph, List]

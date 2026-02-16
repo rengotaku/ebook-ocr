@@ -640,51 +640,19 @@ class TestParseFigureComment:
 
 
 class TestParseFigureDescription:
-    """T051: 図説明文解析テスト (図コメント後のテキストをdescriptionに)"""
+    """T051: 図解析テスト (新形式: path, caption, marker)"""
 
-    def test_parse_figure_with_description(self) -> None:
-        """図コメントと説明文を解析"""
+    def test_parse_figure_basic(self) -> None:
+        """図コメントを解析 (path)"""
         from src.book_converter.parser import parse_figure
 
         lines = [
             "<!-- FIGURE: images/fig1.png -->",
-            "この図は構成図を示しています。",
         ]
         result = parse_figure(lines)
 
         assert result is not None
-        assert result.file == "images/fig1.png"
-        assert result.description == "この図は構成図を示しています。"
-
-    def test_parse_figure_with_multiline_description(self) -> None:
-        """複数行の説明文を解析"""
-        from src.book_converter.parser import parse_figure
-
-        lines = [
-            "<!-- FIGURE: diagram.png -->",
-            "図1: システム構成図",
-            "この図は全体のアーキテクチャを表しています。",
-        ]
-        result = parse_figure(lines)
-
-        assert result is not None
-        assert result.file == "diagram.png"
-        # 複数行は結合されるか、最初の行のみか
-        assert "図1: システム構成図" in result.description or \
-               "アーキテクチャ" in result.description
-
-    def test_parse_figure_without_description(self) -> None:
-        """説明文なしの図を解析"""
-        from src.book_converter.parser import parse_figure
-
-        lines = [
-            "<!-- FIGURE: image.png -->",
-        ]
-        result = parse_figure(lines)
-
-        assert result is not None
-        assert result.file == "image.png"
-        assert result.description == ""
+        assert result.path == "images/fig1.png"
 
     def test_parse_figure_with_caption(self) -> None:
         """キャプション付きの図を解析"""
@@ -698,9 +666,22 @@ class TestParseFigureDescription:
         result = parse_figure(lines)
 
         assert result is not None
-        assert result.file == "chart.png"
+        assert result.path == "chart.png"
         # キャプションは ** で囲まれた部分
         assert "売上推移" in result.caption or "図1" in result.caption
+
+    def test_parse_figure_without_caption(self) -> None:
+        """キャプションなしの図を解析"""
+        from src.book_converter.parser import parse_figure
+
+        lines = [
+            "<!-- FIGURE: image.png -->",
+        ]
+        result = parse_figure(lines)
+
+        assert result is not None
+        assert result.path == "image.png"
+        assert result.caption == ""
 
     def test_parse_figure_returns_figure_type(self) -> None:
         """戻り値はFigure型"""
@@ -711,16 +692,6 @@ class TestParseFigureDescription:
         result = parse_figure(lines)
 
         assert isinstance(result, Figure)
-
-    def test_parse_figure_default_read_aloud(self) -> None:
-        """デフォルトのreadAloudはFalse（Phase 5: bool型に変更）"""
-        from src.book_converter.parser import parse_figure
-
-        lines = ["<!-- FIGURE: test.png -->"]
-        result = parse_figure(lines)
-
-        assert result is not None
-        assert result.read_aloud is False  # Phase 5: str → bool
 
     def test_parse_figure_empty_lines_returns_none(self) -> None:
         """空のラインリストはNoneを返す"""
@@ -742,19 +713,17 @@ class TestParseFigureDescription:
 
         assert result is None
 
-    def test_parse_figure_preserves_unicode_description(self) -> None:
-        """Unicode説明文を保持"""
+    def test_parse_figure_preserves_unicode_path(self) -> None:
+        """Unicodeパスを保持"""
         from src.book_converter.parser import parse_figure
 
         lines = [
             "<!-- FIGURE: 日本語パス.png -->",
-            "日本語の説明文「テスト」です。",
         ]
         result = parse_figure(lines)
 
         assert result is not None
-        assert "日本語の説明文" in result.description
-        assert "「テスト」" in result.description
+        assert result.path == "日本語パス.png"
 
 
 class TestParsePageMetadata:
@@ -1633,15 +1602,6 @@ class TestTocModels:
         assert toc.entries[0].text == "第1章"
         assert toc.entries[1].text == "1.1 節"
 
-    def test_table_of_contents_read_aloud_default_false(self) -> None:
-        """TableOfContentsのread_aloudデフォルトはFalse"""
-        from src.book_converter.models import TocEntry, TableOfContents
-
-        entry = TocEntry(text="テスト", level="chapter")
-        toc = TableOfContents(entries=(entry,))
-
-        assert toc.read_aloud is False
-
     def test_marker_type_exists(self) -> None:
         """MarkerType列挙が存在する"""
         from src.book_converter.models import MarkerType
@@ -1871,20 +1831,20 @@ class TestMarkerStateStack:
     """T052: マーカー状態スタックテスト (ネスト処理)
 
     US4: マーカーがネストした場合の動作
-    - 空スタック → readAloud=false
+    - 空スタック → readAloud=true (デフォルトで読む)
     - "content"をpush → readAloud=true
     - "skip"をpush → readAloud=false
     - pop → 前の状態に戻る
     """
 
     def test_get_read_aloud_from_empty_stack(self) -> None:
-        """空スタックからreadAloudを取得 → false"""
+        """空スタックからreadAloudを取得 → true (デフォルトで読む)"""
         from src.book_converter.parser import get_read_aloud_from_stack
 
         stack = []
         result = get_read_aloud_from_stack(stack)
 
-        assert result is False
+        assert result is True
 
     def test_get_read_aloud_with_content_on_stack(self) -> None:
         """スタックにcontentがある → true"""
@@ -1933,14 +1893,14 @@ class TestMarkerStateStack:
         assert result is True
 
     def test_get_read_aloud_after_pop_content(self) -> None:
-        """contentをpopした後 → false (デフォルト)"""
+        """contentをpopした後 → true (空スタック=デフォルトで読む)"""
         from src.book_converter.parser import get_read_aloud_from_stack
 
         stack = ["content"]
         stack.pop()  # contentをpop
         result = get_read_aloud_from_stack(stack)
 
-        assert result is False
+        assert result is True
 
     def test_get_read_aloud_deep_nesting(self) -> None:
         """深いネスト: content → skip → content → skip"""
@@ -1967,8 +1927,8 @@ class TestMarkerStateStack:
 
         stack = []
 
-        # 初期状態: 空 → false
-        assert get_read_aloud_from_stack(stack) is False
+        # 初期状態: 空 → true (デフォルトで読む)
+        assert get_read_aloud_from_stack(stack) is True
 
         # content追加 → true
         stack.append("content")
@@ -1982,9 +1942,9 @@ class TestMarkerStateStack:
         stack.pop()
         assert get_read_aloud_from_stack(stack) is True
 
-        # content削除 → false
+        # content削除 → true (空スタック=デフォルトで読む)
         stack.pop()
-        assert get_read_aloud_from_stack(stack) is False
+        assert get_read_aloud_from_stack(stack) is True
 
 
 class TestMarkerTypeContentSkip:

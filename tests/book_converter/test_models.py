@@ -898,15 +898,6 @@ class TestFigurePathMarker:
         # marker を指定しない場合は空文字列
         assert fig.marker == ""
 
-    def test_figure_read_aloud_default_false(self) -> None:
-        """Figure の read_aloud はデフォルトで "false" """
-        from src.book_converter.models import Figure
-
-        fig = Figure(path="figures/fig001.png")
-
-        # 新形式では read_aloud="false" がデフォルト
-        assert fig.read_aloud == "false" or fig.read_aloud is False
-
     def test_figure_is_immutable(self) -> None:
         """Figure は frozen dataclass（イミュータブル）"""
         from src.book_converter.models import Figure

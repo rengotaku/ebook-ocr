@@ -62,6 +62,16 @@ build-book: setup ## Build book.txt and book.md from ROVER outputs (requires HAS
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make build-book HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/consolidate.py "$(HASHDIR)"
 
+converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml [THRESHOLD=0.5] [VERBOSE=1])
+	@test -n "$(INPUT_MD)" || { echo "Error: INPUT_MD required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
+	@test -n "$(OUTPUT_XML)" || { echo "Error: OUTPUT_XML required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
+	PYTHONPATH=$(CURDIR) USE_LLM_TOC_CLASSIFIER=true $(PYTHON) -m src.book_converter.cli "$(INPUT_MD)" "$(OUTPUT_XML)" --group-pages \
+		$(if $(THRESHOLD),--running-head-threshold $(THRESHOLD)) \
+		$(if $(VERBOSE),--verbose)
+
+convert-sample: setup ## Convert sample book.md to XML
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli tests/book_converter/fixtures/sample_book.md output/sample_book.xml --group-pages
+
 # OBSOLETE TARGETS (kept for reference, not maintained)
 # ocr: setup ## [OBSOLETE] Run DeepSeek-OCR - file removed, use 'make run' instead
 # detect: setup ## [OBSOLETE] Run YOLO-based layout detection - replaced by yomitoku-detect
@@ -77,16 +87,6 @@ test-book-converter: setup ## Run book_converter tests
 
 test-cov: setup ## Run tests with coverage
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
-
-converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml [THRESHOLD=0.5] [VERBOSE=1])
-	@test -n "$(INPUT_MD)" || { echo "Error: INPUT_MD required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
-	@test -n "$(OUTPUT_XML)" || { echo "Error: OUTPUT_XML required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
-	PYTHONPATH=$(CURDIR) USE_LLM_TOC_CLASSIFIER=true $(PYTHON) -m src.book_converter.cli "$(INPUT_MD)" "$(OUTPUT_XML)" --group-pages \
-		$(if $(THRESHOLD),--running-head-threshold $(THRESHOLD)) \
-		$(if $(VERBOSE),--verbose)
-
-convert-sample: setup ## Convert sample book.md to XML
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli tests/book_converter/fixtures/sample_book.md output/sample_book.xml --group-pages
 
 clean: ## Remove output files (keep venv)
 	rm -rf $(OUTPUT)

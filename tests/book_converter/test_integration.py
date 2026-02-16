@@ -1025,10 +1025,10 @@ A
         assert content is not None
         assert content.get("readAloud") == "false"
 
-    def test_no_marker_defaults_to_read_aloud_false(
+    def test_no_marker_defaults_to_read_aloud_true(
         self, tmp_path: Path
     ) -> None:
-        """マーカーなしの要素はデフォルトでreadAloud="false"になる"""
+        """マーカーなしの要素はデフォルトでreadAloud=true（属性省略）"""
         input_file = tmp_path / "book_no_marker.md"
         input_file.write_text(
             """--- Page 1 (page_0001.png) ---
@@ -1052,13 +1052,15 @@ A
         xml_string = build_xml(book)
         root = fromstring(xml_string)
 
-        # マーカーなしの要素がreadAloud="false"になっている
+        # マーカーなしの要素はデフォルトで読む（readAloud属性省略またはtrue）
         page = root.find(".//page[@number='1']")
         assert page is not None
 
         content = page.find("content")
         assert content is not None
-        assert content.get("readAloud") == "false"
+        # デフォルトは true（属性省略または "true"）
+        read_aloud = content.get("readAloud")
+        assert read_aloud is None or read_aloud == "true"
 
     def test_mixed_content_and_skip_markers(
         self, tmp_path: Path
@@ -1359,7 +1361,7 @@ A
     def test_backward_compatible_without_content_skip_markers(
         self, tmp_path: Path
     ) -> None:
-        """content/skipマーカーなしでも既存動作を維持（後方互換性）"""
+        """content/skipマーカーなしでも動作する"""
         input_file = tmp_path / "book_backward.md"
         input_file.write_text(
             """--- Page 1 (page_0001.png) ---
@@ -1394,14 +1396,15 @@ A
         pages_elem = root.findall(".//page")
         assert len(pages_elem) == 2
 
-        # マーカーなしなのでデフォルトのreadAloud="false"
+        # マーカーなしはデフォルトでreadAloud=true（属性省略または"true"）
         page1 = root.find(".//page[@number='1']")
         assert page1 is not None
 
         content = page1.find("content")
         assert content is not None
-        # デフォルトはreadAloud="false"
-        assert content.get("readAloud") == "false"
+        # デフォルトはreadAloud=true（属性省略または"true"）
+        read_aloud = content.get("readAloud")
+        assert read_aloud is None or read_aloud == "true"
 
 
 # =============================================================================

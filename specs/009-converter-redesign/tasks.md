@@ -19,6 +19,7 @@
 | US2 | chapter/heading タグの役割明確化 | P1 | FR-004,008,009 | 構造コンテナとheadingの分離 |
 | US3 | paragraphの論理的分離 | P2 | FR-005,006 | 空行で段落分離、改行除去 |
 | US4 | list/figure要素の出力 | P2 | FR-010,011,012 | リストと図の適切な出力 |
+| US5 | 出力XMLの簡素化 | P1 | - | page/content削除、重複heading除去 |
 
 **注意**: US4（MD生成時の段落保持）はOCR工程の責任であり、converter再設計スコープ外。
 
@@ -222,6 +223,53 @@
 
 ---
 
+## Phase 7: 出力フォーマット簡素化 (Priority: P1)
+
+**Goal**: XML出力から冗長なタグを削除し、より簡潔な構造に変更
+
+**設計書**: specs/009-converter-redesign/tasks/ph7-design.md
+
+**User Story**: US5 - 出力XMLの簡素化
+- page, pageAnnouncement, content タグを削除
+- ページ境界は `<!-- page N -->` コメントで表現
+- chapter/section title と重複する heading は出力しない
+- 構造と無関係な heading はそのまま出力
+
+### Input
+
+- [X] T084 設計書確認: specs/009-converter-redesign/tasks/ph7-design.md
+- [X] T085 前フェーズ出力確認: specs/009-converter-redesign/tasks/ph6-output.md
+
+### Test Implementation (RED)
+
+- [X] T086 [P] [US5] heading正規化テスト実装: tests/book_converter/test_transformer.py に test_normalize_heading_* を追加
+- [X] T087 [P] [US5] 重複heading判定テスト実装: tests/book_converter/test_transformer.py に test_is_duplicate_heading_* を追加
+- [X] T088 [P] [US5] 非構造heading保持テスト実装: tests/book_converter/test_transformer.py に test_non_structural_heading_preserved を追加
+- [X] T089 [P] [US5] page/content タグ除去テスト実装: tests/book_converter/test_page_grouper.py に TestPhase7OutputSimplification を追加
+- [X] T090 [P] [US5] ページコメント形式テスト実装: tests/book_converter/test_page_grouper.py に test_page_comment_format を追加
+- [X] T091 `make test` FAIL (RED) 確認
+- [X] T092 RED出力生成: specs/009-converter-redesign/red-tests/ph7-test.md
+
+### Implementation (GREEN)
+
+- [X] T093 REDテスト確認: specs/009-converter-redesign/red-tests/ph7-test.md
+- [X] T094 [P] [US5] normalize_heading_for_comparison 関数追加: src/book_converter/transformer.py
+- [X] T095 [P] [US5] is_duplicate_heading 関数追加: src/book_converter/transformer.py
+- [X] T096 [P] [US5] _flatten_pages_in_element で重複heading除去: src/book_converter/page_grouper.py
+- [X] T097 [P] [US5] page/content/pageMetadata タグ出力を削除: src/book_converter/page_grouper.py
+- [X] T098 [P] [US5] ページコメント生成を group_pages_by_toc に追加: src/book_converter/page_grouper.py
+- [X] T099 `make test` PASS (GREEN) 確認
+
+### Verification
+
+- [X] T100 `make test` で全テストパス確認（リグレッションなし）
+- [ ] T101 xml-schema.md をバージョン 2.1.0 に更新: specs/009-converter-redesign/contracts/xml-schema.md
+- [X] T102 フェーズ出力生成: specs/009-converter-redesign/tasks/ph7-output.md
+
+**Checkpoint**: 新しい出力フォーマットが正しく生成されること
+
+---
+
 ## 依存関係と実行順序
 
 ### フェーズ依存関係
@@ -230,6 +278,7 @@
 - **User Stories (Phase 2-5)**: TDDフロー (tdd-generator → phase-executor)
   - User Story は優先度順に逐次処理 (P1 → P2)
 - **Polish (Phase 6)**: 全 User Story に依存 - phase-executor のみ
+- **出力簡素化 (Phase 7)**: Phase 6 に依存 - TDDフロー
 
 ### 各 User Story フェーズ内 (TDDフロー)
 
@@ -268,12 +317,15 @@ specs/009-converter-redesign/
 │   ├── ph3-output.md           # Phase 3 出力（US2 GREEN結果）
 │   ├── ph4-output.md           # Phase 4 出力（US3 GREEN結果）
 │   ├── ph5-output.md           # Phase 5 出力（US4 GREEN結果）
-│   └── ph6-output.md           # Phase 6 出力（Polish結果）
+│   ├── ph6-output.md           # Phase 6 出力（Polish結果）
+│   ├── ph7-design.md           # Phase 7 設計書
+│   └── ph7-output.md           # Phase 7 出力（US5 GREEN結果）
 └── red-tests/
     ├── ph2-test.md             # Phase 2 REDテスト結果（FAIL確認）
     ├── ph3-test.md             # Phase 3 REDテスト結果
     ├── ph4-test.md             # Phase 4 REDテスト結果
-    └── ph5-test.md             # Phase 5 REDテスト結果
+    ├── ph5-test.md             # Phase 5 REDテスト結果
+    └── ph7-test.md             # Phase 7 REDテスト結果
 ```
 
 ### フェーズ出力内容

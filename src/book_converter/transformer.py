@@ -9,18 +9,308 @@ import re
 from xml.etree.ElementTree import Element, SubElement
 
 from src.book_converter.models import (
-    Page,
-    PageAnnouncement,
-    Content,
+    Book,
+    BookMetadata,
+    Chapter,
+    Section,
     Paragraph,
     Heading,
     List,
     Figure,
-    PageMetadata,
     TocEntry,
     TableOfContents,
-    StructureContainer,
 )
+
+
+# ============================================================
+# Phase 7: Heading Normalization and Duplicate Detection
+# ============================================================
+
+
+def normalize_heading_for_comparison(heading_text: str) -> str:
+    """Normalize heading text for comparison with container titles.
+
+    Removes "Chapter N" or "Section N.N" prefix and normalizes whitespace.
+
+    Args:
+        heading_text: Original heading text (e.g., "Chapter 1 「企画」で失敗")
+
+    Returns:
+        Normalized text (e.g., "1 「企画」で失敗")
+
+    Examples:
+        >>> normalize_heading_for_comparison("Chapter 1 「企画」で失敗")
+        '1 「企画」で失敗'
+        >>> normalize_heading_for_comparison("Section 1.1 なんでもできる")
+        '1.1 なんでもできる'
+        >>> normalize_heading_for_comparison("すべての要求に応えてしまう")
+        'すべての要求に応えてしまう'
+    """
+    text = heading_text
+
+    # Remove "Chapter N" prefix (case-insensitive)
+    text = re.sub(r'^[Cc][Hh][Aa][Pp][Tt][Ee][Rr]\s+(\d+)\s*', r'\1 ', text)
+
+    # Remove "Section N.N" prefix (case-insensitive)
+    text = re.sub(r'^[Ss][Ee][Cc][Tt][Ii][Oo][Nn]\s+(\d+\.\d+)\s*', r'\1 ', text)
+
+    # Normalize whitespace (collapse multiple spaces to single space)
+    text = ' '.join(text.split())
+
+    return text.strip()
+
+
+def is_duplicate_heading(
+    heading_text: str,
+    container_number: str | None,
+    container_title: str,
+) -> bool:
+    """Check if heading is a duplicate of the container's title.
+
+    A heading is considered duplicate if its normalized form matches
+    "{number} {title}" or just "{title}" (when number is None).
+
+    Args:
+        heading_text: The heading text to check
+        container_number: The container's number (e.g., "1" or "1.1")
+        container_title: The container's title
+
+    Returns:
+        True if the heading is a duplicate, False otherwise
+
+    Examples:
+        >>> is_duplicate_heading("Chapter 1 「企画」で失敗", "1", "「企画」で失敗")
+        True
+        >>> is_duplicate_heading("すべての要求に応えてしまう", "1.1", "なんでもできる")
+        False
+    """
+    normalized = normalize_heading_for_comparison(heading_text)
+
+    if container_number:
+        expected = f"{container_number} {container_title}"
+    else:
+        expected = container_title
+
+    return normalized == expected
+
+
+# ============================================================
+# New Design: Book → Chapter → Section → Elements
+# ============================================================
+
+
+def transform_book(book: Book) -> Element:
+    """Transform Book to XML element.
+
+    Args:
+        book: The Book object to transform.
+
+    Returns:
+        An XML Element representing the book.
+
+    Example:
+        >>> metadata = BookMetadata(title="Test Book")
+        >>> book = Book(metadata=metadata)
+        >>> elem = transform_book(book)
+        >>> elem.tag
+        'book'
+    """
+    elem = Element("book")
+
+    # Metadata
+    metadata_elem = transform_book_metadata(book.metadata)
+    elem.append(metadata_elem)
+
+    # TOC
+    if book.toc:
+        toc_elem = transform_table_of_contents(book.toc)
+        if toc_elem is not None:
+            elem.append(toc_elem)
+
+    # Chapters
+    for chapter in book.chapters:
+        chapter_elem = transform_chapter(chapter)
+        elem.append(chapter_elem)
+
+    return elem
+
+
+def transform_book_metadata(metadata: BookMetadata) -> Element:
+    """Transform BookMetadata to XML element.
+
+    Args:
+        metadata: The BookMetadata object to transform.
+
+    Returns:
+        An XML Element representing the metadata.
+    """
+    elem = Element("metadata")
+
+    title_elem = SubElement(elem, "title")
+    title_elem.text = metadata.title
+
+    if metadata.isbn:
+        isbn_elem = SubElement(elem, "isbn")
+        isbn_elem.text = metadata.isbn
+
+    return elem
+
+
+def transform_chapter(chapter: Chapter) -> Element:
+    """Transform Chapter to XML element.
+
+    <chapter number="1" title="Chapter Title">
+      <section .../>
+    </chapter>
+
+    Args:
+        chapter: The Chapter object to transform.
+
+    Returns:
+        An XML Element representing the chapter.
+    """
+    elem = Element("chapter")
+
+    if chapter.number:
+        elem.set("number", chapter.number)
+    elem.set("title", chapter.title)
+
+    for section in chapter.sections:
+        section_elem = transform_section(section)
+        elem.append(section_elem)
+
+    return elem
+
+
+def transform_section(section: Section) -> Element:
+    """Transform Section to XML element.
+
+    <section number="1.1" title="Section Title">
+      <paragraph>...</paragraph>
+      <heading level="3">...</heading>
+      <list>...</list>
+      <figure .../>
+    </section>
+
+    Args:
+        section: The Section object to transform.
+
+    Returns:
+        An XML Element representing the section.
+    """
+    elem = Element("section")
+
+    if section.number:
+        elem.set("number", section.number)
+    elem.set("title", section.title)
+
+    for child in section.elements:
+        if isinstance(child, Paragraph):
+            child_elem = transform_paragraph(child)
+            elem.append(child_elem)
+        elif isinstance(child, Heading):
+            child_elem = transform_heading(child)
+            elem.append(child_elem)
+        elif isinstance(child, List):
+            child_elem = transform_list(child)
+            elem.append(child_elem)
+        elif isinstance(child, Figure):
+            child_elem = transform_figure(child)
+            elem.append(child_elem)
+
+    return elem
+
+
+def transform_paragraph(para: Paragraph) -> Element:
+    """Transform Paragraph to XML element.
+
+    readAloud="false" only when read_aloud=False (skip区間).
+
+    Args:
+        para: The Paragraph object to transform.
+
+    Returns:
+        An XML Element representing the paragraph.
+    """
+    elem = Element("paragraph")
+
+    # Only output readAloud="false" when skipping
+    if not para.read_aloud:
+        elem.set("readAloud", "false")
+
+    apply_emphasis(para.text, elem)
+    return elem
+
+
+def transform_heading(heading: Heading) -> Element:
+    """Transform Heading to XML element.
+
+    readAloud="false" only when read_aloud=False (skip区間).
+
+    Args:
+        heading: The Heading object to transform.
+
+    Returns:
+        An XML Element representing the heading.
+    """
+    elem = Element("heading")
+    elem.set("level", str(heading.level))
+
+    # Only output readAloud="false" when skipping
+    if not heading.read_aloud:
+        elem.set("readAloud", "false")
+
+    apply_emphasis(heading.text, elem)
+    return elem
+
+
+def transform_list(lst: List) -> Element:
+    """Transform List to XML element.
+
+    readAloud="false" only when read_aloud=False (skip区間).
+
+    Args:
+        lst: The List object to transform.
+
+    Returns:
+        An XML Element representing the list.
+    """
+    elem = Element("list")
+
+    # Only output readAloud="false" when skipping
+    if not lst.read_aloud:
+        elem.set("readAloud", "false")
+
+    for item_text in lst.items:
+        item_elem = SubElement(elem, "item")
+        apply_emphasis(item_text, item_elem)
+
+    return elem
+
+
+def transform_figure(figure: Figure) -> Element:
+    """Transform Figure to XML element.
+
+    <figure path="figures/fig001.png" caption="図1: 説明"/>
+
+    Figure は常に読まないので readAloud 属性は出力しない。
+
+    Args:
+        figure: The Figure object to transform.
+
+    Returns:
+        An XML Element representing the figure.
+    """
+    elem = Element("figure")
+    elem.set("path", figure.path)
+
+    if figure.caption:
+        elem.set("caption", figure.caption)
+
+    if figure.marker:
+        elem.set("marker", figure.marker)
+
+    return elem
 
 
 def transform_toc_entry(entry: TocEntry) -> Element:
@@ -33,16 +323,6 @@ def transform_toc_entry(entry: TocEntry) -> Element:
 
     Returns:
         An XML Element representing the TOC entry.
-
-    Example:
-        >>> entry = TocEntry(text="SREとは", level=1, number="1", page="15")
-        >>> elem = transform_toc_entry(entry)
-        >>> elem.tag
-        'entry'
-        >>> elem.get("level")
-        '1'
-        >>> elem.get("title")
-        'SREとは'
     """
     elem = Element("entry")
     elem.set("level", str(entry.level))
@@ -59,29 +339,17 @@ def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
 
     <toc begin="13" end="15">
       <entry .../>
-      <entry .../>
     </toc>
+
+    TOC は常に読まないので readAloud 属性は出力しない。
 
     Args:
         toc: The TableOfContents object to transform.
 
     Returns:
-        An XML Element representing the table of contents, or None if toc is None.
-
-    Example:
-        >>> entries = (TocEntry(text="Chapter 1", level="chapter", number="1"),)
-        >>> toc = TableOfContents(entries=entries, begin_page="5", end_page="7")
-        >>> elem = transform_table_of_contents(toc)
-        >>> elem.tag
-        'toc'
-        >>> elem.get("begin")
-        '5'
+        An XML Element, or None if toc is None or empty.
     """
-    if toc is None:
-        return None
-
-    # Return None for empty TOC (no entries)
-    if not toc.entries:
+    if toc is None or not toc.entries:
         return None
 
     elem = Element("toc")
@@ -90,7 +358,6 @@ def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
     if toc.end_page:
         elem.set("end", toc.end_page)
 
-    # Add entries
     for entry in toc.entries:
         entry_elem = transform_toc_entry(entry)
         elem.append(entry_elem)
@@ -99,23 +366,21 @@ def transform_table_of_contents(toc: TableOfContents | None) -> Element | None:
 
 
 def apply_emphasis(text: str, parent: Element) -> None:
-    """Apply emphasis conversion to text and set on parent element.
+    """Apply emphasis conversion to text.
 
-    Converts **text** patterns to <emphasis>text</emphasis> elements.
+    Converts **text** to <em>text</em>.
 
     Args:
-        text: The text to process for emphasis patterns.
-        parent: The parent element to add text and emphasis children to.
+        text: The text to process.
+        parent: The parent element to add text and em children to.
 
     Example:
         >>> elem = Element("paragraph")
         >>> apply_emphasis("before **bold** after", elem)
         >>> elem.text
         'before '
-        >>> elem.find("emphasis").text
+        >>> elem.find("em").text
         'bold'
-        >>> elem.find("emphasis").tail
-        ' after'
     """
     if not text:
         return
@@ -123,67 +388,60 @@ def apply_emphasis(text: str, parent: Element) -> None:
     pattern = r"\*\*(.+?)\*\*"
     parts = re.split(pattern, text)
 
-    # parts example: ['before', 'emphasis1', 'middle', 'emphasis2', 'after']
-    # Even indices: normal text
-    # Odd indices: emphasized text
-
     if len(parts) == 1:
-        # No emphasis found
         parent.text = text
         return
 
-    # First text (before any emphasis)
     parent.text = parts[0] if parts[0] else None
 
     for i in range(1, len(parts), 2):
         emphasis_text = parts[i]
         normal_text = parts[i + 1] if i + 1 < len(parts) else ""
 
-        emphasis = SubElement(parent, "emphasis")
-        emphasis.text = emphasis_text
-        emphasis.tail = normal_text if normal_text else None
+        em = SubElement(parent, "em")
+        em.text = emphasis_text
+        em.tail = normal_text if normal_text else None
+
+
+# ============================================================
+# Legacy functions (parser.py との互換性用)
+# ============================================================
+
+from src.book_converter.models import (
+    Page,
+    PageAnnouncement,
+    Content,
+    PageMetadata,
+    StructureContainer,
+)
 
 
 def transform_page(page: Page) -> Element:
-    """Transform a Page object into an XML Element.
-
-    Args:
-        page: The Page object to transform.
-
-    Returns:
-        An XML Element representing the page.
-    """
+    """Transform a Page object into an XML Element (Legacy)."""
     elem = Element("page")
-
-    # Required attributes
     elem.set("number", page.number)
     elem.set("sourceFile", page.source_file)
 
-    # Optional attributes
     if page.continued:
         elem.set("continued", "true")
 
     if page.page_type != "normal":
         elem.set("type", page.page_type)
 
-    # Child elements
     if page.announcement is not None:
         announcement_elem = transform_page_announcement(page.announcement)
         if announcement_elem is not None:
             elem.append(announcement_elem)
 
-    # Add content elements
     content_elem = transform_content(page.content)
     if content_elem is not None:
         elem.append(content_elem)
 
-    # Add figures
     for figure in page.figures:
-        figure_elem = transform_figure(figure)
+        figure_elem = transform_figure_legacy(figure)
         if figure_elem is not None:
             elem.append(figure_elem)
 
-    # Add metadata
     if page.metadata is not None:
         metadata_elem = transform_page_metadata(page.metadata)
         if metadata_elem is not None:
@@ -193,19 +451,11 @@ def transform_page(page: Page) -> Element:
 
 
 def transform_content(content: Content) -> Element | None:
-    """Transform a Content object into an XML Element.
-
-    Args:
-        content: The Content object to transform.
-
-    Returns:
-        An XML Element representing the content, or None if no elements.
-    """
+    """Transform a Content object into an XML Element (Legacy)."""
     if not content.elements:
         return None
 
     elem = Element("content")
-    # Add readAloud attribute based on content.read_aloud
     elem.set("readAloud", "true" if content.read_aloud else "false")
 
     for element in content.elements:
@@ -219,9 +469,6 @@ def transform_content(content: Content) -> Element | None:
             heading_elem.set("level", str(element.level))
             heading_elem.set("readAloud", "true" if element.read_aloud else "false")
             apply_emphasis(element.text, heading_elem)
-            # readAloud=False の場合は属性を出力
-            if not element.read_aloud:
-                heading_elem.set("readAloud", "false")
             elem.append(heading_elem)
         elif isinstance(element, List):
             list_elem = Element("list")
@@ -235,17 +482,8 @@ def transform_content(content: Content) -> Element | None:
     return elem
 
 
-def transform_page_announcement(
-    announcement: PageAnnouncement | None,
-) -> Element | None:
-    """Transform a PageAnnouncement into an XML Element.
-
-    Args:
-        announcement: The PageAnnouncement object to transform.
-
-    Returns:
-        An XML Element representing the announcement, or None if input is None.
-    """
+def transform_page_announcement(announcement: PageAnnouncement | None) -> Element | None:
+    """Transform a PageAnnouncement (Legacy)."""
     if announcement is None:
         return None
 
@@ -253,200 +491,38 @@ def transform_page_announcement(
     elem.text = announcement.text
     elem.set("format", announcement.format)
     elem.set("readAloud", "false")
-
     return elem
 
 
-def transform_heading(heading: Heading) -> Element:
-    """Transform a Heading into an XML Element.
-
-    Args:
-        heading: The Heading object to transform.
-
-    Returns:
-        An XML Element representing the heading.
-
-    Example:
-        >>> heading = Heading(level=1, text="Chapter 1")
-        >>> elem = transform_heading(heading)
-        >>> elem.tag
-        'heading'
-        >>> elem.get("level")
-        '1'
-    """
-    elem = Element("heading")
-    elem.set("level", str(heading.level))
-    elem.text = heading.text
-
-    # readAloud=False の場合は属性を出力
-    if not heading.read_aloud:
-        elem.set("readAloud", "false")
-
-    return elem
-
-
-def transform_content_with_continued(
-    content: Content, continued: bool
-) -> Element | None:
-    """Transform a Content object with continued attribute.
-
-    Args:
-        content: The Content object to transform.
-        continued: Whether this content continues from previous page.
-
-    Returns:
-        An XML Element with optional continued="true" attribute,
-        or None if no elements.
-
-    Example:
-        >>> content = Content(elements=(Paragraph(text="Text"),))
-        >>> elem = transform_content_with_continued(content, True)
-        >>> elem.get("continued")
-        'true'
-    """
-    elem = transform_content(content)
-
-    if elem is None:
-        return None
-
-    if continued:
-        elem.set("continued", "true")
-
-    return elem
-
-
-def transform_figure(figure: Figure) -> Element:
-    """Transform a Figure object into an XML Element (新形式).
-
-    新形式:
-    <figure readAloud="false" path="figures/fig001.png" marker="図1" />
-
-    後方互換性のため、file/caption/description属性もサポート。
-
-    Args:
-        figure: The Figure object to transform.
-
-    Returns:
-        An XML Element representing the figure.
-
-    Example:
-        >>> fig = Figure(path="image.png", marker="図1")
-        >>> elem = transform_figure(fig)
-        >>> elem.tag
-        'figure'
-        >>> elem.get("readAloud")
-        'false'
-        >>> elem.get("path")
-        'image.png'
-    """
+def transform_figure_legacy(figure: Figure) -> Element:
+    """Transform a Figure object (Legacy format)."""
     elem = Element("figure")
+    elem.set("readAloud", "false")
 
-    # readAloud属性（新形式: bool, 旧形式: str）
-    if isinstance(figure.read_aloud, bool):
-        elem.set("readAloud", "true" if figure.read_aloud else "false")
-    else:
-        elem.set("readAloud", figure.read_aloud)
-
-    # 新形式: path属性（自己終了タグ）
     if figure.path:
         elem.set("path", figure.path)
         if figure.marker:
             elem.set("marker", figure.marker)
-        # 新形式は自己終了タグのため、子要素なし
-        return elem
-
-    # 旧形式: file/caption/description 子要素
-    if figure.continued:
-        elem.set("continued", "true")
-
-    # file element (always readAloud="false")
-    if figure.file:
-        file_elem = Element("file")
-        file_elem.text = figure.file
-        file_elem.set("readAloud", "false")
-        elem.append(file_elem)
-
-    # caption element (readAloud="true" if present)
-    if figure.caption:
-        caption_elem = Element("caption")
-        caption_elem.text = figure.caption
-        caption_elem.set("readAloud", "true")
-        elem.append(caption_elem)
-
-    # description element (inherits from parent)
-    if figure.description:
-        desc_elem = Element("description")
-        desc_elem.text = figure.description
-        elem.append(desc_elem)
 
     return elem
 
 
 def transform_page_metadata(metadata: PageMetadata | None) -> Element | None:
-    """Transform a PageMetadata object into an XML Element.
-
-    Args:
-        metadata: The PageMetadata object to transform.
-
-    Returns:
-        An XML Element representing the page metadata, or None if input is None.
-
-    Example:
-        >>> meta = PageMetadata(text="3 / 7", meta_type="chapter-page")
-        >>> elem = transform_page_metadata(meta)
-        >>> elem.tag
-        'pageMetadata'
-        >>> elem.get("type")
-        'chapter-page'
-        >>> elem.get("readAloud")
-        'false'
-    """
+    """Transform a PageMetadata (Legacy)."""
     if metadata is None:
         return None
 
     elem = Element("pageMetadata")
     elem.set("type", metadata.meta_type)
-    elem.set("readAloud", "false")  # Always false for metadata
+    elem.set("readAloud", "false")
     apply_emphasis(metadata.text, elem)
-
     return elem
 
 
 def transform_structure_container(container: StructureContainer) -> Element:
-    """Transform StructureContainer to XML element.
-
-    - container_type="chapter" → <chapter number="N" title="...">
-    - container_type="section" → <section number="N" title="...">
-    - container_type="subsection" → <subsection level="N" number="..." title="...">
-    - 子要素の heading は readAloud="true" または "false" を出力
-
-    Args:
-        container: The StructureContainer object to transform.
-
-    Returns:
-        An XML Element representing the structure container.
-
-    Example:
-        >>> from src.book_converter.models import Heading, Paragraph
-        >>> container = StructureContainer(
-        ...     container_type="chapter",
-        ...     level=1,
-        ...     number="1",
-        ...     title="Chapter Title",
-        ...     children=(Heading(level=1, text="Chapter 1 Title", read_aloud=True),)
-        ... )
-        >>> elem = transform_structure_container(container)
-        >>> elem.tag
-        'chapter'
-        >>> elem.get("number")
-        '1'
-        >>> elem.get("title")
-        'Chapter Title'
-    """
-    # Create element based on container_type
+    """Transform StructureContainer to XML element (Legacy)."""
     elem = Element(container.container_type)
 
-    # Set attributes
     if container.container_type in ("chapter", "section"):
         if container.number:
             elem.set("number", container.number)
@@ -457,7 +533,6 @@ def transform_structure_container(container: StructureContainer) -> Element:
             elem.set("number", container.number)
         elem.set("title", container.title)
 
-    # Transform children
     for child in container.children:
         if isinstance(child, StructureContainer):
             child_elem = transform_structure_container(child)
@@ -482,27 +557,14 @@ def transform_structure_container(container: StructureContainer) -> Element:
     return elem
 
 
-def transform_list(lst: List) -> Element:
-    """List を XML Element に変換.
+def transform_content_with_continued(content: Content, continued: bool) -> Element | None:
+    """Transform a Content object with continued attribute (Legacy)."""
+    elem = transform_content(content)
 
-    出力例:
-    <list type="unordered">
-      <item>項目1</item>
-      <item>項目2</item>
-    </list>
+    if elem is None:
+        return None
 
-    Args:
-        lst: List オブジェクト
-
-    Returns:
-        XML Element
-    """
-    elem = Element("list")
-    elem.set("type", lst.list_type)
-
-    for item_text in lst.items:
-        item_elem = Element("item")
-        item_elem.text = item_text
-        elem.append(item_elem)
+    if continued:
+        elem.set("continued", "true")
 
     return elem

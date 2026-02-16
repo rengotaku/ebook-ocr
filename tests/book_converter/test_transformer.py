@@ -541,21 +541,18 @@ class TestTransformContentContinued:
 
 
 class TestTransformFigure:
-    """T053: Figure XML変換テスト (<figure readAloud="optional"> 生成)"""
+    """T053: Figure XML変換テスト (新形式: <figure path="..." caption="..." marker="..."/>)"""
 
     def test_transform_figure_basic(self) -> None:
-        """基本的な図をXMLに変換（旧形式: file引数）"""
+        """基本的な図をXMLに変換"""
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        # Phase 5: path は必須引数だが、旧形式では空にして file を使用
-        figure = Figure(path="", file="images/fig1.png")
+        figure = Figure(path="images/fig1.png")
         element = transform_figure(figure)
 
         assert element.tag == "figure"
-        file_elem = element.find("file")
-        assert file_elem is not None
-        assert file_elem.text == "images/fig1.png"
+        assert element.get("path") == "images/fig1.png"
 
     def test_transform_figure_with_caption(self) -> None:
         """キャプション付きの図を変換"""
@@ -563,68 +560,43 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
-            path="",
-            file="chart.png",
+            path="chart.png",
             caption="図1: 売上推移",
         )
         element = transform_figure(figure)
 
-        caption_elem = element.find("caption")
-        assert caption_elem is not None
-        assert caption_elem.text == "図1: 売上推移"
+        assert element.get("caption") == "図1: 売上推移"
 
-    def test_transform_figure_with_description(self) -> None:
-        """説明文付きの図を変換"""
+    def test_transform_figure_with_marker(self) -> None:
+        """マーカー付きの図を変換"""
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
         figure = Figure(
-            path="",
-            file="diagram.png",
-            description="システム構成を表す図です。",
+            path="diagram.png",
+            marker="図1",
         )
         element = transform_figure(figure)
 
-        desc_elem = element.find("description")
-        assert desc_elem is not None
-        assert desc_elem.text == "システム構成を表す図です。"
+        assert element.get("marker") == "図1"
 
-    def test_transform_figure_read_aloud_optional(self) -> None:
-        """readAloud='optional'属性を変換"""
+    def test_transform_figure_no_read_aloud_attribute(self) -> None:
+        """図にreadAloud属性は出力されない"""
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(path="", file="test.png", read_aloud="optional")
+        figure = Figure(path="test.png")
         element = transform_figure(figure)
 
-        assert element.get("readAloud") == "optional"
-
-    def test_transform_figure_read_aloud_true(self) -> None:
-        """readAloud='true'属性を変換"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
-
-        figure = Figure(path="", file="test.png", read_aloud="true")
-        element = transform_figure(figure)
-
-        assert element.get("readAloud") == "true"
-
-    def test_transform_figure_read_aloud_false(self) -> None:
-        """readAloud='false'属性を変換"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
-
-        figure = Figure(path="", file="test.png", read_aloud="false")
-        element = transform_figure(figure)
-
-        assert element.get("readAloud") == "false"
+        # 図は常に読まないのでreadAloud属性は出力しない
+        assert element.get("readAloud") is None
 
     def test_transform_figure_returns_element(self) -> None:
         """戻り値はElement型"""
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(path="", file="test.png")
+        figure = Figure(path="test.png")
         element = transform_figure(figure)
 
         assert isinstance(element, Element)
@@ -635,19 +607,16 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
-            path="",
-            file="images/architecture.png",
+            path="images/architecture.png",
             caption="図2-1: システムアーキテクチャ",
-            description="本システムの全体構成を示す図です。主要コンポーネント間の関係を表しています。",
-            read_aloud="optional",
+            marker="図2-1",
         )
         element = transform_figure(figure)
 
         assert element.tag == "figure"
-        assert element.get("readAloud") == "optional"
-        assert element.find("file").text == "images/architecture.png"
-        assert element.find("caption").text == "図2-1: システムアーキテクチャ"
-        assert "全体構成" in element.find("description").text
+        assert element.get("path") == "images/architecture.png"
+        assert element.get("caption") == "図2-1: システムアーキテクチャ"
+        assert element.get("marker") == "図2-1"
 
     def test_transform_figure_xml_serialization(self) -> None:
         """XMLにシリアライズ可能"""
@@ -655,32 +624,26 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
-            path="",
-            file="test.png",
+            path="test.png",
             caption="テスト図",
-            read_aloud="optional",
         )
         element = transform_figure(figure)
         xml_string = tostring(element, encoding="unicode")
 
         assert "<figure" in xml_string
-        assert 'readAloud="optional"' in xml_string
-        assert "test.png" in xml_string
-        assert "テスト図" in xml_string
+        assert 'path="test.png"' in xml_string
+        assert 'caption="テスト図"' in xml_string
 
-    def test_transform_figure_with_continued(self) -> None:
-        """ページをまたぐ図を変換"""
+    def test_transform_figure_self_closing(self) -> None:
+        """図要素は子要素を持たない（自己終了タグ）"""
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(
-            path="",
-            file="large_diagram.png",
-            continued=True,
-        )
+        figure = Figure(path="large_diagram.png")
         element = transform_figure(figure)
 
-        assert element.get("continued") == "true"
+        # 子要素がないことを確認
+        assert len(list(element)) == 0
 
     def test_transform_figure_preserves_unicode(self) -> None:
         """Unicode文字を保持"""
@@ -688,16 +651,14 @@ class TestTransformFigure:
         from src.book_converter.models import Figure
 
         figure = Figure(
-            path="",
-            file="日本語/図表.png",
+            path="日本語/図表.png",
             caption="日本語キャプション「テスト」",
-            description="日本語の説明文です。",
+            marker="図1",
         )
         element = transform_figure(figure)
 
-        assert element.find("file").text == "日本語/図表.png"
-        assert "日本語キャプション" in element.find("caption").text
-        assert "日本語の説明文" in element.find("description").text
+        assert element.get("path") == "日本語/図表.png"
+        assert "日本語キャプション" in element.get("caption")
 
 
 class TestTransformPageMetadata:
@@ -837,87 +798,18 @@ class TestTransformPageMetadata:
 
 
 class TestReadAloudInheritance:
-    """T055: readAloud属性継承テスト (file=false, caption=true, description=親継承)"""
+    """T055: readAloud属性テスト (新形式)"""
 
-    def test_figure_file_read_aloud_false(self) -> None:
-        """<file>要素はreadAloud='false'"""
+    def test_figure_no_read_aloud(self) -> None:
+        """figure要素はreadAloud属性を持たない（常に読まない）"""
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
-        figure = Figure(path="", file="test.png")
+        figure = Figure(path="test.png", caption="図1")
         element = transform_figure(figure)
 
-        file_elem = element.find("file")
-        assert file_elem is not None
-        # file要素は読み上げない
-        assert file_elem.get("readAloud") == "false"
-
-    def test_figure_caption_read_aloud_true(self) -> None:
-        """<caption>要素はreadAloud='true'"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
-
-        figure = Figure(path="", file="test.png", caption="図1")
-        element = transform_figure(figure)
-
-        caption_elem = element.find("caption")
-        assert caption_elem is not None
-        # caption要素は読み上げる
-        assert caption_elem.get("readAloud") == "true"
-
-    def test_figure_description_inherits_parent(self) -> None:
-        """<description>要素は親のreadAloud属性を継承"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
-
-        # 親がoptionalの場合
-        figure_optional = Figure(
-            path="",
-            file="test.png",
-            description="説明文",
-            read_aloud="optional",
-        )
-        element = transform_figure(figure_optional)
-        desc_elem = element.find("description")
-        # descriptionは親を継承するか、親と同じ設定
-        # 仕様: descriptionは親のreadAloud設定を継承
-        assert desc_elem.get("readAloud") is None or \
-               desc_elem.get("readAloud") == element.get("readAloud")
-
-    def test_figure_description_inherits_true(self) -> None:
-        """親がreadAloud='true'の場合、descriptionも読み上げ対象"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
-
-        figure = Figure(
-            path="",
-            file="test.png",
-            description="この図は重要です",
-            read_aloud="true",
-        )
-        element = transform_figure(figure)
-        desc_elem = element.find("description")
-
-        # 親がtrueの場合、descriptionも読み上げ対象
-        # 属性を継承するか、明示的にtrueを設定
-        assert desc_elem is not None
-
-    def test_figure_description_inherits_false(self) -> None:
-        """親がreadAloud='false'の場合、descriptionも読み上げない"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
-
-        figure = Figure(
-            path="",
-            file="test.png",
-            description="この図は読み上げません",
-            read_aloud="false",
-        )
-        element = transform_figure(figure)
-        desc_elem = element.find("description")
-
-        # 親がfalseの場合、descriptionも読み上げない
-        assert desc_elem is not None
+        # 図は常に読まないのでreadAloud属性は出力しない
+        assert element.get("readAloud") is None
 
     def test_page_metadata_always_read_aloud_false(self) -> None:
         """pageMetadataは常にreadAloud='false'"""
@@ -930,52 +822,26 @@ class TestReadAloudInheritance:
         # pageMetadataは本文読み上げに混入しない
         assert element.get("readAloud") == "false"
 
-    def test_page_includes_figure_with_read_aloud(self) -> None:
-        """ページに図が含まれる場合のreadAloud属性"""
-        from src.book_converter.models import Figure
-
-        page = Page(
-            number="1",
-            source_file="page_0001.png",
-            content=Content(elements=()),
-            figures=(
-                Figure(path="", file="fig1.png", read_aloud="optional"),
-                Figure(path="", file="fig2.png", read_aloud="true"),
-            ),
-        )
-
-        element = transform_page(page)
-
-        # ページ内の図が正しく変換されているか
-        # transform_pageが図を含む場合の処理は実装による
-        # 少なくともPageオブジェクトには図が含まれている
-        assert len(page.figures) == 2
-
-    def test_content_read_aloud_default_true(self) -> None:
-        """<content>のreadAloudデフォルトはfalse (Phase 4で変更)"""
-        from src.book_converter.transformer import transform_content
-        from src.book_converter.models import Paragraph
-
-        content = Content(
-            elements=(Paragraph(text="本文"),)
-        )
-        element = transform_content(content)
-
-        # Phase 4以降: contentのデフォルトはfalse（マーカーなし）
-        # マーカーで囲まれた場合のみtrue
-        read_aloud = element.get("readAloud")
-        assert read_aloud == "false"
-
     def test_heading_read_aloud_default_true(self) -> None:
-        """<heading>のreadAloudデフォルトはtrue"""
+        """<heading>のreadAloudデフォルトはtrue（属性省略）"""
         from src.book_converter.transformer import transform_heading
 
         heading = Heading(level=1, text="タイトル")
         element = transform_heading(heading)
 
-        # headingのデフォルトはtrue（省略可）
+        # headingのデフォルトはtrue（属性省略）
         read_aloud = element.get("readAloud")
         assert read_aloud is None or read_aloud == "true"
+
+    def test_heading_read_aloud_false_when_skipped(self) -> None:
+        """skip区間内のheadingはreadAloud='false'"""
+        from src.book_converter.transformer import transform_heading
+
+        heading = Heading(level=1, text="スキップ対象", read_aloud=False)
+        element = transform_heading(heading)
+
+        # skip区間内ではreadAloud="false"を出力
+        assert element.get("readAloud") == "false"
 
 
 # =============================================================================
@@ -1105,161 +971,134 @@ class TestHeadingReadAloudAttribute:
 
 
 # =============================================================================
-# Phase 7: Emphasis Conversion - **強調** → <emphasis>
+# Phase 7: Emphasis Conversion - **強調** → <em>
 # =============================================================================
 
 
 class TestEmphasisConversion:
-    """強調変換テスト: **text** → <emphasis>text</emphasis>"""
+    """強調変換テスト: **text** → <em>text</em>"""
 
     def test_paragraph_with_single_emphasis(self) -> None:
         """単一の強調を含む段落を変換"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
 
-        content = Content(
-            elements=(Paragraph(text="これは**強調**です。"),)
-        )
-        element = transform_content(content)
-        para_elem = element.find("paragraph")
+        para = Paragraph(text="これは**強調**です。")
+        element = transform_paragraph(para)
 
-        # **強調** が <emphasis>強調</emphasis> に変換される
-        emphasis = para_elem.find("emphasis")
-        assert emphasis is not None
-        assert emphasis.text == "強調"
+        # **強調** が <em>強調</em> に変換される
+        em = element.find("em")
+        assert em is not None
+        assert em.text == "強調"
 
     def test_paragraph_with_multiple_emphasis(self) -> None:
         """複数の強調を含む段落を変換"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
 
-        content = Content(
-            elements=(Paragraph(text="**最初**と**二番目**の強調"),)
-        )
-        element = transform_content(content)
-        para_elem = element.find("paragraph")
+        para = Paragraph(text="**最初**と**二番目**の強調")
+        element = transform_paragraph(para)
 
-        emphasis_elems = para_elem.findall("emphasis")
-        assert len(emphasis_elems) == 2
-        assert emphasis_elems[0].text == "最初"
-        assert emphasis_elems[1].text == "二番目"
+        em_elems = element.findall("em")
+        assert len(em_elems) == 2
+        assert em_elems[0].text == "最初"
+        assert em_elems[1].text == "二番目"
 
     def test_paragraph_without_emphasis(self) -> None:
         """強調なしの段落はそのまま"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
 
-        content = Content(
-            elements=(Paragraph(text="通常のテキストです。"),)
-        )
-        element = transform_content(content)
-        para_elem = element.find("paragraph")
+        para = Paragraph(text="通常のテキストです。")
+        element = transform_paragraph(para)
 
-        # emphasisは生成されない
-        assert para_elem.find("emphasis") is None
-        assert para_elem.text == "通常のテキストです。"
+        # emは生成されない
+        assert element.find("em") is None
+        assert element.text == "通常のテキストです。"
 
     def test_paragraph_emphasis_preserves_surrounding_text(self) -> None:
         """強調の前後のテキストを保持"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
 
-        content = Content(
-            elements=(Paragraph(text="前のテキスト**強調**後のテキスト"),)
-        )
-        element = transform_content(content)
-        para_elem = element.find("paragraph")
+        para = Paragraph(text="前のテキスト**強調**後のテキスト")
+        element = transform_paragraph(para)
 
-        # 前のテキストはpara_elem.text
-        assert para_elem.text == "前のテキスト"
+        # 前のテキストはelement.text
+        assert element.text == "前のテキスト"
         # 強調
-        emphasis = para_elem.find("emphasis")
-        assert emphasis.text == "強調"
-        # 後のテキストはemphasis.tail
-        assert emphasis.tail == "後のテキスト"
+        em = element.find("em")
+        assert em.text == "強調"
+        # 後のテキストはem.tail
+        assert em.tail == "後のテキスト"
 
     def test_heading_with_emphasis(self) -> None:
         """強調を含む見出しを変換"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_heading
 
-        content = Content(
-            elements=(Heading(level=1, text="**重要な**見出し"),)
-        )
-        element = transform_content(content)
-        heading_elem = element.find("heading")
+        heading = Heading(level=1, text="**重要な**見出し")
+        element = transform_heading(heading)
 
-        emphasis = heading_elem.find("emphasis")
-        assert emphasis is not None
-        assert emphasis.text == "重要な"
-        assert emphasis.tail == "見出し"
+        em = element.find("em")
+        assert em is not None
+        assert em.text == "重要な"
+        assert em.tail == "見出し"
 
     def test_list_item_with_emphasis(self) -> None:
         """強調を含むリストアイテムを変換"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
 
-        content = Content(
-            elements=(List(items=("**重要**な項目", "通常の項目")),)
-        )
-        element = transform_content(content)
-        list_elem = element.find("list")
-        items = list_elem.findall("item")
+        lst = List(items=("**重要**な項目", "通常の項目"))
+        element = transform_list(lst)
+        items = element.findall("item")
 
         # 最初のアイテムに強調がある
-        emphasis = items[0].find("emphasis")
-        assert emphasis is not None
-        assert emphasis.text == "重要"
-        assert emphasis.tail == "な項目"
+        em = items[0].find("em")
+        assert em is not None
+        assert em.text == "重要"
+        assert em.tail == "な項目"
 
         # 2番目は強調なし
-        assert items[1].find("emphasis") is None
+        assert items[1].find("em") is None
         assert items[1].text == "通常の項目"
 
     def test_emphasis_unicode_content(self) -> None:
         """Unicode文字を含む強調を変換"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
 
-        content = Content(
-            elements=(Paragraph(text="**日本語「テスト」**を含む"),)
-        )
-        element = transform_content(content)
-        para_elem = element.find("paragraph")
+        para = Paragraph(text="**日本語「テスト」**を含む")
+        element = transform_paragraph(para)
 
-        emphasis = para_elem.find("emphasis")
-        assert emphasis.text == "日本語「テスト」"
+        em = element.find("em")
+        assert em.text == "日本語「テスト」"
 
     def test_emphasis_xml_serialization(self) -> None:
         """強調を含む要素をXMLにシリアライズ"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
 
-        content = Content(
-            elements=(Paragraph(text="テスト**強調**です"),)
-        )
-        element = transform_content(content)
-        para_elem = element.find("paragraph")
-        xml_string = tostring(para_elem, encoding="unicode")
+        para = Paragraph(text="テスト**強調**です")
+        element = transform_paragraph(para)
+        xml_string = tostring(element, encoding="unicode")
 
-        assert "<emphasis>" in xml_string
-        assert "</emphasis>" in xml_string
+        assert "<em>" in xml_string
+        assert "</em>" in xml_string
         assert "強調" in xml_string
 
     def test_full_emphasis_only(self) -> None:
         """テキスト全体が強調の場合"""
-        from src.book_converter.transformer import transform_content
+        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
 
-        content = Content(
-            elements=(Paragraph(text="**全体が強調**"),)
-        )
-        element = transform_content(content)
-        para_elem = element.find("paragraph")
+        para = Paragraph(text="**全体が強調**")
+        element = transform_paragraph(para)
 
         # テキスト部分は空またはNone
-        assert para_elem.text is None or para_elem.text == ""
-        emphasis = para_elem.find("emphasis")
-        assert emphasis.text == "全体が強調"
+        assert element.text is None or element.text == ""
+        em = element.find("em")
+        assert em.text == "全体が強調"
 
     def test_page_metadata_emphasis_preserved(self) -> None:
         """pageMetadata内の強調も変換"""
@@ -1276,9 +1115,9 @@ class TestEmphasisConversion:
         element = transform_page_metadata(metadata)
 
         # pageMetadata内の強調も変換される
-        emphasis = element.find("emphasis")
-        assert emphasis is not None
-        assert emphasis.text == "はじめに"
+        em = element.find("em")
+        assert em is not None
+        assert em.text == "はじめに"
 
 
 # =============================================================================
@@ -2830,10 +2669,10 @@ class TestHeadingReadAloudInStructureContainer:
 
 
 class TestTransformListType:
-    """T058: リスト変換テスト（unordered/ordered）
+    """T058: リスト変換テスト
 
-    User Story 4 - list/figure要素の出力
-    transform_list が type="unordered" / type="ordered" 属性を出力
+    User Story 4 - list要素の出力
+    transform_list が <list><item>...</item></list> を出力
     """
 
     def test_transform_list_exists(self) -> None:
@@ -2842,27 +2681,26 @@ class TestTransformListType:
 
         assert callable(transform_list)
 
-    def test_transform_list_unordered(self) -> None:
-        """unordered リストを変換"""
+    def test_transform_list_basic(self) -> None:
+        """基本的なリストを変換"""
         from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
 
-        lst = List(items=("項目1", "項目2"), list_type="unordered")
+        lst = List(items=("項目1", "項目2"))
         element = transform_list(lst)
 
         assert element.tag == "list"
-        assert element.get("type") == "unordered"
 
-    def test_transform_list_ordered(self) -> None:
-        """ordered リストを変換"""
+    def test_transform_list_read_aloud_default(self) -> None:
+        """リストのreadAloudデフォルト（属性省略=true）"""
         from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
 
-        lst = List(items=("手順1", "手順2"), list_type="ordered")
+        lst = List(items=("手順1", "手順2"))
         element = transform_list(lst)
 
-        assert element.tag == "list"
-        assert element.get("type") == "ordered"
+        # デフォルトは読む（readAloud属性は出力しない）
+        assert element.get("readAloud") is None
 
     def test_transform_list_has_item_children(self) -> None:
         """リスト要素は <item> 子要素を持つ"""
@@ -2884,33 +2722,33 @@ class TestTransformListType:
         from src.book_converter.models import List
         from xml.etree.ElementTree import tostring
 
-        lst = List(items=("項目A", "項目B"), list_type="unordered")
+        lst = List(items=("項目A", "項目B"))
         element = transform_list(lst)
         xml_string = tostring(element, encoding="unicode")
 
-        assert '<list type="unordered">' in xml_string
+        assert "<list>" in xml_string
         assert "<item>項目A</item>" in xml_string
         assert "<item>項目B</item>" in xml_string
         assert "</list>" in xml_string
 
-    def test_transform_list_ordered_xml_format(self) -> None:
-        """ordered リストのXML出力形式が正しい"""
+    def test_transform_list_read_aloud_false(self) -> None:
+        """skip区間内のリストはreadAloud='false'"""
         from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
         from xml.etree.ElementTree import tostring
 
-        lst = List(items=("手順1", "手順2"), list_type="ordered")
+        lst = List(items=("手順1", "手順2"), read_aloud=False)
         element = transform_list(lst)
         xml_string = tostring(element, encoding="unicode")
 
-        assert '<list type="ordered">' in xml_string
+        assert 'readAloud="false"' in xml_string
 
     def test_transform_list_empty_items(self) -> None:
         """空のリストを変換"""
         from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
 
-        lst = List(items=(), list_type="unordered")
+        lst = List(items=())
         element = transform_list(lst)
 
         assert element.tag == "list"
@@ -2924,7 +2762,6 @@ class TestTransformListType:
 
         lst = List(
             items=("日本語項目", "特殊文字<>&\"'"),
-            list_type="unordered",
         )
         element = transform_list(lst)
 
@@ -2965,7 +2802,7 @@ class TestTransformFigureNewFormat:
     """T061: figure XML出力テスト（新形式）
 
     User Story 4 - list/figure要素の出力
-    <figure readAloud="false" path="..." marker="..." /> 形式
+    <figure path="..." marker="..." caption="..." /> 形式
     """
 
     def test_transform_figure_new_format_path_attribute(self) -> None:
@@ -2989,15 +2826,16 @@ class TestTransformFigureNewFormat:
 
         assert element.get("marker") == "図1"
 
-    def test_transform_figure_new_format_read_aloud_false(self) -> None:
-        """figure 要素の readAloud は "false" """
+    def test_transform_figure_no_read_aloud_attribute(self) -> None:
+        """figure 要素は readAloud 属性を持たない（常に読まない）"""
         from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
 
         fig = Figure(path="figures/fig001.png")
         element = transform_figure(fig)
 
-        assert element.get("readAloud") == "false"
+        # 図は常に読まないので readAloud 属性は出力しない
+        assert element.get("readAloud") is None
 
     def test_transform_figure_new_format_xml(self) -> None:
         """XML出力形式が正しい"""
@@ -3009,8 +2847,7 @@ class TestTransformFigureNewFormat:
         element = transform_figure(fig)
         xml_string = tostring(element, encoding="unicode")
 
-        # 新形式の属性ベース出力
-        assert 'readAloud="false"' in xml_string
+        # 新形式の属性ベース出力（readAloudなし）
         assert 'path="figures/fig001.png"' in xml_string
         assert 'marker="図1"' in xml_string
 
@@ -3090,3 +2927,137 @@ class TestTransformFigureNewFormat:
         element = transform_figure(fig)
 
         assert isinstance(element, Element)
+
+
+# ============================================================================
+# Phase 7: 出力フォーマット簡素化テスト (US5)
+# ============================================================================
+
+
+class TestNormalizeHeadingForComparison:
+    """heading テキストの正規化テスト."""
+
+    def test_normalize_heading_chapter(self) -> None:
+        """Chapter N Title → N Title に正規化"""
+        from src.book_converter.transformer import normalize_heading_for_comparison
+
+        result = normalize_heading_for_comparison("Chapter 1 「企画」で失敗")
+        assert result == "1 「企画」で失敗"
+
+    def test_normalize_heading_chapter_case_insensitive(self) -> None:
+        """CHAPTER, chapter 等も正規化"""
+        from src.book_converter.transformer import normalize_heading_for_comparison
+
+        assert normalize_heading_for_comparison("CHAPTER 2 Title") == "2 Title"
+        assert normalize_heading_for_comparison("chapter 3 Title") == "3 Title"
+
+    def test_normalize_heading_section(self) -> None:
+        """Section N.N Title → N.N Title に正規化"""
+        from src.book_converter.transformer import normalize_heading_for_comparison
+
+        result = normalize_heading_for_comparison("Section 1.1 なんでもできる")
+        assert result == "1.1 なんでもできる"
+
+    def test_normalize_heading_section_case_insensitive(self) -> None:
+        """SECTION, section 等も正規化"""
+        from src.book_converter.transformer import normalize_heading_for_comparison
+
+        assert normalize_heading_for_comparison("SECTION 2.3 Title") == "2.3 Title"
+        assert normalize_heading_for_comparison("section 4.5 Title") == "4.5 Title"
+
+    def test_normalize_heading_no_keyword(self) -> None:
+        """キーワードなしの場合はそのまま（空白正規化のみ）"""
+        from src.book_converter.transformer import normalize_heading_for_comparison
+
+        result = normalize_heading_for_comparison("すべての要求に応えてしまう")
+        assert result == "すべての要求に応えてしまう"
+
+    def test_normalize_heading_whitespace_normalization(self) -> None:
+        """連続空白を単一空白に正規化"""
+        from src.book_converter.transformer import normalize_heading_for_comparison
+
+        result = normalize_heading_for_comparison("Chapter  1   Title")
+        assert result == "1 Title"
+
+
+class TestIsDuplicateHeading:
+    """heading 重複判定テスト."""
+
+    def test_is_duplicate_heading_chapter_match(self) -> None:
+        """chapter title と一致する heading は重複"""
+        from src.book_converter.transformer import is_duplicate_heading
+
+        result = is_duplicate_heading(
+            heading_text="Chapter 1 「企画」で失敗",
+            container_number="1",
+            container_title="「企画」で失敗",
+        )
+        assert result is True
+
+    def test_is_duplicate_heading_section_match(self) -> None:
+        """section title と一致する heading は重複"""
+        from src.book_converter.transformer import is_duplicate_heading
+
+        result = is_duplicate_heading(
+            heading_text="Section 1.1 なんでもできる「全部入りソフトウェア」",
+            container_number="1.1",
+            container_title="なんでもできる「全部入りソフトウェア」",
+        )
+        assert result is True
+
+    def test_is_duplicate_heading_not_match(self) -> None:
+        """chapter/section title と一致しない heading は重複ではない"""
+        from src.book_converter.transformer import is_duplicate_heading
+
+        result = is_duplicate_heading(
+            heading_text="すべての要求に応えてしまう",
+            container_number="1.1",
+            container_title="なんでもできる「全部入りソフトウェア」",
+        )
+        assert result is False
+
+    def test_is_duplicate_heading_no_number(self) -> None:
+        """number が None の場合は title のみで比較"""
+        from src.book_converter.transformer import is_duplicate_heading
+
+        result = is_duplicate_heading(
+            heading_text="はじめに",
+            container_number=None,
+            container_title="はじめに",
+        )
+        assert result is True
+
+    def test_is_duplicate_heading_partial_match_is_false(self) -> None:
+        """部分一致は重複ではない"""
+        from src.book_converter.transformer import is_duplicate_heading
+
+        result = is_duplicate_heading(
+            heading_text="Chapter 1 「企画」で失敗する",  # extra text
+            container_number="1",
+            container_title="「企画」で失敗",
+        )
+        assert result is False
+
+
+class TestNonStructuralHeadingPreserved:
+    """構造と無関係な heading 保持テスト."""
+
+    def test_non_structural_heading_preserved(self) -> None:
+        """構造と無関係な heading は保持される"""
+        from src.book_converter.transformer import is_duplicate_heading
+
+        # These should NOT be duplicates (preserved)
+        non_structural_headings = [
+            "すべての要求に応えてしまう",
+            "◎ソフトウェア開発は難しい",
+            "●ご質問される前に",
+            "あいまいな顧客像",
+        ]
+
+        for heading in non_structural_headings:
+            result = is_duplicate_heading(
+                heading_text=heading,
+                container_number="1.1",
+                container_title="なんでもできる",
+            )
+            assert result is False, f"'{heading}' should be preserved"

@@ -5,6 +5,7 @@ Provides functions to parse Markdown content into structured data models.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
@@ -116,21 +117,25 @@ def get_read_aloud_from_stack(stack: list[str]) -> bool:
         stack: List of marker types ("content" or "skip")
 
     Returns:
-        True if top of stack is "content", False otherwise
+        True by default, False only if top of stack is "skip"
 
     Example:
         >>> get_read_aloud_from_stack([])
-        False
+        True
         >>> get_read_aloud_from_stack(["content"])
         True
+        >>> get_read_aloud_from_stack(["skip"])
+        False
         >>> get_read_aloud_from_stack(["content", "skip"])
         False
+        >>> get_read_aloud_from_stack(["skip", "content"])
+        True
     """
     if not stack:
-        return False  # Default: readAloud=false
+        return True  # Default: readAloud=true
 
     top = stack[-1]
-    return top == "content"
+    return top != "skip"
 
 
 def normalize_toc_line(line: str) -> str:
@@ -306,6 +311,8 @@ def split_toc_entries(normalized_text: str) -> list[str]:
 
     Detects entry boundaries by looking for patterns:
     - Chapter N (case insensitive)
+    - Section N.N (case insensitive)
+    - Subsection N.N.N (case insensitive)
     - Episode NN
     - Column (case insensitive)
     - 第N章
@@ -317,8 +324,8 @@ def split_toc_entries(normalized_text: str) -> list[str]:
         List of individual entry strings
 
     Example:
-        >>> split_toc_entries("Chapter 1 Title Episode 01 Text")
-        ["Chapter 1 Title", "Episode 01 Text"]
+        >>> split_toc_entries("Chapter 1 Title Section 1.1 Text")
+        ["Chapter 1 Title", "Section 1.1 Text"]
         >>> split_toc_entries("第1章 タイトル 第2章 次")
         ["第1章 タイトル", "第2章 次"]
     """
@@ -329,17 +336,58 @@ def split_toc_entries(normalized_text: str) -> list[str]:
     # Pattern to match entry start markers
     # Lookahead to split before these patterns:
     # - Chapter N (case insensitive)
+    # - Section N.N (case insensitive) - NEW
+    # - Subsection N.N.N (case insensitive) - NEW
     # - Episode NN (case insensitive)
     # - Column (case insensitive)
     # - 第N章
-    # - N.N (section)
     # - N.N.N (subsection)
-    # - N (standalone chapter number)
-    pattern = r'(?=(?:Chapter|CHAPTER|chapter)\s+\d+|(?:Episode|EPISODE|episode)\s+\d+|(?:Column|COLUMN|column)\s+|第\d+章|\d+\.\d+\.\d+\s|\d+\.\d+\s|^\d+\s)'
+    # - N.N (section)
+    # - N (standalone chapter number at start or after whitespace)
+    pattern = (
+        r'(?='
+        r'(?:Chapter|CHAPTER|chapter)\s+\d+|'
+        r'(?:Section|SECTION|section)\s+\d+\.\d+|'
+        r'(?:Subsection|SUBSECTION|subsection)\s+\d+\.\d+\.\d+|'
+        r'(?:Episode|EPISODE|episode)\s+\d+|'
+        r'(?:Column|COLUMN|column)\s+|'
+        r'第\d+章|'
+        r'\d+\.\d+\.\d+\s|'
+        r'\d+\.\d+\s|'
+        r'(?:^|\s)\d+\s+(?=[^\d\.])'
+        r')'
+    )
 
     entries = re.split(pattern, normalized_text)
     # Filter empty entries and strip whitespace
     return [e.strip() for e in entries if e.strip()]
+
+
+def parse_toc_lines(lines: list[str]) -> list[TocEntry]:
+    """Parse TOC lines into TocEntry objects.
+
+    Processes each line individually as a TOC entry.
+    Format: # Chapter N Title / ## Section N.N Title / ### Subsection N.N.N Title
+
+    Args:
+        lines: List of TOC lines
+
+    Returns:
+        List of TocEntry objects
+    """
+    entries = []
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Normalize the line (remove # prefix)
+        normalized = normalize_toc_line(stripped)
+        entry = parse_toc_entry(normalized)
+        if entry is not None:
+            entries.append(entry)
+
+    return entries
 
 
 def parse_toc_entry(line: str) -> TocEntry | None:
@@ -431,8 +479,50 @@ def parse_toc_entry(line: str) -> TocEntry | None:
             page_number = space_match.group(1)
             line = line[: space_match.start()]
 
-    # Normalize: remove markdown prefixes (###, -, *)
+    # Normalize: remove markdown prefixes (###, -, *) but preserve structure keywords
     line = normalize_toc_line(line)
+
+    # NEW FORMAT: # Chapter N Title (with markdown prefix stripped)
+    # Note: normalize_toc_line removes # prefixes, so we check the original pattern
+    chapter_new_pattern = r"^Chapter\s+(\d+)\s*(.*)$"
+    match = re.match(chapter_new_pattern, line, re.IGNORECASE)
+    if match:
+        number = match.group(1)
+        title = (match.group(2) or "").strip()
+        return TocEntry(
+            text=title,
+            level=1,
+            number=number,
+            page=page_number,
+        )
+
+    # NEW FORMAT: ## Section N.N Title
+    section_new_pattern = r"^Section\s+(\d+\.\d+)\s*(.*)$"
+    match = re.match(section_new_pattern, line, re.IGNORECASE)
+    if match:
+        number = match.group(1)
+        title = (match.group(2) or "").strip()
+        return TocEntry(
+            text=title,
+            level=2,
+            number=number,
+            page=page_number,
+        )
+
+    # NEW FORMAT: ### Subsection N.N.N Title
+    subsection_new_pattern = r"^Subsection\s+(\d+\.\d+\.\d+)\s*(.*)$"
+    match = re.match(subsection_new_pattern, line, re.IGNORECASE)
+    if match:
+        number = match.group(1)
+        title = (match.group(2) or "").strip()
+        return TocEntry(
+            text=title,
+            level=3,
+            number=number,
+            page=page_number,
+        )
+
+    # Legacy patterns below for backward compatibility
 
     # Chapter pattern 1: 第N章 タイトル
     chapter_pattern = r"^第(\d+)章\s+(.+)$"
@@ -445,7 +535,7 @@ def parse_toc_entry(line: str) -> TocEntry | None:
             page=page_number,
         )
 
-    # Chapter pattern 2: Chapter N タイトル (case insensitive)
+    # Chapter pattern 2: Chapter N タイトル (case insensitive) - legacy
     chapter_en_pattern = r"^[Cc][Hh][Aa][Pp][Tt][Ee][Rr]\s+(\d+)(?:\s+(.+))?$"
     match = re.match(chapter_en_pattern, line)
     if match:
@@ -593,6 +683,18 @@ def extract_page_number(line: str, verbose: bool = False) -> tuple[str, str]:
         source_file = match.group(1)
         return ("", source_file)
 
+    # Try pattern: --- Page: filename ---
+    pattern_colon = r"---\s+[Pp]age:\s*(.+?)\s*---"
+    match = re.search(pattern_colon, line)
+    if match:
+        source_file = match.group(1).strip()
+        # Extract page number from source_file (e.g., page_0001.png -> 1)
+        page_num_match = re.search(r"page_(\d+)", source_file)
+        if page_num_match:
+            page_number = str(int(page_num_match.group(1)))
+            return (page_number, source_file)
+        return ("", source_file)
+
     # Debug: check if this looks like a page marker but wasn't recognized
     if verbose and line.strip().startswith("---") and "page" in line.lower():
         print(f"[DEBUG] Unrecognized potential page marker: {line.strip()!r}", file=sys.stderr)
@@ -614,6 +716,73 @@ def create_page_announcement(page_number: str) -> PageAnnouncement | None:
 
     text = f"{page_number}ページ"
     return PageAnnouncement(text=text, format="simple")
+
+
+@dataclass
+class StructureHeading:
+    """Parsed structure heading with section info."""
+
+    level: int  # 1=chapter, 2=section, 3=subsection
+    number: str  # "1", "1.1", "1.1.1"
+    title: str  # Title text after number
+    raw_text: str  # Original heading text
+
+
+def parse_structure_heading(line: str) -> StructureHeading | None:
+    """Parse a structure heading line.
+
+    Recognizes:
+    - # Chapter N Title → level=1, number="N"
+    - ## Section N.N Title → level=2, number="N.N"
+    - ### Subsection N.N.N Title → level=3, number="N.N.N"
+
+    Args:
+        line: A line from the Markdown file.
+
+    Returns:
+        StructureHeading if the line matches a structure pattern, None otherwise.
+
+    Example:
+        >>> parse_structure_heading("# Chapter 1 Introduction")
+        StructureHeading(level=1, number="1", title="Introduction", raw_text="Chapter 1 Introduction")
+        >>> parse_structure_heading("## Section 2.3 Details")
+        StructureHeading(level=2, number="2.3", title="Details", raw_text="Section 2.3 Details")
+    """
+    import re
+
+    # Pattern: ^(#{1,3})\s*(.*)$
+    pattern = r"^(#{1,3})\s*(.*)$"
+    match = re.match(pattern, line)
+
+    if not match:
+        return None
+
+    markers = match.group(1)
+    text = match.group(2).strip()
+    md_level = len(markers)
+
+    # Try Chapter pattern: Chapter N Title
+    chapter_match = re.match(r'^Chapter\s+(\d+)\s*(.*)?$', text, re.IGNORECASE)
+    if chapter_match and md_level == 1:
+        number = chapter_match.group(1)
+        title = (chapter_match.group(2) or "").strip()
+        return StructureHeading(level=1, number=number, title=title, raw_text=text)
+
+    # Try Section pattern: Section N.N Title
+    section_match = re.match(r'^Section\s+(\d+\.\d+)\s*(.*)?$', text, re.IGNORECASE)
+    if section_match and md_level == 2:
+        number = section_match.group(1)
+        title = (section_match.group(2) or "").strip()
+        return StructureHeading(level=2, number=number, title=title, raw_text=text)
+
+    # Try Subsection pattern: Subsection N.N.N Title
+    subsection_match = re.match(r'^Subsection\s+(\d+\.\d+\.\d+)\s*(.*)?$', text, re.IGNORECASE)
+    if subsection_match and md_level == 3:
+        number = subsection_match.group(1)
+        title = (subsection_match.group(2) or "").strip()
+        return StructureHeading(level=3, number=number, title=title, raw_text=text)
+
+    return None
 
 
 def parse_heading(line: str) -> Heading | None:
@@ -1041,14 +1210,11 @@ def parse_figure(lines: list[str]) -> Figure | None:
 
     description = "\n".join(description_lines) if description_lines else ""
 
-    # Phase 5: Use new format (path) with backward compatibility (file, caption, description)
+    # 新形式: path と caption のみ
     return Figure(
-        path="",  # 旧形式では path は空（後方互換性）
-        marker="",
-        read_aloud=False,  # Phase 5: read_aloud is bool now
-        file=file_path,
+        path=file_path,
         caption=caption,
-        description=description,
+        marker="",
     )
 
 
@@ -1150,6 +1316,9 @@ def parse_pages_with_errors(
     toc_begin_page = ""
     toc_end_page = ""
 
+    # Track marker stack across all pages (content/skip markers)
+    marker_stack: list[str] = []
+
     # Debug: show first few lines to help diagnose format issues
     if verbose:
         print(f"[DEBUG] Parsing file: {input_path}", file=sys.stderr)
@@ -1171,6 +1340,7 @@ def parse_pages_with_errors(
                     current_source_file,
                     current_page_lines,
                     page_start_line,
+                    marker_stack,
                 )
                 pages.append(page_obj)
                 errors.extend(page_errors)
@@ -1209,6 +1379,7 @@ def parse_pages_with_errors(
             current_source_file,
             current_page_lines,
             page_start_line,
+            marker_stack,
         )
         pages.append(page_obj)
         errors.extend(page_errors)
@@ -1236,7 +1407,6 @@ def parse_pages_with_errors(
             entries=tuple(all_toc_entries),
             begin_page=toc_begin_page,
             end_page=toc_end_page,
-            read_aloud=False,
         )
 
     return (pages, errors, toc)
@@ -1247,6 +1417,7 @@ def _parse_single_page_content(
     source_file: str,
     lines: list[str],
     start_line: int,
+    marker_stack: list[str],
 ) -> tuple[Page, list[ConversionError], list[TocEntry], bool]:
     """Parse the content of a single page.
 
@@ -1255,6 +1426,7 @@ def _parse_single_page_content(
         source_file: Source file name.
         lines: Lines of content for this page.
         start_line: Starting line number in the original file.
+        marker_stack: Marker stack state (mutated in place, persists across pages).
 
     Returns:
         Tuple of (Page, errors, toc_entries, had_toc_marker).
@@ -1267,7 +1439,7 @@ def _parse_single_page_content(
     toc_entries = []
     in_toc = False
     had_toc_marker = False  # Track if this page has any TOC markers
-    marker_stack: list[str] = []  # Track content/skip marker state
+    # marker_stack is passed as argument (persists across pages)
     toc_lines: list[str] = []  # Collect TOC lines for merging
 
     # Parse content line by line
@@ -1300,20 +1472,10 @@ def _parse_single_page_content(
                         toc_entries.extend(llm_entries)
                     else:
                         # LLM failed - fallback to rule-based
-                        normalized_text = normalize_toc_text(toc_lines)
-                        entry_strings = split_toc_entries(normalized_text)
-                        for entry_str in entry_strings:
-                            toc_entry = parse_toc_entry(entry_str)
-                            if toc_entry is not None:
-                                toc_entries.append(toc_entry)
+                        toc_entries.extend(parse_toc_lines(toc_lines))
                 else:
                     # LLM not enabled - use rule-based
-                    normalized_text = normalize_toc_text(toc_lines)
-                    entry_strings = split_toc_entries(normalized_text)
-                    for entry_str in entry_strings:
-                        toc_entry = parse_toc_entry(entry_str)
-                        if toc_entry is not None:
-                            toc_entries.append(toc_entry)
+                    toc_entries.extend(parse_toc_lines(toc_lines))
             in_toc = False
             toc_lines = []
             idx += 1
@@ -1470,20 +1632,10 @@ def _parse_single_page_content(
                 toc_entries.extend(llm_entries)
             else:
                 # LLM failed - fallback to rule-based
-                normalized_text = normalize_toc_text(toc_lines)
-                entry_strings = split_toc_entries(normalized_text)
-                for entry_str in entry_strings:
-                    toc_entry = parse_toc_entry(entry_str)
-                    if toc_entry is not None:
-                        toc_entries.append(toc_entry)
+                toc_entries.extend(parse_toc_lines(toc_lines))
         else:
             # LLM not enabled - use rule-based
-            normalized_text = normalize_toc_text(toc_lines)
-            entry_strings = split_toc_entries(normalized_text)
-            for entry_str in entry_strings:
-                toc_entry = parse_toc_entry(entry_str)
-                if toc_entry is not None:
-                    toc_entries.append(toc_entry)
+            toc_entries.extend(parse_toc_lines(toc_lines))
 
     # Create Page object
     # Content readAloud is true if ANY child element has readAloud=true

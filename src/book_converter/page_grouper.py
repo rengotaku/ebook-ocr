@@ -10,7 +10,22 @@ from dataclasses import dataclass
 from xml.etree import ElementTree as ET
 
 from src.book_converter.errors import PageValidationError
-from src.book_converter.models import HeaderLevelConfig
+from src.book_converter.models import (
+    HeaderLevelConfig,
+    Book,
+    BookMetadata,
+    Chapter,
+    Section,
+    TableOfContents,
+    TocEntry,
+    Page,
+    Paragraph,
+    Heading,
+    List,
+    Figure,
+    SectionElement,
+)
+from src.book_converter.transformer import is_duplicate_heading
 
 
 @dataclass(frozen=True)
@@ -157,11 +172,37 @@ def extract_section_from_page_metadata(
     if '<emphasis>' in metadata:
         return None
 
-    # Config-based keyword extraction (required)
+    # Config-based keyword extraction
     if config and config.has_any_config():
         return _extract_number_by_keyword(metadata, config)
 
-    # No config provided - return None
+    # Fallback patterns (no config required):
+
+    # 1. Direct section number at start (e.g., "1.1 Title", "2.3.1 Title")
+    section_match = re.match(r'^(\d+(?:\.\d+)+)\s+', metadata)
+    if section_match:
+        return section_match.group(1)
+
+    # 2. Single number at start followed by non-numeric non-slash text (e.g., "1 Chapter Title")
+    # Avoid matching "1 / 1" (page number format)
+    chapter_match = re.match(r'^(\d+)\s+(?![/\d])', metadata)
+    if chapter_match:
+        return chapter_match.group(1)
+
+    # 3. Japanese chapter pattern (e.g., "第1章 Title")
+    japanese_chapter_match = re.match(r'^第(\d+)章', metadata)
+    if japanese_chapter_match:
+        return japanese_chapter_match.group(1)
+
+    # 4. Keyword prefix with number (e.g., "Section 1.1 Title")
+    keyword_number_match = re.match(
+        r'^(?:Section|Chapter|Episode|Part)\s+(\d+(?:\.\d+)*)',
+        metadata,
+        re.IGNORECASE
+    )
+    if keyword_number_match:
+        return keyword_number_match.group(1)
+
     return None
 
 
@@ -172,7 +213,7 @@ def extract_section_from_heading(
     """Extract section number from heading content.
 
     Args:
-        heading: Heading text like "Section 1.1 SREの概要"
+        heading: Heading text like "Section 1.1 SREの概要" or "1.1 SREの概要"
         config: Header level configuration for keyword-based extraction
 
     Returns:
@@ -184,11 +225,37 @@ def extract_section_from_heading(
     # Normalize whitespace for consistent matching
     heading = normalize_for_matching(heading)
 
-    # Config-based keyword extraction (required)
+    # Config-based keyword extraction
     if config and config.has_any_config():
         return _extract_number_by_keyword(heading, config)
 
-    # No config provided - return None
+    # Fallback patterns (no config required):
+
+    # 1. Direct section number at start (e.g., "1.1 Title", "2.3.1 Title")
+    section_match = re.match(r'^(\d+(?:\.\d+)+)\s+', heading)
+    if section_match:
+        return section_match.group(1)
+
+    # 2. Single number at start followed by non-numeric non-slash text (e.g., "1 Chapter Title")
+    # Avoid matching "1 / 1" (page number format)
+    chapter_match = re.match(r'^(\d+)\s+(?![/\d])', heading)
+    if chapter_match:
+        return chapter_match.group(1)
+
+    # 3. Japanese chapter pattern (e.g., "第1章 Title")
+    japanese_chapter_match = re.match(r'^第(\d+)章', heading)
+    if japanese_chapter_match:
+        return japanese_chapter_match.group(1)
+
+    # 4. Keyword prefix with number (e.g., "Section 1.1 Title", "Chapter 2 Title")
+    keyword_number_match = re.match(
+        r'^(?:Section|Chapter|Episode|Part)\s+(\d+(?:\.\d+)*)',
+        heading,
+        re.IGNORECASE
+    )
+    if keyword_number_match:
+        return keyword_number_match.group(1)
+
     return None
 
 
@@ -300,6 +367,80 @@ def validate_page_count(input_count: int, output_count: int) -> None:
         )
 
 
+def _flatten_pages_in_element(
+    element: ET.Element,
+    container_number: str | None = None,
+    container_title: str | None = None,
+) -> int:
+    """Flatten page tags to page comments and extract content elements.
+
+    Transforms:
+    - <page number="N"> -> <!-- page N -->
+    - <content><children/></content> -> <children/> (direct)
+    - <pageAnnouncement> -> removed
+    - Duplicate headings -> removed (if matches container title)
+
+    Args:
+        element: The XML element to process (modified in place)
+        container_number: The container's number for duplicate heading detection
+        container_title: The container's title for duplicate heading detection
+
+    Returns:
+        Number of pages flattened
+    """
+    pages_flattened = 0
+
+    # Find all page elements to process
+    pages_to_process = list(element.findall('page'))
+
+    for page in pages_to_process:
+        page_number = page.get('number', '')
+
+        # Get index of page element
+        page_index = list(element).index(page)
+
+        # Remove the page element
+        element.remove(page)
+
+        # Insert page comment at the same position
+        if page_number:
+            comment = ET.Comment(f" page {page_number} ")
+            element.insert(page_index, comment)
+            page_index += 1
+
+        # Extract content elements (skip pageAnnouncement, pageMetadata)
+        for child in page:
+            if child.tag in ('pageAnnouncement', 'pageMetadata'):
+                # Skip page-level metadata (not content)
+                continue
+            elif child.tag == 'content':
+                # Extract content's children directly
+                for content_child in child:
+                    # Check for duplicate heading
+                    if content_child.tag == 'heading' and container_title:
+                        heading_text = ''.join(content_child.itertext())
+                        if is_duplicate_heading(heading_text, container_number, container_title):
+                            # Skip duplicate heading
+                            continue
+                    element.insert(page_index, content_child)
+                    page_index += 1
+            else:
+                # Other elements go directly (shouldn't happen normally)
+                element.insert(page_index, child)
+                page_index += 1
+
+        pages_flattened += 1
+
+    # Recursively process child elements (chapter, section, subsection, front-matter)
+    for child in element:
+        if child.tag in ('chapter', 'section', 'subsection', 'front-matter'):
+            child_number = child.get('number')
+            child_title = child.get('title', '')
+            pages_flattened += _flatten_pages_in_element(child, child_number, child_title)
+
+    return pages_flattened
+
+
 def group_pages_by_toc(
     xml_input: str,
     header_level_config: HeaderLevelConfig | None = None,
@@ -379,10 +520,14 @@ def group_pages_by_toc(
         # Build hierarchical structure
         _build_hierarchical_structure(new_book, page_assignments, toc_lookup)
 
-    # Validate page count
+    # Validate page count (before flattening)
     input_count = len(pages)
     output_count = len(new_book.findall('.//page'))
     validate_page_count(input_count, output_count)
+
+    # Flatten pages: convert <page> to <!-- page N --> comments
+    # and extract content elements directly
+    _flatten_pages_in_element(new_book)
 
     # Serialize to string
     return _serialize_to_xml(new_book)
@@ -453,6 +598,11 @@ def _extract_section_from_page(
 ) -> str | None:
     """Extract section number from a page element.
 
+    Recognizes new format:
+    - "Chapter N Title" → returns "N"
+    - "Section N.N Title" → returns "N.N"
+    - "Subsection N.N.N Title" → returns "N.N.N"
+
     Args:
         page: Page element
         config: Header level configuration
@@ -460,23 +610,40 @@ def _extract_section_from_page(
     Returns:
         Section number string or None
     """
-    # Try pageMetadata first
+    # Try heading first (new format: Chapter N / Section N.N)
+    content = page.find('content')
+    if content is not None:
+        heading = content.find('heading')
+        if heading is not None:
+            heading_text = ''.join(heading.itertext()).strip()
+
+            # New format: "Chapter N Title"
+            chapter_match = re.match(r'^Chapter\s+(\d+)', heading_text, re.IGNORECASE)
+            if chapter_match:
+                return chapter_match.group(1)
+
+            # New format: "Section N.N Title"
+            section_match = re.match(r'^Section\s+(\d+\.\d+)', heading_text, re.IGNORECASE)
+            if section_match:
+                return section_match.group(1)
+
+            # New format: "Subsection N.N.N Title"
+            subsection_match = re.match(r'^Subsection\s+(\d+\.\d+\.\d+)', heading_text, re.IGNORECASE)
+            if subsection_match:
+                return subsection_match.group(1)
+
+            # Fallback: try legacy extraction
+            section = extract_section_from_heading(heading_text, config)
+            if section:
+                return section
+
+    # Try pageMetadata (for legacy support)
     page_metadata = page.find('pageMetadata')
     if page_metadata is not None:
         metadata_text = ''.join(page_metadata.itertext())
         section = extract_section_from_page_metadata(metadata_text, config)
         if section:
             return section
-
-    # Try heading
-    content = page.find('content')
-    if content is not None:
-        heading = content.find('heading')
-        if heading is not None:
-            heading_text = ''.join(heading.itertext())
-            section = extract_section_from_heading(heading_text, config)
-            if section:
-                return section
 
     return None
 
@@ -636,6 +803,286 @@ def _serialize_to_xml(element: ET.Element) -> str:
     """
     xml_str = ET.tostring(element, encoding='unicode')
     return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
+
+
+# ============================================================
+# New Design: Page list → Chapter/Section structure
+# ============================================================
+
+
+def convert_pages_to_book(
+    pages: tuple[Page, ...],
+    toc: TableOfContents | None,
+    metadata: BookMetadata,
+    config: HeaderLevelConfig | None = None,
+) -> Book:
+    """Convert flat page list to hierarchical Book structure.
+
+    Args:
+        pages: Tuple of Page objects (legacy format)
+        toc: Table of contents
+        metadata: Book metadata
+        config: Header level configuration
+
+    Returns:
+        Book with chapters and sections (new format)
+    """
+    if not toc or not toc.entries:
+        # No TOC: put all content in a single chapter
+        section = _pages_to_section("", "Content", pages)
+        chapter = Chapter(number="", title="Content", sections=(section,))
+        return Book(metadata=metadata, toc=toc, chapters=(chapter,))
+
+    # Build TOC lookup
+    toc_lookup = {entry.number: entry for entry in toc.entries if entry.number}
+
+    # Assign pages to sections
+    page_assignments = _assign_pages_to_sections_new(pages, toc_lookup, config)
+
+    # Build chapters
+    chapters = _build_chapters(page_assignments, toc_lookup)
+
+    return Book(metadata=metadata, toc=toc, chapters=chapters)
+
+
+def _assign_pages_to_sections_new(
+    pages: tuple[Page, ...],
+    toc_lookup: dict[str, TocEntry],
+    config: HeaderLevelConfig | None = None,
+) -> dict[str, list[Page]]:
+    """Assign pages to sections.
+
+    Args:
+        pages: Tuple of Page objects
+        toc_lookup: Dict mapping section number to TocEntry
+        config: Header level configuration
+
+    Returns:
+        Dict mapping section number to list of pages
+    """
+    assignments: dict[str, list[Page]] = {}
+    current_section: str | None = None
+
+    for page in pages:
+        # Try to extract section number from page content
+        section_num = _extract_section_from_page_content(page, config)
+
+        if section_num and section_num in toc_lookup:
+            current_section = section_num
+        elif current_section is None:
+            # First page without section -> assign to first chapter
+            first_chapter = _find_first_chapter_entry(toc_lookup)
+            if first_chapter:
+                current_section = first_chapter
+
+        if current_section:
+            if current_section not in assignments:
+                assignments[current_section] = []
+            assignments[current_section].append(page)
+
+    return assignments
+
+
+def _find_first_chapter_entry(toc_lookup: dict[str, TocEntry]) -> str | None:
+    """Find the first chapter number in TOC."""
+    chapter_numbers = [
+        num for num, entry in toc_lookup.items()
+        if entry.level == 1 and num and num.isdigit()
+    ]
+    if not chapter_numbers:
+        return None
+    return min(chapter_numbers, key=lambda x: int(x))
+
+
+def _extract_section_from_page_content(
+    page: Page,
+    config: HeaderLevelConfig | None = None,
+) -> str | None:
+    """Extract section number from page content."""
+    for element in page.content.elements:
+        if isinstance(element, Heading):
+            # Try to extract section number from heading
+            section = extract_section_from_heading(element.text, config)
+            if section:
+                return section
+        elif isinstance(element, Paragraph):
+            # Try to extract from paragraph (chapter title pages)
+            section = extract_section_from_heading(element.text, config)
+            if section:
+                return section
+    return None
+
+
+def _build_chapters(
+    page_assignments: dict[str, list[Page]],
+    toc_lookup: dict[str, TocEntry],
+) -> tuple[Chapter, ...]:
+    """Build chapters from page assignments.
+
+    Args:
+        page_assignments: Dict mapping section number to pages
+        toc_lookup: Dict mapping section number to TocEntry
+
+    Returns:
+        Tuple of Chapter objects
+    """
+    # Group by chapter number
+    chapters_data: dict[str, dict[str, list[Page]]] = {}
+
+    for section_num, pages in page_assignments.items():
+        section_parts = parse_section_number(section_num)
+        if not section_parts:
+            continue
+
+        chapter_num = str(section_parts.chapter_num)
+        if chapter_num not in chapters_data:
+            chapters_data[chapter_num] = {}
+        chapters_data[chapter_num][section_num] = pages
+
+    # Build Chapter objects
+    chapters = []
+    for chapter_num in sorted(chapters_data.keys(), key=lambda x: int(x) if x.isdigit() else 0):
+        chapter_entry = toc_lookup.get(chapter_num)
+        if not chapter_entry:
+            continue
+
+        sections = _build_sections(chapters_data[chapter_num], toc_lookup, chapter_entry)
+        chapter = Chapter(
+            number=chapter_num,
+            title=chapter_entry.text,
+            sections=sections,
+        )
+        chapters.append(chapter)
+
+    return tuple(chapters)
+
+
+def _build_sections(
+    section_pages: dict[str, list[Page]],
+    toc_lookup: dict[str, TocEntry],
+    chapter_entry: TocEntry,
+) -> tuple[Section, ...]:
+    """Build sections for a chapter.
+
+    Args:
+        section_pages: Dict mapping section number to pages
+        toc_lookup: Dict mapping section number to TocEntry
+        chapter_entry: TOC entry for the chapter
+
+    Returns:
+        Tuple of Section objects
+    """
+    sections = []
+
+    # Sort section numbers
+    sorted_sections = sorted(section_pages.keys(), key=_section_sort_key)
+
+    for section_num in sorted_sections:
+        pages = section_pages[section_num]
+        section_parts = parse_section_number(section_num)
+
+        if not section_parts:
+            continue
+
+        # Get section entry from TOC
+        section_entry = toc_lookup.get(section_num)
+
+        if section_parts.is_chapter:
+            # Chapter-level pages: create section with chapter title
+            # Skip title elements (they're in chapter.title)
+            section = _pages_to_section(
+                section_num,
+                chapter_entry.text,
+                pages,
+                skip_title=True,
+            )
+            if section.elements:  # Only add if has elements
+                sections.append(section)
+        else:
+            # Regular section
+            title = section_entry.text if section_entry else ""
+            section = _pages_to_section(
+                section_num,
+                title,
+                pages,
+                skip_title=True,
+            )
+            sections.append(section)
+
+    return tuple(sections)
+
+
+def _pages_to_section(
+    number: str,
+    title: str,
+    pages: list[Page] | tuple[Page, ...],
+    skip_title: bool = False,
+) -> Section:
+    """Convert pages to a Section.
+
+    Args:
+        number: Section number
+        title: Section title
+        pages: List of pages
+        skip_title: Whether to skip title elements (heading/paragraph matching title)
+
+    Returns:
+        Section object
+    """
+    elements: list[SectionElement] = []
+
+    # Normalize title for comparison
+    normalized_title = normalize_for_matching(title) if title else ""
+
+    for page in pages:
+        # Add content elements
+        for element in page.content.elements:
+            # Skip title duplicates if requested
+            if skip_title and normalized_title:
+                if isinstance(element, (Heading, Paragraph)):
+                    normalized_text = normalize_for_matching(element.text)
+                    # Skip if text contains the title
+                    if _is_title_duplicate(normalized_text, normalized_title):
+                        continue
+
+            elements.append(element)
+
+        # Add figures
+        for figure in page.figures:
+            elements.append(figure)
+
+    return Section(
+        number=number,
+        title=title,
+        elements=tuple(elements),
+    )
+
+
+def _is_title_duplicate(text: str, title: str) -> bool:
+    """Check if text is a title duplicate.
+
+    Args:
+        text: Normalized text to check
+        title: Normalized title
+
+    Returns:
+        True if text is a title duplicate
+    """
+    # Exact match
+    if text == title:
+        return True
+
+    # Text starts with "Chapter N" or "Section N.N" followed by title
+    chapter_pattern = r'^(?:Chapter|Section|第\d+章)\s*\d*\.?\d*\s*'
+    stripped = re.sub(chapter_pattern, '', text, flags=re.IGNORECASE)
+    if normalize_for_matching(stripped) == title:
+        return True
+
+    # Title is contained in text (for cases like "1.1 Title Here")
+    if title and title in text:
+        return True
+
+    return False
 
 
 def main() -> int:

@@ -126,7 +126,8 @@ def detect_running_head(
     most_frequent = max(level_1_analyses, key=lambda a: a.count)
 
     # 指定された閾値以上なら柱として判定
-    threshold = total_pages * threshold_ratio
+    # ただし、最低でも2回以上出現する必要がある（1回だけの出現は running head ではない）
+    threshold = max(total_pages * threshold_ratio, 2)
     running_head_texts = set()
 
     if most_frequent.count >= threshold:
