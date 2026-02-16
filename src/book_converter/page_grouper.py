@@ -329,8 +329,8 @@ def group_pages_by_toc(
         toc_end = int(toc_element.get('end', '0'))
         toc_entries = parse_toc(toc_element)
 
-    # Build TOC lookup: section number -> TOCEntry
-    toc_lookup = {entry.number: entry for entry in toc_entries}
+    # Build TOC lookup: section number -> TOCEntry (skip entries without number)
+    toc_lookup = {entry.number: entry for entry in toc_entries if entry.number}
 
     # Create new book element
     new_book = ET.Element('book')
@@ -434,8 +434,11 @@ def _find_first_chapter(toc_lookup: dict[str, TOCEntry]) -> str | None:
     Returns:
         First chapter number or None if no chapters exist
     """
-    # Find all chapter entries (level=1)
-    chapter_numbers = [num for num, entry in toc_lookup.items() if entry.level == 1]
+    # Find all chapter entries (level=1) with valid numeric section numbers
+    chapter_numbers = [
+        num for num, entry in toc_lookup.items()
+        if entry.level == 1 and num and num.isdigit()
+    ]
 
     if not chapter_numbers:
         return None
