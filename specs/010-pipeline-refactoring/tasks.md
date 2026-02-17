@@ -59,7 +59,7 @@
 
 ### Input
 
-- [ ] T013 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
+- [x] T013 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
@@ -75,21 +75,21 @@
 
 ### Implementation (GREEN)
 
-- [ ] T023 REDテストを読み込み: specs/010-pipeline-refactoring/red-tests/ph2-test.md
-- [ ] T024 [P] [US1] src/cli/__init__.py を作成
-- [ ] T025 [P] [US1] CLI extract_frames を実装: src/cli/extract_frames.py
-- [ ] T026 [P] [US1] CLI deduplicate を実装: src/cli/deduplicate.py
-- [ ] T027 [P] [US1] CLI split_spreads を実装: src/cli/split_spreads.py
-- [ ] T028 [P] [US1] CLI detect_layout を実装: src/cli/detect_layout.py
-- [ ] T029 [P] [US1] CLI run_ocr を実装: src/cli/run_ocr.py
-- [ ] T030 [P] [US1] CLI consolidate を実装: src/cli/consolidate.py
-- [ ] T031 `make test` PASS を確認 (GREEN)
+- [x] T023 REDテストを読み込み: specs/010-pipeline-refactoring/red-tests/ph2-test.md
+- [x] T024 [P] [US1] src/cli/__init__.py を作成
+- [x] T025 [P] [US1] CLI extract_frames を実装: src/cli/extract_frames.py
+- [x] T026 [P] [US1] CLI deduplicate を実装: src/cli/deduplicate.py
+- [x] T027 [P] [US1] CLI split_spreads を実装: src/cli/split_spreads.py
+- [x] T028 [P] [US1] CLI detect_layout を実装: src/cli/detect_layout.py
+- [x] T029 [P] [US1] CLI run_ocr を実装: src/cli/run_ocr.py
+- [x] T030 [P] [US1] CLI consolidate を実装: src/cli/consolidate.py
+- [x] T031 `make test` PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T032 `make test` で全テストがパスすることを確認
-- [ ] T033 各CLIスクリプトを手動実行してエラーがないことを確認
-- [ ] T034 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph2-output.md
+- [x] T032 `make test` で全テストがパスすることを確認
+- [x] T033 各CLIスクリプトを手動実行してエラーがないことを確認
+- [x] T034 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph2-output.md
 
 **Checkpoint**: 6つのCLIスクリプトが独立して実行可能
 

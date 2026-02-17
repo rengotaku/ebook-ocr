@@ -16,9 +16,9 @@ from pathlib import Path
 
 from PIL import Image
 
-from ocr_engines import EngineResult, TextWithBox, run_all_engines
-from ocr_output import ROVEROutput
-from ocr_alignment import align_texts_character_level, vote_aligned_text
+from src.ocr_engines import EngineResult, TextWithBox, run_all_engines
+from src.ocr_output import ROVEROutput
+from src.ocr_alignment import align_texts_character_level, vote_aligned_text
 
 
 # Engine priority weights for voting (Tesseract excluded from ROVER)
