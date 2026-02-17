@@ -28,6 +28,20 @@ from src.book_converter.models import (
 from src.book_converter.transformer import is_duplicate_heading
 
 
+@dataclass
+class FlattenStats:
+    """Statistics from page flattening operation."""
+
+    pages_flattened: int = 0
+    headings_removed: int = 0
+
+    def __iadd__(self, other: "FlattenStats") -> "FlattenStats":
+        """Add another stats object to this one."""
+        self.pages_flattened += other.pages_flattened
+        self.headings_removed += other.headings_removed
+        return self
+
+
 @dataclass(frozen=True)
 class SectionNumber:
     """Parsed section number with hierarchy information."""
@@ -371,7 +385,7 @@ def _flatten_pages_in_element(
     element: ET.Element,
     container_number: str | None = None,
     container_title: str | None = None,
-) -> int:
+) -> FlattenStats:
     """Flatten page tags to page comments and extract content elements.
 
     Transforms:
@@ -386,9 +400,9 @@ def _flatten_pages_in_element(
         container_title: The container's title for duplicate heading detection
 
     Returns:
-        Number of pages flattened
+        FlattenStats with pages_flattened and headings_removed counts
     """
-    pages_flattened = 0
+    stats = FlattenStats()
 
     # Find all page elements to process
     pages_to_process = list(element.findall('page'))
@@ -421,6 +435,7 @@ def _flatten_pages_in_element(
                         heading_text = ''.join(content_child.itertext())
                         if is_duplicate_heading(heading_text, container_number, container_title):
                             # Skip duplicate heading
+                            stats.headings_removed += 1
                             continue
                     element.insert(page_index, content_child)
                     page_index += 1
@@ -429,16 +444,16 @@ def _flatten_pages_in_element(
                 element.insert(page_index, child)
                 page_index += 1
 
-        pages_flattened += 1
+        stats.pages_flattened += 1
 
     # Recursively process child elements (chapter, section, subsection, front-matter)
     for child in element:
         if child.tag in ('chapter', 'section', 'subsection', 'front-matter'):
             child_number = child.get('number')
             child_title = child.get('title', '')
-            pages_flattened += _flatten_pages_in_element(child, child_number, child_title)
+            stats += _flatten_pages_in_element(child, child_number, child_title)
 
-    return pages_flattened
+    return stats
 
 
 def group_pages_by_toc(
@@ -525,9 +540,30 @@ def group_pages_by_toc(
     output_count = len(new_book.findall('.//page'))
     validate_page_count(input_count, output_count)
 
+    # Count structure elements created
+    chapters_count = len(new_book.findall('.//chapter'))
+    sections_count = len(new_book.findall('.//section'))
+    subsections_count = len(new_book.findall('.//subsection'))
+
+    # Count content elements before flattening
+    headings_before = len(new_book.findall('.//heading'))
+    paragraphs_count = len(new_book.findall('.//paragraph'))
+    lists_count = len(new_book.findall('.//list'))
+    figures_count = len(new_book.findall('.//figure'))
+
     # Flatten pages: convert <page> to <!-- page N --> comments
     # and extract content elements directly
-    _flatten_pages_in_element(new_book)
+    flatten_stats = _flatten_pages_in_element(new_book)
+
+    # Count headings after flattening
+    headings_after = len(new_book.findall('.//heading'))
+
+    # Print statistics
+    print(f"グループ化統計:")
+    print(f"  TOCエントリ: {len(toc_entries)}件")
+    print(f"  構造タグ: chapter={chapters_count}, section={sections_count}, subsection={subsections_count}")
+    print(f"  コンテンツタグ: heading={headings_after}, paragraph={paragraphs_count}, list={lists_count}, figure={figures_count}")
+    print(f"  重複heading削除: {flatten_stats.headings_removed}件 ({headings_before}→{headings_after})")
 
     # Serialize to string
     return _serialize_to_xml(new_book)

@@ -37,6 +37,65 @@ except ImportError:
     TOC_CLASSIFIER_AVAILABLE = False
 
 
+# ============================================================
+# List Detection Constants
+# ============================================================
+
+# Unordered list markers (bullet points)
+BULLET_MARKERS = (
+    '●', '○', '◎',  # Circle variants
+    '•', '·', '・',  # Dot variants
+    '◆', '◇',       # Diamond variants
+    '■', '□',       # Square variants
+    '▶', '▷', '►',  # Triangle variants
+    '-', '*',        # Standard markdown
+)
+
+# Ordered list patterns (compiled regex)
+import re
+ORDERED_LIST_PATTERN = re.compile(
+    r'^\s*('
+    r'[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]'  # Circled numbers
+    r'|[（(]\d+[)）]'                           # (1) (2) etc
+    r'|\d+[.．)）]'                              # 1. 2. etc
+    r')\s*(.*)$'
+)
+
+
+def is_list_line(line: str) -> tuple[bool, str, str]:
+    """Check if a line is a list item.
+
+    Args:
+        line: The line to check.
+
+    Returns:
+        Tuple of (is_list, list_type, content).
+        - is_list: True if this is a list item
+        - list_type: "unordered" or "ordered"
+        - content: The text content after the marker
+    """
+    stripped = line.strip()
+    if not stripped:
+        return False, "", ""
+
+    # Check unordered markers
+    for marker in BULLET_MARKERS:
+        if stripped.startswith(marker):
+            # Ensure there's content after marker (with optional space)
+            rest = stripped[len(marker):].lstrip()
+            if rest:  # Has content
+                return True, "unordered", rest
+
+    # Check ordered markers
+    match = ORDERED_LIST_PATTERN.match(stripped)
+    if match:
+        content = match.group(2).strip()
+        if content:  # Has content
+            return True, "ordered", content
+
+    return False, "", ""
+
+
 def parse_toc_marker(line: str) -> MarkerType | None:
     """Parse a TOC marker line.
 
@@ -1042,8 +1101,11 @@ def parse_paragraph(lines: list[str]) -> Paragraph | None:
 def parse_list(lines: list[str]) -> List | None:
     """Parse list lines into a List object.
 
+    Supports various bullet markers (●, •, -, *, etc.) and ordered markers
+    (①, 1., (1), etc.).
+
     Args:
-        lines: List of lines containing list items (- or * markers).
+        lines: List of lines containing list items.
 
     Returns:
         List object with items tuple, or None if empty.
@@ -1051,35 +1113,22 @@ def parse_list(lines: list[str]) -> List | None:
     Example:
         >>> parse_list(["- Item 1", "- Item 2"])
         List(items=("Item 1", "Item 2"), list_type="unordered", read_aloud=True)
+        >>> parse_list(["● 項目1", "● 項目2"])
+        List(items=("項目1", "項目2"), list_type="unordered", read_aloud=True)
     """
-    import re
-
     if not lines:
         return None
 
     items = []
-    list_type = "unordered"  # デフォルト
-
-    # Pattern for unordered list: optional leading spaces, then - or *, then space, then content
-    unordered_pattern = r"^\s*[-*]\s+(.*)$"
-    # Pattern for ordered list: optional leading spaces, then digit(s), then ., then space, then content
-    ordered_pattern = r"^\s*\d+\.\s+(.*)$"
+    list_type = "unordered"  # Default
 
     for line in lines:
-        # 最初の行でリストタイプを判定
-        if not items:
-            if re.match(ordered_pattern, line):
-                list_type = "ordered"
-
-        # リストタイプに応じてパターンマッチ
-        if list_type == "ordered":
-            match = re.match(ordered_pattern, line)
-        else:
-            match = re.match(unordered_pattern, line)
-
-        if match:
-            item_text = match.group(1)
-            items.append(item_text)
+        is_list, detected_type, content = is_list_line(line)
+        if is_list:
+            # Set list type from first item
+            if not items:
+                list_type = detected_type
+            items.append(content)
 
     if not items:
         return None
@@ -1556,30 +1605,35 @@ def _parse_single_page_content(
             idx += 1
             continue
 
-        # Check for list item
-        if line.strip().startswith(('-', '*')) and line.strip()[1:2] in (' ', ''):
-            # Collect consecutive list items
-            list_lines = []
-            list_idx = idx
+        # Check for list item (supports ●, •, -, *, ①, 1., etc.)
+        is_list, _, _ = is_list_line(line)
+        if is_list:
+            # Collect consecutive list items (minimum 2 for recognition)
+            list_lines = [line]
+            list_idx = idx + 1
             while list_idx < len(lines):
                 list_line = lines[list_idx]
-                if list_line.strip().startswith(('-', '*')) and list_line.strip()[1:2] in (' ', ''):
-                    list_lines.append(list_line)
-                    list_idx += 1
-                elif not list_line.strip():
+                if not list_line.strip():
                     # Empty line ends list
                     break
+                next_is_list, _, _ = is_list_line(list_line)
+                if next_is_list:
+                    list_lines.append(list_line)
+                    list_idx += 1
                 else:
                     # Non-list line ends list
                     break
 
-            lst = parse_list(list_lines)
-            if lst is not None:
-                # Apply readAloud state
-                lst = List(items=lst.items, read_aloud=read_aloud)
-                content_elements.append(lst)
-            idx = list_idx
-            continue
+            # Only treat as list if 2+ consecutive items
+            if len(list_lines) >= 2:
+                lst = parse_list(list_lines)
+                if lst is not None:
+                    # Apply readAloud state
+                    lst = List(items=lst.items, read_aloud=read_aloud)
+                    content_elements.append(lst)
+                idx = list_idx
+                continue
+            # Single item: fall through to paragraph handling
 
         # Check for paragraph (non-empty, non-special line)
         if line.strip():
@@ -1593,8 +1647,16 @@ def _parse_single_page_content(
                     break
                 if parse_heading(para_line) is not None:
                     break
-                if para_line.strip().startswith(('-', '*')) and para_line.strip()[1:2] in (' ', ''):
-                    break
+                # Stop at list item (check if 2+ consecutive items follow)
+                is_list_item, _, _ = is_list_line(para_line)
+                if is_list_item:
+                    # Look ahead to see if there are 2+ consecutive list items
+                    lookahead_idx = para_idx + 1
+                    if lookahead_idx < len(lines):
+                        next_is_list, _, _ = is_list_line(lines[lookahead_idx])
+                        if next_is_list:
+                            break  # This starts a real list
+                    # Single list marker: treat as part of paragraph
                 if parse_figure_comment(para_line) is not None:
                     break
                 if parse_page_metadata(para_line.strip()) is not None:
