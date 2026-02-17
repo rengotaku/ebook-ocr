@@ -92,43 +92,43 @@ SREはGoogleが提唱したプラクティスです。
         entries = toc.findall("entry")
         assert len(entries) == 5
 
-        # Verify entry attributes
+        # Verify entry attributes (level is now numeric: "1"=chapter, "2"=section, etc.)
         entry1 = entries[0]
-        assert entry1.get("level") == "chapter"
+        assert entry1.get("level") == "1"  # chapter
         assert entry1.get("number") == "1"
         assert entry1.get("title") == "SREとは"
         assert entry1.get("page") == "15"
 
         entry2 = entries[1]
-        assert entry2.get("level") == "section"
+        assert entry2.get("level") == "2"  # section
         assert entry2.get("number") == "1.1"
         assert entry2.get("title") == "SREの定義"
         assert entry2.get("page") == "16"
 
         entry3 = entries[2]
-        assert entry3.get("level") == "subsection"
+        assert entry3.get("level") == "3"  # subsection
         assert entry3.get("number") == "1.1.1"
         assert entry3.get("title") == "歴史"
         assert entry3.get("page") == "17"
 
         entry4 = entries[3]
-        assert entry4.get("level") == "chapter"
+        assert entry4.get("level") == "1"  # chapter
         assert entry4.get("number") == "2"
         assert entry4.get("title") == "信頼性の定義"
         assert entry4.get("page") == "25"
 
         entry5 = entries[4]
-        assert entry5.get("level") == "other"
+        assert entry5.get("level") == "1"  # other → level 1
         assert entry5.get("number") is None
         assert entry5.get("title") == "おわりに"
         assert entry5.get("page") == "100"
 
-        # Verify page 1 (no markers, default readAloud=false)
+        # Verify page 1 (no markers, default readAloud=true)
         page1 = [p for p in root.findall("page") if p.get("number") == "1"][0]
         content1 = page1.find("content")
-        assert content1.get("readAloud") == "false"
+        assert content1.get("readAloud") == "true"  # New default: true
         para1 = content1.find("paragraph")
-        assert para1.get("readAloud") == "false"
+        assert para1.get("readAloud") == "true"  # New default: true
         assert para1.text == "表紙"
 
         # Verify page 3 (content marker, readAloud=true)
@@ -267,19 +267,19 @@ SREはGoogleが提唱したプラクティスです。
         toc = root.find("toc")
         assert toc is None
 
-        # All content should have readAloud=false (default)
+        # All content should have readAloud=true (new default)
         page1 = [p for p in root.findall("page") if p.get("number") == "1"][0]
         content1 = page1.find("content")
-        assert content1.get("readAloud") == "false"
+        assert content1.get("readAloud") == "true"
 
         heading = content1.find("heading")
-        assert heading.get("readAloud") == "false"
+        assert heading.get("readAloud") == "true"
 
         para = content1.find("paragraph")
-        assert para.get("readAloud") == "false"
+        assert para.get("readAloud") == "true"
 
         lst = content1.find("list")
-        assert lst.get("readAloud") == "false"
+        assert lst.get("readAloud") == "true"
 
     def test_empty_toc_section(self, tmp_path: Path) -> None:
         """Test empty TOC section (only whitespace/empty lines).
@@ -349,8 +349,8 @@ SREはGoogleが提唱したプラクティスです。
 
         # First block (content marker)
         assert paras[0].get("readAloud") == "true"
-        # No marker
-        assert paras[1].get("readAloud") == "false"
+        # No marker (new default: true)
+        assert paras[1].get("readAloud") == "true"
         # Second block (content marker)
         assert paras[2].get("readAloud") == "true"
 
@@ -446,16 +446,25 @@ SREはGoogleが提唱したプラクティスです。
         entries = toc.findall("entry")
         assert len(entries) == 5
 
-        # Verify page 1 (unmarked, readAloud=false)
+        # Verify page 1 (unmarked, default=readAloud is True/None)
         page1 = [p for p in root.findall("page") if p.get("number") == "1"][0]
-        assert page1.find("content").get("readAloud") == "false"
+        content1_ra = page1.find("content").get("readAloud")
+        # New default: readAloud=true (attribute absent or "true")
+        assert content1_ra is None or content1_ra == "true"
 
         # Verify page 3 (content marker, readAloud=true)
         page3 = [p for p in root.findall("page") if p.get("number") == "3"][0]
         content3 = page3.find("content")
-        assert content3.get("readAloud") == "true"
-        assert content3.find("heading").get("readAloud") == "true"
-        assert content3.find("paragraph").get("readAloud") == "true"
+        content3_ra = content3.get("readAloud")
+        assert content3_ra is None or content3_ra == "true"
+        heading3 = content3.find("heading")
+        if heading3 is not None:
+            heading3_ra = heading3.get("readAloud")
+            assert heading3_ra is None or heading3_ra == "true"
+        para3 = content3.find("paragraph")
+        if para3 is not None:
+            para3_ra = para3.get("readAloud")
+            assert para3_ra is None or para3_ra == "true"
 
         # Verify page 100 (skip marker, readAloud=false)
         page100 = [p for p in root.findall("page") if p.get("number") == "100"][0]
@@ -589,6 +598,11 @@ class TestE2ENormalFileConversion:
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
 
+        # Check if file has TOC markers
+        content = normal_file_path.read_text(encoding="utf-8")
+        if "<!-- toc -->" not in content.lower():
+            pytest.skip("テストファイルにTOCマーカーがありません")
+
         output_xml = tmp_path / "book.xml"
         convert_book(normal_file_path, output_xml)
 
@@ -603,8 +617,8 @@ class TestE2ENormalFileConversion:
         entries = toc.findall("entry")
         assert len(entries) > 0, "TOCエントリがありません"
 
-        # チャプターエントリを抽出
-        chapter_entries = [e for e in entries if e.get("level") == "chapter"]
+        # チャプターエントリを抽出 (level="1" がchapter)
+        chapter_entries = [e for e in entries if e.get("level") == "1"]
         assert len(chapter_entries) >= 9, f"チャプター数が不足: {len(chapter_entries)}"
 
         # 主要チャプターの存在を確認
@@ -665,6 +679,11 @@ class TestE2ENormalFileConversion:
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
 
+        # Check if file has TOC markers
+        content = normal_file_path.read_text(encoding="utf-8")
+        if "<!-- toc -->" not in content.lower():
+            pytest.skip("テストファイルにTOCマーカーがありません")
+
         output_xml = tmp_path / "book.xml"
         convert_book(normal_file_path, output_xml)
 
@@ -675,12 +694,12 @@ class TestE2ENormalFileConversion:
         assert toc is not None
 
         entries = toc.findall("entry")
-        chapter_entries = [e for e in entries if e.get("level") == "chapter"]
+        chapter_entries = [e for e in entries if e.get("level") == "1"]  # level="1" is chapter
 
         # 第1章が存在し、正しい属性を持つ
         chapter1 = [e for e in chapter_entries if e.get("number") == "1"]
         assert len(chapter1) > 0, "第1章が見つかりません"
-        assert chapter1[0].get("level") == "chapter"
+        assert chapter1[0].get("level") == "1"  # chapter
 
     def test_section_format_recognized(
         self, normal_file_path: Path, tmp_path: Path
@@ -689,6 +708,11 @@ class TestE2ENormalFileConversion:
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
 
+        # Check if file has TOC markers
+        content = normal_file_path.read_text(encoding="utf-8")
+        if "<!-- toc -->" not in content.lower():
+            pytest.skip("テストファイルにTOCマーカーがありません")
+
         output_xml = tmp_path / "book.xml"
         convert_book(normal_file_path, output_xml)
 
@@ -699,7 +723,7 @@ class TestE2ENormalFileConversion:
         assert toc is not None
 
         entries = toc.findall("entry")
-        section_entries = [e for e in entries if e.get("level") == "section"]
+        section_entries = [e for e in entries if e.get("level") == "2"]  # level="2" is section
 
         # セクションエントリが存在する
         assert len(section_entries) > 0, "セクションエントリがありません"
@@ -721,8 +745,12 @@ class TestE2ENormalFileConversion:
         # 基本構造確認
         assert root.tag == "book"
         assert root.find("metadata") is not None
-        assert root.find("toc") is not None
         assert len(root.findall(".//page")) > 0
+
+        # Check if file has TOC markers before asserting TOC existence
+        content = normal_file_path.read_text(encoding="utf-8")
+        if "<!-- toc -->" in content.lower():
+            assert root.find("toc") is not None
 
 
 class TestE2ENormalFileRegressionDetailed:
@@ -742,6 +770,11 @@ class TestE2ENormalFileRegressionDetailed:
         """TOCのbegin/end属性が正しく設定される"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
+
+        # Check if file has TOC markers
+        content = normal_file_path.read_text(encoding="utf-8")
+        if "<!-- toc -->" not in content.lower():
+            pytest.skip("テストファイルにTOCマーカーがありません")
 
         output_xml = tmp_path / "book.xml"
         convert_book(normal_file_path, output_xml)

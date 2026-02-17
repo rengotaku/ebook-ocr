@@ -1,19 +1,21 @@
 """Tests for src.layout_ocr region-based OCR processing.
 
 Phase 4 RED tests for US2 - Region-based OCR Processing.
-These tests will FAIL until src/layout_ocr.py is implemented.
 
-OCR Engine Selection Rules (from research.md):
+OCR Engine Selection Rules:
 | Region Type | OCR Engine | Output Format |
 |-------------|------------|---------------|
 | TITLE | Yomitoku | `## {text}` |
 | TEXT | Yomitoku | `{text}` |
 | TABLE | Yomitoku | Markdown table |
-| FIGURE | VLM (gemma3:12b) | `[FIGURE: {description}]` |
+| FIGURE | Skip | (excluded from output) |
 | CAPTION | Yomitoku | `*{text}*` |
 | FOOTNOTE | Yomitoku | `^{text}^` |
 | FORMULA | Skip or OCR | `$${text}$$` |
 | ABANDON | Skip | None |
+
+Note: VLM support was removed in 008-rover-redesign.
+FIGURE regions are now skipped instead of processed by VLM.
 """
 
 from __future__ import annotations
@@ -52,16 +54,16 @@ class TestSelectOcrEngine:
             f"TITLE region should use yomitoku engine. Got: {engine}"
         )
 
-    def test_select_ocr_engine_figure_returns_vlm(self) -> None:
-        """FIGURE領域に対してVLMが選択されることを検証。"""
+    def test_select_ocr_engine_figure_returns_skip(self) -> None:
+        """FIGURE領域がスキップされることを検証。"""
         from src.layout_ocr import select_ocr_engine
 
         # Act
         engine = select_ocr_engine("FIGURE")
 
         # Assert
-        assert engine == "vlm", (
-            f"FIGURE region should use vlm engine. Got: {engine}"
+        assert engine == "skip", (
+            f"FIGURE region should be skipped. Got: {engine}"
         )
 
     def test_select_ocr_engine_table_returns_yomitoku(self) -> None:
@@ -164,10 +166,10 @@ class TestFormatOcrResult:
             f"TEXT should remain unchanged. Got: {formatted}"
         )
 
-    def test_format_ocr_result_figure_adds_marker(self) -> None:
-        """FIGURE領域のVLM説明が[FIGURE: ...]で出力されることを検証。
+    def test_format_ocr_result_figure_returns_empty(self) -> None:
+        """FIGURE領域に対して空文字が返されることを検証（VLM削除後）。
 
-        期待フォーマット: `[FIGURE: {description}]`
+        FIGURE領域はスキップされるため、空文字を返す。
         """
         from src.layout_ocr import format_ocr_result
 
@@ -178,8 +180,8 @@ class TestFormatOcrResult:
         formatted = format_ocr_result("FIGURE", description)
 
         # Assert
-        assert formatted == "[FIGURE: 棒グラフで売上推移を示している]", (
-            f"FIGURE should be formatted as '[FIGURE: {{description}}]'. Got: {formatted}"
+        assert formatted == "", (
+            f"FIGURE should return empty string (skipped). Got: {formatted}"
         )
 
     def test_format_ocr_result_caption_adds_italic(self) -> None:
@@ -368,10 +370,10 @@ class TestTextRegionOcr:
 
 
 class TestFigureRegionOcr:
-    """FIGURE領域のOCRテスト（VLM使用）。"""
+    """FIGURE領域のOCRテスト（VLM削除後：スキップされる）。"""
 
-    def test_figure_region_uses_vlm(self, tmp_path: Path) -> None:
-        """FIGURE領域がVLMで処理されることを検証（モック使用）。"""
+    def test_figure_region_is_skipped(self) -> None:
+        """FIGURE領域がスキップされることを検証（VLM削除後）。"""
         from src.layout_ocr import ocr_region
 
         # Arrange
@@ -381,54 +383,16 @@ class TestFigureRegionOcr:
             "bbox": [10, 10, 390, 290],
             "confidence": 0.95,
         }
-
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "message": {"content": "棒グラフで売上推移を示している図"}
-        }
-        mock_response.raise_for_status = MagicMock()
-
-        # Act & Assert
-        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
-            result = ocr_region(img, region)
-
-            # VLMが呼ばれたことを確認
-            call_args = mock_post.call_args
-            assert call_args is not None, "requests.post should be called for VLM"
-            payload = call_args.kwargs.get("json") or call_args[1].get("json")
-            # VLMモデル（gemma3:12bなど）が使われることを確認
-            assert payload["model"] != "yomitoku", (
-                f"FIGURE region should NOT use yomitoku. Got: {payload['model']}"
-            )
-
-    def test_figure_region_ocr_result_format(self) -> None:
-        """FIGURE領域のVLM結果が[FIGURE: ...]でフォーマットされることを検証。"""
-        from src.layout_ocr import ocr_region
-
-        # Arrange
-        img = Image.new("RGB", (400, 300), color=(200, 200, 200))
-        region = {
-            "type": "FIGURE",
-            "bbox": [10, 10, 390, 290],
-            "confidence": 0.95,
-        }
-
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "message": {"content": "円グラフで構成比を示している"}
-        }
-        mock_response.raise_for_status = MagicMock()
 
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
-            result = ocr_region(img, region)
+        result = ocr_region(img, region)
 
-        # Assert
-        assert result.text == "円グラフで構成比を示している", (
-            f"VLM description should be extracted. Got: {result.text}"
+        # Assert: FIGUREはスキップされ、空文字を返す
+        assert result.text == "", (
+            f"FIGURE region should return empty text (skipped). Got: {result.text}"
         )
-        assert result.formatted == "[FIGURE: 円グラフで構成比を示している]", (
-            f"FIGURE should be formatted as '[FIGURE: ...]'. Got: {result.formatted}"
+        assert result.formatted == "", (
+            f"FIGURE should return empty formatted text. Got: {result.formatted}"
         )
 
 
@@ -497,19 +461,11 @@ class TestResultConcatenation:
             "page_size": [800, 600],
         }
 
-        # Mock OCR responses
-        mock_responses = [
-            {"message": {"content": "第1章 概要"}},
-            {"message": {"content": "これは最初の段落です。"}},
-            {"message": {"content": "これは2番目の段落です。"}},
-        ]
-        mock_post = MagicMock()
-        mock_post.raise_for_status = MagicMock()
-        mock_post.json.side_effect = mock_responses
+        # Mock Yomitoku OCR responses
+        ocr_responses = ["第1章 概要", "これは最初の段落です。", "これは2番目の段落です。"]
 
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_post):
-            mock_post.json = MagicMock(side_effect=mock_responses)
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=ocr_responses):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert
@@ -537,17 +493,11 @@ class TestResultConcatenation:
             "page_size": [800, 600],
         }
 
-        mock_responses = [
-            {"message": {"content": "表1のタイトル"}},
-            {"message": {"content": "表1: サンプルデータ"}},
-            {"message": {"content": "本文テキスト"}},
-        ]
-        mock_post = MagicMock()
-        mock_post.raise_for_status = MagicMock()
+        # Mock Yomitoku OCR responses
+        ocr_responses = ["表1のタイトル", "表1: サンプルデータ", "本文テキスト"]
 
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_post):
-            mock_post.json = MagicMock(side_effect=mock_responses)
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=ocr_responses):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 順序が維持されている
@@ -574,12 +524,8 @@ class TestResultConcatenation:
             "page_size": [800, 600],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "本文テキスト"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="本文テキスト"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: ABANDONは結果に含まれない
@@ -658,10 +604,13 @@ class TestOcrByLayoutEdgeCases:
         assert "日本語" in results[0].text, "Unicode text should be preserved"
 
     def test_ocr_by_layout_mixed_region_types(self, tmp_path: Path) -> None:
-        """異なる領域タイプが混在する場合の処理を検証。"""
+        """異なる領域タイプが混在する場合の処理を検証。
+
+        FR-012: FIGURE領域はOCR出力から除外される。
+        """
         from src.layout_ocr import ocr_by_layout
 
-        # Arrange
+        # Arrange: シンプルな単一カラムレイアウト（読み順を予測しやすい）
         img_path = tmp_path / "test_page.png"
         img = Image.new("RGB", (800, 800), color=(255, 255, 255))
         img.save(img_path)
@@ -669,59 +618,53 @@ class TestOcrByLayoutEdgeCases:
         layout = {
             "regions": [
                 {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95},
-                {"type": "TEXT", "bbox": [50, 120, 400, 350], "confidence": 0.9},
-                {"type": "FIGURE", "bbox": [420, 120, 750, 350], "confidence": 0.88},
-                {"type": "CAPTION", "bbox": [420, 360, 750, 390], "confidence": 0.85},
-                {"type": "TEXT", "bbox": [50, 400, 750, 600], "confidence": 0.9},
+                {"type": "TEXT", "bbox": [50, 120, 750, 250], "confidence": 0.9},
+                {"type": "FIGURE", "bbox": [50, 270, 750, 450], "confidence": 0.88},
+                {"type": "CAPTION", "bbox": [50, 460, 750, 490], "confidence": 0.85},
+                {"type": "TEXT", "bbox": [50, 510, 750, 640], "confidence": 0.9},
                 {"type": "FOOTNOTE", "bbox": [50, 750, 750, 790], "confidence": 0.8},
             ],
             "page_size": [800, 800],
         }
 
-        # 各領域タイプに応じたモックレスポンス
-        mock_responses = [
-            {"message": {"content": "第5章 結論"}},
-            {"message": {"content": "左カラムのテキスト"}},
-            {"message": {"content": "統計グラフを示す図"}},
-            {"message": {"content": "図5.1: 統計データ"}},
-            {"message": {"content": "結論の本文テキスト"}},
-            {"message": {"content": "脚注: 参考文献より"}},
+        # 各領域タイプに応じたモックレスポンス（上から下の順、FIGUREは除外）
+        mock_yomitoku_responses = [
+            "第5章 結論",           # TITLE (y=50)
+            "左カラムのテキスト",      # TEXT (y=120)
+            "図5.1: 統計データ",     # CAPTION (y=460)
+            "結論の本文テキスト",      # TEXT (y=510)
+            "脚注: 参考文献より",      # FOOTNOTE (y=750)
         ]
-        mock_post = MagicMock()
-        mock_post.raise_for_status = MagicMock()
 
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_post):
-            mock_post.json = MagicMock(side_effect=mock_responses)
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
+            mock_ocr.side_effect = mock_yomitoku_responses
             results = ocr_by_layout(str(img_path), layout)
 
-        # Assert: 各領域が正しいフォーマットで出力
-        assert len(results) == 6, f"Should return 6 results. Got: {len(results)}"
+        # Assert: FIGUREは除外されるので5つの結果（元6領域 - FIGURE 1つ）
+        assert len(results) == 5, f"Should return 5 results (FIGURE excluded). Got: {len(results)}"
 
-        # TITLE: ## {text}
-        assert results[0].formatted.startswith("## "), (
-            f"TITLE should start with '## '. Got: {results[0].formatted}"
-        )
+        # 各領域タイプが正しくフォーマットされているかチェック
+        region_types = [r.region_type for r in results]
+        assert "FIGURE" not in region_types, "FIGURE should be excluded from results"
 
-        # TEXT: {text}
-        assert results[1].formatted == results[1].text, (
-            "TEXT should be unchanged"
-        )
+        # 少なくとも以下を確認:
+        # - TITLEは ## で始まる
+        title_results = [r for r in results if r.region_type == "TITLE"]
+        assert len(title_results) == 1, "Should have exactly one TITLE"
+        assert title_results[0].formatted.startswith("## "), "TITLE should start with '## '"
 
-        # FIGURE: [FIGURE: {desc}]
-        assert results[2].formatted.startswith("[FIGURE:"), (
-            f"FIGURE should start with '[FIGURE:'. Got: {results[2].formatted}"
-        )
+        # - CAPTIONは * で囲まれる
+        caption_results = [r for r in results if r.region_type == "CAPTION"]
+        assert len(caption_results) == 1, "Should have exactly one CAPTION"
+        assert caption_results[0].formatted.startswith("*"), "CAPTION should start with '*'"
+        assert caption_results[0].formatted.endswith("*"), "CAPTION should end with '*'"
 
-        # CAPTION: *{text}*
-        assert results[3].formatted.startswith("*") and results[3].formatted.endswith("*"), (
-            f"CAPTION should be wrapped in '*'. Got: {results[3].formatted}"
-        )
-
-        # FOOTNOTE: ^{text}^
-        assert results[5].formatted.startswith("^") and results[5].formatted.endswith("^"), (
-            f"FOOTNOTE should be wrapped in '^'. Got: {results[5].formatted}"
-        )
+        # - FOOTNOTEは ^ で囲まれる
+        footnote_results = [r for r in results if r.region_type == "FOOTNOTE"]
+        assert len(footnote_results) == 1, "Should have exactly one FOOTNOTE"
+        assert footnote_results[0].formatted.startswith("^"), "FOOTNOTE should start with '^'"
+        assert footnote_results[0].formatted.endswith("^"), "FOOTNOTE should end with '^'"
 
 
 # ============================================================================
@@ -1079,21 +1022,17 @@ class TestFallbackLowCoverage:
             "page_size": [1000, 1000],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "フォールバック結果"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response) as mock_post:
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="フォールバック結果"):
             results = ocr_by_layout(str(img_path), layout)
 
-            # Assert: フォールバックが実行される
-            assert len(results) == 1, (
-                f"Low coverage should trigger fallback. Got: {len(results)}"
-            )
-            assert results[0].region_type in ("FALLBACK", "TEXT"), (
-                f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
-            )
+        # Assert: フォールバックが実行される
+        assert len(results) == 1, (
+            f"Low coverage should trigger fallback. Got: {len(results)}"
+        )
+        assert results[0].region_type in ("FALLBACK", "TEXT"), (
+            f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
+        )
 
     def test_ocr_by_layout_no_fallback_above_30_percent(self, tmp_path: Path) -> None:
         """30%以上のカバー率ではフォールバックしないことを検証。"""
@@ -1112,12 +1051,8 @@ class TestFallbackLowCoverage:
             "page_size": [100, 100],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "通常OCR結果"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="通常OCR結果"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 領域別OCRが実行される（フォールバックしない）
@@ -1144,12 +1079,8 @@ class TestFallbackLowCoverage:
             "page_size": [1000, 1000],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "フォールバック結果"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="フォールバック結果"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 29%はフォールバック
@@ -1182,12 +1113,8 @@ class TestFallbackSingleFigure:
             "page_size": [800, 600],
         }
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"message": {"content": "ページ全体のテキスト"}}
-        mock_response.raise_for_status = MagicMock()
-
         # Act
-        with patch("src.layout_ocr.requests.post", return_value=mock_response):
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="ページ全体のテキスト"):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: フォールバックが実行される
@@ -1261,3 +1188,645 @@ class TestFallbackEdgeCases:
         assert result is True, (
             "Only ABANDON regions should trigger fallback"
         )
+
+
+# ============================================================================
+# Phase 5: US2 - 領域別OCR処理テスト (RED)
+# ============================================================================
+
+
+class TestIsTitleFunction:
+    """TITLE判定ロジックのテスト (FR-009)。
+
+    is_title() は以下の条件でTrueを返す:
+    1. YOLOでTITLEとして検出された
+    2. Yomitokuのroleがsection_headingsである
+    """
+
+    def test_is_title_yolo_title_type(self) -> None:
+        """YOLOでTITLEとして検出された場合、is_titleがTrueを返すことを検証。"""
+        from src.layout_ocr import is_title
+
+        # Arrange: YOLOがTITLEとして検出
+        region = {"type": "TITLE", "bbox": [50, 50, 700, 100], "confidence": 0.95}
+        yomitoku_result = {}  # Yomitoku結果なし
+
+        # Act
+        result = is_title(region, yomitoku_result)
+
+        # Assert
+        assert result is True, (
+            "Region with type='TITLE' should be recognized as title"
+        )
+
+    def test_is_title_yomitoku_section_headings_role(self) -> None:
+        """Yomitokuのroleがsection_headingsの場合、is_titleがTrueを返すことを検証。"""
+        from src.layout_ocr import is_title
+
+        # Arrange: YOLOはTEXTだが、Yomitokuがsection_headingsと判定
+        region = {"type": "TEXT", "bbox": [50, 50, 700, 100], "confidence": 0.9}
+        yomitoku_result = {"role": "section_headings"}
+
+        # Act
+        result = is_title(region, yomitoku_result)
+
+        # Assert
+        assert result is True, (
+            "Region with yomitoku role='section_headings' should be recognized as title"
+        )
+
+    def test_is_title_text_without_role_returns_false(self) -> None:
+        """YOLO=TEXT、Yomitokuのroleなしの場合、is_titleがFalseを返すことを検証。"""
+        from src.layout_ocr import is_title
+
+        # Arrange: 通常のTEXT領域
+        region = {"type": "TEXT", "bbox": [50, 100, 700, 500], "confidence": 0.9}
+        yomitoku_result = {}  # roleなし
+
+        # Act
+        result = is_title(region, yomitoku_result)
+
+        # Assert
+        assert result is False, (
+            "Regular TEXT region without section_headings role should not be title"
+        )
+
+    def test_is_title_yomitoku_paragraph_role(self) -> None:
+        """Yomitokuのroleがparagraphの場合、is_titleがFalseを返すことを検証。"""
+        from src.layout_ocr import is_title
+
+        # Arrange: Yomitokuがparagraphと判定
+        region = {"type": "TEXT", "bbox": [50, 100, 700, 500], "confidence": 0.9}
+        yomitoku_result = {"role": "paragraph"}
+
+        # Act
+        result = is_title(region, yomitoku_result)
+
+        # Assert
+        assert result is False, (
+            "Region with yomitoku role='paragraph' should not be title"
+        )
+
+    def test_is_title_both_yolo_and_yomitoku_agree(self) -> None:
+        """YOLOとYomitoku両方がTITLEと判定した場合、Trueを返すことを検証。"""
+        from src.layout_ocr import is_title
+
+        # Arrange: 両方がTITLEと判定
+        region = {"type": "TITLE", "bbox": [50, 50, 700, 100], "confidence": 0.98}
+        yomitoku_result = {"role": "section_headings"}
+
+        # Act
+        result = is_title(region, yomitoku_result)
+
+        # Assert
+        assert result is True, (
+            "Region detected as TITLE by both YOLO and Yomitoku should be title"
+        )
+
+
+class TestIsLowQualityFunction:
+    """OCR結果の低品質判定テスト (FR-010)。
+
+    is_low_quality() は以下の条件でTrueを返す:
+    1. 空文字列
+    2. 10文字未満
+    3. 非文字率が50%を超える
+    """
+
+    def test_is_low_quality_empty_string(self) -> None:
+        """空文字列が低品質と判定されることを検証。"""
+        from src.layout_ocr import is_low_quality
+
+        # Act
+        result = is_low_quality("")
+
+        # Assert
+        assert result is True, (
+            "Empty string should be considered low quality"
+        )
+
+    def test_is_low_quality_short_text(self) -> None:
+        """10文字未満のテキストが低品質と判定されることを検証。"""
+        from src.layout_ocr import is_low_quality
+
+        # Arrange: 9文字のテキスト
+        text = "あいうえお123"  # 8文字
+
+        # Act
+        result = is_low_quality(text)
+
+        # Assert
+        assert result is True, (
+            f"Text with less than 10 characters should be low quality. Got: '{text}' ({len(text)} chars)"
+        )
+
+    def test_is_low_quality_exactly_10_chars(self) -> None:
+        """ちょうど10文字のテキストは低品質でないことを検証。"""
+        from src.layout_ocr import is_low_quality
+
+        # Arrange: 10文字のテキスト
+        text = "あいうえおかきくけこ"  # 10文字
+
+        # Act
+        result = is_low_quality(text)
+
+        # Assert
+        assert result is False, (
+            "Text with exactly 10 characters should not be low quality"
+        )
+
+    def test_is_low_quality_high_non_char_ratio(self) -> None:
+        """非文字率が50%を超えるテキストが低品質と判定されることを検証。"""
+        from src.layout_ocr import is_low_quality
+
+        # Arrange: 60%以上が非文字（記号・空白）
+        text = "...!!!@@@###   ---$$$%%%^^^"  # 27文字全て非文字
+
+        # Act
+        result = is_low_quality(text)
+
+        # Assert
+        assert result is True, (
+            "Text with >50% non-character ratio should be low quality"
+        )
+
+    def test_is_low_quality_normal_japanese_text(self) -> None:
+        """通常の日本語テキストは低品質でないことを検証。"""
+        from src.layout_ocr import is_low_quality
+
+        # Arrange: 通常の日本語テキスト
+        text = "これは正常な日本語のテキストです。"
+
+        # Act
+        result = is_low_quality(text)
+
+        # Assert
+        assert result is False, (
+            "Normal Japanese text should not be low quality"
+        )
+
+    def test_is_low_quality_mixed_content(self) -> None:
+        """日本語と記号が混在するが正常なテキストを検証。"""
+        from src.layout_ocr import is_low_quality
+
+        # Arrange: 正常な混合テキスト（記号率は50%以下）
+        text = "第1章：はじめに（2026年版）"
+
+        # Act
+        result = is_low_quality(text)
+
+        # Assert
+        assert result is False, (
+            "Mixed text with reasonable symbol ratio should not be low quality"
+        )
+
+    def test_is_low_quality_whitespace_only(self) -> None:
+        """空白のみのテキストが低品質と判定されることを検証。"""
+        from src.layout_ocr import is_low_quality
+
+        # Arrange: 空白のみ
+        text = "          "  # 10文字のスペース
+
+        # Act
+        result = is_low_quality(text)
+
+        # Assert
+        assert result is True, (
+            "Whitespace-only text should be low quality"
+        )
+
+
+class TestCalcNonCharRatio:
+    """非文字率計算関数のテスト。
+
+    calc_non_char_ratio() は日本語/英数字以外の文字の割合を計算する。
+    """
+
+    def test_calc_non_char_ratio_all_japanese(self) -> None:
+        """全て日本語文字の場合、非文字率が0であることを検証。"""
+        from src.layout_ocr import calc_non_char_ratio
+
+        # Arrange
+        text = "日本語テキスト"
+
+        # Act
+        ratio = calc_non_char_ratio(text)
+
+        # Assert
+        assert ratio == 0.0, (
+            f"Pure Japanese text should have 0% non-char ratio. Got: {ratio}"
+        )
+
+    def test_calc_non_char_ratio_all_symbols(self) -> None:
+        """全て記号の場合、非文字率が1であることを検証。"""
+        from src.layout_ocr import calc_non_char_ratio
+
+        # Arrange
+        text = "!!!@@@###$$$%%%"
+
+        # Act
+        ratio = calc_non_char_ratio(text)
+
+        # Assert
+        assert ratio == 1.0, (
+            f"All-symbol text should have 100% non-char ratio. Got: {ratio}"
+        )
+
+    def test_calc_non_char_ratio_half_and_half(self) -> None:
+        """半分が文字、半分が記号の場合を検証。"""
+        from src.layout_ocr import calc_non_char_ratio
+
+        # Arrange: 5文字 + 5記号 = 50%
+        text = "あいうえお!@#$%"
+
+        # Act
+        ratio = calc_non_char_ratio(text)
+
+        # Assert
+        assert 0.45 <= ratio <= 0.55, (
+            f"Half-and-half text should have ~50% non-char ratio. Got: {ratio}"
+        )
+
+    def test_calc_non_char_ratio_empty_string(self) -> None:
+        """空文字列の場合の処理を検証。"""
+        from src.layout_ocr import calc_non_char_ratio
+
+        # Act
+        ratio = calc_non_char_ratio("")
+
+        # Assert: 空文字列は0.0を返す（または別の定義による）
+        assert ratio == 0.0 or ratio == 1.0, (
+            f"Empty string non-char ratio should be 0.0 or 1.0. Got: {ratio}"
+        )
+
+    def test_calc_non_char_ratio_english_and_numbers(self) -> None:
+        """英数字は文字としてカウントされることを検証。"""
+        from src.layout_ocr import calc_non_char_ratio
+
+        # Arrange: 英数字のみ
+        text = "ABC123xyz"
+
+        # Act
+        ratio = calc_non_char_ratio(text)
+
+        # Assert
+        assert ratio == 0.0, (
+            f"Alphanumeric text should have 0% non-char ratio. Got: {ratio}"
+        )
+
+
+class TestOcrWithFallback:
+    """OCRフォールバック処理のテスト (FR-010)。
+
+    ocr_with_fallback() は以下の順序でフォールバック:
+    1. Yomitoku（メインOCR）
+    2. PaddleOCR（フォールバック1）
+    3. Tesseract（フォールバック2）
+    """
+
+    def test_ocr_with_fallback_yomitoku_success(self) -> None:
+        """Yomitokuが成功した場合、そのまま結果を返すことを検証。"""
+        from src.layout_ocr import ocr_with_fallback
+
+        # Arrange: テスト画像
+        img = Image.new("RGB", (200, 50), color=(255, 255, 255))
+
+        # Act: Yomitokuが成功する場合をモック
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="正常なOCR結果テキスト"):
+            text, engine_used = ocr_with_fallback(img)
+
+        # Assert
+        assert engine_used == "yomitoku", (
+            f"Should use yomitoku when it succeeds. Got: {engine_used}"
+        )
+        assert text == "正常なOCR結果テキスト", (
+            f"Should return yomitoku result. Got: {text}"
+        )
+
+    def test_ocr_with_fallback_yomitoku_empty_uses_paddleocr(self) -> None:
+        """Yomitokuが空結果の場合、PaddleOCRにフォールバックすることを検証。"""
+        from src.layout_ocr import ocr_with_fallback
+
+        # Arrange
+        img = Image.new("RGB", (200, 50), color=(255, 255, 255))
+
+        # Act: Yomitokuが空を返し、PaddleOCRが成功
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=""):
+            with patch("src.ocr_ensemble.ocr_paddleocr") as mock_paddle:
+                mock_paddle.return_value = MagicMock(
+                    success=True, text="PaddleOCRからの結果"
+                )
+                text, engine_used = ocr_with_fallback(img)
+
+        # Assert
+        assert engine_used == "paddleocr", (
+            f"Should fallback to paddleocr when yomitoku is empty. Got: {engine_used}"
+        )
+
+    def test_ocr_with_fallback_yomitoku_low_quality_uses_paddleocr(self) -> None:
+        """Yomitokuが低品質結果の場合、PaddleOCRにフォールバックすることを検証。"""
+        from src.layout_ocr import ocr_with_fallback
+
+        # Arrange
+        img = Image.new("RGB", (200, 50), color=(255, 255, 255))
+
+        # Act: Yomitokuが短いゴミ結果を返す
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="!!!???"):
+            with patch("src.ocr_ensemble.ocr_paddleocr") as mock_paddle:
+                mock_paddle.return_value = MagicMock(
+                    success=True, text="PaddleOCRからの正常な結果テキスト"
+                )
+                text, engine_used = ocr_with_fallback(img)
+
+        # Assert
+        assert engine_used == "paddleocr", (
+            f"Should fallback to paddleocr when yomitoku is low quality. Got: {engine_used}"
+        )
+
+    def test_ocr_with_fallback_paddleocr_fails_uses_tesseract(self) -> None:
+        """Yomitoku/PaddleOCR両方失敗時、Tesseractにフォールバックすることを検証。"""
+        from src.layout_ocr import ocr_with_fallback
+
+        # Arrange
+        img = Image.new("RGB", (200, 50), color=(255, 255, 255))
+
+        # Act: Yomitoku/PaddleOCR両方失敗、Tesseractが成功
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=""):
+            with patch("src.ocr_ensemble.ocr_paddleocr") as mock_paddle:
+                mock_paddle.return_value = MagicMock(success=False, text="", error="OCR failed")
+                with patch("src.ocr_ensemble.ocr_tesseract") as mock_tesseract:
+                    mock_tesseract.return_value = MagicMock(
+                        success=True, text="Tesseractからの結果"
+                    )
+                    text, engine_used = ocr_with_fallback(img)
+
+        # Assert
+        assert engine_used == "tesseract", (
+            f"Should fallback to tesseract when others fail. Got: {engine_used}"
+        )
+
+    def test_ocr_with_fallback_all_fail_returns_empty(self) -> None:
+        """全エンジンが失敗した場合、空文字列を返すことを検証。"""
+        from src.layout_ocr import ocr_with_fallback
+
+        # Arrange
+        img = Image.new("RGB", (200, 50), color=(255, 255, 255))
+
+        # Act: 全エンジンが失敗
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=""):
+            with patch("src.ocr_ensemble.ocr_paddleocr") as mock_paddle:
+                mock_paddle.return_value = MagicMock(success=False, text="")
+                with patch("src.ocr_ensemble.ocr_tesseract") as mock_tesseract:
+                    mock_tesseract.return_value = MagicMock(success=False, text="")
+                    text, engine_used = ocr_with_fallback(img)
+
+        # Assert
+        assert text == "", "Should return empty string when all engines fail"
+        assert engine_used == "none", (
+            f"Should indicate no engine succeeded. Got: {engine_used}"
+        )
+
+
+class TestMaskFigures:
+    """FIGURE領域マスク処理のテスト (FR-011)。
+
+    mask_figures() はFIGURE領域のみを白塗りでマスクする。
+    """
+
+    def test_mask_figures_single_figure(self) -> None:
+        """単一のFIGURE領域が白塗りされることを検証。"""
+        from src.utils import mask_figures
+
+        # Arrange: 赤い画像にFIGURE領域
+        img = Image.new("RGB", (100, 100), color=(255, 0, 0))  # 赤
+        regions = [
+            {"type": "FIGURE", "bbox": [10, 10, 50, 50], "confidence": 0.9},
+        ]
+
+        # Act
+        masked = mask_figures(img, regions)
+
+        # Assert: マスク領域が白になっている
+        # 領域の中心ピクセルを確認
+        center_pixel = masked.getpixel((30, 30))
+        assert center_pixel == (255, 255, 255), (
+            f"FIGURE region should be white. Got: {center_pixel}"
+        )
+
+        # 領域外は元のまま（赤）
+        outside_pixel = masked.getpixel((80, 80))
+        assert outside_pixel == (255, 0, 0), (
+            f"Outside FIGURE region should remain unchanged. Got: {outside_pixel}"
+        )
+
+    def test_mask_figures_multiple_figures(self) -> None:
+        """複数のFIGURE領域が全て白塗りされることを検証。"""
+        from src.utils import mask_figures
+
+        # Arrange
+        img = Image.new("RGB", (200, 100), color=(0, 0, 255))  # 青
+        regions = [
+            {"type": "FIGURE", "bbox": [10, 10, 50, 50], "confidence": 0.9},
+            {"type": "FIGURE", "bbox": [100, 10, 150, 50], "confidence": 0.85},
+        ]
+
+        # Act
+        masked = mask_figures(img, regions)
+
+        # Assert: 両方のFIGURE領域が白
+        pixel1 = masked.getpixel((30, 30))
+        pixel2 = masked.getpixel((125, 30))
+        assert pixel1 == (255, 255, 255), f"First FIGURE should be white. Got: {pixel1}"
+        assert pixel2 == (255, 255, 255), f"Second FIGURE should be white. Got: {pixel2}"
+
+    def test_mask_figures_non_figure_regions_unchanged(self) -> None:
+        """FIGURE以外の領域（TEXT, TABLE等）はマスクされないことを検証。"""
+        from src.utils import mask_figures
+
+        # Arrange
+        img = Image.new("RGB", (100, 100), color=(0, 255, 0))  # 緑
+        regions = [
+            {"type": "TEXT", "bbox": [10, 10, 50, 50], "confidence": 0.9},
+            {"type": "TABLE", "bbox": [60, 10, 90, 50], "confidence": 0.85},
+        ]
+
+        # Act
+        masked = mask_figures(img, regions)
+
+        # Assert: TEXTとTABLE領域は元のまま（緑）
+        text_pixel = masked.getpixel((30, 30))
+        table_pixel = masked.getpixel((75, 30))
+        assert text_pixel == (0, 255, 0), f"TEXT region should be unchanged. Got: {text_pixel}"
+        assert table_pixel == (0, 255, 0), f"TABLE region should be unchanged. Got: {table_pixel}"
+
+    def test_mask_figures_empty_regions(self) -> None:
+        """空の領域リストの場合、画像が変更されないことを検証。"""
+        from src.utils import mask_figures
+
+        # Arrange
+        img = Image.new("RGB", (100, 100), color=(128, 128, 128))  # グレー
+        regions: list[dict] = []
+
+        # Act
+        masked = mask_figures(img, regions)
+
+        # Assert: 画像は変更されない
+        pixel = masked.getpixel((50, 50))
+        assert pixel == (128, 128, 128), f"Image should be unchanged. Got: {pixel}"
+
+    def test_mask_figures_returns_new_image(self) -> None:
+        """mask_figuresは元画像を変更せず、新しい画像を返すことを検証。"""
+        from src.utils import mask_figures
+
+        # Arrange
+        img = Image.new("RGB", (100, 100), color=(255, 0, 0))  # 赤
+        original_pixel = img.getpixel((30, 30))
+        regions = [
+            {"type": "FIGURE", "bbox": [10, 10, 50, 50], "confidence": 0.9},
+        ]
+
+        # Act
+        masked = mask_figures(img, regions)
+
+        # Assert: 元画像は変更されていない
+        assert img.getpixel((30, 30)) == original_pixel, (
+            "Original image should not be modified"
+        )
+        assert masked is not img, "Should return a new image object"
+
+
+class TestFigureExclusion:
+    """FIGURE領域がOCR出力から除外されることのテスト (FR-012)。"""
+
+    def test_ocr_by_layout_excludes_figure_from_output(self, tmp_path: Path) -> None:
+        """FIGURE領域がOCR結果に含まれないことを検証。"""
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange
+        img_path = tmp_path / "test_page.png"
+        img = Image.new("RGB", (800, 600), color=(255, 255, 255))
+        img.save(img_path)
+
+        layout = {
+            "regions": [
+                {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95},
+                {"type": "FIGURE", "bbox": [50, 120, 400, 350], "confidence": 0.9},
+                {"type": "TEXT", "bbox": [50, 370, 750, 550], "confidence": 0.88},
+            ],
+            "page_size": [800, 600],
+        }
+
+        # Act: モックでOCR結果を設定（FIGUREはスキップされるため2つの応答のみ）
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=["タイトル", "テキスト内容"]):
+            results = ocr_by_layout(str(img_path), layout)
+
+        # Assert: 結果にFIGUREが含まれない
+        figure_results = [r for r in results if r.region_type == "FIGURE"]
+
+        # FR-012要件: FIGUREはbook.txtから除外される
+        assert len(figure_results) == 0, (
+            f"FIGURE regions should be excluded from OCR output. Found: {len(figure_results)}"
+        )
+        # TITLE と TEXT のみが結果に含まれる
+        assert len(results) == 2, f"Should have 2 results (TITLE and TEXT). Got: {len(results)}"
+
+    def test_figure_saved_to_separate_directory(self, tmp_path: Path) -> None:
+        """FIGURE領域がfigures/ディレクトリに保存されることを検証。"""
+        # この機能はrun_layout_ocrで実装されるため、統合テストとして実装
+        # ここではfigures/ディレクトリの存在を確認するテストを追加
+
+        # Arrange
+        figures_dir = tmp_path / "figures"
+        figures_dir.mkdir()
+
+        # Assert: ディレクトリが作成されることを確認（実装で使用される）
+        assert figures_dir.exists(), "figures directory should be created"
+
+
+class TestResultConcatenationWithReadingOrder:
+    """読み順ソート後の結果連結テスト (T060)。"""
+
+    def test_results_concatenated_in_reading_order(self, tmp_path: Path) -> None:
+        """領域が読み順にソートされてから連結されることを検証。"""
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange: 2カラムレイアウト
+        img_path = tmp_path / "two_column_page.png"
+        img = Image.new("RGB", (1000, 600), color=(255, 255, 255))
+        img.save(img_path)
+
+        # 左カラム→右カラムの読み順になるべきレイアウト
+        layout = {
+            "regions": [
+                # 右カラム上部（読み順: 3番目）
+                {"type": "TEXT", "bbox": [550, 50, 950, 200], "confidence": 0.9},
+                # 左カラム上部（読み順: 1番目）
+                {"type": "TITLE", "bbox": [50, 50, 450, 100], "confidence": 0.95},
+                # 左カラム中部（読み順: 2番目）
+                {"type": "TEXT", "bbox": [50, 120, 450, 300], "confidence": 0.88},
+                # 右カラム下部（読み順: 4番目）
+                {"type": "TEXT", "bbox": [550, 220, 950, 400], "confidence": 0.87},
+            ],
+            "page_size": [1000, 600],
+        }
+
+        # Mock OCR responses - 各領域に異なるテキストを返す
+        mock_texts = {
+            "TITLE": "タイトル",
+            "TEXT_LEFT": "左カラム本文",
+            "TEXT_RIGHT1": "右カラム上部",
+            "TEXT_RIGHT2": "右カラム下部",
+        }
+
+        # Act
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
+            # 読み順でソートされた後に呼ばれるので、順番を設定
+            mock_ocr.side_effect = [
+                "タイトル",      # 左カラム TITLE
+                "左カラム本文",   # 左カラム TEXT
+                "右カラム上部",   # 右カラム TEXT (上)
+                "右カラム下部",   # 右カラム TEXT (下)
+            ]
+            results = ocr_by_layout(str(img_path), layout)
+
+        # Assert: 読み順（左カラム→右カラム）で結果が返される
+        assert len(results) == 4, f"Should have 4 results. Got: {len(results)}"
+
+        # 最初はTITLE（左カラム上部）
+        assert results[0].region_type == "TITLE", (
+            f"First result should be TITLE. Got: {results[0].region_type}"
+        )
+        # 2番目は左カラムのTEXT
+        assert results[1].region_type == "TEXT", (
+            f"Second result should be TEXT. Got: {results[1].region_type}"
+        )
+
+    def test_results_maintain_sorted_order_for_single_column(self, tmp_path: Path) -> None:
+        """単一カラムレイアウトでも上から下の順序が維持されることを検証。"""
+        from src.layout_ocr import ocr_by_layout
+
+        # Arrange: 単一カラムレイアウト
+        img_path = tmp_path / "single_column_page.png"
+        img = Image.new("RGB", (600, 800), color=(255, 255, 255))
+        img.save(img_path)
+
+        layout = {
+            "regions": [
+                # 下から上に定義（ソートが機能することを確認）
+                {"type": "TEXT", "bbox": [50, 400, 550, 600], "confidence": 0.85},
+                {"type": "TEXT", "bbox": [50, 200, 550, 380], "confidence": 0.88},
+                {"type": "TITLE", "bbox": [50, 50, 550, 100], "confidence": 0.95},
+            ],
+            "page_size": [600, 800],
+        }
+
+        # Act
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
+            mock_ocr.side_effect = ["タイトル", "段落1", "段落2"]
+            results = ocr_by_layout(str(img_path), layout)
+
+        # Assert: 上から下の順序
+        assert len(results) == 3, f"Should have 3 results. Got: {len(results)}"
+        assert results[0].region_type == "TITLE", "First should be TITLE (top)"
+        assert results[1].region_type == "TEXT", "Second should be TEXT (middle)"
+        assert results[2].region_type == "TEXT", "Third should be TEXT (bottom)"

@@ -7,7 +7,7 @@
 
 ## 概要
 
-現在のパイプラインではページ全体を一度にDeepSeek-OCRに送信しているため、複雑なレイアウト（縦書き・横書き混在、マルチカラム、図表混在）で読み順の混乱が発生する。
+現在のパイプラインではページ全体を一度にYomitokuに送信しているため、複雑なレイアウト（縦書き・横書き混在、マルチカラム、図表混在）で読み順の混乱が発生する。
 
 YOLOによるレイアウト検出を拡張し、検出した領域毎にOCRを実行することで精度向上を図る。
 
@@ -31,7 +31,7 @@ YOLOによるレイアウト検出を拡張し、検出した領域毎にOCRを�
 
 ### User Story 2 - 領域別OCR処理 (Priority: P1)
 
-ユーザーとして、検出された各領域に対して適切なOCR処理を実行してほしい。テキスト領域はDeepSeek-OCRで読み取り、図領域はVLMで説明を生成する。
+ユーザーとして、検出された各領域に対して適切なOCR処理を実行してほしい。テキスト領域はYomitokuで読み取り、図領域はVLMで説明を生成する。
 
 **Why this priority**: メイン機能。領域検出後に各領域を適切に処理することがこの機能の核心。
 
@@ -39,10 +39,10 @@ YOLOによるレイアウト検出を拡張し、検出した領域毎にOCRを�
 
 **Acceptance Scenarios**:
 
-1. **Given** TEXT領域が検出されたページがある, **When** 領域別OCRを実行する, **Then** TEXT領域はDeepSeek-OCRで読み取られる
+1. **Given** TEXT領域が検出されたページがある, **When** 領域別OCRを実行する, **Then** TEXT領域はYomitokuで読み取られる
 2. **Given** FIGURE領域が検出されたページがある, **When** 領域別OCRを実行する, **Then** FIGURE領域はVLMで説明文が生成される
-3. **Given** TABLE領域が検出されたページがある, **When** 領域別OCRを実行する, **Then** TABLE領域はDeepSeek-OCRで構造を保持して読み取られる
-4. **Given** TITLE領域が検出されたページがある, **When** 領域別OCRを実行する, **Then** TITLE領域はDeepSeek-OCRで読み取られ、見出しとしてマークされる
+3. **Given** TABLE領域が検出されたページがある, **When** 領域別OCRを実行する, **Then** TABLE領域はYomitokuで構造を保持して読み取られる
+4. **Given** TITLE領域が検出されたページがある, **When** 領域別OCRを実行する, **Then** TITLE領域はYomitokuで読み取られ、見出しとしてマークされる
 
 ---
 
@@ -72,8 +72,8 @@ YOLOによるレイアウト検出を拡張し、検出した領域毎にOCRを�
 
 **Acceptance Scenarios**:
 
-1. **Given** レイアウト検出で領域が検出されなかったページがある, **When** 領域別OCRを実行する, **Then** ページ全体に対してDeepSeek-OCRが実行される
-2. **Given** 検出領域がページ面積の30%未満のページがある, **When** 領域別OCRを実行する, **Then** ページ全体に対してDeepSeek-OCRが実行される
+1. **Given** レイアウト検出で領域が検出されなかったページがある, **When** 領域別OCRを実行する, **Then** ページ全体に対してYomitokuが実行される
+2. **Given** 検出領域がページ面積の30%未満のページがある, **When** 領域別OCRを実行する, **Then** ページ全体に対してYomitokuが実行される
 
 ---
 
@@ -90,12 +90,16 @@ YOLOによるレイアウト検出を拡張し、検出した領域毎にOCRを�
 
 - **FR-001**: システムはDocLayout-YOLOのすべての検出クラス（title, plain text, table, figure, figure_caption, table_caption, table_footnote, isolated formula, formula_caption）を検出できなければならない
 - **FR-002**: システムはlayout.jsonの構造を「figures」配列から「regions」配列に拡張し、各領域の種類、位置、信頼度を格納しなければならない
-- **FR-003**: システムは検出された領域の種類に応じて適切なOCRエンジンを選択しなければならない（TEXT/TITLE→DeepSeek-OCR、FIGURE→VLM）
+- **FR-003**: システムは検出された領域の種類に応じて適切なOCRエンジンを選択しなければならない（TEXT/TITLE/TABLE→Yomitoku、FIGURE→VLM）。YOLOのレイアウト検出を優先し、Yomitokuの`role`は補助的に使用する
 - **FR-004**: システムは検出された領域をbbox座標に基づいて読み順にソートしなければならない
 - **FR-005**: システムはソートされた各領域のOCR結果を連結して最終出力を生成しなければならない
 - **FR-006**: システムは領域が検出されなかった場合、または検出領域のカバー率が低い場合にページ全体OCRにフォールバックしなければならない
 - **FR-007**: システムは重複領域を検出し、重複部分を適切に処理しなければならない
 - **FR-008**: システムは最小面積しきい値未満の領域をノイズとして除外しなければならない
+- **FR-009**: システムはTITLE判定において、YOLOのTITLE検出とYomitokuの`role=section_headings`を併用し、いずれかに該当すれば見出し（`##`）としてマークアップしなければならない
+- **FR-010**: システムはYomitokuの出力が低品質の場合、PaddleOCR → Tesseract の順でフォールバックしなければならない。低品質の判定基準: (1) 空文字、(2) 10文字未満、(3) 非文字率>50%（非文字=日本語/英数字/基本句読点以外の文字）
+- **FR-011**: システムはYomitokuへの入力画像において、YOLOで検出されたFIGURE領域のみを白塗りでマスクしなければならない
+- **FR-012**: システムはFIGURE領域をOCR出力から除外し、別ファイル（figures/）で管理しなければならない
 
 ### Key Entities
 
@@ -140,6 +144,17 @@ YOLOによるレイアウト検出を拡張し、検出した領域毎にOCRを�
 ## Dependencies
 
 - 既存の `detect_figures.py` モジュール
-- 既存の `ocr_deepseek.py` モジュール
+- 既存の `ocr_yomitoku.py` モジュール（deepseekから移行済み）
 - 既存の `describe_figures.py` モジュール
 - DocLayout-YOLO モデル（juliozhao/DocLayout-YOLO-DocStructBench）
+
+## Clarifications
+
+### Session 2026-02-13
+
+- Q: YOLO vs Yomitokuのレイアウト検出の優先順位 → A: YOLOを優先（FIGURE/TABLE検出）、Yomitokuの`role`は補助的に使用
+- Q: TITLEの判定方法 → A: 両方を併用（YOLOのTITLEまたはYomitokuの`role=section_headings`のいずれかに該当すれば`##`付与）
+- Q: Yomitoku失敗時のフォールバック戦略 → A: PaddleOCR → Tesseract の順でフォールバック
+- Q: FIGURE領域のマスク範囲 → A: FIGUREのみマスク（ABANDON等は対象外）
+- Q: FIGURE領域の出力形式 → A: 出力から除外（FIGUREは別ファイルで管理）
+- Q: OCRフォールバックの低品質判定基準 → A: 空文字 OR 10文字未満 OR 非文字率>50%（非文字=日本語/英数字/基本句読点以外）

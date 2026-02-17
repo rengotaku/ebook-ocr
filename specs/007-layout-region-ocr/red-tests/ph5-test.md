@@ -1,183 +1,222 @@
-# Phase 5 RED テスト結果: US4 - フォールバック処理
+# Phase 5 テスト実装 (RED) 出力
 
-**日付**: 2026-02-11
-**Phase**: Phase 5 (Test Implementation - RED)
-**User Story**: US4 - フォールバック処理
+**Date**: 2026-02-13
+**Status**: RED (30 tests FAIL)
 
-## サマリ
+## サマリー
 
 | 項目 | 値 |
 |------|-----|
-| Phase | 5 (US4 - フォールバック処理) |
-| FAILテスト数 | 18件 |
-| PASSテスト数 | 36件 (Phase 1-4 既存テスト) |
+| Phase | 5: US2 - 領域別OCR処理 |
+| 新規FAILテスト数 | 30 |
+| 既存PASSテスト数 | 54 |
 | テストファイル | tests/test_layout_ocr.py |
-| ステータス | RED (実装前) |
-
-## 追加テストクラス
-
-| クラス名 | テスト数 | 目的 |
-|---------|---------|------|
-| TestCalculateCoverage | 5 | カバー率計算の正確性検証 |
-| TestShouldFallback | 7 | フォールバック判定ロジック検証 |
-| TestFallbackEmptyLayout | 2 | 空layout時のフォールバック検証 |
-| TestFallbackLowCoverage | 3 | 低カバー率時のフォールバック検証 |
-| TestFallbackSingleFigure | 1 | 全ページFIGURE時のフォールバック検証 |
-| TestFallbackEdgeCases | 3 | エッジケース検証 |
 
 ## FAILテスト一覧
 
-| テストファイル | テストメソッド | 期待される動作 | FAIL理由 |
-|--------------|--------------|--------------|---------|
-| test_layout_ocr.py | TestCalculateCoverage::test_calculate_coverage_single_region | 単一領域のカバー率 = 25% | `calculate_coverage` 未実装 |
-| test_layout_ocr.py | TestCalculateCoverage::test_calculate_coverage_multiple_regions | 複数領域の合計カバー率 = 12.5% | `calculate_coverage` 未実装 |
-| test_layout_ocr.py | TestCalculateCoverage::test_calculate_coverage_full_page | ページ全体カバー = 100% | `calculate_coverage` 未実装 |
-| test_layout_ocr.py | TestCalculateCoverage::test_calculate_coverage_empty_regions | 空リスト = 0% | `calculate_coverage` 未実装 |
-| test_layout_ocr.py | TestCalculateCoverage::test_calculate_coverage_real_world_example | 実世界例のカバー率計算 | `calculate_coverage` 未実装 |
-| test_layout_ocr.py | TestShouldFallback::test_should_fallback_empty_regions | 空regions → True | `should_fallback` 未実装 |
-| test_layout_ocr.py | TestShouldFallback::test_should_fallback_low_coverage | 4%カバー率 → True | `should_fallback` 未実装 |
-| test_layout_ocr.py | TestShouldFallback::test_should_fallback_sufficient_coverage | 36%カバー率 → False | `should_fallback` 未実装 |
-| test_layout_ocr.py | TestShouldFallback::test_should_fallback_exactly_30_percent | 30%カバー率 → False (境界値) | `should_fallback` 未実装 |
-| test_layout_ocr.py | TestShouldFallback::test_should_fallback_custom_threshold | カスタムしきい値50% | `should_fallback` 未実装 |
-| test_layout_ocr.py | TestShouldFallback::test_should_fallback_single_figure_full_page | 全ページFIGURE → True | `should_fallback` 未実装 |
-| test_layout_ocr.py | TestShouldFallback::test_should_fallback_multiple_figures_not_fallback | 複数FIGURE → False | `should_fallback` 未実装 |
-| test_layout_ocr.py | TestFallbackEmptyLayout::test_ocr_by_layout_fallback_empty_regions | 空layout → ページ全体OCR | `ocr_by_layout` フォールバック未統合 |
-| test_layout_ocr.py | TestFallbackEmptyLayout::test_ocr_by_layout_fallback_missing_regions_key | regionsキー欠落 → フォールバック | `ocr_by_layout` フォールバック未統合 |
-| test_layout_ocr.py | TestFallbackLowCoverage::test_ocr_by_layout_fallback_below_30_percent | 1%カバー率 → ページ全体OCR | `ocr_by_layout` フォールバック未統合 |
-| test_layout_ocr.py | TestFallbackLowCoverage::test_ocr_by_layout_no_fallback_above_30_percent | 50%カバー率 → 通常OCR | 期待通りPASSすべき (既存動作) |
-| test_layout_ocr.py | TestFallbackLowCoverage::test_ocr_by_layout_fallback_29_percent_coverage | 29%カバー率 → フォールバック | `ocr_by_layout` フォールバック未統合 |
-| test_layout_ocr.py | TestFallbackSingleFigure::test_ocr_by_layout_fallback_full_page_figure | 全ページFIGURE → フォールバック | `ocr_by_layout` フォールバック未統合 |
-| test_layout_ocr.py | TestFallbackEdgeCases::test_calculate_coverage_zero_page_size | ゼロページサイズハンドリング | `calculate_coverage` 未実装 |
-| test_layout_ocr.py | TestFallbackEdgeCases::test_calculate_coverage_negative_bbox | 負bbox座標ハンドリング | `calculate_coverage` 未実装 |
-| test_layout_ocr.py | TestFallbackEdgeCases::test_should_fallback_only_abandon_regions | ABANDONのみ → True | `should_fallback` 未実装 |
+### 1. TITLE判定テスト (TestIsTitleFunction)
+
+| テストファイル | テストメソッド | 期待動作 | 失敗理由 |
+|----------------|----------------|----------|----------|
+| test_layout_ocr.py | test_is_title_yolo_title_type | YOLOでTITLEと検出された場合、Trueを返す | ImportError: is_title未実装 |
+| test_layout_ocr.py | test_is_title_yomitoku_section_headings_role | Yomitokuのrole=section_headingsでTrueを返す | ImportError: is_title未実装 |
+| test_layout_ocr.py | test_is_title_text_without_role_returns_false | 通常のTEXT領域でFalseを返す | ImportError: is_title未実装 |
+| test_layout_ocr.py | test_is_title_yomitoku_paragraph_role | role=paragraphでFalseを返す | ImportError: is_title未実装 |
+| test_layout_ocr.py | test_is_title_both_yolo_and_yomitoku_agree | 両方がTITLEと判定した場合、Trueを返す | ImportError: is_title未実装 |
+
+### 2. 低品質判定テスト (TestIsLowQualityFunction)
+
+| テストファイル | テストメソッド | 期待動作 | 失敗理由 |
+|----------------|----------------|----------|----------|
+| test_layout_ocr.py | test_is_low_quality_empty_string | 空文字列は低品質と判定 | ImportError: is_low_quality未実装 |
+| test_layout_ocr.py | test_is_low_quality_short_text | 10文字未満は低品質と判定 | ImportError: is_low_quality未実装 |
+| test_layout_ocr.py | test_is_low_quality_exactly_10_chars | 10文字以上は低品質でない | ImportError: is_low_quality未実装 |
+| test_layout_ocr.py | test_is_low_quality_high_non_char_ratio | 非文字率>50%は低品質と判定 | ImportError: is_low_quality未実装 |
+| test_layout_ocr.py | test_is_low_quality_normal_japanese_text | 通常の日本語テキストは低品質でない | ImportError: is_low_quality未実装 |
+| test_layout_ocr.py | test_is_low_quality_mixed_content | 正常な混合テキストは低品質でない | ImportError: is_low_quality未実装 |
+| test_layout_ocr.py | test_is_low_quality_whitespace_only | 空白のみは低品質と判定 | ImportError: is_low_quality未実装 |
+
+### 3. 非文字率計算テスト (TestCalcNonCharRatio)
+
+| テストファイル | テストメソッド | 期待動作 | 失敗理由 |
+|----------------|----------------|----------|----------|
+| test_layout_ocr.py | test_calc_non_char_ratio_all_japanese | 日本語のみ→0.0 | ImportError: calc_non_char_ratio未実装 |
+| test_layout_ocr.py | test_calc_non_char_ratio_all_symbols | 記号のみ→1.0 | ImportError: calc_non_char_ratio未実装 |
+| test_layout_ocr.py | test_calc_non_char_ratio_half_and_half | 半分ずつ→0.5 | ImportError: calc_non_char_ratio未実装 |
+| test_layout_ocr.py | test_calc_non_char_ratio_empty_string | 空文字列の処理 | ImportError: calc_non_char_ratio未実装 |
+| test_layout_ocr.py | test_calc_non_char_ratio_english_and_numbers | 英数字は文字として扱う | ImportError: calc_non_char_ratio未実装 |
+
+### 4. OCRフォールバックテスト (TestOcrWithFallback)
+
+| テストファイル | テストメソッド | 期待動作 | 失敗理由 |
+|----------------|----------------|----------|----------|
+| test_layout_ocr.py | test_ocr_with_fallback_yomitoku_success | Yomitoku成功時はそのまま返す | ImportError: ocr_with_fallback未実装 |
+| test_layout_ocr.py | test_ocr_with_fallback_yomitoku_empty_uses_paddleocr | Yomitoku空→PaddleOCRへフォールバック | ImportError: ocr_with_fallback未実装 |
+| test_layout_ocr.py | test_ocr_with_fallback_yomitoku_low_quality_uses_paddleocr | 低品質→PaddleOCRへフォールバック | ImportError: ocr_with_fallback未実装 |
+| test_layout_ocr.py | test_ocr_with_fallback_paddleocr_fails_uses_tesseract | PaddleOCR失敗→Tesseractへフォールバック | ImportError: ocr_with_fallback未実装 |
+| test_layout_ocr.py | test_ocr_with_fallback_all_fail_returns_empty | 全失敗→空文字列 | ImportError: ocr_with_fallback未実装 |
+
+### 5. FIGUREマスクテスト (TestMaskFigures)
+
+| テストファイル | テストメソッド | 期待動作 | 失敗理由 |
+|----------------|----------------|----------|----------|
+| test_layout_ocr.py | test_mask_figures_single_figure | 単一FIGURE領域が白塗り | ImportError: mask_figures未実装 |
+| test_layout_ocr.py | test_mask_figures_multiple_figures | 複数FIGURE領域が全て白塗り | ImportError: mask_figures未実装 |
+| test_layout_ocr.py | test_mask_figures_non_figure_regions_unchanged | TEXT/TABLE等はマスクされない | ImportError: mask_figures未実装 |
+| test_layout_ocr.py | test_mask_figures_empty_regions | 空のリストで変更なし | ImportError: mask_figures未実装 |
+| test_layout_ocr.py | test_mask_figures_returns_new_image | 元画像を変更せず新画像を返す | ImportError: mask_figures未実装 |
+
+### 6. FIGURE除外テスト (TestFigureExclusion)
+
+| テストファイル | テストメソッド | 期待動作 | 失敗理由 |
+|----------------|----------------|----------|----------|
+| test_layout_ocr.py | test_ocr_by_layout_excludes_figure_from_output | FIGUREがOCR結果から除外 | AssertionError: 現在FIGUREが含まれる |
+
+### 7. 結果連結テスト (TestResultConcatenationWithReadingOrder)
+
+| テストファイル | テストメソッド | 期待動作 | 失敗理由 |
+|----------------|----------------|----------|----------|
+| test_layout_ocr.py | test_results_concatenated_in_reading_order | 2カラムで左→右の読み順 | AssertionError: ソート順序が不正 |
+| test_layout_ocr.py | test_results_maintain_sorted_order_for_single_column | 上から下の順序維持 | AssertionError: ソート順序が不正 |
 
 ## 実装ヒント
 
-### 1. calculate_coverage() 関数
-
-data-model.md で定義されたアルゴリズム:
+### 1. is_title() 関数
 
 ```python
-def calculate_coverage(regions: list[dict], page_size: tuple[int, int]) -> float:
-    """検出領域がページをカバーする割合を計算。
-
-    Args:
-        regions: 領域リスト [{"bbox": [x1, y1, x2, y2], ...}, ...]
-        page_size: (width, height)
-
-    Returns:
-        カバー率 (0.0 - 1.0)
-    """
-    if not regions or page_size[0] <= 0 or page_size[1] <= 0:
-        return 0.0
-
-    page_area = page_size[0] * page_size[1]
-    total_region_area = sum(
-        (r["bbox"][2] - r["bbox"][0]) * (r["bbox"][3] - r["bbox"][1])
-        for r in regions
-    )
-    return total_region_area / page_area
-```
-
-### 2. should_fallback() 関数
-
-research.md のフォールバック条件:
-
-1. 領域が検出されなかった
-2. 検出領域のカバー率が30%未満
-3. ページ全体が1つのFIGUREとして検出された
-
-```python
-def should_fallback(
-    regions: list[dict],
-    page_size: tuple[int, int],
-    threshold: float = 0.3,
-) -> bool:
-    """フォールバックが必要かどうかを判定。
-
-    Returns:
-        True: ページ全体OCRにフォールバック
-        False: 領域別OCRを実行
-    """
-    # 条件1: 領域なし
-    if not regions:
+def is_title(region: dict, yomitoku_result: dict) -> bool:
+    """TITLEかどうかを判定。"""
+    # YOLOでTITLEとして検出
+    if region.get("type") == "TITLE":
         return True
-
-    # OCR対象領域のみをフィルタ（ABANDONを除外）
-    ocr_regions = [r for r in regions if r["type"] != "ABANDON"]
-    if not ocr_regions:
+    # Yomitokuの role が section_headings
+    if yomitoku_result.get("role") == "section_headings":
         return True
-
-    # 条件2: カバー率が閾値未満
-    coverage = calculate_coverage(ocr_regions, page_size)
-    if coverage < threshold:
-        return True
-
-    # 条件3: 単一FIGUREがページの90%以上をカバー
-    if len(ocr_regions) == 1 and ocr_regions[0]["type"] == "FIGURE":
-        if coverage >= 0.9:
-            return True
-
     return False
 ```
 
-### 3. ocr_by_layout() フォールバック統合
+### 2. calc_non_char_ratio() 関数
 
 ```python
-def ocr_by_layout(
-    page_path: str,
-    layout: dict,
-    base_url: str = "http://localhost:11434",
-    timeout: int = 60,
-) -> list[OCRResult]:
-    regions = layout.get("regions", [])
-    page_size = tuple(layout.get("page_size", [0, 0]))
+import re
 
-    # フォールバック判定
-    if should_fallback(regions, page_size):
-        # ページ全体OCRを実行
-        img = Image.open(page_path)
-        # DeepSeek-OCRでページ全体を処理
-        ...
-        return [OCRResult(region_type="FALLBACK", text=..., formatted=...)]
+def calc_non_char_ratio(text: str) -> float:
+    """非文字率（記号・空白）を計算。"""
+    if not text:
+        return 0.0
+    # 日本語、英数字をカウント
+    char_pattern = r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\w]'
+    chars = len(re.findall(char_pattern, text))
+    return 1.0 - (chars / len(text))
+```
 
-    # 通常の領域別OCR処理
-    ...
+### 3. is_low_quality() 関数
+
+```python
+def is_low_quality(text: str) -> bool:
+    """OCR結果が低品質かどうかを判定。"""
+    # 空文字列
+    if not text or not text.strip():
+        return True
+    # 10文字未満
+    if len(text.strip()) < 10:
+        return True
+    # 非文字率 > 50%
+    if calc_non_char_ratio(text) > 0.5:
+        return True
+    return False
+```
+
+### 4. ocr_with_fallback() 関数
+
+```python
+def ocr_with_fallback(image: Image.Image, device: str = "cpu") -> tuple[str, str]:
+    """OCRフォールバック付き。Returns (text, engine_used)."""
+    from src.ocr_yomitoku import ocr_page_yomitoku
+    from src.ocr_ensemble import ocr_paddleocr, ocr_tesseract
+
+    # 1. Yomitoku
+    text = ocr_page_yomitoku("", device=device, img=image)
+    if text and not is_low_quality(text):
+        return text, "yomitoku"
+
+    # 2. PaddleOCR
+    result = ocr_paddleocr(image)
+    if result.success and result.text and not is_low_quality(result.text):
+        return result.text, "paddleocr"
+
+    # 3. Tesseract
+    result = ocr_tesseract(image)
+    if result.success and result.text:
+        return result.text, "tesseract"
+
+    return "", "none"
+```
+
+### 5. mask_figures() 関数 (src/utils.py)
+
+```python
+def mask_figures(img: Image.Image, regions: list[dict]) -> Image.Image:
+    """FIGURE領域のみを白でマスク。"""
+    masked = img.copy()
+    draw = ImageDraw.Draw(masked)
+    for r in regions:
+        if r.get("type") == "FIGURE":
+            x1, y1, x2, y2 = r["bbox"]
+            draw.rectangle([x1, y1, x2, y2], fill="white")
+    return masked
+```
+
+### 6. FIGURE除外
+
+`ocr_by_layout()` で FIGURE領域をスキップするロジックを追加:
+
+```python
+# FIGUREはOCR結果から除外（figures/で別管理）
+if region["type"] == "FIGURE":
+    continue
+```
+
+### 7. 結果連結（読み順）
+
+`ocr_by_layout()` で処理前にソートを適用:
+
+```python
+from src.reading_order import sort_reading_order, remove_overlaps
+
+# ソート適用
+regions = remove_overlaps(regions)
+regions = sort_reading_order(regions, page_size[0])
 ```
 
 ## FAIL出力例
 
 ```
-============================= test session starts ==============================
-platform linux -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0
-collected 54 items
+FAILED tests/test_layout_ocr.py::TestIsTitleFunction::test_is_title_yolo_title_type
+tests/test_layout_ocr.py:1281: in test_is_title_yolo_title_type
+    from src.layout_ocr import is_title
+E   ImportError: cannot import name 'is_title' from 'src.layout_ocr'
 
-tests/test_layout_ocr.py ....................................FFFFFFFFFFFFFFFFFF [100%]
-
-================================ short test summary info ============================
-FAILED tests/test_layout_ocr.py::TestCalculateCoverage::test_calculate_coverage_single_region
-  - ImportError: cannot import name 'calculate_coverage' from 'src.layout_ocr'
-
-FAILED tests/test_layout_ocr.py::TestShouldFallback::test_should_fallback_empty_regions
-  - ImportError: cannot import name 'should_fallback' from 'src.layout_ocr'
-
-FAILED tests/test_layout_ocr.py::TestFallbackEmptyLayout::test_ocr_by_layout_fallback_empty_regions
-  - AssertionError: Empty regions should trigger fallback. Got: 0 results
-
-FAILED tests/test_layout_ocr.py::TestFallbackSingleFigure::test_ocr_by_layout_fallback_full_page_figure
-  - AssertionError: Fallback result type should be FALLBACK or TEXT. Got: FIGURE
-
-======================== 18 failed, 36 passed in 0.33s =========================
+FAILED tests/test_layout_ocr.py::TestFigureExclusion::test_ocr_by_layout_excludes_figure_from_output
+tests/test_layout_ocr.py:1809: in test_ocr_by_layout_excludes_figure_from_output
+    assert len(figure_results) == 0, (
+E   AssertionError: FIGURE regions should be excluded from OCR output. Found: 1
 ```
 
 ## 次のステップ
 
-1. **T057**: RED テスト結果を読み取り
-2. **T058**: `calculate_coverage()` 関数を `src/layout_ocr.py` に実装
-3. **T059**: `should_fallback()` 関数を `src/layout_ocr.py` に実装
-4. **T060**: `ocr_by_layout()` にフォールバック処理を統合
-5. **T061**: `make test` で全テストがPASSすることを確認 (GREEN)
+1. GREEN Phaseで以下を実装:
+   - `is_title()` in src/layout_ocr.py
+   - `calc_non_char_ratio()` in src/layout_ocr.py
+   - `is_low_quality()` in src/layout_ocr.py
+   - `ocr_with_fallback()` in src/layout_ocr.py
+   - `mask_figures()` in src/utils.py
+   - `ocr_by_layout()` にFIGURE除外・読み順ソートを統合
 
----
+2. `make test` で全テストがPASSすることを確認
 
-**ステータス**: RED - phase-executor による Implementation (GREEN) 待ち
+## 関連ファイル
+
+- テストファイル: `/data/projects/video-separater/tests/test_layout_ocr.py`
+- 実装対象: `/data/projects/video-separater/src/layout_ocr.py`
+- 実装対象: `/data/projects/video-separater/src/utils.py`

@@ -15,6 +15,7 @@ from src.book_converter.models import (
     ConversionResult,
     ConversionError,
     Heading,
+    HeaderLevelConfig,
     Page,
     Content,
 )
@@ -69,6 +70,41 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "--group-pages",
         action="store_true",
         help="Group pages by TOC structure (front-matter, chapter, section, subsection)"
+    )
+
+    # Header level mapping options
+    parser.add_argument(
+        "--header-level1",
+        metavar="KEYWORDS",
+        help="Level 1 keywords (pipe-separated, e.g., 'chapter')"
+    )
+    parser.add_argument(
+        "--header-level2",
+        metavar="KEYWORDS",
+        help="Level 2 keywords (pipe-separated, e.g., 'episode|column')"
+    )
+    parser.add_argument(
+        "--header-level3",
+        metavar="KEYWORDS",
+        help="Level 3 keywords (pipe-separated)"
+    )
+    parser.add_argument(
+        "--header-level4",
+        metavar="KEYWORDS",
+        help="Level 4 keywords (pipe-separated)"
+    )
+    parser.add_argument(
+        "--header-level5",
+        metavar="KEYWORDS",
+        help="Level 5 keywords (pipe-separated)"
+    )
+
+    # Figure marker options
+    parser.add_argument(
+        "--figure-markers",
+        metavar="KEYWORDS",
+        default="図|写真|表",
+        help="Figure marker keywords (pipe-separated, default: '図|写真|表')"
     )
 
     return parser.parse_args(args)
@@ -134,6 +170,7 @@ def convert_book(
     running_head_threshold: float = 0.5,
     verbose: bool = False,
     group_pages: bool = False,
+    header_level_config: HeaderLevelConfig | None = None,
 ) -> ConversionResult:
     """Convert a Markdown book to XML.
 
@@ -143,6 +180,7 @@ def convert_book(
         running_head_threshold: Ratio threshold for running head detection (default: 0.5).
         verbose: If True, print exclusion reasons to stdout.
         group_pages: If True, group pages by TOC structure.
+        header_level_config: Header level keyword mapping configuration.
 
     Returns:
         ConversionResult with conversion statistics and errors.
@@ -173,7 +211,7 @@ def convert_book(
     # Group pages if requested
     if group_pages:
         from src.book_converter.page_grouper import group_pages_by_toc
-        xml_string = group_pages_by_toc(xml_string)
+        xml_string = group_pages_by_toc(xml_string, header_level_config=header_level_config)
 
     # Write to output file
     output_path.write_text(xml_string, encoding="utf-8")
@@ -207,9 +245,20 @@ def main(args: list[str] | None = None) -> int:
             print(f"エラー: 入力ファイルが見つかりません: {input_path}", file=sys.stderr)
             return 1
 
+        # Build header level config from CLI args
+        header_level_config = HeaderLevelConfig.from_cli_args(
+            level1=parsed.header_level1,
+            level2=parsed.header_level2,
+            level3=parsed.header_level3,
+            level4=parsed.header_level4,
+            level5=parsed.header_level5,
+        )
+
         # Convert
         if parsed.verbose:
             print(f"変換中: {input_path} -> {output_path}")
+            if header_level_config.has_any_config():
+                print(f"見出しレベル設定: L1={header_level_config.level1}, L2={header_level_config.level2}, L3={header_level_config.level3}")
 
         result = convert_book(
             input_path,
@@ -217,6 +266,7 @@ def main(args: list[str] | None = None) -> int:
             running_head_threshold=parsed.running_head_threshold,
             verbose=parsed.verbose,
             group_pages=parsed.group_pages,
+            header_level_config=header_level_config,
         )
 
         # Count markers

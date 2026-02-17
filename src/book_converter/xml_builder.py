@@ -8,14 +8,20 @@ from __future__ import annotations
 from xml.etree.ElementTree import Element, tostring, Comment
 
 from src.book_converter.models import Book, ConversionError
-from src.book_converter.transformer import transform_page, transform_table_of_contents
+from src.book_converter.transformer import (
+    transform_page,
+    transform_table_of_contents,
+    transform_structure_container,
+)
 
 
-def build_xml(book: Book) -> str:
+def build_xml(book: Book, page_numbers: dict[int, int | str] | None = None) -> str:
     """Build an XML string from a Book object.
 
     Args:
         book: The Book object to convert.
+        page_numbers: Optional mapping of structure container index to page number.
+                     Used when book.chapters is set.
 
     Returns:
         XML string with proper encoding declaration.
@@ -41,10 +47,20 @@ def build_xml(book: Book) -> str:
     if toc_elem is not None:
         root.append(toc_elem)
 
-    # Add pages
-    for page in book.pages:
-        page_elem = transform_page(page)
-        root.append(page_elem)
+    # If chapters exist, use structure container-based generation
+    if book.chapters:
+        page_map = page_numbers or {}
+        for idx, chapter in enumerate(book.chapters, start=1):
+            chapter_elem = transform_structure_container(chapter)
+            # Insert page comment if page number is provided for this chapter
+            if idx in page_map:
+                insert_page_comment(chapter_elem, page_map[idx])
+            root.append(chapter_elem)
+    else:
+        # Legacy: Add pages
+        for page in book.pages:
+            page_elem = transform_page(page)
+            root.append(page_elem)
 
     # Serialize to string with XML declaration
     xml_bytes = tostring(root, encoding="UTF-8", xml_declaration=True)
@@ -57,6 +73,47 @@ def build_xml(book: Book) -> str:
     )
 
     return xml_string
+
+
+def generate_page_comment(page_number: int | str) -> Comment | None:
+    """Generate a page comment.
+
+    Args:
+        page_number: Page number (integer or string)
+
+    Returns:
+        Comment: <!-- page N --> format comment
+        None: if page_number is empty
+
+    Example:
+        >>> comment = generate_page_comment(42)
+        >>> comment.text
+        ' page 42 '
+        >>> generate_page_comment("") is None
+        True
+    """
+    if not page_number:
+        return None
+    return Comment(f" page {page_number} ")
+
+
+def insert_page_comment(element: Element, page_number: int | str) -> None:
+    """Insert a page comment at the beginning of an element.
+
+    Args:
+        element: The XML element to insert the comment into.
+        page_number: Page number to insert
+
+    Example:
+        >>> from xml.etree.ElementTree import Element
+        >>> elem = Element("chapter")
+        >>> insert_page_comment(elem, 42)
+        >>> elem[0].text
+        ' page 42 '
+    """
+    comment = generate_page_comment(page_number)
+    if comment is not None:
+        element.insert(0, comment)
 
 
 def insert_error_comment(element: Element, error: ConversionError) -> None:

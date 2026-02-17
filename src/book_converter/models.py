@@ -32,20 +32,12 @@ class BookMetadata:
 
 
 @dataclass(frozen=True)
-class PageAnnouncement:
-    """ページ読み上げ"""
-
-    text: str  # "42ページ"
-    format: str = "simple"  # "simple", "chapter"
-
-
-@dataclass(frozen=True)
 class Heading:
-    """見出し"""
+    """見出し（TOC外の見出し用）"""
 
     level: int  # 1, 2, 3（0=エラー）
     text: str
-    read_aloud: bool = True
+    read_aloud: bool = True  # skip区間ではFalse
 
 
 @dataclass(frozen=True)
@@ -53,7 +45,7 @@ class Paragraph:
     """段落"""
 
     text: str
-    read_aloud: bool = True
+    read_aloud: bool = True  # skip区間ではFalse
 
 
 @dataclass(frozen=True)
@@ -61,41 +53,17 @@ class List:
     """リスト"""
 
     items: tuple[str, ...]
-    read_aloud: bool = True
-
-
-# Union type for content elements
-ContentElement = Union[Heading, Paragraph, List]
-
-
-@dataclass(frozen=True)
-class Content:
-    """本文コンテンツ"""
-
-    elements: tuple[ContentElement, ...]
-    read_aloud: bool = False
+    list_type: str = "unordered"  # "unordered" or "ordered"
+    read_aloud: bool = True  # skip区間ではFalse
 
 
 @dataclass(frozen=True)
 class Figure:
     """図表"""
 
-    file: str
-    caption: str = ""
-    description: str = ""
-    read_aloud: str = "optional"  # "true", "false", "optional"
-    continued: bool = False
-
-
-@dataclass(frozen=True)
-class PageMetadata:
-    """ページメタデータ"""
-
-    text: str  # 元の表記 "はじめに 1 / 3"
-    meta_type: str = "chapter-page"  # "chapter-page", "section-page", "unknown"
-    section_name: str = ""  # "はじめに"
-    current: int = 0  # 1
-    total: int = 0  # 3
+    path: str  # 必須: 画像ファイルパス
+    caption: str = ""  # 図の説明
+    marker: str = ""  # オプション: 元のマーカーテキスト
 
 
 @dataclass(frozen=True)
@@ -103,7 +71,7 @@ class TocEntry:
     """Table of Contents entry."""
 
     text: str  # エントリのタイトルテキスト
-    level: str  # "chapter", "section", "subsection", "other"
+    level: int  # 階層レベル（1-5）
     number: str = ""  # 章番号（例: "1", "2.1", "2.1.1"）
     page: str = ""  # 参照ページ番号
 
@@ -115,21 +83,28 @@ class TableOfContents:
     entries: tuple[TocEntry, ...]
     begin_page: str = ""  # TOCが開始するページ番号
     end_page: str = ""  # TOCが終了するページ番号
-    read_aloud: bool = False
+
+
+# Section の子要素
+SectionElement = Union[Heading, Paragraph, List, Figure]
 
 
 @dataclass(frozen=True)
-class Page:
-    """1ページ"""
+class Section:
+    """セクション（chapter直下）"""
 
-    number: str  # 空文字列許容（エラー時）
-    source_file: str
-    content: Content
-    announcement: PageAnnouncement | None = None
-    figures: tuple[Figure, ...] = ()
-    metadata: PageMetadata | None = None
-    continued: bool = False
-    page_type: str = "normal"  # "normal", "cover", "colophon", "toc"
+    number: str  # セクション番号（例: "1.1"）
+    title: str  # タイトル（ナビゲーション用）
+    elements: tuple[SectionElement, ...] = ()
+
+
+@dataclass(frozen=True)
+class Chapter:
+    """章"""
+
+    number: str  # 章番号（例: "1"）
+    title: str  # タイトル（ナビゲーション用）
+    sections: tuple[Section, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -137,8 +112,10 @@ class Book:
     """書籍全体"""
 
     metadata: BookMetadata
-    pages: tuple[Page, ...]  # イミュータブルなタプル
-    toc: TableOfContents | None = None  # 目次（book直下、metadata の次）
+    toc: TableOfContents | None = None
+    chapters: tuple[Chapter, ...] = ()
+    # Legacy: pages 属性（段階的に削除予定）
+    pages: tuple["Page", ...] = ()
 
 
 @dataclass(frozen=True)
@@ -191,3 +168,151 @@ class MarkerStats:
     toc: int = 0  # <!-- toc --> 開始マーカー数
     content: int = 0  # <!-- content --> 開始マーカー数
     skip: int = 0  # <!-- skip --> 開始マーカー数
+
+
+@dataclass(frozen=True)
+class HeaderLevelConfig:
+    """見出しレベルとキーワードのマッピング設定.
+
+    CLI引数から構築される設定。
+    例: --header-level1=chapter --header-level2=episode|column
+
+    Attributes:
+        level1: レベル1キーワード (e.g., ("chapter",))
+        level2: レベル2キーワード (e.g., ("episode", "column"))
+        level3: レベル3キーワード
+        level4: レベル4キーワード
+        level5: レベル5キーワード
+    """
+
+    level1: tuple[str, ...] = ()
+    level2: tuple[str, ...] = ()
+    level3: tuple[str, ...] = ()
+    level4: tuple[str, ...] = ()
+    level5: tuple[str, ...] = ()
+
+    def get_level_for_keyword(self, keyword: str) -> int | None:
+        """キーワードに対応するレベルを返す.
+
+        Args:
+            keyword: 検索するキーワード (case-insensitive)
+
+        Returns:
+            レベル (1-5) or None
+        """
+        keyword_lower = keyword.lower()
+        if keyword_lower in (k.lower() for k in self.level1):
+            return 1
+        if keyword_lower in (k.lower() for k in self.level2):
+            return 2
+        if keyword_lower in (k.lower() for k in self.level3):
+            return 3
+        if keyword_lower in (k.lower() for k in self.level4):
+            return 4
+        if keyword_lower in (k.lower() for k in self.level5):
+            return 5
+        return None
+
+    def get_keywords_for_level(self, level: int) -> tuple[str, ...]:
+        """レベルに対応するキーワードを返す.
+
+        Args:
+            level: レベル (1-5)
+
+        Returns:
+            キーワードのタプル
+        """
+        return getattr(self, f"level{level}", ())
+
+    def has_any_config(self) -> bool:
+        """設定が存在するかどうか."""
+        return bool(self.level1 or self.level2 or self.level3 or self.level4 or self.level5)
+
+    @staticmethod
+    def from_cli_args(
+        level1: str | None = None,
+        level2: str | None = None,
+        level3: str | None = None,
+        level4: str | None = None,
+        level5: str | None = None,
+    ) -> "HeaderLevelConfig":
+        """CLI引数から設定を構築.
+
+        Args:
+            level1-5: パイプ区切りのキーワード (e.g., "episode|column")
+
+        Returns:
+            HeaderLevelConfig
+        """
+        def parse(value: str | None) -> tuple[str, ...]:
+            if not value:
+                return ()
+            return tuple(k.strip() for k in value.split("|") if k.strip())
+
+        return HeaderLevelConfig(
+            level1=parse(level1),
+            level2=parse(level2),
+            level3=parse(level3),
+            level4=parse(level4),
+            level5=parse(level5),
+        )
+
+
+# ============================================================
+# Legacy models (parser.py との互換性用、段階的に削除予定)
+# ============================================================
+
+@dataclass(frozen=True)
+class PageAnnouncement:
+    """ページ読み上げ (Legacy)"""
+
+    text: str
+    format: str = "simple"
+
+
+@dataclass(frozen=True)
+class Content:
+    """本文コンテンツ (Legacy)"""
+
+    elements: tuple[Union[Heading, Paragraph, List], ...]
+    read_aloud: bool = False
+
+
+@dataclass(frozen=True)
+class PageMetadata:
+    """ページメタデータ (Legacy)"""
+
+    text: str
+    meta_type: str = "chapter-page"
+    section_name: str = ""
+    current: int = 0
+    total: int = 0
+
+
+@dataclass(frozen=True)
+class Page:
+    """1ページ (Legacy)"""
+
+    number: str
+    source_file: str
+    content: Content
+    announcement: PageAnnouncement | None = None
+    figures: tuple[Figure, ...] = ()
+    metadata: PageMetadata | None = None
+    continued: bool = False
+    page_type: str = "normal"
+
+
+@dataclass(frozen=True)
+class StructureContainer:
+    """構造コンテナ (Legacy)"""
+
+    container_type: str
+    level: int
+    number: str
+    title: str
+    children: tuple  # StructureContainer or ContentElement
+
+
+# Legacy union type
+ContentElement = Union[Heading, Paragraph, List]

@@ -1,147 +1,133 @@
-# Phase 1 Output: Setup Analysis
+# Phase 1 Output: Setup（既存コード分析）
 
-**Date**: 2026-02-11
-**Phase**: Setup (Analysis Only)
+**Date**: 2026-02-13
+**Status**: Completed
 
-## T001: src/detect_figures.py Analysis
+## T001: src/detect_figures.py 分析
 
-### Current Implementation
+### 現在実装
+- `LABEL_TYPE_MAP`: 全10クラス対応済み（title, plain text, abandon, figure, figure_caption, table, table_caption, table_footnote, isolated formula, formula_caption）
+- `TARGET_LABELS`: LABEL_TYPE_MAP.keys() を使用（全クラス検出対象）
+- 出力構造: `{"page_001.png": {"regions": [...], "page_size": [w, h]}}`
+- `min_area` パラメータ: 実装済み（デフォルト 0.01 = 1%）
 
-```python
-LABEL_TYPE_MAP = {
-    "table": "TABLE",
-    "figure": "FIGURE",
-    "isolated formula": "FORMULA",
-}
-TARGET_LABELS = set(LABEL_TYPE_MAP.keys())  # Only 3 classes
-```
+### 変更不要
+- 10クラス検出: 実装済み
+- regions構造: 実装済み
+- page_size: 実装済み
+- min_area フィルタリング: 実装済み
 
-### Required Changes
+## T002: src/ocr_yomitoku.py 分析
 
-1. **Expand LABEL_TYPE_MAP** to 10 classes:
-   ```python
-   LABEL_TYPE_MAP = {
-       "title": "TITLE",
-       "plain text": "TEXT",
-       "abandon": "ABANDON",
-       "figure": "FIGURE",
-       "figure_caption": "CAPTION",
-       "table": "TABLE",
-       "table_caption": "CAPTION",
-       "table_footnote": "FOOTNOTE",
-       "isolated formula": "FORMULA",
-       "formula_caption": "CAPTION",
-   }
-   ```
+### 現在実装
+- `YomitokuResult` dataclass: text, markdown, paragraphs, tables, figures
+- `ocr_page_yomitoku()`: 単一ページOCR（`img` パラメータでPIL Image対応）
+- `ocr_page_yomitoku_full()`: フル結果（markdown含む）
+- `_get_analyzer()`: lazy初期化
 
-2. **Change output structure**: `figures` → `regions` + add `page_size`
+### roleフィールド
+- `results.paragraphs[i]` に `contents` または `text` 属性
+- **role フィールドは現在取得していない** → Phase 5 で追加必要
 
-3. **Add min_area filtering**: Filter out small noise regions
+### 変更予定（Phase 5）
+- role フィールド取得の追加（TITLE判定用）
 
-### Key Integration Points
+## T003: src/ocr_ensemble.py 分析
 
-- Line 100: `layout_data[page_name] = {"figures": figures}` → Change to `regions`
-- Need to capture `img.size` for `page_size` field
+### 現在実装
+- 4エンジン対応: yomitoku, paddleocr, tesseract, easyocr
+- `ocr_tesseract()`, `ocr_easyocr()`, `ocr_paddleocr()`, `ocr_yomitoku_engine()`
+- `merge_by_voting()`: 投票によるマージ
+- `ocr_ensemble()`: 複数エンジン実行
 
----
+### フォールバック統合ポイント
+- `ocr_paddleocr()`: PIL Image → numpy → PaddleOCR
+- `ocr_tesseract()`: PIL Image → pytesseract
 
-## T002: src/ocr_deepseek.py Analysis
+### 変更予定（Phase 5）
+- `ocr_with_fallback()` 関数の追加（layout_ocr.py から呼び出し）
 
-### Current Implementation
+## T004: src/layout_ocr.py 分析
 
-- `ocr_page_deepseek()`: Single page OCR with optional pre-processed image
-- `ocr_pages_deepseek()`: Batch OCR with figure masking via layout
-- Uses `mask_figure_regions()` from utils to white-out figures before OCR
+### 現在実装
+- `OCRResult` dataclass: region_type, text, formatted
+- `select_ocr_engine()`: FIGURE→vlm, ABANDON→skip, その他→yomitoku
+- `format_ocr_result()`: Markdownフォーマット
+- `crop_region()`: bbox→PIL crop
+- `ocr_region()`: 単一領域OCR
+- `calculate_coverage()`: カバー率計算
+- `should_fallback()`: フォールバック判定
+- `ocr_by_layout()`: ページ全体処理
+- `run_layout_ocr()`: 全ページ処理
 
-### Region OCR Integration Points
+### 既存の領域別OCR構造
+- Yomitoku: TEXT/TITLE/TABLE/CAPTION/FOOTNOTE/FORMULA
+- VLM (gemma3:12b): FIGURE
+- skip: ABANDON
 
-1. **Function Signature** (Line 81-88):
-   ```python
-   def ocr_page_deepseek(
-       page_path: str,
-       ...
-       img: Image.Image | None = None,  # Can pass pre-cropped region
-   )
-   ```
-   - Already supports passing a PIL Image directly (for cropped regions)
+### 変更予定（Phase 5）
+- `is_title()`: YOLO + Yomitoku role 併用
+- `is_low_quality()`: 品質判定（空/10文字未満/非文字率>50%）
+- `calc_non_char_ratio()`: 非文字率計算
+- `ocr_with_fallback()`: Yomitoku → PaddleOCR → Tesseract
+- `mask_figures()` の呼び出し統合
 
-2. **Reusable for Region OCR**:
-   - `ocr_page_deepseek()` can be called per-region with cropped image
-   - No modification needed to this function
+## T005: src/reading_order.py 分析
 
-3. **New Module Needed**: `layout_ocr.py`
-   - Orchestrates region-based OCR
-   - Calls `ocr_page_deepseek()` for TEXT/TITLE regions
-   - Calls VLM for FIGURE regions
+### 現在実装
+- `TYPE_PRIORITY`: TITLE(0) < TEXT(1) < CAPTION(2) < ...
+- `sort_reading_order()`: 2カラム検出 + Y座標ソート
+- `iou()`: 重複率計算（intersection / min_area）
+- `remove_overlaps()`: 同一タイプ、IoU>=0.5 で除去
 
----
+### アルゴリズム
+1. center_x < mid_x → 左カラム
+2. 各カラム内: (Y座標, TYPE_PRIORITY, X座標) でソート
+3. 左カラム + 右カラム で結合
 
-## T003: src/utils.py Analysis
+### 変更不要
+- 基本アルゴリズム実装済み
 
-### Current Functions
+## T006: src/utils.py 分析
 
-| Function | Purpose | Status |
-|----------|---------|--------|
-| `encode_image_file()` | File to base64 | Reusable |
-| `encode_pil_image()` | PIL Image to base64 | Reusable |
-| `format_figure_markers()` | Generate figure markers | Update for `regions` |
-| `mask_figure_regions()` | White-out figures | Update for `regions` |
+### 現在実装
+- `encode_image_file()`: ファイル→base64
+- `encode_pil_image()`: PIL→base64
+- `format_figure_markers()`: 図マーカーフォーマット
+- `mask_figure_regions()`: **figures キー使用**（旧構造）
 
-### Required Addition
+### 変更予定（Phase 5）
+- `mask_figures()`: **regions キー対応**、FIGURE領域のみ白塗り
 
-```python
-def crop_region(img: Image.Image, bbox: list[int]) -> Image.Image:
-    """Crop a region from image by bbox [x1, y1, x2, y2]."""
-    x1, y1, x2, y2 = bbox
-    return img.crop((x1, y1, x2, y2))
-```
+## T007: tests/ 分析
 
-### Backward Compatibility Updates
+### 既存テスト
+- `test_detect_figures.py`: 10クラス検出、regions構造、page_size、min_area
+- `test_layout_ocr.py`: OCRエンジン選択、フォーマット、crop、結果連結、フォールバック
+- `test_reading_order.py`: ソート、2カラム、TITLE優先、重複除去
 
-`format_figure_markers()` and `mask_figure_regions()`:
-- Need to support both `figures` (old) and `regions` (new) keys
+### テストパターン
+- pytest + tmp_path fixture
+- unittest.mock.patch でYOLO/OCRモック
+- MagicMock でAPIレスポンスモック
 
----
-
-## T004: tests/test_ocr_deepseek.py Analysis
-
-### Test Patterns Identified
-
-1. **Mock Pattern**: Uses `unittest.mock.patch` to mock Ollama API
-2. **Fixture Pattern**: Uses `tmp_path` pytest fixture for test images
-3. **Class Organization**: One class per logical test group
-4. **Assertion Style**: Descriptive messages in assert statements
-
-### Test Structure Template
-
-```python
-class TestFeatureName:
-    """Description of test group."""
-
-    def test_specific_behavior(self, tmp_path: Path) -> None:
-        """What this test verifies."""
-        # Arrange
-        ...
-        # Act
-        ...
-        # Assert
-        assert result == expected, f"Expected ..., got {result}"
-```
-
----
+### 変更予定（Phase 2-5）
+- 追加テストは tasks.md に定義済み
 
 ## Summary
 
-| File | Changes Required |
-|------|------------------|
-| src/detect_figures.py | LABEL_TYPE_MAP expansion, regions structure, page_size, min_area |
-| src/ocr_deepseek.py | No changes (reuse ocr_page_deepseek) |
-| src/utils.py | Add crop_region(), update for regions key |
-| src/layout_ocr.py | **New file**: region-based OCR dispatcher |
-| src/reading_order.py | **New file**: reading order sort algorithm |
+| ファイル | 状態 | Phase 2 変更 | Phase 3 変更 | Phase 4 変更 | Phase 5 変更 |
+|---------|------|-------------|-------------|-------------|-------------|
+| detect_figures.py | 完了 | なし | なし | なし | なし |
+| ocr_yomitoku.py | 一部対応 | なし | なし | なし | role取得追加 |
+| ocr_ensemble.py | 完了 | なし | なし | なし | 統合ポイントのみ |
+| layout_ocr.py | 一部対応 | なし | なし | なし | 多数追加 |
+| reading_order.py | 完了 | なし | なし | なし | なし |
+| utils.py | 旧構造 | なし | なし | なし | mask_figures更新 |
 
-## Next Phase
+## Conclusion
 
-Phase 2 will implement US1 (Extended Layout Detection) using TDD:
-1. RED: Write tests for 10-class detection and regions structure
-2. GREEN: Implement LABEL_TYPE_MAP expansion and output format change
+- **Phase 2 (US1)**: detect_figures.py は既に実装済み。テスト確認のみ。
+- **Phase 3 (US3)**: reading_order.py は既に実装済み。テスト確認のみ。
+- **Phase 4 (US4)**: layout_ocr.py のフォールバック機能は既に実装済み。テスト確認のみ。
+- **Phase 5 (US2)**: 主要な変更が必要。TITLE判定、OCRフォールバック、FIGUREマスク、role取得。

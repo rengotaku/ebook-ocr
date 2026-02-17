@@ -1,0 +1,2 @@
+# paddleocr OCR output for page_0024.png
+# FAILED: No module named 'paddleocr'

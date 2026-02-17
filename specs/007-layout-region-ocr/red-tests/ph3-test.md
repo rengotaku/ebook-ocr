@@ -1,237 +1,149 @@
-# Phase 3 RED テスト結果: US3 - 読み順の再構築
+# Phase 3 テスト結果: US3 - 読み順の再構築
 
-**日付**: 2026-02-11
+**日付**: 2026-02-13
 **Phase**: Phase 3 (User Story 3)
-**ステータス**: RED (テスト失敗確認済み)
+**ステータス**: GREEN (既に実装済み - テスト全て成功)
 
 ## サマリ
 
 | 項目 | 値 |
 |------|-----|
 | Phase | Phase 3 (US3 - 読み順の再構築) |
-| FAILテスト数 | 20 |
-| PASSテスト数 | 0 |
+| FAILテスト数 | 0 |
+| PASSテスト数 | 20 |
 | テストファイル | tests/test_reading_order.py |
+| 状態 | 既存実装がテストを全て満たす |
 
-## FAILテスト一覧
+## 分析結果
 
-### TestSortReadingOrderSimple (単純ソートテスト)
+Phase 1の分析(T005)で確認されたように、`src/reading_order.py`は既に完全に実装されています:
 
-| テストメソッド | 期待動作 | 失敗理由 |
-|--------------|---------|---------|
-| test_sort_reading_order_top_to_bottom | Y座標で上から下にソート | モジュール未実装 |
-| test_sort_reading_order_left_to_right_same_row | 同一行内でX座標で左から右にソート | モジュール未実装 |
-| test_sort_reading_order_empty_list | 空リストを空リストで返す | モジュール未実装 |
-| test_sort_reading_order_single_region | 単一領域をそのまま返す | モジュール未実装 |
+- `TYPE_PRIORITY`: TITLE(0) < TEXT(1) < CAPTION(2) < ... の優先度定義済み
+- `sort_reading_order()`: 2カラム検出 + Y座標ソート + タイプ優先度実装済み
+- `iou()`: 重複率計算（intersection / min_area）実装済み
+- `remove_overlaps()`: 同一タイプ、IoU>=0.5で除去実装済み
 
-### TestSortReadingOrderTwoColumn (2カラムソートテスト)
+## PASSテスト一覧
 
-| テストメソッド | 期待動作 | 失敗理由 |
-|--------------|---------|---------|
-| test_sort_reading_order_two_columns_left_first | 左カラム全体が右カラムより先 | モジュール未実装 |
-| test_sort_reading_order_two_columns_mixed_y | 各カラム内がY座標順 | モジュール未実装 |
-| test_sort_reading_order_center_regions | 中央領域が正しく分類される | モジュール未実装 |
+### TestSortReadingOrderSimple (単純ソートテスト) - 4テスト
 
-### TestSortReadingOrderTitlePriority (タイトル優先テスト)
+| テストメソッド | 検証内容 | 結果 |
+|--------------|---------|------|
+| test_sort_reading_order_top_to_bottom | Y座標で上から下にソート | PASS |
+| test_sort_reading_order_left_to_right_same_row | 同一行内でX座標で左から右にソート | PASS |
+| test_sort_reading_order_empty_list | 空リストを空リストで返す | PASS |
+| test_sort_reading_order_single_region | 単一領域をそのまま返す | PASS |
 
-| テストメソッド | 期待動作 | 失敗理由 |
-|--------------|---------|---------|
-| test_sort_reading_order_title_before_text_same_y | 同一Y座標でTITLEがTEXTより先 | モジュール未実装 |
-| test_sort_reading_order_title_priority_with_y_sort | Y座標ソートとタイトル優先の組み合わせ | モジュール未実装 |
-| test_sort_reading_order_title_at_top_of_page | ページ上部のTITLEが最初 | モジュール未実装 |
+### TestSortReadingOrderTwoColumn (2カラムソートテスト) - 3テスト
 
-### TestRemoveOverlaps (重複除去テスト)
+| テストメソッド | 検証内容 | 結果 |
+|--------------|---------|------|
+| test_sort_reading_order_two_columns_left_first | 左カラム全体が右カラムより先 | PASS |
+| test_sort_reading_order_two_columns_mixed_y | 各カラム内がY座標順 | PASS |
+| test_sort_reading_order_center_regions | 中央領域が正しく分類される | PASS |
 
-| テストメソッド | 期待動作 | 失敗理由 |
-|--------------|---------|---------|
-| test_remove_overlaps_no_overlap | 重複なしで全領域保持 | モジュール未実装 |
-| test_remove_overlaps_complete_overlap | 完全重複で信頼度高い方を残す | モジュール未実装 |
-| test_remove_overlaps_partial_overlap | 部分重複(50%+)で1つのみ残す | モジュール未実装 |
-| test_remove_overlaps_low_overlap_both_kept | 低重複率で両方残す | モジュール未実装 |
-| test_remove_overlaps_empty_list | 空リストを空リストで返す | モジュール未実装 |
-| test_remove_overlaps_different_types_kept | 異なるタイプは両方残す | モジュール未実装 |
+### TestSortReadingOrderTitlePriority (タイプ優先度テスト) - 3テスト
 
-### TestSortReadingOrderEdgeCases (エッジケーステスト)
+| テストメソッド | 検証内容 | 結果 |
+|--------------|---------|------|
+| test_sort_reading_order_title_before_text_same_y | 同一Y座標でTITLEがTEXTより先 | PASS |
+| test_sort_reading_order_title_priority_with_y_sort | Y座標ソートとタイトル優先の組み合わせ | PASS |
+| test_sort_reading_order_title_at_top_of_page | ページ上部のTITLEが最初 | PASS |
 
-| テストメソッド | 期待動作 | 失敗理由 |
-|--------------|---------|---------|
-| test_sort_reading_order_unicode_content_preserved | Unicode文字を含むデータ保持 | モジュール未実装 |
-| test_sort_reading_order_immutable_input | 入力リストが変更されない | モジュール未実装 |
-| test_sort_reading_order_large_page | 大ページサイズで正しく動作 | モジュール未実装 |
-| test_sort_reading_order_negative_coords_handled | 負の座標のエラーハンドリング | モジュール未実装 |
+### TestRemoveOverlaps (重複除去テスト) - 6テスト
 
-## 実装ヒント
+| テストメソッド | 検証内容 | 結果 |
+|--------------|---------|------|
+| test_remove_overlaps_no_overlap | 重複なしで全領域保持 | PASS |
+| test_remove_overlaps_complete_overlap | 完全重複で信頼度高い方を残す | PASS |
+| test_remove_overlaps_partial_overlap | 部分重複(50%+)で1つのみ残す | PASS |
+| test_remove_overlaps_low_overlap_both_kept | 低重複率で両方残す | PASS |
+| test_remove_overlaps_empty_list | 空リストを空リストで返す | PASS |
+| test_remove_overlaps_different_types_kept | 異なるタイプは両方残す | PASS |
 
-### T029: sort_reading_order() 関数実装
+### TestSortReadingOrderEdgeCases (エッジケーステスト) - 4テスト
 
-research.mdより:
+| テストメソッド | 検証内容 | 結果 |
+|--------------|---------|------|
+| test_sort_reading_order_unicode_content_preserved | Unicode文字を含むデータ保持 | PASS |
+| test_sort_reading_order_immutable_input | 入力リストが変更されない | PASS |
+| test_sort_reading_order_large_page | 大ページサイズで正しく動作 | PASS |
+| test_sort_reading_order_negative_coords_handled | 負の座標のエラーハンドリング | PASS |
 
+## テスト実行結果
+
+```
+$ PYTHONPATH=/data/projects/video-separater .venv/bin/python -m pytest tests/test_reading_order.py -v
+============================= test session starts ==============================
+platform linux -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0
+collected 20 items
+
+tests/test_reading_order.py::TestSortReadingOrderSimple::test_sort_reading_order_top_to_bottom PASSED [  5%]
+tests/test_reading_order.py::TestSortReadingOrderSimple::test_sort_reading_order_left_to_right_same_row PASSED [ 10%]
+tests/test_reading_order.py::TestSortReadingOrderSimple::test_sort_reading_order_empty_list PASSED [ 15%]
+tests/test_reading_order.py::TestSortReadingOrderSimple::test_sort_reading_order_single_region PASSED [ 20%]
+tests/test_reading_order.py::TestSortReadingOrderTwoColumn::test_sort_reading_order_two_columns_left_first PASSED [ 25%]
+tests/test_reading_order.py::TestSortReadingOrderTwoColumn::test_sort_reading_order_two_columns_mixed_y PASSED [ 30%]
+tests/test_reading_order.py::TestSortReadingOrderTwoColumn::test_sort_reading_order_center_regions PASSED [ 35%]
+tests/test_reading_order.py::TestSortReadingOrderTitlePriority::test_sort_reading_order_title_before_text_same_y PASSED [ 40%]
+tests/test_reading_order.py::TestSortReadingOrderTitlePriority::test_sort_reading_order_title_priority_with_y_sort PASSED [ 45%]
+tests/test_reading_order.py::TestSortReadingOrderTitlePriority::test_sort_reading_order_title_at_top_of_page PASSED [ 50%]
+tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_no_overlap PASSED [ 55%]
+tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_complete_overlap PASSED [ 60%]
+tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_partial_overlap PASSED [ 65%]
+tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_low_overlap_both_kept PASSED [ 70%]
+tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_empty_list PASSED [ 75%]
+tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_different_types_kept PASSED [ 80%]
+tests/test_reading_order.py::TestSortReadingOrderEdgeCases::test_sort_reading_order_unicode_content_preserved PASSED [ 85%]
+tests/test_reading_order.py::TestSortReadingOrderEdgeCases::test_sort_reading_order_immutable_input PASSED [ 90%]
+tests/test_reading_order.py::TestSortReadingOrderEdgeCases::test_sort_reading_order_large_page PASSED [ 95%]
+tests/test_reading_order.py::TestSortReadingOrderEdgeCases::test_sort_reading_order_negative_coords_handled PASSED [100%]
+
+============================== 20 passed in 0.03s ==============================
+```
+
+## 既存実装の確認
+
+### src/reading_order.py の実装
+
+**TYPE_PRIORITY 定義**:
 ```python
-def sort_reading_order(regions: list[dict], page_width: int) -> list[dict]:
-    """横書きレイアウトの読み順でソート。
-
-    アルゴリズム:
-    1. カラム検出: X座標の中央値でグループ化（mid_x = page_width / 2）
-    2. 各カラム内をY座標でソート
-    3. 左カラム → 右カラムの順で結合
-
-    同一Y座標の場合、TITLEがTEXTより優先される。
-
-    Args:
-        regions: 領域のリスト（type, bbox, confidenceを含む）
-        page_width: ページ幅（カラム判定に使用）
-
-    Returns:
-        読み順でソートされた領域のリスト（新しいリスト、元は変更しない）
-    """
-    if not regions:
-        return regions
-
-    # イミュータブル: 元のリストを変更しない
-    regions_copy = [r.copy() for r in regions]
-
-    mid_x = page_width / 2
-    left_col = []
-    right_col = []
-
-    for r in regions_copy:
-        center_x = (r["bbox"][0] + r["bbox"][2]) / 2
-        if center_x < mid_x:
-            left_col.append(r)
-        else:
-            right_col.append(r)
-
-    # 各カラム内をY座標でソート（同一YならTITLE優先）
-    def sort_key(r):
-        type_priority = 0 if r["type"] == "TITLE" else 1
-        return (r["bbox"][1], type_priority)
-
-    left_col.sort(key=sort_key)
-    right_col.sort(key=sort_key)
-
-    return left_col + right_col
+TYPE_PRIORITY = {
+    "TITLE": 0,
+    "TEXT": 1,
+    "CAPTION": 2,
+    "FOOTNOTE": 3,
+    "FIGURE": 4,
+    "TABLE": 5,
+    "FORMULA": 6,
+    "ABANDON": 7,
+}
 ```
 
-### T030: remove_overlaps() 関数実装
+**sort_reading_order() アルゴリズム**:
+1. ページ中央（mid_x = page_width / 2）で左右カラムに分割
+2. 各カラム内を (Y座標, TYPE_PRIORITY, X座標) でソート
+3. 左カラム + 右カラムの順で結合
+4. 入力リストは変更しない（イミュータブル）
 
-data-model.mdより:
+**remove_overlaps() アルゴリズム**:
+1. 同一タイプの領域ペアのみ比較
+2. iou() でIoU（Intersection over smaller area）を計算
+3. IoU >= 0.5 の場合、信頼度の低い方を除去
+4. 異なるタイプの重複は意図的重複として保持
 
-```python
-def remove_overlaps(regions: list[dict]) -> list[dict]:
-    """重複領域の検出と除去。
+## 結論
 
-    アルゴリズム:
-    1. 各領域ペアの重複率を計算
-    2. 重複率が50%以上の場合、信頼度の低い方を除去
-    3. 異なるタイプの領域は除去しない
+Phase 3 (US3: 読み順の再構築) は既に完全に実装されています:
 
-    Args:
-        regions: 領域のリスト
-
-    Returns:
-        重複を除去した領域のリスト
-    """
-    if not regions:
-        return []
-
-    def calculate_overlap(r1, r2):
-        x1 = max(r1["bbox"][0], r2["bbox"][0])
-        y1 = max(r1["bbox"][1], r2["bbox"][1])
-        x2 = min(r1["bbox"][2], r2["bbox"][2])
-        y2 = min(r1["bbox"][3], r2["bbox"][3])
-
-        if x1 >= x2 or y1 >= y2:
-            return 0
-
-        intersection = (x2 - x1) * (y2 - y1)
-        area1 = (r1["bbox"][2] - r1["bbox"][0]) * (r1["bbox"][3] - r1["bbox"][1])
-        area2 = (r2["bbox"][2] - r2["bbox"][0]) * (r2["bbox"][3] - r2["bbox"][1])
-
-        return intersection / min(area1, area2)
-
-    result = []
-    removed = set()
-
-    for i, r1 in enumerate(regions):
-        if i in removed:
-            continue
-
-        keep = True
-        for j, r2 in enumerate(regions):
-            if i >= j or j in removed:
-                continue
-
-            # 異なるタイプは除去しない
-            if r1["type"] != r2["type"]:
-                continue
-
-            overlap = calculate_overlap(r1, r2)
-            if overlap >= 0.5:
-                if r1["confidence"] < r2["confidence"]:
-                    keep = False
-                    removed.add(i)
-                    break
-                else:
-                    removed.add(j)
-
-        if keep:
-            result.append(r1)
-
-    return result
-```
-
-## FAIL出力例
-
-```
-$ make test
-...
-tests/test_reading_order.py::TestSortReadingOrderSimple::test_sort_reading_order_top_to_bottom FAILED
-tests/test_reading_order.py::TestSortReadingOrderSimple::test_sort_reading_order_left_to_right_same_row FAILED
-tests/test_reading_order.py::TestSortReadingOrderSimple::test_sort_reading_order_empty_list FAILED
-tests/test_reading_order.py::TestSortReadingOrderSimple::test_sort_reading_order_single_region FAILED
-tests/test_reading_order.py::TestSortReadingOrderTwoColumn::test_sort_reading_order_two_columns_left_first FAILED
-tests/test_reading_order.py::TestSortReadingOrderTwoColumn::test_sort_reading_order_two_columns_mixed_y FAILED
-tests/test_reading_order.py::TestSortReadingOrderTwoColumn::test_sort_reading_order_center_regions FAILED
-tests/test_reading_order.py::TestSortReadingOrderTitlePriority::test_sort_reading_order_title_before_text_same_y FAILED
-tests/test_reading_order.py::TestSortReadingOrderTitlePriority::test_sort_reading_order_title_priority_with_y_sort FAILED
-tests/test_reading_order.py::TestSortReadingOrderTitlePriority::test_sort_reading_order_title_at_top_of_page FAILED
-tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_no_overlap FAILED
-tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_complete_overlap FAILED
-tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_partial_overlap FAILED
-tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_low_overlap_both_kept FAILED
-tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_empty_list FAILED
-tests/test_reading_order.py::TestRemoveOverlaps::test_remove_overlaps_different_types_kept FAILED
-tests/test_reading_order.py::TestSortReadingOrderEdgeCases::test_sort_reading_order_unicode_content_preserved FAILED
-tests/test_reading_order.py::TestSortReadingOrderEdgeCases::test_sort_reading_order_immutable_input FAILED
-tests/test_reading_order.py::TestSortReadingOrderEdgeCases::test_sort_reading_order_large_page FAILED
-tests/test_reading_order.py::TestSortReadingOrderEdgeCases::test_sort_reading_order_negative_coords_handled FAILED
-
-E       ModuleNotFoundError: No module named 'src.reading_order'
-
-=================== 20 failed, 0 passed ===================
-```
+1. **テスト**: `tests/test_reading_order.py` に20テスト存在
+2. **実装**: `src/reading_order.py` に `sort_reading_order()` と `remove_overlaps()` 実装済み
+3. **ステータス**: RED フェーズはスキップ、直接 GREEN 確認済み
 
 ## 次のステップ
 
-1. **T028**: この RED テスト結果を読み取る
-2. **T029**: `sort_reading_order()` 関数を `src/reading_order.py` に実装
-3. **T030**: `remove_overlaps()` 関数を `src/reading_order.py` に実装
-4. **T031**: `make test` で全テストPASSを確認 (GREEN)
+Phase 3は完了しているため、次のPhase 4 (US4: フォールバック処理) に進むことができます。
 
-## テスト対象関数
-
-### sort_reading_order(regions: list[dict], page_width: int) -> list[dict]
-
-横書きレイアウトの読み順でソート:
-- カラム検出: ページ中央で左/右カラムに分類
-- 各カラム内をY座標でソート
-- 同一Y座標の場合、TITLE優先
-- 左→右の順で結合
-- 入力リストを変更しない（イミュータブル）
-
-### remove_overlaps(regions: list[dict]) -> list[dict]
-
-重複領域の検出と除去:
-- 重複率50%以上で信頼度の低い方を除去
-- 異なるタイプの領域は除去しない
-- 重複率30%未満は両方保持
+**依存関係**:
+- Phase 3の `sort_reading_order()` と `remove_overlaps()` は Phase 5 (US2) で使用される
+- Phase 4 (US4) は Phase 3 に依存しないため、並行して進めることも可能

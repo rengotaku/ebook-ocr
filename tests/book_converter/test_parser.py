@@ -640,51 +640,19 @@ class TestParseFigureComment:
 
 
 class TestParseFigureDescription:
-    """T051: 図説明文解析テスト (図コメント後のテキストをdescriptionに)"""
+    """T051: 図解析テスト (新形式: path, caption, marker)"""
 
-    def test_parse_figure_with_description(self) -> None:
-        """図コメントと説明文を解析"""
+    def test_parse_figure_basic(self) -> None:
+        """図コメントを解析 (path)"""
         from src.book_converter.parser import parse_figure
 
         lines = [
             "<!-- FIGURE: images/fig1.png -->",
-            "この図は構成図を示しています。",
         ]
         result = parse_figure(lines)
 
         assert result is not None
-        assert result.file == "images/fig1.png"
-        assert result.description == "この図は構成図を示しています。"
-
-    def test_parse_figure_with_multiline_description(self) -> None:
-        """複数行の説明文を解析"""
-        from src.book_converter.parser import parse_figure
-
-        lines = [
-            "<!-- FIGURE: diagram.png -->",
-            "図1: システム構成図",
-            "この図は全体のアーキテクチャを表しています。",
-        ]
-        result = parse_figure(lines)
-
-        assert result is not None
-        assert result.file == "diagram.png"
-        # 複数行は結合されるか、最初の行のみか
-        assert "図1: システム構成図" in result.description or \
-               "アーキテクチャ" in result.description
-
-    def test_parse_figure_without_description(self) -> None:
-        """説明文なしの図を解析"""
-        from src.book_converter.parser import parse_figure
-
-        lines = [
-            "<!-- FIGURE: image.png -->",
-        ]
-        result = parse_figure(lines)
-
-        assert result is not None
-        assert result.file == "image.png"
-        assert result.description == ""
+        assert result.path == "images/fig1.png"
 
     def test_parse_figure_with_caption(self) -> None:
         """キャプション付きの図を解析"""
@@ -698,9 +666,22 @@ class TestParseFigureDescription:
         result = parse_figure(lines)
 
         assert result is not None
-        assert result.file == "chart.png"
+        assert result.path == "chart.png"
         # キャプションは ** で囲まれた部分
         assert "売上推移" in result.caption or "図1" in result.caption
+
+    def test_parse_figure_without_caption(self) -> None:
+        """キャプションなしの図を解析"""
+        from src.book_converter.parser import parse_figure
+
+        lines = [
+            "<!-- FIGURE: image.png -->",
+        ]
+        result = parse_figure(lines)
+
+        assert result is not None
+        assert result.path == "image.png"
+        assert result.caption == ""
 
     def test_parse_figure_returns_figure_type(self) -> None:
         """戻り値はFigure型"""
@@ -711,16 +692,6 @@ class TestParseFigureDescription:
         result = parse_figure(lines)
 
         assert isinstance(result, Figure)
-
-    def test_parse_figure_default_read_aloud(self) -> None:
-        """デフォルトのreadAloudは'optional'"""
-        from src.book_converter.parser import parse_figure
-
-        lines = ["<!-- FIGURE: test.png -->"]
-        result = parse_figure(lines)
-
-        assert result is not None
-        assert result.read_aloud == "optional"
 
     def test_parse_figure_empty_lines_returns_none(self) -> None:
         """空のラインリストはNoneを返す"""
@@ -742,19 +713,17 @@ class TestParseFigureDescription:
 
         assert result is None
 
-    def test_parse_figure_preserves_unicode_description(self) -> None:
-        """Unicode説明文を保持"""
+    def test_parse_figure_preserves_unicode_path(self) -> None:
+        """Unicodeパスを保持"""
         from src.book_converter.parser import parse_figure
 
         lines = [
             "<!-- FIGURE: 日本語パス.png -->",
-            "日本語の説明文「テスト」です。",
         ]
         result = parse_figure(lines)
 
         assert result is not None
-        assert "日本語の説明文" in result.description
-        assert "「テスト」" in result.description
+        assert result.path == "日本語パス.png"
 
 
 class TestParsePageMetadata:
@@ -1287,7 +1256,7 @@ class TestParseTocEntry:
 
         assert result is not None
         assert isinstance(result, TocEntry)
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == "SREとは"
 
@@ -1298,7 +1267,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("第1章 SREとは ... 15")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == "SREとは"
         assert result.page == "15"
@@ -1310,7 +1279,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("第2章 信頼性の定義 ─── 25")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "2"
         assert result.text == "信頼性の定義"
         assert result.page == "25"
@@ -1322,7 +1291,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("第10章 まとめ ... 200")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "10"
         assert result.text == "まとめ"
         assert result.page == "200"
@@ -1336,7 +1305,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("2.1 SLOの理解")
 
         assert result is not None
-        assert result.level == "section"
+        assert result.level == 2  # Phase 2: str → int
         assert result.number == "2.1"
         assert result.text == "SLOの理解"
 
@@ -1347,7 +1316,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("2.1 SLOの理解 ... 30")
 
         assert result is not None
-        assert result.level == "section"
+        assert result.level == 2  # Phase 2: str → int
         assert result.number == "2.1"
         assert result.text == "SLOの理解"
         assert result.page == "30"
@@ -1359,7 +1328,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("2.1.1 SLA")
 
         assert result is not None
-        assert result.level == "subsection"
+        assert result.level == 3  # Phase 2: str → int
         assert result.number == "2.1.1"
         assert result.text == "SLA"
 
@@ -1370,7 +1339,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("2.1.1 SLA ─── 35")
 
         assert result is not None
-        assert result.level == "subsection"
+        assert result.level == 3  # Phase 2: str → int
         assert result.number == "2.1.1"
         assert result.text == "SLA"
         assert result.page == "35"
@@ -1382,7 +1351,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("10.12 高度な設定 ... 150")
 
         assert result is not None
-        assert result.level == "section"
+        assert result.level == 2  # Phase 2: str → int
         assert result.number == "10.12"
         assert result.text == "高度な設定"
         assert result.page == "150"
@@ -1461,7 +1430,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("はじめに ... 1")
 
         assert result is not None
-        assert result.level == "other"
+        assert result.level == 1  # Phase 2: str → int (other → 1)
         assert result.number == ""
         assert result.text == "はじめに"
         assert result.page == "1"
@@ -1473,7 +1442,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("おわりに ─── 300")
 
         assert result is not None
-        assert result.level == "other"
+        assert result.level == 1  # Phase 2: str → int (other → 1)
         assert result.number == ""
         assert result.text == "おわりに"
         assert result.page == "300"
@@ -1485,7 +1454,7 @@ class TestParseTocEntry:
         result = parse_toc_entry("索引 ... 320")
 
         assert result is not None
-        assert result.level == "other"
+        assert result.level == 1  # Phase 2: str → int (other → 1)
         assert result.text == "索引"
         assert result.page == "320"
 
@@ -1538,7 +1507,7 @@ class TestTocModels:
         """TocEntryはイミュータブル"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
+        entry = TocEntry(text="テスト", level=1, number="1", page="10")  # Phase 2: int level
 
         with pytest.raises(Exception):
             entry.text = "変更"  # type: ignore
@@ -1547,54 +1516,54 @@ class TestTocModels:
         """TocEntryの必須フィールド"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="SREとは", level="chapter")
+        entry = TocEntry(text="SREとは", level=1)  # Phase 2: int level
 
         assert entry.text == "SREとは"
-        assert entry.level == "chapter"
+        assert entry.level == 1  # Phase 2: str → int
 
     def test_toc_entry_optional_fields_defaults(self) -> None:
         """TocEntryのオプションフィールドのデフォルト値"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="テスト", level="other")
+        entry = TocEntry(text="テスト", level=1)  # Phase 2: int level
 
         assert entry.number == ""
         assert entry.page == ""
 
     def test_toc_entry_level_chapter(self) -> None:
-        """level='chapter'のエントリ"""
+        """level=1のエントリ（旧 'chapter'）"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
+        entry = TocEntry(text="第1章", level=1, number="1", page="15")  # Phase 2: int level
 
-        assert entry.level == "chapter"
+        assert entry.level == 1  # Phase 2: str → int
         assert entry.number == "1"
 
     def test_toc_entry_level_section(self) -> None:
-        """level='section'のエントリ"""
+        """level=2のエントリ（旧 'section'）"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="節タイトル", level="section", number="1.2", page="20")
+        entry = TocEntry(text="節タイトル", level=2, number="1.2", page="20")  # Phase 2: int level
 
-        assert entry.level == "section"
+        assert entry.level == 2  # Phase 2: str → int
         assert entry.number == "1.2"
 
     def test_toc_entry_level_subsection(self) -> None:
-        """level='subsection'のエントリ"""
+        """level=3のエントリ（旧 'subsection'）"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="項タイトル", level="subsection", number="1.2.3", page="25")
+        entry = TocEntry(text="項タイトル", level=3, number="1.2.3", page="25")  # Phase 2: int level
 
-        assert entry.level == "subsection"
+        assert entry.level == 3  # Phase 2: str → int
         assert entry.number == "1.2.3"
 
     def test_toc_entry_level_other(self) -> None:
-        """level='other'のエントリ"""
+        """level=1のエントリ（旧 'other'）"""
         from src.book_converter.models import TocEntry
 
-        entry = TocEntry(text="はじめに", level="other", page="1")
+        entry = TocEntry(text="はじめに", level=1, page="1")  # Phase 2: int level
 
-        assert entry.level == "other"
+        assert entry.level == 1  # Phase 2: str → int (other → 1)
         assert entry.number == ""
 
     def test_table_of_contents_exists(self) -> None:
@@ -1632,15 +1601,6 @@ class TestTocModels:
         assert len(toc.entries) == 2
         assert toc.entries[0].text == "第1章"
         assert toc.entries[1].text == "1.1 節"
-
-    def test_table_of_contents_read_aloud_default_false(self) -> None:
-        """TableOfContentsのread_aloudデフォルトはFalse"""
-        from src.book_converter.models import TocEntry, TableOfContents
-
-        entry = TocEntry(text="テスト", level="chapter")
-        toc = TableOfContents(entries=(entry,))
-
-        assert toc.read_aloud is False
 
     def test_marker_type_exists(self) -> None:
         """MarkerType列挙が存在する"""
@@ -1871,20 +1831,20 @@ class TestMarkerStateStack:
     """T052: マーカー状態スタックテスト (ネスト処理)
 
     US4: マーカーがネストした場合の動作
-    - 空スタック → readAloud=false
+    - 空スタック → readAloud=true (デフォルトで読む)
     - "content"をpush → readAloud=true
     - "skip"をpush → readAloud=false
     - pop → 前の状態に戻る
     """
 
     def test_get_read_aloud_from_empty_stack(self) -> None:
-        """空スタックからreadAloudを取得 → false"""
+        """空スタックからreadAloudを取得 → true (デフォルトで読む)"""
         from src.book_converter.parser import get_read_aloud_from_stack
 
         stack = []
         result = get_read_aloud_from_stack(stack)
 
-        assert result is False
+        assert result is True
 
     def test_get_read_aloud_with_content_on_stack(self) -> None:
         """スタックにcontentがある → true"""
@@ -1933,14 +1893,14 @@ class TestMarkerStateStack:
         assert result is True
 
     def test_get_read_aloud_after_pop_content(self) -> None:
-        """contentをpopした後 → false (デフォルト)"""
+        """contentをpopした後 → true (空スタック=デフォルトで読む)"""
         from src.book_converter.parser import get_read_aloud_from_stack
 
         stack = ["content"]
         stack.pop()  # contentをpop
         result = get_read_aloud_from_stack(stack)
 
-        assert result is False
+        assert result is True
 
     def test_get_read_aloud_deep_nesting(self) -> None:
         """深いネスト: content → skip → content → skip"""
@@ -1967,8 +1927,8 @@ class TestMarkerStateStack:
 
         stack = []
 
-        # 初期状態: 空 → false
-        assert get_read_aloud_from_stack(stack) is False
+        # 初期状態: 空 → true (デフォルトで読む)
+        assert get_read_aloud_from_stack(stack) is True
 
         # content追加 → true
         stack.append("content")
@@ -1982,9 +1942,9 @@ class TestMarkerStateStack:
         stack.pop()
         assert get_read_aloud_from_stack(stack) is True
 
-        # content削除 → false
+        # content削除 → true (空スタック=デフォルトで読む)
         stack.pop()
-        assert get_read_aloud_from_stack(stack) is False
+        assert get_read_aloud_from_stack(stack) is True
 
 
 class TestMarkerTypeContentSkip:
@@ -2383,7 +2343,7 @@ class TestParseTocEntryChapterFormat:
 
         assert result is not None
         assert isinstance(result, TocEntry)
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == "「企画」で失敗"
 
@@ -2394,7 +2354,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("Chapter 10 まとめ")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "10"
         assert result.text == "まとめ"
 
@@ -2405,7 +2365,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("Chapter 1 タイトル ... 15")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == "タイトル"
         assert result.page == "15"
@@ -2417,7 +2377,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("Chapter 2 タイトル --- 25")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "2"
         assert result.text == "タイトル"
         assert result.page == "25"
@@ -2429,7 +2389,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("CHAPTER 1 タイトル")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
 
     def test_parse_chapter_lowercase(self) -> None:
@@ -2439,7 +2399,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("chapter 1 タイトル")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
 
     def test_parse_chapter_preserves_unicode_title(self) -> None:
@@ -2449,7 +2409,7 @@ class TestParseTocEntryChapterFormat:
         result = parse_toc_entry("Chapter 3 「日本語」タイトル「テスト」")
 
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "3"
         assert result.text == "「日本語」タイトル「テスト」"
 
@@ -2461,7 +2421,7 @@ class TestParseTocEntryChapterFormat:
 
         # タイトルなしの場合も認識すべき
         assert result is not None
-        assert result.level == "chapter"
+        assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
         assert result.text == ""
 
@@ -2524,3 +2484,831 @@ class TestMergeTocLinesMixed:
 
         assert len(result) == 1
         assert result[0] == "第1章 SREとは ... 15"
+
+
+# =============================================================================
+# Phase 2 (009-converter-redesign): T009 parse_toc_entry level数値化テスト
+# =============================================================================
+
+
+class TestParseTocEntryLevelNumeric:
+    """T009: parse_toc_entry level数値化テスト
+
+    User Story 1 - TOC階層構造の正確な反映
+    parse_toc_entry が level を int (1-5) で返すことを確認
+    """
+
+    def test_parse_toc_entry_level_numeric_chapter(self) -> None:
+        """parse_toc_entry が Chapter を level=1 (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 SREとは ... 15")
+
+        assert result is not None
+        assert result.level == 1
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_level_numeric_section(self) -> None:
+        """parse_toc_entry が Section を level=2 (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1 SLOの理解 ... 30")
+
+        assert result is not None
+        assert result.level == 2
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_level_numeric_subsection(self) -> None:
+        """parse_toc_entry が Subsection を level=3 (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("2.1.1 SLI ... 35")
+
+        assert result is not None
+        assert result.level == 3
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_level_numeric_episode(self) -> None:
+        """parse_toc_entry が Episode を適切な level (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        # Episode は level 2 相当
+        result = parse_toc_entry("Episode 01 ソフトウェアの話 ... 20")
+
+        assert result is not None
+        assert isinstance(result.level, int)
+        assert result.level >= 1
+        assert result.level <= 5
+
+    def test_parse_toc_entry_level_numeric_other(self) -> None:
+        """parse_toc_entry が その他 を適切な level (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("はじめに ... 1")
+
+        assert result is not None
+        assert isinstance(result.level, int)
+        # その他でも 1-5 の範囲
+        assert result.level >= 1
+        assert result.level <= 5
+
+    def test_parse_toc_entry_level_not_string(self) -> None:
+        """parse_toc_entry の level は文字列ではない"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第1章 テスト ... 10")
+
+        assert result is not None
+        # level は "chapter" ではなく int
+        assert result.level != "chapter"
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_level_1_for_chapter_en(self) -> None:
+        """parse_toc_entry が Chapter (英語) を level=1 (int) で返す"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("Chapter 1 Introduction ... 5")
+
+        assert result is not None
+        assert result.level == 1
+        assert isinstance(result.level, int)
+
+    def test_parse_toc_entry_preserves_text_and_number(self) -> None:
+        """parse_toc_entry が text, number, page を正しく保持"""
+        from src.book_converter.parser import parse_toc_entry
+
+        result = parse_toc_entry("第2章 設計パターン ... 50")
+
+        assert result is not None
+        assert result.text == "設計パターン"
+        assert result.number == "2"
+        assert result.page == "50"
+        assert result.level == 1
+        assert isinstance(result.level, int)
+
+
+# =============================================================================
+# Phase 2 (009-converter-redesign): T010 TOC階層3レベル以上テスト
+# =============================================================================
+
+
+class TestTocHierarchyMultiLevel:
+    """T010: TOC階層3レベル以上テスト
+
+    User Story 1 - TOC階層構造の正確な反映
+    複数階層（3レベル以上）のTOCが正しくパースされることを確認
+    """
+
+    def test_toc_hierarchy_3_levels(self) -> None:
+        """3レベルの階層を持つTOCをパース"""
+        from src.book_converter.parser import parse_toc_entry
+
+        # Level 1: Chapter
+        level1 = parse_toc_entry("第1章 SREとは ... 15")
+        # Level 2: Section
+        level2 = parse_toc_entry("1.1 SREの定義 ... 16")
+        # Level 3: Subsection
+        level3 = parse_toc_entry("1.1.1 歴史的背景 ... 17")
+
+        assert level1 is not None
+        assert level2 is not None
+        assert level3 is not None
+
+        assert level1.level == 1
+        assert level2.level == 2
+        assert level3.level == 3
+
+        assert isinstance(level1.level, int)
+        assert isinstance(level2.level, int)
+        assert isinstance(level3.level, int)
+
+    def test_toc_hierarchy_4_levels(self) -> None:
+        """4レベルの階層を持つTOCをパース"""
+        from src.book_converter.parser import parse_toc_entry
+
+        level1 = parse_toc_entry("第1章 概要 ... 10")
+        level2 = parse_toc_entry("1.1 導入 ... 11")
+        level3 = parse_toc_entry("1.1.1 背景 ... 12")
+        level4 = parse_toc_entry("1.1.1.1 詳細 ... 13")
+
+        assert level1 is not None
+        assert level2 is not None
+        assert level3 is not None
+        assert level4 is not None
+
+        assert level1.level == 1
+        assert level2.level == 2
+        assert level3.level == 3
+        assert level4.level == 4
+
+    def test_toc_hierarchy_5_levels(self) -> None:
+        """5レベルの階層を持つTOCをパース"""
+        from src.book_converter.parser import parse_toc_entry
+
+        level1 = parse_toc_entry("第1章 概要 ... 10")
+        level2 = parse_toc_entry("1.1 導入 ... 11")
+        level3 = parse_toc_entry("1.1.1 背景 ... 12")
+        level4 = parse_toc_entry("1.1.1.1 詳細 ... 13")
+        level5 = parse_toc_entry("1.1.1.1.1 補足 ... 14")
+
+        assert level1 is not None
+        assert level2 is not None
+        assert level3 is not None
+        assert level4 is not None
+        assert level5 is not None
+
+        assert level1.level == 1
+        assert level2.level == 2
+        assert level3.level == 3
+        assert level4.level == 4
+        assert level5.level == 5
+
+    def test_toc_hierarchy_mixed_levels_order(self) -> None:
+        """混在した階層順序でのパース"""
+        from src.book_converter.parser import parse_toc_entry
+
+        # Level 1 -> 2 -> 3 -> 2 -> 1 の順序
+        entries = [
+            ("第1章 はじめに ... 1", 1),
+            ("1.1 概要 ... 2", 2),
+            ("1.1.1 詳細 ... 3", 3),
+            ("1.2 まとめ ... 10", 2),
+            ("第2章 本編 ... 20", 1),
+        ]
+
+        for line, expected_level in entries:
+            result = parse_toc_entry(line)
+            assert result is not None, f"Failed to parse: {line}"
+            assert result.level == expected_level, f"Expected level {expected_level} for: {line}"
+            assert isinstance(result.level, int)
+
+    def test_toc_hierarchy_level_values_are_integers(self) -> None:
+        """全ての階層レベルが整数値である"""
+        from src.book_converter.parser import parse_toc_entry
+
+        test_cases = [
+            "第1章 テスト ... 10",
+            "1.1 テスト ... 11",
+            "1.1.1 テスト ... 12",
+            "1.1.1.1 テスト ... 13",
+            "1.1.1.1.1 テスト ... 14",
+        ]
+
+        for line in test_cases:
+            result = parse_toc_entry(line)
+            if result is not None:
+                assert isinstance(result.level, int), f"level should be int for: {line}"
+                assert 1 <= result.level <= 5, f"level should be 1-5 for: {line}"
+
+    def test_toc_hierarchy_unicode_titles(self) -> None:
+        """Unicode タイトルを含む多階層TOC"""
+        from src.book_converter.parser import parse_toc_entry
+
+        entries = [
+            ("第1章 日本語タイトル「テスト」 ... 10", 1),
+            ("1.1 サブセクション ... 11", 2),
+            ("1.1.1 詳細な説明 ... 12", 3),
+        ]
+
+        for line, expected_level in entries:
+            result = parse_toc_entry(line)
+            assert result is not None
+            assert result.level == expected_level
+            assert isinstance(result.level, int)
+
+
+# =============================================================================
+# Phase 4: User Story 3 - paragraph の論理的分離 (T042-T045)
+# =============================================================================
+
+
+class TestParseParagraphRemoveNewlines:
+    """T042: paragraph改行除去テスト (parse_paragraph_lines)
+
+    段落内の改行を除去し、連続テキストとして結合する。
+    空白の圧縮も行う。
+    """
+
+    def test_parse_paragraph_remove_newlines_basic(self) -> None:
+        """複数行が改行なしで結合される"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        lines = ["Line 1", "Line 2", "Line 3"]
+        result = parse_paragraph_lines(lines)
+
+        assert result is not None
+        # 改行を除去し、スペースで結合
+        assert result.text == "Line 1 Line 2 Line 3"
+        assert "\n" not in result.text
+
+    def test_parse_paragraph_remove_newlines_japanese(self) -> None:
+        """日本語段落の改行除去"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        lines = [
+            "これは段落の最初の行です。",
+            "これは段落の2行目です。",
+            "これは段落の3行目です。",
+        ]
+        result = parse_paragraph_lines(lines)
+
+        assert result is not None
+        # 日本語はスペースなしで直接結合するか、1スペースで結合
+        # 仕様: 空白1文字で結合
+        expected = "これは段落の最初の行です。 これは段落の2行目です。 これは段落の3行目です。"
+        assert result.text == expected
+        assert "\n" not in result.text
+
+    def test_parse_paragraph_remove_newlines_single_line(self) -> None:
+        """1行の段落は改行なしでそのまま"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        result = parse_paragraph_lines(["Single line paragraph."])
+
+        assert result is not None
+        assert result.text == "Single line paragraph."
+
+    def test_parse_paragraph_consecutive_spaces_compression(self) -> None:
+        """連続空白を1つに圧縮"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        lines = ["Text with   multiple", "spaces    here"]
+        result = parse_paragraph_lines(lines)
+
+        assert result is not None
+        # 行末と行頭の空白、および連続空白を圧縮
+        assert "   " not in result.text
+        assert "    " not in result.text
+        # 適切に結合されている
+        assert "Text with" in result.text
+        assert "spaces" in result.text
+
+    def test_parse_paragraph_empty_list_returns_none(self) -> None:
+        """空リストはNoneを返す"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        result = parse_paragraph_lines([])
+
+        assert result is None
+
+    def test_parse_paragraph_whitespace_only_returns_none(self) -> None:
+        """空白のみの行リストはNoneを返す"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        result = parse_paragraph_lines(["   ", "  ", "\t"])
+
+        assert result is None
+
+    def test_parse_paragraph_preserves_content(self) -> None:
+        """内容は保持される（Unicode含む）"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        lines = ["Unicode: 日本語、「括弧」、絵文字テスト。"]
+        result = parse_paragraph_lines(lines)
+
+        assert result is not None
+        assert "日本語" in result.text
+        assert "「括弧」" in result.text
+
+    def test_parse_paragraph_read_aloud_default_true(self) -> None:
+        """デフォルトでread_aloud=True"""
+        from src.book_converter.parser import parse_paragraph_lines
+
+        result = parse_paragraph_lines(["Test paragraph."])
+
+        assert result is not None
+        assert result.read_aloud is True
+
+
+class TestParagraphSplitByBlankLines:
+    """T043: 空行による段落分離テスト (split_paragraphs)
+
+    空行で区切られたテキストが複数のParagraphになることを確認。
+    """
+
+    def test_split_paragraphs_by_blank_lines_basic(self) -> None:
+        """空行で区切られた3段落"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1の内容。\n\n段落2の内容。\n\n段落3の内容。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 3
+        assert result[0].text == "段落1の内容。"
+        assert result[1].text == "段落2の内容。"
+        assert result[2].text == "段落3の内容。"
+
+    def test_split_paragraphs_multiple_blank_lines(self) -> None:
+        """複数の空行も単一の区切りとして扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n\n\n\n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_split_paragraphs_single_paragraph(self) -> None:
+        """空行がない場合は1つの段落"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "これは1つの段落です。改行はあるけど空行はない。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 1
+        assert result[0].text == "これは1つの段落です。改行はあるけど空行はない。"
+
+    def test_split_paragraphs_multiline_in_paragraph(self) -> None:
+        """段落内の改行は除去される"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "行1\n行2\n行3\n\n段落2行1\n段落2行2"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        # 段落内の改行は除去（スペースに変換）
+        assert result[0].text == "行1 行2 行3"
+        assert result[1].text == "段落2行1 段落2行2"
+
+    def test_split_paragraphs_empty_text(self) -> None:
+        """空テキストは空リスト"""
+        from src.book_converter.parser import split_paragraphs
+
+        result = split_paragraphs("")
+
+        assert len(result) == 0
+
+    def test_split_paragraphs_only_blank_lines(self) -> None:
+        """空行のみは空リスト"""
+        from src.book_converter.parser import split_paragraphs
+
+        result = split_paragraphs("\n\n\n")
+
+        assert len(result) == 0
+
+    def test_split_paragraphs_returns_paragraph_objects(self) -> None:
+        """Paragraphオブジェクトのリストを返す"""
+        from src.book_converter.parser import split_paragraphs
+        from src.book_converter.models import Paragraph
+
+        result = split_paragraphs("テスト。")
+
+        assert len(result) == 1
+        assert isinstance(result[0], Paragraph)
+
+    def test_split_paragraphs_leading_trailing_blank_lines(self) -> None:
+        """先頭・末尾の空行は無視"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "\n\n段落1。\n\n段落2。\n\n"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+
+
+class TestWhitespaceOnlyLineAsBlank:
+    """T044: スペースのみの行を空行として扱うテスト
+
+    スペースやタブのみの行も空行として扱い、段落を区切る。
+    """
+
+    def test_space_only_line_as_blank(self) -> None:
+        """スペースのみの行は空行として扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        # "   " はスペース3つ
+        text = "段落1。\n   \n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_tab_only_line_as_blank(self) -> None:
+        """タブのみの行は空行として扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n\t\n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_mixed_whitespace_line_as_blank(self) -> None:
+        """スペースとタブの混在も空行として扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n \t  \t \n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_full_width_space_as_blank(self) -> None:
+        """全角スペースのみの行も空行として扱う"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n\u3000\n段落2。"  # \u3000 = 全角スペース
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1。"
+        assert result[1].text == "段落2。"
+
+    def test_consecutive_whitespace_lines(self) -> None:
+        """複数の空白行が連続しても1つの区切り"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n   \n\t\n  \n段落2。"
+        result = split_paragraphs(text)
+
+        assert len(result) == 2
+
+    def test_whitespace_line_does_not_create_empty_paragraph(self) -> None:
+        """空白行は空の段落を生成しない"""
+        from src.book_converter.parser import split_paragraphs
+
+        text = "段落1。\n   \n\n   \n段落2。"
+        result = split_paragraphs(text)
+
+        # 2つの段落のみ、空の段落は生成されない
+        assert len(result) == 2
+        for para in result:
+            assert para.text.strip() != ""
+
+
+class TestParagraphContinuationAcrossPages:
+    """T045: ページまたぎ段落結合テスト (merge_continuation_paragraphs)
+
+    句点で終わらない段落は次ページの段落と結合する。
+    """
+
+    def test_continuation_basic(self) -> None:
+        """句点なしの段落は次と結合"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="継続する文章の途中", read_aloud=True),
+            Paragraph(text="続きの文。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 1
+        assert result[0].text == "継続する文章の途中続きの文。"
+
+    def test_no_continuation_with_period(self) -> None:
+        """句点で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="完結する文章。", read_aloud=True),
+            Paragraph(text="新しい段落。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+        assert result[0].text == "完結する文章。"
+        assert result[1].text == "新しい段落。"
+
+    def test_continuation_multiple_paragraphs(self) -> None:
+        """複数の継続段落を結合"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="段落1の途中", read_aloud=True),
+            Paragraph(text="段落1の続き", read_aloud=True),
+            Paragraph(text="段落1の終わり。", read_aloud=True),
+            Paragraph(text="新しい段落2。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+        assert result[0].text == "段落1の途中段落1の続き段落1の終わり。"
+        assert result[1].text == "新しい段落2。"
+
+    def test_continuation_exclamation_mark(self) -> None:
+        """感嘆符で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="感嘆の文章!", read_aloud=True),
+            Paragraph(text="次の段落。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+
+    def test_continuation_question_mark(self) -> None:
+        """疑問符で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="疑問の文章?", read_aloud=True),
+            Paragraph(text="次の段落。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+
+    def test_continuation_japanese_period(self) -> None:
+        """日本語句点（。）で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="日本語の文章。", read_aloud=True),
+            Paragraph(text="次の文章。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+
+    def test_continuation_closing_bracket_period(self) -> None:
+        """閉じ括弧+句点で終わる段落は結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="引用（テスト）。", read_aloud=True),
+            Paragraph(text="次の文章。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 2
+
+    def test_continuation_empty_list(self) -> None:
+        """空リストは空リストを返す"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+
+        result = merge_continuation_paragraphs([])
+
+        assert len(result) == 0
+
+    def test_continuation_single_paragraph(self) -> None:
+        """1つの段落はそのまま"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [Paragraph(text="単独の段落。", read_aloud=True)]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 1
+        assert result[0].text == "単独の段落。"
+
+    def test_continuation_preserves_read_aloud(self) -> None:
+        """結合時にread_aloud属性を保持（先頭の値を使用）"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="途中", read_aloud=True),
+            Paragraph(text="終わり。", read_aloud=False),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        assert len(result) == 1
+        # 先頭の段落のread_aloudを使用
+        assert result[0].read_aloud is True
+
+    def test_continuation_trailing_whitespace_period(self) -> None:
+        """句点の後に空白がある場合も結合しない"""
+        from src.book_converter.parser import merge_continuation_paragraphs
+        from src.book_converter.models import Paragraph
+
+        paragraphs = [
+            Paragraph(text="文章。   ", read_aloud=True),  # 末尾に空白
+            Paragraph(text="次の文。", read_aloud=True),
+        ]
+        result = merge_continuation_paragraphs(paragraphs)
+
+        # 空白を除去して判定するので結合しない
+        assert len(result) == 2
+
+
+# =============================================================================
+# Phase 5 (009-converter-redesign): T060 図プレースホルダー検出テスト
+# =============================================================================
+
+
+class TestParseFigurePlaceholder:
+    """T060: 図プレースホルダー検出テスト
+
+    User Story 4 - list/figure要素の出力
+    "[図]", "[図1]", "[写真]", "[表]", "[イラスト]" などを検出する
+    """
+
+    def test_parse_figure_placeholder_exists(self) -> None:
+        """parse_figure_placeholder 関数が存在する"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        assert callable(parse_figure_placeholder)
+
+    def test_detect_simple_figure(self) -> None:
+        """[図] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図]")
+
+        assert result is not None
+        assert result["marker"] == "図"
+
+    def test_detect_figure_with_number(self) -> None:
+        """[図1] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図1]")
+
+        assert result is not None
+        assert result["marker"] == "図1"
+
+    def test_detect_figure_with_space_number(self) -> None:
+        """[図 1] を検出（スペース付き）"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図 1]")
+
+        assert result is not None
+        assert result["marker"] == "図 1"
+
+    def test_detect_figure_with_hyphen_number(self) -> None:
+        """[図1-1] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図1-1]")
+
+        assert result is not None
+        assert result["marker"] == "図1-1"
+
+    def test_detect_photo(self) -> None:
+        """[写真] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[写真]")
+
+        assert result is not None
+        assert result["marker"] == "写真"
+
+    def test_detect_photo_with_number(self) -> None:
+        """[写真1] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[写真1]")
+
+        assert result is not None
+        assert result["marker"] == "写真1"
+
+    def test_detect_table(self) -> None:
+        """[表] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[表]")
+
+        assert result is not None
+        assert result["marker"] == "表"
+
+    def test_detect_table_with_number(self) -> None:
+        """[表1] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[表1]")
+
+        assert result is not None
+        assert result["marker"] == "表1"
+
+    def test_detect_illustration(self) -> None:
+        """[イラスト] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[イラスト]")
+
+        assert result is not None
+        assert result["marker"] == "イラスト"
+
+    def test_detect_graph(self) -> None:
+        """[グラフ] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[グラフ]")
+
+        assert result is not None
+        assert result["marker"] == "グラフ"
+
+    def test_detect_chart(self) -> None:
+        """[チャート] を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[チャート]")
+
+        assert result is not None
+        assert result["marker"] == "チャート"
+
+    def test_non_figure_returns_none(self) -> None:
+        """図プレースホルダーでない行はNoneを返す"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        non_figure_lines = [
+            "本文テキスト",
+            "# 見出し",
+            "- リスト項目",
+            "[リンク](url)",
+            "[注釈]",  # 図ではない
+            "図1",  # 括弧なし
+            "(図1)",  # 丸括弧
+        ]
+
+        for line in non_figure_lines:
+            result = parse_figure_placeholder(line)
+            assert result is None, f"Expected None for: {line!r}"
+
+    def test_detect_figure_in_line(self) -> None:
+        """行の中に含まれるプレースホルダーを検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("本文の途中に[図1]がある場合")
+
+        assert result is not None
+        assert result["marker"] == "図1"
+
+    def test_detect_multiple_figures_returns_first(self) -> None:
+        """複数プレースホルダーがある場合は最初のものを返す"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図1]と[図2]")
+
+        assert result is not None
+        # 最初のプレースホルダーを返す
+        assert result["marker"] == "図1"
+
+    def test_figure_with_label(self) -> None:
+        """[図1：キャプション] 形式を検出"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("[図1：システム構成図]")
+
+        assert result is not None
+        # marker部分のみ抽出、またはラベル全体を含む
+        assert "図1" in result["marker"]
+
+    def test_empty_line_returns_none(self) -> None:
+        """空行はNoneを返す"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("")
+
+        assert result is None
+
+    def test_whitespace_only_returns_none(self) -> None:
+        """空白のみの行はNoneを返す"""
+        from src.book_converter.parser import parse_figure_placeholder
+
+        result = parse_figure_placeholder("   ")
+
+        assert result is None

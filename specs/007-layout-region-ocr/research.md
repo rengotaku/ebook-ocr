@@ -187,23 +187,134 @@ def sort_reading_order(regions: list[dict], page_width: int) -> list[dict]:
 
 ---
 
-## 5. OCRエンジン選択ルール
+## 5. OCRエンジン選択ルール（更新: 2026-02-13）
 
 ### Decision
 
 | Region Type | OCR Engine | Output Format |
 |-------------|------------|---------------|
-| TITLE | DeepSeek-OCR | `## {text}` |
-| TEXT | DeepSeek-OCR | `{text}` |
-| TABLE | DeepSeek-OCR | Markdown table |
-| FIGURE | VLM (gemma3:12b) | `[FIGURE: {description}]` |
-| CAPTION | DeepSeek-OCR | `*{text}*` |
-| FOOTNOTE | DeepSeek-OCR | `^{text}^` |
+| TITLE | Yomitoku | `## {text}` |
+| TEXT | Yomitoku | `{text}` |
+| TABLE | Yomitoku | Markdown table |
+| FIGURE | VLM (gemma3:12b) | 除外（figures/で管理） |
+| CAPTION | Yomitoku | `*{text}*` |
+| FOOTNOTE | Yomitoku | `^{text}^` |
 | FORMULA | スキップまたはOCR | `$${text}$$` |
 | ABANDON | スキップ | なし |
 
 ### Rationale
 
-- 領域種別に応じた適切なフォーマット
-- FIGUREのみVLM使用（他はOCRで十分）
+- DeepSeek-OCR → Yomitoku に移行済み（精度向上）
+- FIGUREはOCR出力から除外し、figures/ディレクトリで別管理
 - ABANDONはヘッダー/フッターなのでスキップ
+
+---
+
+## 6. TITLE判定ロジック（FR-009）
+
+### Decision
+
+**YOLOとYomitokuの併用**によるTITLE判定:
+
+```python
+def is_title(region: dict, yomitoku_result: dict) -> bool:
+    """TITLEかどうかを判定"""
+    # YOLOでTITLEとして検出
+    if region.get("type") == "TITLE":
+        return True
+    # Yomitokuの role が section_headings
+    if yomitoku_result.get("role") == "section_headings":
+        return True
+    return False
+```
+
+### Rationale
+
+- YOLOは視覚的特徴（フォントサイズ、位置）でTITLEを検出
+- Yomitokuは意味的特徴（章番号、「第X章」パターン）でTITLEを検出
+- 両方を併用することで検出精度向上
+
+---
+
+## 7. OCRフォールバック戦略（FR-010）
+
+### Decision
+
+Yomitoku出力が低品質の場合、**PaddleOCR → Tesseract** の順でフォールバック:
+
+```python
+def ocr_with_fallback(image: Image) -> str:
+    """OCRフォールバック付き"""
+    # 1. Yomitoku（メインOCR）
+    result = yomitoku_ocr(image)
+    if is_good_quality(result):
+        return result
+
+    # 2. PaddleOCR（フォールバック1）
+    result = paddle_ocr(image)
+    if is_good_quality(result):
+        return result
+
+    # 3. Tesseract（フォールバック2）
+    return tesseract_ocr(image)
+```
+
+### 品質判定基準
+
+- 空文字列
+- 極端に短い（< 10文字）
+- ゴミ文字の割合が高い（非ASCII/非日本語の割合）
+
+### Rationale
+
+- Yomitokuは通常最高精度だが、特定画像で失敗することがある
+- PaddleOCRは中国語由来で日本語にも強い
+- Tesseractは最も汎用的で安定
+
+---
+
+## 8. FIGUREマスク処理（FR-011）
+
+### Decision
+
+Yomitokuへの入力画像で**FIGURE領域のみを白塗りでマスク**:
+
+```python
+def mask_figures(image: Image, regions: list[dict]) -> Image:
+    """FIGURE領域を白でマスク"""
+    masked = image.copy()
+    draw = ImageDraw.Draw(masked)
+    for r in regions:
+        if r["type"] == "FIGURE":
+            draw.rectangle(r["bbox"], fill="white")
+    return masked
+```
+
+### Rationale
+
+- FIGUREをマスクすることで、Yomitokuが図内の文字を誤認識しない
+- ABANDONはマスク不要（スキップされるため）
+- TABLEはOCR対象なのでマスク不要
+
+---
+
+## 9. FIGURE出力管理（FR-012）
+
+### Decision
+
+FIGURE領域は**OCR出力から除外**し、**figures/ディレクトリで別管理**:
+
+```
+output/<hash>/
+├── book.txt      # FIGURE除外のOCRテキスト
+├── book.md       # FIGURE説明付きの最終出力
+└── figures/      # FIGUREクロップ画像
+    ├── page_001_figure1.png
+    └── page_001_figure2.png
+```
+
+### Rationale
+
+- book.txtはテキストのみ（音声合成等に利用）
+- book.mdでFIGURE説明を統合（完全版）
+- figures/で元画像を保持（後処理に利用可能）

@@ -1,47 +1,53 @@
-# Phase 2 RED テスト結果: US1 - 拡張レイアウト検出
+# Phase 2 RED Tests: US1 - 拡張レイアウト検出
 
-**日付**: 2026-02-11
-**Phase**: Phase 2 (User Story 1)
-**ステータス**: RED (テスト失敗確認済み)
+**Date**: 2026-02-13
+**Status**: GREEN (実装済み - テストは全てPASS)
 
-## サマリ
+## Summary
 
 | 項目 | 値 |
 |------|-----|
-| Phase | Phase 2 (US1 - 拡張レイアウト検出) |
-| FAILテスト数 | 12 |
-| PASSテスト数 | 1 |
+| Phase | 2 (US1: 拡張レイアウト検出) |
 | テストファイル | tests/test_detect_figures.py |
+| 対象タスク | T010, T011, T012, T013 |
+| 期待状態 | RED (FAIL) |
+| 実際状態 | GREEN (PASS) |
+| 理由 | 実装が既に完了している |
 
-## FAILテスト一覧
+## Test Results
 
-| テストファイル | テストメソッド | 期待動作 | 失敗理由 |
-|--------------|--------------|---------|---------|
-| test_detect_figures.py | test_label_type_map_has_10_classes | LABEL_TYPE_MAPが10クラス含む | 現在3クラスのみ |
-| test_detect_figures.py | test_label_type_map_contains_title | 'title'クラスを含む | 未実装 |
-| test_detect_figures.py | test_label_type_map_contains_plain_text | 'plain text'クラスを含む | 未実装 |
-| test_detect_figures.py | test_label_type_map_contains_abandon | 'abandon'クラスを含む | 未実装 |
-| test_detect_figures.py | test_label_type_map_contains_figure_caption | 'figure_caption'クラスを含む | 未実装 |
-| test_detect_figures.py | test_label_type_map_contains_table_caption | 'table_caption'クラスを含む | 未実装 |
-| test_detect_figures.py | test_label_type_map_contains_table_footnote | 'table_footnote'クラスを含む | 未実装 |
-| test_detect_figures.py | test_label_type_map_contains_formula_caption | 'formula_caption'クラスを含む | 未実装 |
-| test_detect_figures.py | test_detect_figures_output_uses_regions_key | 出力が'regions'キーを使用 | 現在'figures'キー使用 |
-| test_detect_figures.py | test_detect_figures_output_includes_page_size | 出力に'page_size'フィールドを含む | 未実装 |
-| test_detect_figures.py | test_detect_figures_filters_small_regions | 小領域(<1%)を除外 | フィルタリング未実装 |
-| test_detect_figures.py | test_detect_figures_min_area_parameter | min_areaパラメータを受け入れる | パラメータ未実装 |
+| テストクラス | テストメソッド | 状態 | 備考 |
+|-------------|---------------|------|------|
+| TestLabelTypeMapExtension | test_label_type_map_has_10_classes | PASS | 10クラス検証済み |
+| TestLabelTypeMapExtension | test_label_type_map_contains_title | PASS | 'title' -> 'TITLE' |
+| TestLabelTypeMapExtension | test_label_type_map_contains_plain_text | PASS | 'plain text' -> 'TEXT' |
+| TestLabelTypeMapExtension | test_label_type_map_contains_abandon | PASS | 'abandon' -> 'ABANDON' |
+| TestLabelTypeMapExtension | test_label_type_map_contains_figure_caption | PASS | 'figure_caption' -> 'CAPTION' |
+| TestLabelTypeMapExtension | test_label_type_map_contains_table_caption | PASS | 'table_caption' -> 'CAPTION' |
+| TestLabelTypeMapExtension | test_label_type_map_contains_table_footnote | PASS | 'table_footnote' -> 'FOOTNOTE' |
+| TestLabelTypeMapExtension | test_label_type_map_contains_formula_caption | PASS | 'formula_caption' -> 'CAPTION' |
+| TestLabelTypeMapExtension | test_label_type_map_existing_classes_preserved | PASS | table, figure, formula保持 |
+| TestLayoutJsonRegionsStructure | test_detect_figures_output_uses_regions_key | PASS | 'regions' キー使用 |
+| TestLayoutJsonPageSize | test_detect_figures_output_includes_page_size | PASS | page_size含む |
+| TestMinAreaFiltering | test_detect_figures_filters_small_regions | PASS | 1%未満除外 |
+| TestMinAreaFiltering | test_detect_figures_min_area_parameter | PASS | min_area引数あり |
 
-## PASSテスト一覧
+## Task Status
 
-| テストファイル | テストメソッド | 動作確認 |
-|--------------|--------------|---------|
-| test_detect_figures.py | test_label_type_map_existing_classes_preserved | 既存クラス(table, figure, isolated formula)保持 |
+| タスク | 説明 | 状態 | 備考 |
+|--------|------|------|------|
+| T010 | 全クラス検出テスト | PASS | LABEL_TYPE_MAP に10クラス含む |
+| T011 | regions構造テスト | PASS | 'regions' キー使用 |
+| T012 | page_sizeテスト | PASS | page_size [width, height] 含む |
+| T013 | ノイズ除外テスト | PASS | min_area (1%) フィルタリング |
 
-## 実装ヒント
+## Implementation Status
 
-### T014: LABEL_TYPE_MAP を10クラスに拡張
+`src/detect_figures.py` の実装を確認した結果、以下の機能が既に完成しています:
+
+### LABEL_TYPE_MAP (10クラス)
 
 ```python
-# src/detect_figures.py で以下のように変更
 LABEL_TYPE_MAP = {
     "title": "TITLE",
     "plain text": "TEXT",
@@ -56,80 +62,47 @@ LABEL_TYPE_MAP = {
 }
 ```
 
-### T015: layout.json出力を regions 構造に変更
+### 出力構造 (regions + page_size)
 
-現在の出力形式:
-```json
-{
-  "page_001.png": {
-    "figures": [...]
-  }
+```python
+layout_data[page_name] = {
+    "regions": regions,
+    "page_size": [page_width, page_height],
 }
 ```
 
-期待する出力形式:
-```json
-{
-  "page_001.png": {
-    "regions": [...],
-    "page_size": [1920, 1080]
-  }
-}
-```
-
-変更箇所:
-- Line 100: `layout_data[page_name] = {"figures": figures}` を変更
-- `img.size` を取得して `page_size` に設定
-
-### T016: 最小面積フィルタリング実装
+### min_area フィルタリング
 
 ```python
 def detect_figures(
-    page_dir: str,
-    output_dir: str,
-    figures_dir: str | None = None,
-    min_confidence: float = 0.3,
-    min_area: float = 0.01,  # 追加: ページ面積の1%
+    ...
+    min_area: float = 0.01,  # 1% default
 ) -> dict:
     ...
-    page_area = img.size[0] * img.size[1]
     min_area_px = page_area * min_area
-
-    for box in r.boxes:
-        bbox = [int(v) for v in box.xyxy[0].tolist()]
-        area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
-        if area < min_area_px:
-            continue  # 小さな領域をスキップ
-        ...
+    ...
+    if area < min_area_px:
+        continue  # Filter out small regions (noise)
 ```
 
-## FAIL出力例
+## Conclusion
 
-```
-$ make test
-...
-FAILED tests/test_detect_figures.py::TestLabelTypeMapExtension::test_label_type_map_has_10_classes
-  AssertionError: LABEL_TYPE_MAP should contain 10 classes, but has 3 classes: ['table', 'figure', 'isolated formula']
+Phase 2 の対象機能は **既に実装済み** です。テストは全て GREEN 状態です。
 
-FAILED tests/test_detect_figures.py::TestLayoutJsonRegionsStructure::test_detect_figures_output_uses_regions_key
-  AssertionError: Page data should have 'regions' key instead of 'figures'. Got keys: ['figures']
+### 理由
 
-FAILED tests/test_detect_figures.py::TestLayoutJsonPageSize::test_detect_figures_output_includes_page_size
-  AssertionError: Page data should have 'page_size' key. Got keys: ['figures']
+ph1-output.md の分析結果に記載の通り:
 
-FAILED tests/test_detect_figures.py::TestMinAreaFiltering::test_detect_figures_filters_small_regions
-  AssertionError: Only 1 region (large) should remain after filtering. Got 2 regions.
+> - **Phase 2 (US1)**: detect_figures.py は既に実装済み。テスト確認のみ。
 
-FAILED tests/test_detect_figures.py::TestMinAreaFiltering::test_detect_figures_min_area_parameter
-  AssertionError: detect_figures() should accept 'min_area' parameter. Current parameters: ['page_dir', 'output_dir', 'figures_dir', 'min_confidence']
+### 推奨アクション
 
-=================== 12 failed, 1 passed ===================
-```
+1. **Implementation (GREEN)** フェーズは **スキップ可能**
+2. tasks.md の T010-T013 を `[x]` にマーク
+3. Phase 2 Verification -> ph2-output.md 生成へ進む
 
-## 次のステップ
+## Related Files
 
-1. **T013**: この RED テスト結果を読み取る
-2. **T014**: LABEL_TYPE_MAP を10クラスに拡張
-3. **T015**: layout.json出力を regions 構造に変更、page_size追加
-4. **T016**: min_area パラメータと最小面積フィルタリングを実装
-5. **T017**: `make test` で全テストPASSを確認 (GREEN)
+- テストファイル: `/data/projects/video-separater/tests/test_detect_figures.py`
+- 実装ファイル: `/data/projects/video-separater/src/detect_figures.py`
+- Phase 1 分析: `/data/projects/video-separater/specs/007-layout-region-ocr/tasks/ph1-output.md`

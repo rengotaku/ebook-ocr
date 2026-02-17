@@ -10,6 +10,8 @@ import json
 import os
 from dataclasses import dataclass
 
+from src.book_converter.models import TocEntry as ModelTocEntry
+
 # Optional requests import for Ollama API
 try:
     import requests
@@ -26,6 +28,32 @@ class TocEntry:
     level: str  # "chapter", "section", "subsection", "other"
     number: str
     page: str = ""
+
+
+def _convert_level_to_int(level_str: str) -> int:
+    """Convert level string to integer.
+
+    Args:
+        level_str: Level string ("chapter", "section", "subsection", "other")
+
+    Returns:
+        Integer level (1-5). "other" defaults to 1.
+
+    Example:
+        >>> _convert_level_to_int("chapter")
+        1
+        >>> _convert_level_to_int("section")
+        2
+        >>> _convert_level_to_int("subsection")
+        3
+    """
+    level_map = {
+        "chapter": 1,
+        "section": 2,
+        "subsection": 3,
+        "other": 1,  # Default to level 1
+    }
+    return level_map.get(level_str.lower(), 1)
 
 
 # System prompt for batch TOC classification
@@ -60,7 +88,7 @@ IMPORTANT:
 """
 
 
-def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", preserve_newlines: bool = False) -> list[TocEntry]:
+def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", preserve_newlines: bool = False) -> list[ModelTocEntry]:
     """Classify entire TOC text using LLM (batch processing).
 
     Args:
@@ -69,12 +97,12 @@ def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", prese
         preserve_newlines: If True, use raw text with newlines preserved
 
     Returns:
-        List of TocEntry objects
+        List of TocEntry objects (from models module with int level)
 
     Example:
         >>> toc = "Chapter 1 SREとは\\n2.1 SLOを理解するための4つの要素\\n2.1.1 SLA"
         >>> classify_toc_batch_with_llm(toc, preserve_newlines=True)
-        [TocEntry(text="SREとは", level="chapter", number="1", page=""), ...]
+        [TocEntry(text="SREとは", level=1, number="1", page=""), ...]
     """
     if not REQUESTS_AVAILABLE:
         return []
@@ -106,15 +134,16 @@ def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", prese
         if not isinstance(entries_data, list):
             return []
 
-        # Convert to TocEntry objects
+        # Convert to TocEntry objects with int level
         results = []
         for entry_dict in entries_data:
             if not isinstance(entry_dict, dict):
                 continue
 
-            results.append(TocEntry(
+            level_str = entry_dict.get("level", "other")
+            results.append(ModelTocEntry(
                 text=entry_dict.get("title", ""),
-                level=entry_dict.get("level", "other"),
+                level=_convert_level_to_int(level_str),
                 number=entry_dict.get("number", ""),
                 page=""
             ))
@@ -126,7 +155,7 @@ def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", prese
         return []
 
 
-def classify_toc_entry_with_llm(entry_text: str, model: str = "gpt-oss:20b") -> TocEntry | None:
+def classify_toc_entry_with_llm(entry_text: str, model: str = "gpt-oss:20b") -> ModelTocEntry | None:
     """Classify TOC entry using LLM.
 
     Args:
@@ -134,11 +163,11 @@ def classify_toc_entry_with_llm(entry_text: str, model: str = "gpt-oss:20b") -> 
         model: Ollama model name to use
 
     Returns:
-        TocEntry or None if classification fails
+        TocEntry (from models module with int level) or None if classification fails
 
     Example:
         >>> classify_toc_entry_with_llm("2.1 SLOを理解するための4つの要素")
-        TocEntry(text="SLOを理解するための4つの要素", level="section", number="2.1", page="")
+        TocEntry(text="SLOを理解するための4つの要素", level=2, number="2.1", page="")
     """
     if not REQUESTS_AVAILABLE:
         return None
@@ -161,9 +190,10 @@ def classify_toc_entry_with_llm(entry_text: str, model: str = "gpt-oss:20b") -> 
         # Parse JSON response
         result = json.loads(response)
 
-        return TocEntry(
+        level_str = result.get("level", "other")
+        return ModelTocEntry(
             text=result.get("title", entry_text),
-            level=result.get("level", "other"),
+            level=_convert_level_to_int(level_str),
             number=result.get("number", ""),
             page=""
         )

@@ -10,12 +10,7 @@ VIDEO ?= $(shell $(call CFG,video))
 OUTPUT ?= $(shell $(call CFG,output))
 INTERVAL ?= $(shell $(call CFG,interval))
 THRESHOLD ?= $(shell $(call CFG,threshold))
-OCR_MODEL ?= $(shell $(call CFG,ocr_model))
-VLM_MODEL ?= $(shell $(call CFG,vlm_model))
-VLM_URL ?= $(shell $(call CFG,ollama_url))
 OCR_TIMEOUT ?= $(shell $(call CFG,ocr_timeout))
-VLM_TIMEOUT ?= $(shell $(call CFG,vlm_timeout))
-MIN_CONFIDENCE ?= $(shell $(call CFG,min_confidence))
 
 # Hash directory (set manually for individual targets)
 # Usage: make ocr HASHDIR=output/a3f8c2d1e5b7f9c0
@@ -25,7 +20,7 @@ HASHDIR ?=
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract split-spreads detect layout-ocr ocr ensemble-ocr integrated-ocr test test-book-converter test-cov converter convert-sample clean clean-all
+.PHONY: help setup run extract split-spreads yomitoku-detect yomitoku-ocr rover-ocr build-book test test-book-converter test-cov converter convert-sample clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -37,8 +32,8 @@ $(VENV)/bin/activate: requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-run: setup ## Run full pipeline (DeepSeek-OCR + VLM figure description)
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --ocr-model $(OCR_MODEL) --vlm-model $(VLM_MODEL) --ollama-url $(VLM_URL) --ocr-timeout $(OCR_TIMEOUT) --vlm-timeout $(VLM_TIMEOUT) --min-confidence $(MIN_CONFIDENCE)
+run: setup ## Run full pipeline (ROVER multi-engine OCR: yomitoku+paddle+easyocr)
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --device cpu --ocr-timeout $(OCR_TIMEOUT)
 
 extract: setup ## Extract frames only (skip OCR)
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --skip-ocr
@@ -51,34 +46,21 @@ split-spreads: setup ## Split spread images into pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) src/split_spread.py "$(HASHDIR)/pages" --left-trim $(LEFT_TRIM) --right-trim $(RIGHT_TRIM) --aspect-ratio $(ASPECT_RATIO) --renumber
 
-detect: setup ## Run layout detection (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/detect_figures.py "$(HASHDIR)/pages" -o "$(HASHDIR)"
+yomitoku-detect: setup ## Run yomitoku layout detection and visualization (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-detect HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.ocr_yomitoku import detect_layout_yomitoku; detect_layout_yomitoku('$(HASHDIR)/pages', '$(HASHDIR)', device='cpu')"
 
-layout-ocr: setup ## Run layout-aware OCR (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make layout-ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/layout_ocr.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt" --layout "$(HASHDIR)/layout.json"
+yomitoku-ocr: setup ## [LEGACY] Re-run single-engine Yomitoku OCR (use 'make run' for ROVER)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-ocr HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.layout_ocr import run_yomitoku_ocr; run_yomitoku_ocr('$(HASHDIR)/pages', '$(HASHDIR)/book.txt', device='cpu')"
 
-ocr: setup ## Run DeepSeek-OCR on pages (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_deepseek.py "$(HASHDIR)/pages" -o "$(HASHDIR)/book.txt"
+rover-ocr: setup ## Run ROVER multi-engine OCR (yomitoku+paddle+easyocr) with character-level voting (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make rover-ocr HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_rover.py "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output"
 
-ensemble-ocr: setup ## Run ensemble OCR (DeepSeek + Tesseract + EasyOCR + PaddleOCR) (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make ensemble-ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_ensemble.py "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_texts"
-
-integrated-ocr: setup ## Run integrated OCR with layout masking (requires HASHDIR, optional SAVE_MASKS=1)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make integrated-ocr HASHDIR=output/<hash> [SAVE_MASKS=1]"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.ocr_integrated "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_texts" --layout "$(HASHDIR)/layout.json" $(if $(SAVE_MASKS),--save-masks)
-
-test: setup ## Run tests
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v
-
-test-book-converter: setup ## Run book_converter tests
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/book_converter/ -v
-
-test-cov: setup ## Run tests with coverage
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
+build-book: setup ## Build book.txt and book.md from ROVER outputs (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make build-book HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) src/consolidate.py "$(HASHDIR)"
 
 converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml [THRESHOLD=0.5] [VERBOSE=1])
 	@test -n "$(INPUT_MD)" || { echo "Error: INPUT_MD required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
@@ -89,6 +71,22 @@ converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/
 
 convert-sample: setup ## Convert sample book.md to XML
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli tests/book_converter/fixtures/sample_book.md output/sample_book.xml --group-pages
+
+# OBSOLETE TARGETS (kept for reference, not maintained)
+# ocr: setup ## [OBSOLETE] Run DeepSeek-OCR - file removed, use 'make run' instead
+# detect: setup ## [OBSOLETE] Run YOLO-based layout detection - replaced by yomitoku-detect
+# layout-ocr: setup ## [OBSOLETE] Run region-based OCR with cropping - replaced by yomitoku-ocr
+# ensemble-ocr: setup ## [OBSOLETE] Run ensemble OCR - use 'make run' instead
+# integrated-ocr: setup ## [OBSOLETE] Run integrated OCR - use 'make run' instead
+
+test: setup ## Run tests
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v
+
+test-book-converter: setup ## Run book_converter tests
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/book_converter/ -v
+
+test-cov: setup ## Run tests with coverage
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
 
 clean: ## Remove output files (keep venv)
 	rm -rf $(OUTPUT)

@@ -163,23 +163,20 @@ class TestXMLSchemaStructure:
                     child.tag in allowed_children
                 ), f"Invalid metadata child: {child.tag}"
 
-    def test_figure_child_elements_structure(self, sample_xml: Path) -> None:
-        """figure要素が有効な子要素を含む"""
+    def test_figure_structure(self, sample_xml: Path) -> None:
+        """figure要素が正しい構造を持つ"""
         tree = ET.parse(sample_xml)
         root = tree.getroot()
         figures = root.findall(".//figure")
 
         for figure in figures:
-            # file要素が存在する (required)
-            file_elem = figure.find("file")
-            assert file_elem is not None, "figure must have file element"
+            # path属性が存在する (required)
+            path_attr = figure.get("path")
+            assert path_attr is not None, "figure must have path attribute"
 
-            # 許可された子要素のみ
-            allowed_children = ["file", "caption", "description"]
-            for child in figure:
-                assert (
-                    child.tag in allowed_children
-                ), f"Invalid figure child: {child.tag}"
+            # 新形式では子要素を持たない（自己終了タグ）
+            children = list(figure)
+            assert len(children) == 0, "figure should have no child elements"
 
     def test_content_child_elements_structure(self, sample_xml: Path) -> None:
         """content要素が有効な子要素を含む"""
