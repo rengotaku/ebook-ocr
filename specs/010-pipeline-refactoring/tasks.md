@@ -63,15 +63,15 @@
 
 ### Test Implementation (RED)
 
-- [ ] T014 [P] [US1] CLI extract_frames のテストを実装: tests/cli/test_extract_frames.py
-- [ ] T015 [P] [US1] CLI deduplicate のテストを実装: tests/cli/test_deduplicate.py
-- [ ] T016 [P] [US1] CLI split_spreads のテストを実装: tests/cli/test_split_spreads.py
-- [ ] T017 [P] [US1] CLI detect_layout のテストを実装: tests/cli/test_detect_layout.py
-- [ ] T018 [P] [US1] CLI run_ocr のテストを実装: tests/cli/test_run_ocr.py
-- [ ] T019 [P] [US1] CLI consolidate のテストを実装: tests/cli/test_consolidate.py
-- [ ] T020 [P] [US1] 入力不存在時のエラーメッセージテストを実装: tests/cli/test_error_handling.py
-- [ ] T021 `make test` FAIL を確認 (RED)
-- [ ] T022 RED出力を生成: specs/010-pipeline-refactoring/red-tests/ph2-test.md
+- [x] T014 [P] [US1] CLI extract_frames のテストを実装: tests/cli/test_extract_frames.py
+- [x] T015 [P] [US1] CLI deduplicate のテストを実装: tests/cli/test_deduplicate.py
+- [x] T016 [P] [US1] CLI split_spreads のテストを実装: tests/cli/test_split_spreads.py
+- [x] T017 [P] [US1] CLI detect_layout のテストを実装: tests/cli/test_detect_layout.py
+- [x] T018 [P] [US1] CLI run_ocr のテストを実装: tests/cli/test_run_ocr.py
+- [x] T019 [P] [US1] CLI consolidate のテストを実装: tests/cli/test_consolidate.py
+- [x] T020 [P] [US1] 入力不存在時のエラーメッセージテストを実装: tests/cli/test_error_handling.py
+- [x] T021 `make test` FAIL を確認 (RED)
+- [x] T022 RED出力を生成: specs/010-pipeline-refactoring/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
