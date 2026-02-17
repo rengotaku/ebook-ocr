@@ -27,7 +27,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from src.reading_order import sort_reading_order, remove_overlaps
+from src.layout.reading_order import sort_reading_order, remove_overlaps
 
 
 @dataclass(frozen=True)

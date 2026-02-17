@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from src.split_spread import (
+from src.preprocessing.split_spread import (
     is_spread_image,
     renumber_pages,
     split_spread,

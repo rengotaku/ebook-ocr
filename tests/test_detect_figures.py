@@ -6,7 +6,7 @@ These tests will FAIL until implementation is complete.
 
 from __future__ import annotations
 
-from src.detect_figures import LABEL_TYPE_MAP
+from src.layout.figures import LABEL_TYPE_MAP
 
 
 class TestLabelTypeMapExtension:
@@ -163,9 +163,9 @@ class TestLayoutJsonRegionsStructure:
         }):
             # Force reload to pick up mocked modules
             import importlib
-            import src.detect_figures
-            importlib.reload(src.detect_figures)
-            layout = src.detect_figures.detect_figures(str(page_dir), str(output_dir))
+            import src.layout.figures
+            importlib.reload(src.layout.figures)
+            layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
 
         # layout.json を読み込み
         layout_path = output_dir / "layout.json"
@@ -241,9 +241,9 @@ class TestLayoutJsonPageSize:
         }):
             # Force reload to pick up mocked modules
             import importlib
-            import src.detect_figures
-            importlib.reload(src.detect_figures)
-            layout = src.detect_figures.detect_figures(str(page_dir), str(output_dir))
+            import src.layout.figures
+            importlib.reload(src.layout.figures)
+            layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
 
         # layout.json を読み込み
         layout_path = output_dir / "layout.json"
@@ -336,9 +336,9 @@ class TestMinAreaFiltering:
         }):
             # Force reload to pick up mocked modules
             import importlib
-            import src.detect_figures
-            importlib.reload(src.detect_figures)
-            layout = src.detect_figures.detect_figures(str(page_dir), str(output_dir))
+            import src.layout.figures
+            importlib.reload(src.layout.figures)
+            layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
 
         # layout.json を読み込み
         layout_path = output_dir / "layout.json"
@@ -367,7 +367,7 @@ class TestMinAreaFiltering:
     def test_detect_figures_min_area_parameter(self) -> None:
         """detect_figures() が min_area パラメータを受け入れることを検証。"""
         import inspect
-        from src.detect_figures import detect_figures
+        from src.layout.figures import detect_figures
 
         sig = inspect.signature(detect_figures)
         param_names = list(sig.parameters.keys())

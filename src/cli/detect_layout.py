@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.layout_detector import detect_layout
+from src.layout.detector import detect_layout
 
 
 def main() -> int:

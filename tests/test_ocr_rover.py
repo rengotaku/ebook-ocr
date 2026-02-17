@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import pytest
 
-from src.ocr_engines import EngineResult, TextWithBox
-from src.ocr_rover import (
+from src.rover.engines import EngineResult, TextWithBox
+from src.rover.ensemble import (
     OCRLine,
     AlignedLine,
     ROVERResult,
@@ -35,20 +35,20 @@ class TestIsGarbage:
 
     def test_is_garbage_empty_string(self):
         """空文字列はゴミと判定される"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("", 1.0) is True
 
     def test_is_garbage_whitespace_only(self):
         """空白のみの文字列はゴミと判定される"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("   ", 1.0) is True
         assert is_garbage("\t\n", 1.0) is True
 
     def test_is_garbage_low_confidence(self):
         """信頼度0.5未満はゴミと判定される"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("テスト", 0.49) is True
         assert is_garbage("テスト", 0.3) is True
@@ -56,7 +56,7 @@ class TestIsGarbage:
 
     def test_is_garbage_confidence_threshold(self):
         """信頼度0.5以上の日本語はゴミではない"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("テスト", 0.5) is False
         assert is_garbage("日本語テキスト", 0.7) is False
@@ -64,7 +64,7 @@ class TestIsGarbage:
 
     def test_is_garbage_short_ascii_without_japanese(self):
         """日本語を含まない5文字以下のASCIIはゴミと判定される"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         # ASCII断片（Tesseract等のゴミ出力パターン）
         assert is_garbage("EE", 0.9) is True
@@ -76,14 +76,14 @@ class TestIsGarbage:
 
     def test_is_garbage_long_ascii_is_valid(self):
         """6文字以上のASCIIは有効（例: SHOEISHA）"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("SHOEISHA", 0.9) is False
         assert is_garbage("engineer", 0.9) is False
 
     def test_is_garbage_repeated_chars(self):
         """同一文字が5回以上繰り返されるとゴミと判定される"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("ああああああ", 0.9) is True  # 6回繰り返し
         assert is_garbage("AAAAA", 0.9) is True  # 5回繰り返し
@@ -92,14 +92,14 @@ class TestIsGarbage:
 
     def test_is_garbage_repeated_chars_threshold(self):
         """4回以下の繰り返しは有効"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         # 4回繰り返しは有効
         assert is_garbage("ああああ", 0.9) is False
 
     def test_is_garbage_mixed_content_with_japanese(self):
         """日本語を含むテキストは有効"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("AB日", 0.9) is False  # 日本語を含む短いテキスト
         assert is_garbage("1章", 0.9) is False
@@ -107,7 +107,7 @@ class TestIsGarbage:
 
     def test_is_garbage_punctuation_only(self):
         """記号のみのテキストはゴミと判定される"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("...", 0.9) is True
         assert is_garbage("---", 0.9) is True
@@ -115,7 +115,7 @@ class TestIsGarbage:
 
     def test_is_garbage_valid_japanese_text(self):
         """有効な日本語テキストはゴミではない"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         assert is_garbage("チーム開発", 0.9) is False
         assert is_garbage("ソフトウェア", 0.8) is False
@@ -133,84 +133,84 @@ class TestNormalizeConfidence:
 
     def test_normalize_confidence_yomitoku_low(self):
         """yomitoku: 0.4 (最小値) -> 0.0"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(0.4, "yomitoku")
         assert result == pytest.approx(0.0, abs=0.01)
 
     def test_normalize_confidence_yomitoku_mid(self):
         """yomitoku: 0.7 -> 0.5 (中間値)"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(0.7, "yomitoku")
         assert result == pytest.approx(0.5, abs=0.01)
 
     def test_normalize_confidence_yomitoku_high(self):
         """yomitoku: 1.0 (最大値) -> 1.0"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(1.0, "yomitoku")
         assert result == pytest.approx(1.0, abs=0.01)
 
     def test_normalize_confidence_paddleocr_low(self):
         """paddleocr: 0.85 (最小値) -> 0.0"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(0.85, "paddleocr")
         assert result == pytest.approx(0.0, abs=0.01)
 
     def test_normalize_confidence_paddleocr_mid(self):
         """paddleocr: 0.925 -> 0.5 (中間値)"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(0.925, "paddleocr")
         assert result == pytest.approx(0.5, abs=0.01)
 
     def test_normalize_confidence_paddleocr_high(self):
         """paddleocr: 1.0 (最大値) -> 1.0"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(1.0, "paddleocr")
         assert result == pytest.approx(1.0, abs=0.01)
 
     def test_normalize_confidence_easyocr_low(self):
         """easyocr: 0.25 (最小値) -> 0.0"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(0.25, "easyocr")
         assert result == pytest.approx(0.0, abs=0.01)
 
     def test_normalize_confidence_easyocr_mid(self):
         """easyocr: 0.625 -> 0.5 (中間値)"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(0.625, "easyocr")
         assert result == pytest.approx(0.5, abs=0.01)
 
     def test_normalize_confidence_easyocr_high(self):
         """easyocr: 1.0 (最大値) -> 1.0"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(1.0, "easyocr")
         assert result == pytest.approx(1.0, abs=0.01)
 
     def test_normalize_confidence_clamp_below_min(self):
         """最小値以下の値は0.0にクランプされる"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(0.3, "yomitoku")  # Below 0.4
         assert result == pytest.approx(0.0, abs=0.01)
 
     def test_normalize_confidence_clamp_above_max(self):
         """最大値以上の値は1.0にクランプされる"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(1.1, "yomitoku")  # Above 1.0
         assert result == pytest.approx(1.0, abs=0.01)
 
     def test_normalize_confidence_unknown_engine(self):
         """未知のエンジンは(0.0, 1.0)レンジでそのまま返す"""
-        from src.ocr_rover import normalize_confidence
+        from src.rover.ensemble import normalize_confidence
 
         result = normalize_confidence(0.5, "unknown_engine")
         assert result == pytest.approx(0.5, abs=0.01)
@@ -514,7 +514,7 @@ class TestRoverMergeBasic:
 
     def test_rover_merge_filters_garbage(self):
         """ゴミ出力はフィルタリングされる"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         engine_results = {
             "yomitoku": EngineResult(
@@ -676,7 +676,7 @@ class TestEdgeCases:
 
     def test_is_garbage_unicode_special_chars(self):
         """Unicode特殊文字を含むテキストの処理"""
-        from src.ocr_rover import is_garbage
+        from src.rover.ensemble import is_garbage
 
         # 絵文字のみ
         assert is_garbage("", 0.9) is True  # 空文字相当
@@ -722,8 +722,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_software(self):
         """「ソフトウェア」vs「ソフトウエア」の文字レベル投票"""
-        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
-        from src.ocr_engines import TextWithBox
+        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
+        from src.rover.engines import TextWithBox
 
         # 3エンジンの行を作成
         yomitoku_line = OCRLine(
@@ -764,8 +764,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_returns_three_values(self):
         """vote_line_textが3つの値を返す (text, engines, confidence)"""
-        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
-        from src.ocr_engines import TextWithBox
+        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
+        from src.rover.engines import TextWithBox
 
         line = OCRLine(
             items=[TextWithBox(text="テスト", bbox=(0, 100, 50, 120), confidence=0.9)],
@@ -790,8 +790,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_with_normalized_confidence(self):
         """正規化された信頼度が投票の重みとして使用される"""
-        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine, normalize_confidence
-        from src.ocr_engines import TextWithBox
+        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine, normalize_confidence
+        from src.rover.engines import TextWithBox
 
         # yomitokuの信頼度は高いがテキストが異なる
         # paddleocr + easyocrが一致
@@ -831,8 +831,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_single_engine(self):
         """単一エンジンの場合はそのまま採用"""
-        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
-        from src.ocr_engines import TextWithBox
+        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
+        from src.rover.engines import TextWithBox
 
         line = OCRLine(
             items=[TextWithBox(text="単一エンジン", bbox=(0, 100, 80, 120), confidence=0.9)],
@@ -853,8 +853,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_partial_match(self):
         """部分的に一致するテキストの文字レベル投票"""
-        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
-        from src.ocr_engines import TextWithBox
+        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
+        from src.rover.engines import TextWithBox
 
         # 「チーム開発」vs「チム開発」（一文字欠損）
         yomitoku_line = OCRLine(
@@ -886,7 +886,7 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_empty_lines(self):
         """全ての行がNoneの場合"""
-        from src.ocr_rover import vote_line_text, AlignedLine
+        from src.rover.ensemble import vote_line_text, AlignedLine
 
         aligned_line = AlignedLine(
             lines={"yomitoku": None, "paddleocr": None, "easyocr": None},
@@ -900,8 +900,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_all_agree(self):
         """全エンジンが完全一致の場合"""
-        from src.ocr_rover import vote_line_text, OCRLine, AlignedLine
-        from src.ocr_engines import TextWithBox
+        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
+        from src.rover.engines import TextWithBox
 
         text = "完全一致テスト"
 
@@ -987,7 +987,7 @@ class TestRoverBatchRawOutput:
 
     def test_rover_batch_raw_preserves_original_text(self, tmp_path):
         """rawファイルがエンジンからの元のテキストを保持する"""
-        from src.ocr_engines import EngineResult, TextWithBox
+        from src.rover.engines import EngineResult, TextWithBox
 
         # Simulate engine result
         engine_result = EngineResult(
@@ -1168,7 +1168,7 @@ class TestRunRoverBatchIntegration:
 
     def test_run_rover_batch_returns_list_of_results(self):
         """run_rover_batchがリストを返す"""
-        from src.ocr_rover import run_rover_batch
+        from src.rover.ensemble import run_rover_batch
         import inspect
 
         # Verify function signature
@@ -1178,7 +1178,7 @@ class TestRunRoverBatchIntegration:
 
     def test_run_rover_batch_accepts_engines_parameter(self):
         """enginesパラメータを受け付ける"""
-        from src.ocr_rover import run_rover_batch
+        from src.rover.ensemble import run_rover_batch
         import inspect
 
         sig = inspect.signature(run_rover_batch)
@@ -1186,7 +1186,7 @@ class TestRunRoverBatchIntegration:
 
     def test_run_rover_batch_accepts_min_confidence_parameter(self):
         """min_confidenceパラメータを受け付ける（Phase 4で追加予定）"""
-        from src.ocr_rover import run_rover_batch
+        from src.rover.ensemble import run_rover_batch
         import inspect
 
         sig = inspect.signature(run_rover_batch)
@@ -1205,7 +1205,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_single_line(self):
         """単一行のアイテムはそのまま"""
-        from src.ocr_rover import split_multiline_items
+        from src.rover.ensemble import split_multiline_items
 
         items = [
             TextWithBox(text="単一行", bbox=(0, 100, 100, 120), confidence=0.9),
@@ -1219,7 +1219,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_two_lines(self):
         """2行に分割されるべきアイテム"""
-        from src.ocr_rover import split_multiline_items
+        from src.rover.ensemble import split_multiline_items
 
         # y座標が離れている2つのアイテム
         items = [
@@ -1235,7 +1235,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_three_lines(self):
         """3行に分割 - 実際のyomitoku段落パターン"""
-        from src.ocr_rover import split_multiline_items
+        from src.rover.ensemble import split_multiline_items
 
         # y_range=[169-277] の段落を3行に分割
         items = [
@@ -1254,7 +1254,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_same_line(self):
         """同一行の複数アイテムはマージされる"""
-        from src.ocr_rover import split_multiline_items
+        from src.rover.ensemble import split_multiline_items
 
         # 同じy座標の2つのアイテム
         items = [
@@ -1269,7 +1269,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_empty(self):
         """空リストの処理"""
-        from src.ocr_rover import split_multiline_items
+        from src.rover.ensemble import split_multiline_items
 
         result = split_multiline_items([], y_gap_threshold=15)
 
@@ -1277,7 +1277,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_mixed_pattern(self):
         """混合パターン: 一部が同一行、一部が別行"""
-        from src.ocr_rover import split_multiline_items
+        from src.rover.ensemble import split_multiline_items
 
         items = [
             TextWithBox(text="1行目左", bbox=(0, 100, 50, 120), confidence=0.9),

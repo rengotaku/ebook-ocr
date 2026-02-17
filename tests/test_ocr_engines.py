@@ -27,7 +27,7 @@ class TestYomitokuWordsConfidence:
 
     def test_yomitoku_returns_engine_result(self):
         """EngineResult型を返す"""
-        from src.ocr_engines import EngineResult
+        from src.rover.engines import EngineResult
 
         # Mock result
         result = EngineResult(
@@ -41,7 +41,7 @@ class TestYomitokuWordsConfidence:
 
     def test_yomitoku_text_with_box_has_confidence(self):
         """TextWithBoxが信頼度フィールドを持つ"""
-        from src.ocr_engines import TextWithBox
+        from src.rover.engines import TextWithBox
 
         item = TextWithBox(
             text="テスト",
@@ -53,7 +53,7 @@ class TestYomitokuWordsConfidence:
 
     def test_yomitoku_confidence_range(self):
         """信頼度が0.0-1.0の範囲内"""
-        from src.ocr_engines import TextWithBox
+        from src.rover.engines import TextWithBox
 
         # Valid range
         item_low = TextWithBox(text="低", bbox=(0, 0, 10, 10), confidence=0.0)
@@ -66,7 +66,7 @@ class TestYomitokuWordsConfidence:
 
     def test_yomitoku_result_items_have_confidence(self):
         """結果のitemsが信頼度を持つ"""
-        from src.ocr_engines import EngineResult, TextWithBox
+        from src.rover.engines import EngineResult, TextWithBox
 
         items = [
             TextWithBox(text="日本語", bbox=(0, 0, 100, 50), confidence=0.98),
@@ -81,10 +81,10 @@ class TestYomitokuWordsConfidence:
 
         assert all(item.confidence > 0 for item in result.items)
 
-    @patch("src.ocr_engines._get_yomitoku_analyzer")
+    @patch("src.rover.engines._get_yomitoku_analyzer")
     def test_yomitoku_with_boxes_extracts_confidence_from_words(self, mock_get_analyzer):
         """run_yomitoku_with_boxesがwordsから信頼度を取得する"""
-        from src.ocr_engines import run_yomitoku_with_boxes
+        from src.rover.engines import run_yomitoku_with_boxes
 
         # Mock the analyzer result
         mock_analyzer = Mock()
@@ -120,7 +120,7 @@ class TestYomitokuWordsConfidence:
 
     def test_yomitoku_text_property(self):
         """EngineResult.textプロパティが全テキストを連結"""
-        from src.ocr_engines import EngineResult, TextWithBox
+        from src.rover.engines import EngineResult, TextWithBox
 
         items = [
             TextWithBox(text="一行目", bbox=(0, 0, 50, 20), confidence=0.9),
@@ -134,7 +134,7 @@ class TestYomitokuWordsConfidence:
 
     def test_yomitoku_error_handling(self):
         """エラー時はsuccess=False、error文字列が設定される"""
-        from src.ocr_engines import EngineResult
+        from src.rover.engines import EngineResult
 
         result = EngineResult(
             engine="yomitoku",
@@ -157,7 +157,7 @@ class TestEasyocrWithCLAHE:
 
     def test_easyocr_returns_engine_result(self):
         """EngineResult型を返す"""
-        from src.ocr_engines import EngineResult
+        from src.rover.engines import EngineResult
 
         result = EngineResult(
             engine="easyocr",
@@ -170,7 +170,7 @@ class TestEasyocrWithCLAHE:
 
     def test_easyocr_text_with_box_structure(self):
         """TextWithBoxが正しい構造を持つ"""
-        from src.ocr_engines import TextWithBox
+        from src.rover.engines import TextWithBox
 
         item = TextWithBox(
             text="テスト",
@@ -184,7 +184,7 @@ class TestEasyocrWithCLAHE:
 
     def test_easyocr_y_center_calculation(self):
         """TextWithBox.y_centerが正しく計算される"""
-        from src.ocr_engines import TextWithBox
+        from src.rover.engines import TextWithBox
 
         item = TextWithBox(
             text="テスト",
@@ -195,10 +195,10 @@ class TestEasyocrWithCLAHE:
         expected_y_center = (100 + 150) / 2.0
         assert item.y_center == expected_y_center
 
-    @patch("src.ocr_engines._get_easyocr_reader")
+    @patch("src.rover.engines._get_easyocr_reader")
     def test_easyocr_with_boxes_basic(self, mock_get_reader):
         """run_easyocr_with_boxesが基本的に動作する"""
-        from src.ocr_engines import run_easyocr_with_boxes
+        from src.rover.engines import run_easyocr_with_boxes
 
         # Mock the reader
         mock_reader = Mock()
@@ -221,7 +221,7 @@ class TestEasyocrWithCLAHE:
 
     def test_easyocr_apply_preprocessing_parameter_exists(self):
         """apply_preprocessing パラメータが存在することを確認"""
-        from src.ocr_engines import run_easyocr_with_boxes
+        from src.rover.engines import run_easyocr_with_boxes
         import inspect
 
         # Check function signature
@@ -233,11 +233,11 @@ class TestEasyocrWithCLAHE:
         # This is intentional for RED phase
         assert "apply_preprocessing" in params or True  # Placeholder for RED
 
-    @patch("src.ocr_engines._get_easyocr_reader")
+    @patch("src.rover.engines._get_easyocr_reader")
     @patch("src.ocr_preprocess.apply_clahe")
     def test_easyocr_with_clahe_preprocessing(self, mock_clahe, mock_get_reader):
         """CLAHE前処理が適用される (apply_preprocessing=True)"""
-        from src.ocr_engines import run_easyocr_with_boxes
+        from src.rover.engines import run_easyocr_with_boxes
 
         # Mock CLAHE
         mock_clahe.return_value = np.random.randint(0, 255, (100, 80, 3), dtype=np.uint8)
@@ -261,10 +261,10 @@ class TestEasyocrWithCLAHE:
             # Expected in RED phase - parameter doesn't exist yet
             pytest.skip("apply_preprocessing parameter not implemented yet")
 
-    @patch("src.ocr_engines._get_easyocr_reader")
+    @patch("src.rover.engines._get_easyocr_reader")
     def test_easyocr_without_clahe_preprocessing(self, mock_get_reader):
         """CLAHE前処理なし (apply_preprocessing=False)"""
-        from src.ocr_engines import run_easyocr_with_boxes
+        from src.rover.engines import run_easyocr_with_boxes
 
         mock_reader = Mock()
         mock_reader.readtext.return_value = []
@@ -282,7 +282,7 @@ class TestEasyocrWithCLAHE:
 
     def test_easyocr_multiple_items_with_confidence(self):
         """複数アイテムがそれぞれ信頼度を持つ"""
-        from src.ocr_engines import EngineResult, TextWithBox
+        from src.rover.engines import EngineResult, TextWithBox
 
         items = [
             TextWithBox(text="高信頼度", bbox=(0, 0, 100, 50), confidence=0.98),
@@ -310,7 +310,7 @@ class TestRunAllEngines:
         """デフォルトエンジンリストからtesseractが除外されている"""
         # Note: This test will fail until implementation is updated
         # Current default includes tesseract
-        from src.ocr_engines import run_all_engines
+        from src.rover.engines import run_all_engines
         import inspect
 
         # Check default value in signature
@@ -323,20 +323,20 @@ class TestRunAllEngines:
 
     def test_run_all_engines_accepts_engine_list(self):
         """エンジンリストを指定可能"""
-        from src.ocr_engines import run_all_engines
+        from src.rover.engines import run_all_engines
         import inspect
 
         sig = inspect.signature(run_all_engines)
         assert "engines" in sig.parameters
 
-    @patch("src.ocr_engines.run_yomitoku_with_boxes")
-    @patch("src.ocr_engines.run_paddleocr_with_boxes")
-    @patch("src.ocr_engines.run_easyocr_with_boxes")
+    @patch("src.rover.engines.run_yomitoku_with_boxes")
+    @patch("src.rover.engines.run_paddleocr_with_boxes")
+    @patch("src.rover.engines.run_easyocr_with_boxes")
     def test_run_all_engines_explicit_engines(
         self, mock_easyocr, mock_paddle, mock_yomitoku
     ):
         """指定したエンジンのみが実行される"""
-        from src.ocr_engines import run_all_engines, EngineResult
+        from src.rover.engines import run_all_engines, EngineResult
 
         # Mock return values
         mock_yomitoku.return_value = EngineResult(

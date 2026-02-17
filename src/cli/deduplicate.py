@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.deduplicate import deduplicate_frames
+from src.preprocessing.deduplicate import deduplicate_frames
 
 
 def main() -> int:

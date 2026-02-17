@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from src.deduplicate import deduplicate_frames
+from src.preprocessing.deduplicate import deduplicate_frames
 
 
 class TestDeduplicateIdenticalImages:
@@ -121,7 +121,7 @@ class TestDeduplicateContextManager:
 
     def test_context_manager_usage(self) -> None:
         """Image.open() がコンテキストマネージャで使われていることを検証。"""
-        source = Path("src/deduplicate.py").read_text(encoding="utf-8")
+        source = Path("src/preprocessing/deduplicate.py").read_text(encoding="utf-8")
         assert "with Image.open" in source, (
             "Image.open should use context manager (with statement) "
             "to ensure file handles are properly closed"

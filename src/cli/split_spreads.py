@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.split_spread import renumber_pages, split_spread_pages
+from src.preprocessing.split_spread import renumber_pages, split_spread_pages
 
 
 def main() -> int:

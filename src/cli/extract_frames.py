@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.extract_frames import extract_frames
+from src.preprocessing.frames import extract_frames
 
 
 def main() -> int:

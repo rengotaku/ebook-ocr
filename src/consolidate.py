@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.ocr_output import ROVEROutput
+from src.rover.output import ROVEROutput
 
 
 def consolidate_rover_output(hashdir: str) -> tuple[str, str]:

@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.ocr_rover import run_rover_batch
+from src.rover.ensemble import run_rover_batch
 
 
 def main() -> int:
