@@ -1248,52 +1248,52 @@ class TestParseTocEntry:
     # T012: 章パターン（第N章）抽出テスト
 
     def test_parse_chapter_pattern_basic(self) -> None:
-        """第N章パターンを解析"""
+        """Chapter N パターンを解析"""
         from src.book_converter.parser import parse_toc_entry
         from src.book_converter.models import TocEntry
 
-        result = parse_toc_entry("第1章 SREとは")
+        result = parse_toc_entry("Chapter 1 SRE Overview")
 
         assert result is not None
         assert isinstance(result, TocEntry)
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
-        assert result.text == "SREとは"
+        assert result.text == "SRE Overview"
 
     def test_parse_chapter_pattern_with_page_dots(self) -> None:
-        """第N章パターン + ドットリーダーページ番号"""
+        """Chapter N パターン + ドットリーダーページ番号"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第1章 SREとは ... 15")
+        result = parse_toc_entry("Chapter 1 SRE Overview ... 15")
 
         assert result is not None
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
-        assert result.text == "SREとは"
+        assert result.text == "SRE Overview"
         assert result.page == "15"
 
     def test_parse_chapter_pattern_with_page_line(self) -> None:
-        """第N章パターン + 罫線ページ番号"""
+        """Chapter N パターン + 罫線ページ番号"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第2章 信頼性の定義 ─── 25")
+        result = parse_toc_entry("Chapter 2 Reliability Definition ─── 25")
 
         assert result is not None
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "2"
-        assert result.text == "信頼性の定義"
+        assert result.text == "Reliability Definition"
         assert result.page == "25"
 
     def test_parse_chapter_pattern_double_digit(self) -> None:
         """2桁の章番号を解析"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第10章 まとめ ... 200")
+        result = parse_toc_entry("Chapter 10 Summary ... 200")
 
         assert result is not None
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "10"
-        assert result.text == "まとめ"
+        assert result.text == "Summary"
         assert result.page == "200"
 
     # T013: 節パターン（N.N、N.N.N）抽出テスト
@@ -1478,10 +1478,10 @@ class TestParseTocEntry:
         """Unicode文字を正しく保持"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第3章 「日本語」テスト ... 50")
+        result = parse_toc_entry("Chapter 3 「Japanese」Test ... 50")
 
         assert result is not None
-        assert result.text == "「日本語」テスト"
+        assert result.text == "「Japanese」Test"
 
 
 class TestTocModels:
@@ -2577,10 +2577,10 @@ class TestParseTocEntryLevelNumeric:
         """parse_toc_entry が text, number, page を正しく保持"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第2章 設計パターン ... 50")
+        result = parse_toc_entry("Chapter 2 Design Patterns ... 50")
 
         assert result is not None
-        assert result.text == "設計パターン"
+        assert result.text == "Design Patterns"
         assert result.number == "2"
         assert result.page == "50"
         assert result.level == 1

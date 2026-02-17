@@ -56,7 +56,7 @@ ENGINE_PRIORITY = {
     "CAPTION": ["yomitoku", "paddleocr", "easyocr"],
     "FOOTNOTE": ["yomitoku", "paddleocr", "tesseract"],
     "FORMULA": ["yomitoku", "paddleocr", "tesseract"],
-    "FALLBACK": ["yomitoku", "paddleocr", "tesseract"],
+    "DEFAULT": ["yomitoku", "paddleocr", "tesseract"],
 }
 
 
@@ -328,7 +328,7 @@ def select_best_engine(
     if quality_flags is None:
         quality_flags = {k: not is_garbage(v) for k, v in results.items()}
 
-    priority = ENGINE_PRIORITY.get(region_type, ENGINE_PRIORITY["FALLBACK"])
+    priority = ENGINE_PRIORITY.get(region_type, ENGINE_PRIORITY["DEFAULT"])
 
     # Try engines in priority order, preferring valid results
     for engine in priority:

@@ -273,12 +273,12 @@ def merge_toc_lines(lines: list[str]) -> list[str]:
         merge_pattern = None
 
         # Pattern 1: Just "Chapter" (case insensitive)
-        if re.match(r'^[Cc][Hh][Aa][Pp][Tt][Ee][Rr]$', line):
+        if re.match(r'^Chapter$', line, re.IGNORECASE):
             needs_merge = True
             merge_pattern = 'chapter'
 
         # Pattern 2: "Episode NN" without title
-        elif re.match(r'^[Ee][Pp][Ii][Ss][Oo][Dd][Ee]\s+\d+$', line):
+        elif re.match(r'^Episode\s+\d+$', line, re.IGNORECASE):
             needs_merge = True
             merge_pattern = 'episode'
 
@@ -578,31 +578,6 @@ def parse_toc_entry(line: str) -> TocEntry | None:
             text=title,
             level=3,
             number=number,
-            page=page_number,
-        )
-
-    # Legacy patterns below for backward compatibility
-
-    # Chapter pattern 1: 第N章 タイトル
-    chapter_pattern = r"^第(\d+)章\s+(.+)$"
-    match = re.match(chapter_pattern, line)
-    if match:
-        return TocEntry(
-            text=match.group(2).strip(),
-            level=1,
-            number=match.group(1),
-            page=page_number,
-        )
-
-    # Chapter pattern 2: Chapter N タイトル (case insensitive) - legacy
-    chapter_en_pattern = r"^[Cc][Hh][Aa][Pp][Tt][Ee][Rr]\s+(\d+)(?:\s+(.+))?$"
-    match = re.match(chapter_en_pattern, line)
-    if match:
-        title = match.group(2).strip() if match.group(2) else ""
-        return TocEntry(
-            text=title,
-            level=1,
-            number=match.group(1),
             page=page_number,
         )
 

@@ -187,7 +187,7 @@ class TestSelectBestEngine:
 
         text, engine = select_best_engine(results, "UNKNOWN_TYPE", quality)
 
-        # FALLBACK priority: yomitoku > paddleocr > tesseract
+        # DEFAULT priority: yomitoku > paddleocr > tesseract
         assert engine == "paddleocr"
 
 
@@ -203,5 +203,5 @@ class TestEnginePriority:
     def test_table_priority(self):
         assert ENGINE_PRIORITY["TABLE"] == ["yomitoku", "paddleocr", "tesseract"]
 
-    def test_fallback_priority(self):
-        assert ENGINE_PRIORITY["FALLBACK"] == ["yomitoku", "paddleocr", "tesseract"]
+    def test_default_priority(self):
+        assert ENGINE_PRIORITY["DEFAULT"] == ["yomitoku", "paddleocr", "tesseract"]
