@@ -103,14 +103,14 @@
 
 ### Input
 
-- [ ] T035 セットアップ分析を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
-- [ ] T036 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph2-output.md
+- [x] T035 セットアップ分析を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
+- [x] T036 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T037 [P] [US2] 命名規則検証テストを実装: tests/test_naming_convention.py
-- [ ] T038 `make test` FAIL を確認 (RED)
-- [ ] T039 RED出力を生成: specs/010-pipeline-refactoring/red-tests/ph3-test.md
+- [x] T037 [P] [US2] 命名規則検証テストを実装: tests/test_naming_convention.py
+- [x] T038 `make test` FAIL を確認 (RED)
+- [x] T039 RED出力を生成: specs/010-pipeline-refactoring/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
