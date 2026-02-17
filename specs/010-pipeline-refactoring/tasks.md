@@ -224,20 +224,20 @@
 
 ### Input
 
-- [ ] T090 セットアップ分析を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
-- [ ] T091 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph5-output.md
+- [x] T090 セットアップ分析を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
+- [x] T091 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph5-output.md
 
 ### Implementation（ドキュメント作成 - TDDなし）
 
-- [ ] T092 [US5] WORKFLOW.md を作成: docs/WORKFLOW.md
-- [ ] T093 [US5] 各CLIコマンドの使用例を追加: docs/WORKFLOW.md
-- [ ] T094 [US5] Markdownマーカー追加手順を追加: docs/WORKFLOW.md
-- [ ] T095 [US5] トラブルシューティングセクションを追加: docs/WORKFLOW.md
+- [x] T092 [US5] WORKFLOW.md を作成: docs/WORKFLOW.md
+- [x] T093 [US5] 各CLIコマンドの使用例を追加: docs/WORKFLOW.md
+- [x] T094 [US5] Markdownマーカー追加手順を追加: docs/WORKFLOW.md
+- [x] T095 [US5] トラブルシューティングセクションを追加: docs/WORKFLOW.md
 
 ### Verification
 
-- [ ] T096 手順書に従って動画を処理できることを手動確認
-- [ ] T097 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph6-output.md
+- [x] T096 手順書に従って動画を処理できることを手動確認
+- [x] T097 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph6-output.md
 
 **Checkpoint**: ワークフロー手順書が完成
 
