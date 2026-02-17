@@ -150,31 +150,31 @@
 
 ### Implementation (GREEN)
 
-- [ ] T054 REDテストを読み込み: specs/010-pipeline-refactoring/red-tests/ph4-test.md
-- [ ] T055 [P] [US3] src/preprocessing/__init__.py を作成
-- [ ] T056 [P] [US3] src/preprocessing/frames.py を作成（extract_frames.pyから移動）
-- [ ] T057 [P] [US3] src/preprocessing/deduplicate.py を作成
-- [ ] T058 [P] [US3] src/preprocessing/split_spread.py を作成
-- [ ] T059 [P] [US3] src/preprocessing/hash.py を作成（video_hash.pyから移動）
-- [ ] T060 [P] [US3] src/layout/__init__.py を作成
-- [ ] T061 [P] [US3] src/layout/detector.py を作成（ocr_yomitoku.pyのレイアウト部分）
-- [ ] T062 [P] [US3] src/layout/figures.py を作成（detect_figures.pyから移動）
-- [ ] T063 [P] [US3] src/layout/reading_order.py を作成
-- [ ] T064 [P] [US3] src/rover/__init__.py を作成
-- [ ] T065 [P] [US3] src/rover/ensemble.py を作成（ocr_rover.pyから移動）
-- [ ] T066 [P] [US3] src/rover/engines.py を作成（ocr_engines.pyから移動）
-- [ ] T067 [P] [US3] src/rover/alignment.py を作成（ocr_alignment.pyから移動）
-- [ ] T068 [P] [US3] src/rover/output.py を作成（ocr_output.pyから移動）
-- [ ] T069 [US3] 全ファイルのインポート文を新しいパスに更新
-- [ ] T070 [US3] CLIスクリプトのインポートを更新: src/cli/*.py
-- [ ] T071 [US3] テストのインポートを更新: tests/
-- [ ] T072 `make test` PASS を確認 (GREEN)
+- [x] T054 REDテストを読み込み: specs/010-pipeline-refactoring/red-tests/ph4-test.md
+- [x] T055 [P] [US3] src/preprocessing/__init__.py を作成
+- [x] T056 [P] [US3] src/preprocessing/frames.py を作成（extract_frames.pyから移動）
+- [x] T057 [P] [US3] src/preprocessing/deduplicate.py を作成
+- [x] T058 [P] [US3] src/preprocessing/split_spread.py を作成
+- [x] T059 [P] [US3] src/preprocessing/hash.py を作成（video_hash.pyから移動）
+- [x] T060 [P] [US3] src/layout/__init__.py を作成
+- [x] T061 [P] [US3] src/layout/detector.py を作成（ocr_yomitoku.pyのレイアウト部分）
+- [x] T062 [P] [US3] src/layout/figures.py を作成（detect_figures.pyから移動）
+- [x] T063 [P] [US3] src/layout/reading_order.py を作成
+- [x] T064 [P] [US3] src/rover/__init__.py を作成
+- [x] T065 [P] [US3] src/rover/ensemble.py を作成（ocr_rover.pyから移動）
+- [x] T066 [P] [US3] src/rover/engines.py を作成（ocr_engines.pyから移動）
+- [x] T067 [P] [US3] src/rover/alignment.py を作成（ocr_alignment.pyから移動）
+- [x] T068 [P] [US3] src/rover/output.py を作成（ocr_output.pyから移動）
+- [x] T069 [US3] 全ファイルのインポート文を新しいパスに更新
+- [x] T070 [US3] CLIスクリプトのインポートを更新: src/cli/*.py
+- [x] T071 [US3] テストのインポートを更新: tests/
+- [x] T072 `make test` PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T073 `make test` で全テストがパスすることを確認
-- [ ] T074 src/ 直下のファイル数が減少していることを確認
-- [ ] T075 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph4-output.md
+- [x] T073 `make test` で全テストがパスすることを確認
+- [x] T074 src/ 直下のファイル数が減少していることを確認
+- [x] T075 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph4-output.md
 
 **Checkpoint**: 機能別サブパッケージ構造が完成、全テストがパス
 
