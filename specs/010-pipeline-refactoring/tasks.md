@@ -119,7 +119,7 @@
 - [x] T042 [P] [US2] 関数名の「yomitoku」「rover_ocr」を統一: src/
 - [x] T043 [P] [US2] コメント・docstring の名称を更新: src/
 - [x] T044 [US2] インポート文を更新: src/
-- [ ] T045 `make test` PASS を確認 (GREEN)
+- [x] T045 `make test` PASS を確認 (GREEN)
 
 ### Verification
 
