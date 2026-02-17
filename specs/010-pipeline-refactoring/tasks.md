@@ -188,15 +188,15 @@
 
 ### Input
 
-- [ ] T076 セットアップ分析を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
-- [ ] T077 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph4-output.md
+- [x] T076 セットアップ分析を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
+- [x] T077 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph4-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T078 [P] [US4] ENGINE_PRIORITY["FALLBACK"] → "DEFAULT" の移行テスト: tests/test_fallback_removal.py
-- [ ] T079 [P] [US4] book_converter/parser.py のレガシーパターン除去テスト: tests/book_converter/test_parser.py
-- [ ] T080 `make test` FAIL を確認 (RED)
-- [ ] T081 RED出力を生成: specs/010-pipeline-refactoring/red-tests/ph5-test.md
+- [x] T078 [P] [US4] ENGINE_PRIORITY["FALLBACK"] → "DEFAULT" の移行テスト: tests/test_fallback_removal.py
+- [x] T079 [P] [US4] book_converter/parser.py のレガシーパターン除去テスト: tests/book_converter/test_parser.py
+- [x] T080 `make test` FAIL を確認 (RED)
+- [x] T081 RED出力を生成: specs/010-pipeline-refactoring/red-tests/ph5-test.md
 
 ### Implementation (GREEN)
 
