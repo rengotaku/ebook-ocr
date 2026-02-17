@@ -139,14 +139,14 @@
 
 ### Input
 
-- [ ] T049 セットアップ分析を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
-- [ ] T050 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph3-output.md
+- [x] T049 セットアップ分析を読み込み: specs/010-pipeline-refactoring/tasks/ph1-output.md
+- [x] T050 前フェーズ出力を読み込み: specs/010-pipeline-refactoring/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T051 [P] [US3] 新パッケージ構造のインポートテストを実装: tests/test_package_structure.py
-- [ ] T052 `make test` FAIL を確認 (RED)
-- [ ] T053 RED出力を生成: specs/010-pipeline-refactoring/red-tests/ph4-test.md
+- [x] T051 [P] [US3] 新パッケージ構造のインポートテストを実装: tests/test_package_structure.py
+- [x] T052 `make test` FAIL を確認 (RED)
+- [x] T053 RED出力を生成: specs/010-pipeline-refactoring/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
