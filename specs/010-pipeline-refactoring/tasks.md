@@ -114,18 +114,18 @@
 
 ### Implementation (GREEN)
 
-- [ ] T040 REDテストを読み込み: specs/010-pipeline-refactoring/red-tests/ph3-test.md
-- [ ] T041 [P] [US2] 変数名 yomitoku_device → device にリネーム: src/cli/*.py
-- [ ] T042 [P] [US2] 関数名の「yomitoku」「rover_ocr」を統一: src/
-- [ ] T043 [P] [US2] コメント・docstring の名称を更新: src/
-- [ ] T044 [US2] インポート文を更新: src/
+- [x] T040 REDテストを読み込み: specs/010-pipeline-refactoring/red-tests/ph3-test.md
+- [x] T041 [P] [US2] 変数名 yomitoku_device → device にリネーム: src/cli/*.py
+- [x] T042 [P] [US2] 関数名の「yomitoku」「rover_ocr」を統一: src/
+- [x] T043 [P] [US2] コメント・docstring の名称を更新: src/
+- [x] T044 [US2] インポート文を更新: src/
 - [ ] T045 `make test` PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T046 `make test` で全テストがパスすることを確認
-- [ ] T047 `grep -r "yomitoku\|rover-ocr" src/` が0件であることを確認
-- [ ] T048 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph3-output.md
+- [x] T046 `make test` で全テストがパスすることを確認
+- [x] T047 `grep -r "yomitoku\|rover-ocr" src/` が0件であることを確認
+- [x] T048 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph3-output.md
 
 **Checkpoint**: 命名規則が統一され、全テストがパス
 

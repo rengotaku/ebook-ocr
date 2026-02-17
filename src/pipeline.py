@@ -27,7 +27,7 @@ def run_pipeline(
     output_base: str = "output",
     interval: float = 1.5,
     hash_threshold: int = 8,
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
     ocr_timeout: int = 60,
     skip_ocr: bool = False,
     split_spreads: bool = True,
@@ -47,7 +47,7 @@ def run_pipeline(
         output_base: Base output directory.
         interval: Frame extraction interval in seconds.
         hash_threshold: Perceptual hash threshold for dedup.
-        yomitoku_device: Device for Yomitoku OCR ("cpu" or "cuda").
+        device: Device for Yomitoku OCR ("cpu" or "cuda").
         ocr_timeout: Per-page OCR timeout in seconds.
         skip_ocr: If True, stop after frame extraction + dedup.
         split_spreads: If True, split spread images into left/right pages.
@@ -107,14 +107,14 @@ def run_pipeline(
 
     # Step 3+4: Layout detection and ROVER multi-engine OCR
     print("\n" + "=" * 60)
-    print(f"Step 3+4: Layout detection and ROVER OCR (device={yomitoku_device})")
+    print(f"Step 3+4: Layout detection and ROVER OCR (device={device})")
     print("=" * 60)
 
     # Detect layout and create visualizations
     detect_layout_yomitoku(
         pages_dir=pages_dir,
         output_dir=str(out),
-        device=yomitoku_device,
+        device=device,
     )
 
     # Run ROVER multi-engine OCR
@@ -122,7 +122,7 @@ def run_pipeline(
     run_rover_batch(
         pages_dir=pages_dir,
         output_dir=ocr_output_dir,
-        yomitoku_device=yomitoku_device,
+        device=device,
     )
 
     # Step 5: Consolidate OCR results
@@ -158,7 +158,7 @@ def main() -> None:
     parser.add_argument("-o", "--output", default=cfg.get("output", "output"), help="Base output directory")
     parser.add_argument("-i", "--interval", type=float, default=cfg.get("interval", 1.5), help="Frame interval in seconds")
     parser.add_argument("-t", "--threshold", type=int, default=cfg.get("threshold", 8), help="Dedup hash threshold")
-    parser.add_argument("--device", default=cfg.get("yomitoku_device", "cpu"), choices=["cpu", "cuda"], help="Yomitoku device")
+    parser.add_argument("--device", default=cfg.get("device", "cpu"), choices=["cpu", "cuda"], help="Yomitoku device")
     parser.add_argument("--ocr-timeout", type=int, default=cfg.get("ocr_timeout", 60), help="Per-page OCR timeout")
     parser.add_argument("--skip-ocr", action="store_true", help="Stop after frame extraction (skip OCR)")
     parser.add_argument("--no-split-spreads", action="store_true", help="Disable spread splitting (見開き分割)")
@@ -172,7 +172,7 @@ def main() -> None:
         output_base=args.output,
         interval=args.interval,
         hash_threshold=args.threshold,
-        yomitoku_device=args.device,
+        device=args.device,
         ocr_timeout=args.ocr_timeout,
         skip_ocr=args.skip_ocr,
         split_spreads=not args.no_split_spreads,

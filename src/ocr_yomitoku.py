@@ -504,6 +504,10 @@ def detect_layout_yomitoku(
     return layout_data
 
 
+# Alias for cleaner naming convention
+detect_layout = detect_layout_yomitoku
+
+
 def main() -> None:
     """CLI entry point for standalone Yomitoku OCR."""
     import argparse

@@ -528,7 +528,7 @@ def ocr_ensemble(
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
     paddleocr_lang: str = "japan",
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
     similarity_threshold: float = 0.7,
 ) -> EnsembleResult:
     """Run ensemble OCR with multiple engines.
@@ -539,7 +539,7 @@ def ocr_ensemble(
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
         paddleocr_lang: PaddleOCR language code.
-        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
+        device: Device for Yomitoku ("cpu" or "cuda").
         similarity_threshold: Threshold for voting agreement.
 
     Returns:
@@ -556,7 +556,7 @@ def ocr_ensemble(
     # Run each engine
     for engine in engines:
         if engine == "yomitoku":
-            result = ocr_yomitoku_engine(image, yomitoku_device)
+            result = ocr_yomitoku_engine(image, device)
         elif engine == "tesseract":
             result = ocr_tesseract(image, tesseract_lang)
         elif engine == "easyocr":
@@ -582,7 +582,7 @@ def run_ensemble_ocr(
     engines: list[str] | None = None,
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
 ) -> list[tuple[str, EnsembleResult]]:
     """Run ensemble OCR on all pages in a directory.
 
@@ -592,7 +592,7 @@ def run_ensemble_ocr(
         engines: List of engines to use.
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
-        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
+        device: Device for Yomitoku ("cpu" or "cuda").
 
     Returns:
         List of (page_name, EnsembleResult) tuples.
@@ -620,7 +620,7 @@ def run_ensemble_ocr(
                 engines=engines,
                 tesseract_lang=tesseract_lang,
                 easyocr_langs=easyocr_langs,
-                yomitoku_device=yomitoku_device,
+                device=device,
             )
 
         # Report
@@ -691,7 +691,7 @@ def main() -> None:
         engines=engines,
         tesseract_lang=args.tesseract_lang,
         easyocr_langs=easyocr_langs,
-        yomitoku_device=args.device,
+        device=args.device,
     )
 
 

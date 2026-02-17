@@ -355,7 +355,7 @@ def run_integrated_ocr(
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
     paddleocr_lang: str = "japan",
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
 ) -> IntegratedResult:
     """Run integrated OCR on a single page.
 
@@ -370,7 +370,7 @@ def run_integrated_ocr(
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
         paddleocr_lang: PaddleOCR language code.
-        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
+        device: Device for Yomitoku ("cpu" or "cuda").
 
     Returns:
         IntegratedResult with all engine results and selected output.
@@ -384,7 +384,7 @@ def run_integrated_ocr(
 
     # 1. Run full-page OCR engines
     print("    Running Yomitoku...", end="", flush=True)
-    yomi_result = ocr_yomitoku_engine(image, yomitoku_device)
+    yomi_result = ocr_yomitoku_engine(image, device)
     if yomi_result.success:
         results["yomitoku"] = yomi_result.text
         quality_flags["yomitoku"] = not is_garbage(yomi_result.text)
@@ -472,7 +472,7 @@ def run_integrated_ocr_batch(
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
     paddleocr_lang: str = "japan",
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
 ) -> list[tuple[str, IntegratedResult]]:
     """Run integrated OCR on all pages in a directory.
 
@@ -483,7 +483,7 @@ def run_integrated_ocr_batch(
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
         paddleocr_lang: PaddleOCR language code.
-        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
+        device: Device for Yomitoku ("cpu" or "cuda").
 
     Returns:
         List of (page_name, IntegratedResult) tuples.
@@ -520,7 +520,7 @@ def run_integrated_ocr_batch(
                 tesseract_lang=tesseract_lang,
                 easyocr_langs=easyocr_langs,
                 paddleocr_lang=paddleocr_lang,
-                yomitoku_device=yomitoku_device,
+                device=device,
             )
 
         # Report
@@ -587,7 +587,7 @@ def main() -> None:
         tesseract_lang=args.tesseract_lang,
         easyocr_langs=easyocr_langs,
         paddleocr_lang=args.paddleocr_lang,
-        yomitoku_device=args.device,
+        device=args.device,
     )
 
 

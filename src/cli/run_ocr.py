@@ -35,7 +35,7 @@ def main() -> int:
         run_rover_batch(
             args.pages_dir,
             args.output,
-            yomitoku_device=args.device,
+            device=args.device,
         )
         return 0
     except Exception as e:

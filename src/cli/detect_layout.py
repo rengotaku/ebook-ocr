@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.ocr_yomitoku import detect_layout_yomitoku
+from src.layout_detector import detect_layout
 
 
 def main() -> int:
@@ -28,7 +28,7 @@ def main() -> int:
 
     # Call existing function
     try:
-        detect_layout_yomitoku(args.pages_dir, args.output, device=args.device)
+        detect_layout(args.pages_dir, args.output, device=args.device)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
