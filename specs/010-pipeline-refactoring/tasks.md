@@ -36,18 +36,18 @@
 
 **Purpose**: 現在の実装を確認し、変更の準備を行う
 
-- [ ] T001 現在の pipeline.py を読み込み、ステップ構造を分析: src/pipeline.py
-- [ ] T002 [P] 現在の extract_frames.py を確認: src/extract_frames.py
-- [ ] T003 [P] 現在の deduplicate.py を確認: src/deduplicate.py
-- [ ] T004 [P] 現在の split_spread.py を確認: src/split_spread.py
-- [ ] T005 [P] 現在の ocr_yomitoku.py（レイアウト検出）を確認: src/ocr_yomitoku.py
-- [ ] T006 [P] 現在の ocr_rover.py を確認: src/ocr_rover.py
-- [ ] T007 [P] 現在の consolidate.py を確認: src/consolidate.py
-- [ ] T008 [P] 既存テストを確認: tests/
-- [ ] T009 「yomitoku」「rover-ocr」の使用箇所を特定: src/
-- [ ] T010 後方互換性フォールバックコードを特定: src/
-- [ ] T011 `make test` を実行して現在のテスト状態を確認
-- [ ] T012 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph1-output.md
+- [X] T001 現在の pipeline.py を読み込み、ステップ構造を分析: src/pipeline.py
+- [X] T002 [P] 現在の extract_frames.py を確認: src/extract_frames.py
+- [X] T003 [P] 現在の deduplicate.py を確認: src/deduplicate.py
+- [X] T004 [P] 現在の split_spread.py を確認: src/split_spread.py
+- [X] T005 [P] 現在の ocr_yomitoku.py（レイアウト検出）を確認: src/ocr_yomitoku.py
+- [X] T006 [P] 現在の ocr_rover.py を確認: src/ocr_rover.py
+- [X] T007 [P] 現在の consolidate.py を確認: src/consolidate.py
+- [X] T008 [P] 既存テストを確認: tests/
+- [X] T009 「yomitoku」「rover-ocr」の使用箇所を特定: src/
+- [X] T010 後方互換性フォールバックコードを特定: src/
+- [X] T011 `make test` を実行して現在のテスト状態を確認
+- [X] T012 フェーズ出力を生成: specs/010-pipeline-refactoring/tasks/ph1-output.md
 
 ---
 
