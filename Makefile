@@ -20,10 +20,10 @@ HASHDIR ?=
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract split-spreads yomitoku-detect yomitoku-ocr rover-ocr build-book test test-book-converter test-cov converter convert-sample clean clean-all
+.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate build-book test test-book-converter test-cov converter convert-sample clean clean-all
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 setup: $(VENV)/bin/activate ## Create venv and install dependencies
 
@@ -32,35 +32,72 @@ $(VENV)/bin/activate: requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-run: setup ## Run full pipeline (ROVER multi-engine OCR: yomitoku+paddle+easyocr)
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --device cpu --ocr-timeout $(OCR_TIMEOUT)
+# === Individual CLI Commands (New Pipeline) ===
 
-extract: setup ## Extract frames only (skip OCR)
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/pipeline.py "$(VIDEO)" -o "$(OUTPUT)" -i $(INTERVAL) -t $(THRESHOLD) --skip-ocr
+extract-frames: setup ## Step 1: Extract frames from video (requires VIDEO, OUTPUT or HASHDIR)
+	@test -n "$(VIDEO)" || { echo "Error: VIDEO required. Usage: make extract-frames VIDEO=input.mp4 OUTPUT=output"; exit 1; }
+	@test -n "$(OUTPUT)$(HASHDIR)" || { echo "Error: OUTPUT or HASHDIR required"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.extract_frames "$(VIDEO)" -o "$(or $(HASHDIR),$(OUTPUT))/frames" -i $(INTERVAL)
+
+deduplicate: setup ## Step 2: Deduplicate frames (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make deduplicate HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.deduplicate "$(HASHDIR)/frames" -o "$(HASHDIR)/pages" -t $(THRESHOLD)
 
 LEFT_TRIM ?= $(shell $(call CFG,spread_left_trim))
 RIGHT_TRIM ?= $(shell $(call CFG,spread_right_trim))
 ASPECT_RATIO ?= $(shell $(call CFG,spread_aspect_ratio))
 
-split-spreads: setup ## Split spread images into pages (requires HASHDIR)
+split-spreads: setup ## Step 2.5: Split spread images into pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/split_spread.py "$(HASHDIR)/pages" --left-trim $(LEFT_TRIM) --right-trim $(RIGHT_TRIM) --aspect-ratio $(ASPECT_RATIO) --renumber
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.split_spreads "$(HASHDIR)/pages" --left-trim $(LEFT_TRIM) --right-trim $(RIGHT_TRIM) --aspect-ratio $(ASPECT_RATIO)
 
-yomitoku-detect: setup ## Run yomitoku layout detection and visualization (requires HASHDIR)
+detect-layout: setup ## Step 3: Detect layout using yomitoku (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect-layout HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.detect_layout "$(HASHDIR)/pages" -o "$(HASHDIR)/layout" --device cpu
+
+run-ocr: setup ## Step 4: Run ROVER multi-engine OCR (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make run-ocr HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.run_ocr "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output" --layout-dir "$(HASHDIR)/layout" --device cpu
+
+consolidate: setup ## Step 5: Consolidate OCR results (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make consolidate HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)"
+
+# === Full Pipeline (Convenience) ===
+
+run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT optional)
+	@test -n "$(VIDEO)" || { echo "Error: VIDEO required. Usage: make run VIDEO=input.mp4"; exit 1; }
+	$(eval HASH := $(shell PYTHONPATH=$(CURDIR) $(PYTHON) -m src.preprocessing.hash "$(VIDEO)" --prefix-only 2>/dev/null))
+	@test -n "$(HASH)" || { echo "Error: Failed to compute hash for $(VIDEO)"; exit 1; }
+	$(eval HASHDIR := $(or $(OUTPUT),output)/$(HASH))
+	@echo "=== Output directory: $(HASHDIR) ==="
+	@echo "=== Step 1: Extract Frames ==="
+	@$(MAKE) --no-print-directory extract-frames VIDEO="$(VIDEO)" HASHDIR="$(HASHDIR)"
+	@echo "=== Step 2: Deduplicate ==="
+	@$(MAKE) --no-print-directory deduplicate HASHDIR="$(HASHDIR)"
+	@echo "=== Step 3: Detect Layout ==="
+	@$(MAKE) --no-print-directory detect-layout HASHDIR="$(HASHDIR)"
+	@echo "=== Step 4: Run OCR ==="
+	@$(MAKE) --no-print-directory run-ocr HASHDIR="$(HASHDIR)"
+	@echo "=== Step 5: Consolidate ==="
+	@$(MAKE) --no-print-directory consolidate HASHDIR="$(HASHDIR)"
+	@echo "=== Done: $(HASHDIR)/book.md ==="
+
+# === Legacy Targets (for backward compatibility) ===
+
+yomitoku-detect: setup ## [LEGACY] Run yomitoku layout detection (use detect-layout instead)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-detect HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.ocr_yomitoku import detect_layout_yomitoku; detect_layout_yomitoku('$(HASHDIR)/pages', '$(HASHDIR)', device='cpu')"
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.detect_layout "$(HASHDIR)/pages" -o "$(HASHDIR)/layout" --device cpu
 
-yomitoku-ocr: setup ## [LEGACY] Re-run single-engine Yomitoku OCR (use 'make run' for ROVER)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -c "from src.layout_ocr import run_yomitoku_ocr; run_yomitoku_ocr('$(HASHDIR)/pages', '$(HASHDIR)/book.txt', device='cpu')"
-
-rover-ocr: setup ## Run ROVER multi-engine OCR (yomitoku+paddle+easyocr) with character-level voting (requires HASHDIR)
+rover-ocr: setup ## [LEGACY] Run ROVER OCR (use run-ocr instead)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make rover-ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/ocr_rover.py "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output"
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.run_ocr "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output" --device cpu
 
-build-book: setup ## Build book.txt and book.md from ROVER outputs (requires HASHDIR)
+build-book: setup ## [LEGACY] Build book.txt from ROVER outputs (use consolidate instead)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make build-book HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) src/consolidate.py "$(HASHDIR)"
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)"
+
+# === Book Converter ===
 
 converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml [THRESHOLD=0.5] [VERBOSE=1])
 	@test -n "$(INPUT_MD)" || { echo "Error: INPUT_MD required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
@@ -72,12 +109,7 @@ converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/
 convert-sample: setup ## Convert sample book.md to XML
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli tests/book_converter/fixtures/sample_book.md output/sample_book.xml --group-pages
 
-# OBSOLETE TARGETS (kept for reference, not maintained)
-# ocr: setup ## [OBSOLETE] Run DeepSeek-OCR - file removed, use 'make run' instead
-# detect: setup ## [OBSOLETE] Run YOLO-based layout detection - replaced by yomitoku-detect
-# layout-ocr: setup ## [OBSOLETE] Run region-based OCR with cropping - replaced by yomitoku-ocr
-# ensemble-ocr: setup ## [OBSOLETE] Run ensemble OCR - use 'make run' instead
-# integrated-ocr: setup ## [OBSOLETE] Run integrated OCR - use 'make run' instead
+# === Testing ===
 
 test: setup ## Run tests
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v
@@ -87,6 +119,10 @@ test-book-converter: setup ## Run book_converter tests
 
 test-cov: setup ## Run tests with coverage
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
+
+coverage: test-cov ## Alias for test-cov
+
+# === Cleanup ===
 
 clean: ## Remove output files (keep venv)
 	rm -rf $(OUTPUT)
