@@ -557,7 +557,7 @@ def run_tesseract_with_boxes(
 def run_all_engines(
     image: Image.Image,
     engines: list[str] | None = None,
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
     tesseract_lang: str = "jpn+eng",
     easyocr_langs: list[str] | None = None,
     paddleocr_lang: str = "japan",
@@ -571,7 +571,7 @@ def run_all_engines(
     Args:
         image: PIL Image to process.
         engines: List of engine names. Default: ["yomitoku", "paddleocr", "easyocr"] (Tesseract excluded)
-        yomitoku_device: Device for Yomitoku.
+        device: Device for Yomitoku.
         tesseract_lang: Tesseract language code(s).
         easyocr_langs: EasyOCR language list.
         paddleocr_lang: PaddleOCR language code.
@@ -588,7 +588,7 @@ def run_all_engines(
     # Run yomitoku first to get figure regions
     figure_bboxes: list[tuple[int, int, int, int]] = []
     if "yomitoku" in engines:
-        results["yomitoku"] = run_yomitoku_with_boxes(image, yomitoku_device)
+        results["yomitoku"] = run_yomitoku_with_boxes(image, device)
         if results["yomitoku"].figures:
             figure_bboxes = results["yomitoku"].figures
 

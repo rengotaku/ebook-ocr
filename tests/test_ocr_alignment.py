@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.ocr_alignment import (
+from src.rover.alignment import (
     AlignedPosition,
     align_texts_character_level,
     weighted_vote_character,

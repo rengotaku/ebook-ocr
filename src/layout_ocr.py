@@ -27,7 +27,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from src.reading_order import sort_reading_order, remove_overlaps
+from src.layout.reading_order import sort_reading_order, remove_overlaps
 
 
 @dataclass(frozen=True)
@@ -191,14 +191,14 @@ def crop_region(img: Image.Image, bbox: list[int]) -> Image.Image:
 def ocr_region(
     img: Image.Image,
     region: dict,
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
 ) -> OCRResult:
     """単一領域のOCR処理。
 
     Args:
         img: ページ全体の PIL Image
         region: {"type": str, "bbox": list[int], "confidence": float}
-        yomitoku_device: Device for Yomitoku ("cpu" or "cuda")
+        device: Device for Yomitoku ("cpu" or "cuda")
 
     Returns:
         OCRResult with text and formatted output
@@ -222,7 +222,7 @@ def ocr_region(
 
     # 4. OCR実行 (Yomitoku)
     from src.ocr_yomitoku import ocr_page_yomitoku
-    ocr_text = ocr_page_yomitoku("", device=yomitoku_device, img=cropped_img)
+    ocr_text = ocr_page_yomitoku("", device=device, img=cropped_img)
 
     # 5. フォーマット
     formatted_text = format_ocr_result(region_type, ocr_text)
@@ -296,14 +296,14 @@ def should_fallback(
 def ocr_by_layout(
     page_path: str,
     layout: dict,
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
 ) -> list[OCRResult]:
     """ページ内の全領域をOCR処理。
 
     Args:
         page_path: ページ画像のパス
         layout: {"regions": list[dict], "page_size": [w, h]}
-        yomitoku_device: Device for Yomitoku ("cpu" or "cuda")
+        device: Device for Yomitoku ("cpu" or "cuda")
 
     Returns:
         各領域のOCRResult リスト（読み順ソート済み）
@@ -315,7 +315,7 @@ def ocr_by_layout(
     if should_fallback(regions, page_size):
         # ページ全体OCRを実行 (Yomitoku)
         from src.ocr_yomitoku import ocr_page_yomitoku
-        ocr_text = ocr_page_yomitoku(page_path, device=yomitoku_device)
+        ocr_text = ocr_page_yomitoku(page_path, device=device)
 
         # フォールバック結果を返す
         return [
@@ -343,7 +343,7 @@ def ocr_by_layout(
 
         result = ocr_region(
             img, region,
-            yomitoku_device=yomitoku_device,
+            device=device,
         )
         results.append(result)
 
@@ -354,7 +354,7 @@ def run_layout_ocr(
     pages_dir: str,
     layout_data: dict,
     output_file: str,
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
     warmup: bool = True,
 ) -> list[tuple[str, list[OCRResult]]]:
     """Run layout-aware OCR on all pages in a directory.
@@ -369,7 +369,7 @@ def run_layout_ocr(
         pages_dir: Directory containing page images.
         layout_data: Layout detection results (from layout.json).
         output_file: Path for combined output text file.
-        yomitoku_device: Device for Yomitoku ("cpu" or "cuda").
+        device: Device for Yomitoku ("cpu" or "cuda").
         warmup: Whether to warm up the model before processing.
 
     Returns:
@@ -386,7 +386,7 @@ def run_layout_ocr(
         start = time.time()
         # Warm up by running a dummy OCR
         dummy_img = Image.new("RGB", (100, 100), color=(255, 255, 255))
-        ocr_page_yomitoku("", device=yomitoku_device, img=dummy_img)
+        ocr_page_yomitoku("", device=device, img=dummy_img)
         elapsed = time.time() - start
         print(f"  Yomitoku ready in {elapsed:.1f}s")
 
@@ -417,7 +417,7 @@ def run_layout_ocr(
         ocr_results = ocr_by_layout(
             str(page_path),
             page_layout,
-            yomitoku_device=yomitoku_device,
+            device=device,
         )
 
         # Report status
@@ -481,7 +481,7 @@ def main() -> None:
         pages_dir=args.pages_dir,
         layout_data=layout_data,
         output_file=args.output,
-        yomitoku_device=args.device,
+        device=args.device,
         warmup=not args.no_warmup,
     )
 

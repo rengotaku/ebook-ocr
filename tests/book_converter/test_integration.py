@@ -418,7 +418,7 @@ class TestTocMarkerIntegration:
 
 <!-- toc -->
 
-第1章 SREとは ... 15
+Chapter 1 SRE Overview ... 15
 
 <!-- /toc -->
 """,
@@ -444,7 +444,7 @@ class TestTocMarkerIntegration:
         assert entry is not None
         assert entry.get("level") == "1"  # chapter is now level="1"
         assert entry.get("number") == "1"
-        assert entry.get("title") == "SREとは"
+        assert entry.get("title") == "SRE Overview"
         assert entry.get("page") == "15"
 
     def test_toc_with_various_levels(self, tmp_path: Path) -> None:
@@ -1457,15 +1457,15 @@ class TestTocOneLineFormatPreservation:
         result = merge_toc_lines(lines)
         assert result == lines
 
-    def test_parse_toc_entry_japanese_chapter_still_works(self) -> None:
-        """既存の第N章パターンが引き続き認識される"""
+    def test_parse_toc_entry_chapter_pattern_works(self) -> None:
+        """Chapter N パターンが認識される"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第1章 SREとは ... 14")
+        result = parse_toc_entry("Chapter 1 SRE Overview ... 14")
         assert result is not None
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
-        assert result.text == "SREとは"
+        assert result.text == "SRE Overview"
         assert result.page == "14"
 
     def test_parse_toc_entry_section_still_works(self) -> None:

@@ -73,12 +73,24 @@ def write_source_info(output_dir: str, video_path: str, full_hash: str) -> Path:
 
 if __name__ == "__main__":
     import argparse
+    import sys
 
     parser = argparse.ArgumentParser(description="Compute video file hash")
     parser.add_argument("video", help="Input video file path")
+    parser.add_argument(
+        "--prefix-only", action="store_true", help="Output only the hash prefix"
+    )
     args = parser.parse_args()
+
+    if not Path(args.video).exists():
+        print(f"Error: File not found: {args.video}", file=sys.stderr)
+        sys.exit(1)
 
     full = compute_full_hash(args.video)
     prefix = full[:HASH_PREFIX_LEN]
-    print(f"SHA-256: {full}")
-    print(f"Prefix:  {prefix}")
+
+    if args.prefix_only:
+        print(prefix)
+    else:
+        print(f"SHA-256: {full}")
+        print(f"Prefix:  {prefix}")

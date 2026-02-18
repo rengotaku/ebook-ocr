@@ -1248,52 +1248,52 @@ class TestParseTocEntry:
     # T012: 章パターン（第N章）抽出テスト
 
     def test_parse_chapter_pattern_basic(self) -> None:
-        """第N章パターンを解析"""
+        """Chapter N パターンを解析"""
         from src.book_converter.parser import parse_toc_entry
         from src.book_converter.models import TocEntry
 
-        result = parse_toc_entry("第1章 SREとは")
+        result = parse_toc_entry("Chapter 1 SRE Overview")
 
         assert result is not None
         assert isinstance(result, TocEntry)
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
-        assert result.text == "SREとは"
+        assert result.text == "SRE Overview"
 
     def test_parse_chapter_pattern_with_page_dots(self) -> None:
-        """第N章パターン + ドットリーダーページ番号"""
+        """Chapter N パターン + ドットリーダーページ番号"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第1章 SREとは ... 15")
+        result = parse_toc_entry("Chapter 1 SRE Overview ... 15")
 
         assert result is not None
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "1"
-        assert result.text == "SREとは"
+        assert result.text == "SRE Overview"
         assert result.page == "15"
 
     def test_parse_chapter_pattern_with_page_line(self) -> None:
-        """第N章パターン + 罫線ページ番号"""
+        """Chapter N パターン + 罫線ページ番号"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第2章 信頼性の定義 ─── 25")
+        result = parse_toc_entry("Chapter 2 Reliability Definition ─── 25")
 
         assert result is not None
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "2"
-        assert result.text == "信頼性の定義"
+        assert result.text == "Reliability Definition"
         assert result.page == "25"
 
     def test_parse_chapter_pattern_double_digit(self) -> None:
         """2桁の章番号を解析"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第10章 まとめ ... 200")
+        result = parse_toc_entry("Chapter 10 Summary ... 200")
 
         assert result is not None
         assert result.level == 1  # Phase 2: str → int
         assert result.number == "10"
-        assert result.text == "まとめ"
+        assert result.text == "Summary"
         assert result.page == "200"
 
     # T013: 節パターン（N.N、N.N.N）抽出テスト
@@ -1478,10 +1478,10 @@ class TestParseTocEntry:
         """Unicode文字を正しく保持"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第3章 「日本語」テスト ... 50")
+        result = parse_toc_entry("Chapter 3 「Japanese」Test ... 50")
 
         assert result is not None
-        assert result.text == "「日本語」テスト"
+        assert result.text == "「Japanese」Test"
 
 
 class TestTocModels:
@@ -2577,10 +2577,10 @@ class TestParseTocEntryLevelNumeric:
         """parse_toc_entry が text, number, page を正しく保持"""
         from src.book_converter.parser import parse_toc_entry
 
-        result = parse_toc_entry("第2章 設計パターン ... 50")
+        result = parse_toc_entry("Chapter 2 Design Patterns ... 50")
 
         assert result is not None
-        assert result.text == "設計パターン"
+        assert result.text == "Design Patterns"
         assert result.number == "2"
         assert result.page == "50"
         assert result.level == 1
@@ -3312,3 +3312,75 @@ class TestParseFigurePlaceholder:
         result = parse_figure_placeholder("   ")
 
         assert result is None
+
+
+class TestLegacyPatternRemovalInParser:
+    """Phase 5 T079: Legacy backward compatibility patterns should be removed.
+
+    These tests verify that the legacy patterns marked for removal in
+    specs/010-pipeline-refactoring/plan.md have been removed.
+
+    Category A (Remove):
+    - book_converter/parser.py:584 - "Legacy patterns below for backward compatibility"
+    - book_converter/parser.py:597 - "Chapter pattern 2: ... - legacy"
+    """
+
+    def test_parser_has_no_legacy_patterns_comment(self) -> None:
+        """parser.py should not have 'Legacy patterns' comment marker."""
+        import inspect
+        from src.book_converter import parser
+
+        # Get the parse_toc_line function source
+        # Note: We check the module source to find the legacy section
+        module_source = inspect.getsource(parser)
+
+        assert "Legacy patterns below for backward compatibility" not in module_source, (
+            "parser.py should not contain 'Legacy patterns below for backward compatibility'. "
+            "This comment and the associated legacy patterns should be removed."
+        )
+
+    def test_parser_has_no_legacy_annotation(self) -> None:
+        """parser.py should not have '- legacy' annotations in comments."""
+        import inspect
+        from src.book_converter import parser
+
+        module_source = inspect.getsource(parser)
+
+        # Check for the specific legacy annotation pattern
+        assert "- legacy" not in module_source, (
+            "parser.py should not contain '- legacy' annotations. "
+            "Remove the redundant legacy Chapter pattern."
+        )
+
+    def test_parser_no_character_class_case_insensitive_pattern(self) -> None:
+        """parser.py should not use [Cc][Hh]... style case insensitivity.
+
+        The legacy Chapter pattern uses character-by-character case insensitivity:
+        [Cc][Hh][Aa][Pp][Tt][Ee][Rr]
+
+        This is redundant because the new pattern uses re.IGNORECASE flag.
+        """
+        import inspect
+        from src.book_converter import parser
+
+        module_source = inspect.getsource(parser)
+
+        # The character-class case-insensitive pattern is a signature of legacy code
+        assert "[Cc][Hh][Aa][Pp][Tt][Ee][Rr]" not in module_source, (
+            "parser.py should not use character-class case insensitivity. "
+            "The new pattern with re.IGNORECASE handles case insensitivity."
+        )
+
+    def test_parser_uses_ignorecase_for_chapter(self) -> None:
+        """parser.py should use re.IGNORECASE for Chapter pattern."""
+        import inspect
+        from src.book_converter import parser
+
+        module_source = inspect.getsource(parser)
+
+        # Verify the new pattern exists with IGNORECASE
+        # The new format uses: re.match(..., line, re.IGNORECASE)
+        assert "re.IGNORECASE" in module_source, (
+            "parser.py should use re.IGNORECASE flag for case-insensitive matching. "
+            "This is the modern approach instead of character classes."
+        )

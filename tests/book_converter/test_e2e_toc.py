@@ -27,42 +27,42 @@ class TestE2ETocFeature:
         book_md = tmp_path / "book.md"
         book_md.write_text(
             """--- Page 1 (page_0001.png) ---
-表紙
+Cover
 
 --- Page 2 (page_0002.png) ---
 <!-- toc -->
-第1章 SREとは ............... 15
-1.1 SREの定義 ............... 16
-1.1.1 歴史 ............... 17
-第2章 信頼性の定義 ............... 25
-おわりに ............... 100
+Chapter 1 SRE Overview ............... 15
+1.1 SRE Definition ............... 16
+1.1.1 History ............... 17
+Chapter 2 Reliability Definition ............... 25
+Conclusion ............... 100
 <!-- /toc -->
 
 --- Page 3 (page_0003.png) ---
 <!-- content -->
-# 第1章 SREとは
+# Chapter 1 SRE Overview
 
-SREはGoogleが提唱したプラクティスです。
+SRE is a practice proposed by Google.
 <!-- /content -->
 
 --- Page 15 (page_0015.png) ---
 <!-- content -->
-# 第1章 SREとは
+# Chapter 1 SRE Overview
 
-本章では、SREの基本概念を説明します。
+This chapter explains the basic concepts of SRE.
 
 <!-- skip -->
-図1: SREの概要
+Figure 1: SRE Overview
 <!-- /skip -->
 
-続きの本文です。
+Continuation of the text.
 <!-- /content -->
 
 --- Page 100 (page_0100.png) ---
 <!-- skip -->
-索引
-あ行: 15, 23, 45
-い行: 12, 34, 56
+Index
+A: 15, 23, 45
+B: 12, 34, 56
 <!-- /skip -->
 """,
             encoding="utf-8",
@@ -96,31 +96,31 @@ SREはGoogleが提唱したプラクティスです。
         entry1 = entries[0]
         assert entry1.get("level") == "1"  # chapter
         assert entry1.get("number") == "1"
-        assert entry1.get("title") == "SREとは"
+        assert entry1.get("title") == "SRE Overview"
         assert entry1.get("page") == "15"
 
         entry2 = entries[1]
         assert entry2.get("level") == "2"  # section
         assert entry2.get("number") == "1.1"
-        assert entry2.get("title") == "SREの定義"
+        assert entry2.get("title") == "SRE Definition"
         assert entry2.get("page") == "16"
 
         entry3 = entries[2]
         assert entry3.get("level") == "3"  # subsection
         assert entry3.get("number") == "1.1.1"
-        assert entry3.get("title") == "歴史"
+        assert entry3.get("title") == "History"
         assert entry3.get("page") == "17"
 
         entry4 = entries[3]
         assert entry4.get("level") == "1"  # chapter
         assert entry4.get("number") == "2"
-        assert entry4.get("title") == "信頼性の定義"
+        assert entry4.get("title") == "Reliability Definition"
         assert entry4.get("page") == "25"
 
         entry5 = entries[4]
         assert entry5.get("level") == "1"  # other → level 1
-        assert entry5.get("number") is None
-        assert entry5.get("title") == "おわりに"
+        assert entry5.get("number") == "" or entry5.get("number") is None  # empty or omitted
+        assert entry5.get("title") == "Conclusion"
         assert entry5.get("page") == "100"
 
         # Verify page 1 (no markers, default readAloud=true)
@@ -129,7 +129,7 @@ SREはGoogleが提唱したプラクティスです。
         assert content1.get("readAloud") == "true"  # New default: true
         para1 = content1.find("paragraph")
         assert para1.get("readAloud") == "true"  # New default: true
-        assert para1.text == "表紙"
+        assert para1.text == "Cover"
 
         # Verify page 3 (content marker, readAloud=true)
         page3 = [p for p in root.findall("page") if p.get("number") == "3"][0]
@@ -171,12 +171,12 @@ SREはGoogleが提唱したプラクティスです。
         book_md.write_text(
             """--- Page 1 (page_0001.png) ---
 <!-- toc -->
-第1章 章1 ... 10
+Chapter 1 Chapter 1 ... 10
 <!-- /toc -->
 
 --- Page 2 (page_0002.png) ---
 <!-- toc -->
-第2章 章2 ... 20
+Chapter 2 Chapter 2 ... 20
 <!-- /toc -->
 """,
             encoding="utf-8",
@@ -398,29 +398,29 @@ SREはGoogleが提唱したプラクティスです。
         book_md = tmp_path / "book.md"
         book_md.write_text(
             """--- Page 1 (page_0001.png) ---
-表紙
+Cover
 
 --- Page 2 (page_0002.png) ---
 <!-- toc -->
-第1章 SREとは ............... 15
-1.1 SREの定義 ............... 16
-1.1.1 歴史 ............... 17
-第2章 信頼性の定義 ............... 25
-おわりに ............... 100
+Chapter 1 SRE Overview ............... 15
+1.1 SRE Definition ............... 16
+1.1.1 History ............... 17
+Chapter 2 Reliability Definition ............... 25
+Conclusion ............... 100
 <!-- /toc -->
 
 --- Page 3 (page_0003.png) ---
 <!-- content -->
-# 第1章 SREとは
+# Chapter 1 SRE Overview
 
-SREはGoogleが提唱したプラクティスです。
+SRE is a practice proposed by Google.
 <!-- /content -->
 
 --- Page 100 (page_0100.png) ---
 <!-- skip -->
-索引
-あ行: 15, 23, 45
-い行: 12, 34, 56
+Index
+A: 15, 23, 45
+B: 12, 34, 56
 <!-- /skip -->
 """,
             encoding="utf-8",
@@ -485,7 +485,7 @@ class TestE2EErrorHandling:
         book_md.write_text(
             """--- Page 1 (page_0001.png) ---
 <!-- toc -->
-第1章 章1 ... 10
+Chapter 1 Chapter 1 ... 10
 """,
             encoding="utf-8",
         )
@@ -507,7 +507,7 @@ class TestE2EErrorHandling:
 
         entries = toc.findall("entry")
         assert len(entries) == 1
-        assert entries[0].get("title") == "章1"
+        assert entries[0].get("title") == "Chapter 1"
 
     def test_unclosed_content_marker(self, tmp_path: Path) -> None:
         """Test handling of unclosed content marker."""

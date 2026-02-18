@@ -16,9 +16,9 @@ from pathlib import Path
 
 from PIL import Image
 
-from ocr_engines import EngineResult, TextWithBox, run_all_engines
-from ocr_output import ROVEROutput
-from ocr_alignment import align_texts_character_level, vote_aligned_text
+from src.rover.engines import EngineResult, TextWithBox, run_all_engines
+from src.rover.output import ROVEROutput
+from src.rover.alignment import align_texts_character_level, vote_aligned_text
 
 
 # Engine priority weights for voting (Tesseract excluded from ROVER)
@@ -436,7 +436,7 @@ def run_rover_ocr(
     image: Image.Image | str,
     engines: list[str] | None = None,
     primary_engine: str = "yomitoku",
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
     min_agreement: int = 2,
 ) -> ROVERResult:
     """Run ROVER OCR on a single image.
@@ -445,7 +445,7 @@ def run_rover_ocr(
         image: PIL Image or path to image file.
         engines: List of engine names to use.
         primary_engine: Primary engine (for gap detection).
-        yomitoku_device: Device for Yomitoku.
+        device: Device for Yomitoku.
         min_agreement: Minimum engines that must agree.
 
     Returns:
@@ -458,7 +458,7 @@ def run_rover_ocr(
     engine_results = run_all_engines(
         image,
         engines=engines,
-        yomitoku_device=yomitoku_device,
+        device=device,
     )
 
     # ROVER merge
@@ -474,7 +474,7 @@ def run_rover_batch(
     output_dir: str,
     engines: list[str] | None = None,
     primary_engine: str = "yomitoku",
-    yomitoku_device: str = "cpu",
+    device: str = "cpu",
     min_agreement: int = 2,
 ) -> list[tuple[str, ROVERResult]]:
     """Run ROVER OCR on all pages in a directory.
@@ -484,7 +484,7 @@ def run_rover_batch(
         output_dir: Directory for output files.
         engines: List of engine names to use.
         primary_engine: Primary engine.
-        yomitoku_device: Device for Yomitoku.
+        device: Device for Yomitoku.
         min_agreement: Minimum engines that must agree.
 
     Returns:
@@ -509,7 +509,7 @@ def run_rover_batch(
             engine_results = run_all_engines(
                 img,
                 engines=engines,
-                yomitoku_device=yomitoku_device,
+                device=device,
             )
 
             # Save raw outputs and extract headings from yomitoku
@@ -591,7 +591,7 @@ def main() -> None:
         output_dir=args.output,
         engines=engines,
         primary_engine=args.primary,
-        yomitoku_device=args.device,
+        device=args.device,
         min_agreement=args.min_agreement,
     )
 

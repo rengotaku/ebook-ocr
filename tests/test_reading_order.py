@@ -16,7 +16,7 @@ class TestSortReadingOrderSimple:
         入力: 3つの領域がY座標でバラバラに配置
         期待: Y座標の小さい順（上から下）にソート
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: 3つの領域（Y座標: 300, 100, 200）
         regions = [
@@ -42,7 +42,7 @@ class TestSortReadingOrderSimple:
         入力: 同じY座標の3つの領域がX座標でバラバラに配置
         期待: X座標の小さい順（左から右）にソート
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: 同じ行の3つの領域（X座標: 600, 100, 350）
         # 全て左カラム(center_x < 500)に収まるように配置
@@ -66,7 +66,7 @@ class TestSortReadingOrderSimple:
 
     def test_sort_reading_order_empty_list(self) -> None:
         """空のリストが渡された場合、空のリストを返すことを検証。"""
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange
         regions: list[dict] = []
@@ -82,7 +82,7 @@ class TestSortReadingOrderSimple:
 
     def test_sort_reading_order_single_region(self) -> None:
         """単一領域の場合、そのまま返すことを検証。"""
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange
         regions = [
@@ -116,7 +116,7 @@ class TestSortReadingOrderTwoColumn:
         入力: 右カラムの上部、左カラムの下部、左カラムの上部
         期待: 左上 → 左下 → 右上 の順序
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: 2カラムレイアウト
         # - 右カラム上部 (center_x = 700)
@@ -151,7 +151,7 @@ class TestSortReadingOrderTwoColumn:
         左カラム: Y=200, Y=100, Y=300 → 100, 200, 300
         右カラム: Y=150, Y=50 → 50, 150
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange
         regions = [
@@ -179,7 +179,7 @@ class TestSortReadingOrderTwoColumn:
 
         center_x = 500 の場合、右カラムに分類される
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: center_x がちょうど500の領域
         # bbox = [400, 100, 600, 200] → center_x = 500 → 右カラム
@@ -210,7 +210,7 @@ class TestSortReadingOrderTitlePriority:
         NOTE: research.mdではY座標ソートが主なアルゴリズムだが、
         同一Y座標の場合、TITLE優先のロジックが必要
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: 同じY座標のTITLEとTEXT
         regions = [
@@ -235,7 +235,7 @@ class TestSortReadingOrderTitlePriority:
         - Y座標ソートでは TEXT(Y=100) が先
         - これは正しい動作（Y座標が主ソートキー）
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: TITLEがTEXTより下にある場合
         regions = [
@@ -258,7 +258,7 @@ class TestSortReadingOrderTitlePriority:
 
         典型的なレイアウト: TITLE(上部) → TEXT(下部)
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: 典型的なレイアウト
         regions = [
@@ -286,7 +286,7 @@ class TestRemoveOverlaps:
 
     def test_remove_overlaps_no_overlap(self) -> None:
         """重複がない場合、全ての領域がそのまま返されることを検証。"""
-        from src.reading_order import remove_overlaps
+        from src.layout.reading_order import remove_overlaps
 
         # Arrange: 重複なしの3領域
         regions = [
@@ -305,7 +305,7 @@ class TestRemoveOverlaps:
 
     def test_remove_overlaps_complete_overlap(self) -> None:
         """完全に重複する領域の場合、信頼度の高い方が残ることを検証。"""
-        from src.reading_order import remove_overlaps
+        from src.layout.reading_order import remove_overlaps
 
         # Arrange: 完全に重複する2領域（異なる信頼度）
         regions = [
@@ -330,7 +330,7 @@ class TestRemoveOverlaps:
 
         重複率が高い（例: 50%以上）場合、信頼度の高い方を残す
         """
-        from src.reading_order import remove_overlaps
+        from src.layout.reading_order import remove_overlaps
 
         # Arrange: 50%以上重複する2領域
         # region1: [100, 100, 300, 300] (area = 200*200 = 40000)
@@ -356,7 +356,7 @@ class TestRemoveOverlaps:
 
     def test_remove_overlaps_low_overlap_both_kept(self) -> None:
         """重複率が低い（例: 30%未満）場合、両方残ることを検証。"""
-        from src.reading_order import remove_overlaps
+        from src.layout.reading_order import remove_overlaps
 
         # Arrange: 低重複率の2領域
         # region1: [100, 100, 300, 300] (area = 40000)
@@ -378,7 +378,7 @@ class TestRemoveOverlaps:
 
     def test_remove_overlaps_empty_list(self) -> None:
         """空のリストが渡された場合、空のリストを返すことを検証。"""
-        from src.reading_order import remove_overlaps
+        from src.layout.reading_order import remove_overlaps
 
         # Arrange
         regions: list[dict] = []
@@ -394,7 +394,7 @@ class TestRemoveOverlaps:
 
         例: TITLEとTEXTが重複 → 両方残す（意図的な重複の可能性）
         """
-        from src.reading_order import remove_overlaps
+        from src.layout.reading_order import remove_overlaps
 
         # Arrange: 異なるタイプで重複
         regions = [
@@ -421,7 +421,7 @@ class TestSortReadingOrderEdgeCases:
 
     def test_sort_reading_order_unicode_content_preserved(self) -> None:
         """Unicode文字を含む領域データが保持されることを検証。"""
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: Unicode文字を含む追加フィールド
         regions = [
@@ -450,7 +450,7 @@ class TestSortReadingOrderEdgeCases:
 
     def test_sort_reading_order_immutable_input(self) -> None:
         """入力リストが変更されないことを検証（イミュータビリティ）。"""
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange
         regions = [
@@ -472,7 +472,7 @@ class TestSortReadingOrderEdgeCases:
 
     def test_sort_reading_order_large_page(self) -> None:
         """大きなページサイズでも正しく動作することを検証。"""
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: 4K解像度
         regions = [
@@ -496,7 +496,7 @@ class TestSortReadingOrderEdgeCases:
 
         NOTE: 通常bboxは正の値だが、異常データへの対応を確認
         """
-        from src.reading_order import sort_reading_order
+        from src.layout.reading_order import sort_reading_order
 
         # Arrange: 異常な負の座標（実際には発生しないはずだが）
         regions = [
