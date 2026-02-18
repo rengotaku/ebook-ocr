@@ -38,6 +38,7 @@ def get_analyzer(device: str = "cpu") -> "DocumentAnalyzer":
     global _yomitoku_analyzer
     if _yomitoku_analyzer is None:
         from yomitoku import DocumentAnalyzer
+
         _yomitoku_analyzer = DocumentAnalyzer(
             visualize=False,
             device=device,
@@ -151,6 +152,7 @@ def ocr_page_yomitoku_full(
 
     # Generate markdown (write to temp file then read)
     import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as f:
         temp_path = f.name
 
@@ -165,6 +167,7 @@ def ocr_page_yomitoku_full(
         figures_dir = Path(temp_path).parent / f"{Path(temp_path).stem}_figures"
         if figures_dir.exists():
             import shutil
+
             shutil.rmtree(figures_dir, ignore_errors=True)
 
     return YomitokuResult(
@@ -264,8 +267,8 @@ def save_yomitoku_results(output_dir: str, page_stem: str, results) -> None:
         page_stem: Page filename stem (e.g., "page_0024")
         results: DocumentAnalyzerSchema from yomitoku
     """
-    from pathlib import Path
     import pickle
+    from pathlib import Path
 
     cache_dir = Path(output_dir) / "yomitoku_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -285,8 +288,8 @@ def load_yomitoku_results(output_dir: str, page_stem: str):
     Returns:
         DocumentAnalyzerSchema or None if cache not found
     """
-    from pathlib import Path
     import pickle
+    from pathlib import Path
 
     cache_dir = Path(output_dir) / "yomitoku_cache"
     cache_file = cache_dir / f"{page_stem}.pkl"
@@ -298,11 +301,7 @@ def load_yomitoku_results(output_dir: str, page_stem: str):
         return pickle.load(f)
 
 
-def paragraphs_to_layout(
-    paragraphs: list,
-    figures: list,
-    page_size: tuple[int, int]
-) -> dict:
+def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, int]) -> dict:
     """Convert yomitoku paragraphs and figures to layout.json format.
 
     Args:
@@ -318,38 +317,42 @@ def paragraphs_to_layout(
     # Process paragraphs
     for p in paragraphs:
         # Determine region type based on role
-        if hasattr(p, 'role') and p.role == 'section_headings':
-            region_type = 'TITLE'
+        if hasattr(p, "role") and p.role == "section_headings":
+            region_type = "TITLE"
         else:
-            region_type = 'TEXT'
+            region_type = "TEXT"
 
         # Extract bbox
-        if hasattr(p, 'box') and p.box:
+        if hasattr(p, "box") and p.box:
             bbox = [int(p.box[0]), int(p.box[1]), int(p.box[2]), int(p.box[3])]
         else:
             continue  # Skip paragraphs without box
 
-        regions.append({
-            'type': region_type,
-            'label': 'section_headings' if region_type == 'TITLE' else 'plain text',
-            'bbox': bbox,
-            'confidence': 1.0,  # yomitoku doesn't provide confidence per paragraph
-        })
+        regions.append(
+            {
+                "type": region_type,
+                "label": "section_headings" if region_type == "TITLE" else "plain text",
+                "bbox": bbox,
+                "confidence": 1.0,  # yomitoku doesn't provide confidence per paragraph
+            }
+        )
 
     # Process figures
     for f in figures:
-        if hasattr(f, 'box') and f.box:
+        if hasattr(f, "box") and f.box:
             bbox = [int(f.box[0]), int(f.box[1]), int(f.box[2]), int(f.box[3])]
-            regions.append({
-                'type': 'FIGURE',
-                'label': 'figure',
-                'bbox': bbox,
-                'confidence': 1.0,
-            })
+            regions.append(
+                {
+                    "type": "FIGURE",
+                    "label": "figure",
+                    "bbox": bbox,
+                    "confidence": 1.0,
+                }
+            )
 
     return {
-        'regions': regions,
-        'page_size': list(page_size),
+        "regions": regions,
+        "page_size": list(page_size),
     }
 
 
@@ -375,20 +378,20 @@ def visualize_layout(
 
     # Draw paragraphs
     for p in paragraphs:
-        if not hasattr(p, 'box') or not p.box:
+        if not hasattr(p, "box") or not p.box:
             continue
 
         x1, y1, x2, y2 = [int(v) for v in p.box]
 
         # Determine color based on role
-        if hasattr(p, 'role') and p.role == 'section_headings':
+        if hasattr(p, "role") and p.role == "section_headings":
             color = (0, 0, 255)  # Red for titles
             thickness = 3
-            label = 'section_headings'
+            label = "section_headings"
         else:
             color = (0, 255, 0)  # Green for text
             thickness = 2
-            label = 'text'
+            label = "text"
 
         cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
         cv2.putText(
@@ -403,7 +406,7 @@ def visualize_layout(
 
     # Draw figures
     for f in figures:
-        if not hasattr(f, 'box') or not f.box:
+        if not hasattr(f, "box") or not f.box:
             continue
 
         x1, y1, x2, y2 = [int(v) for v in f.box]
@@ -413,7 +416,7 @@ def visualize_layout(
         cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
         cv2.putText(
             img,
-            'figure',
+            "figure",
             (x1, y1 - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
@@ -443,8 +446,8 @@ def detect_layout_yomitoku(
     Returns:
         Layout dict mapping page filenames to regions
     """
-    from pathlib import Path
     import json
+    from pathlib import Path
 
     pages_path = Path(pages_dir)
     out_path = Path(output_dir)
@@ -468,7 +471,7 @@ def detect_layout_yomitoku(
         # Load and analyze
         cv_img = cv2.imread(str(page_path))
         if cv_img is None:
-            print(f"  → Failed to load image")
+            print("  → Failed to load image")
             continue
 
         results, _, _ = analyzer(cv_img)
@@ -478,15 +481,13 @@ def detect_layout_yomitoku(
         save_yomitoku_results(output_dir, page_path.stem, results)
 
         # Convert to layout format
-        page_layout = paragraphs_to_layout(
-            results.paragraphs,
-            results.figures,
-            (page_width, page_height)
-        )
+        page_layout = paragraphs_to_layout(results.paragraphs, results.figures, (page_width, page_height))
         layout_data[page_name] = page_layout
 
-        print(f"  → Found {len(page_layout['regions'])} regions "
-              f"({len(results.paragraphs)} paragraphs, {len(results.figures)} figures)")
+        print(
+            f"  → Found {len(page_layout['regions'])} regions "
+            f"({len(results.paragraphs)} paragraphs, {len(results.figures)} figures)"
+        )
 
         # Visualize (box反映)
         vis_path = lay_dir / page_name
@@ -497,7 +498,7 @@ def detect_layout_yomitoku(
     with open(layout_file, "w", encoding="utf-8") as f:
         json.dump(layout_data, f, indent=2, ensure_ascii=False)
 
-    print(f"\nLayout detection complete")
+    print("\nLayout detection complete")
     print(f"  Layout: {layout_file}")
     print(f"  Visualizations: {lay_dir}")
 

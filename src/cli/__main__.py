@@ -1,4 +1,5 @@
 """Make src.cli package executable."""
+
 import sys
 
 print("Available CLI commands:", file=sys.stderr)

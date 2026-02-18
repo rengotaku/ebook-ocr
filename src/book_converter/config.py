@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from src.book_converter.models import ExclusionPattern
 
-
 # デフォルト除外パターン（優先度順）
 DEFAULT_EXCLUSION_PATTERNS: list[ExclusionPattern] = [
     # 高優先度: 柱（動的検出）

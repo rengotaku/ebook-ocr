@@ -54,25 +54,25 @@
 
 ### Input
 
-- [ ] T007 前フェーズ出力を読み込み: specs/011-code-refactoring/tasks/ph1-output.md
+- [X] T007 前フェーズ出力を読み込み: specs/011-code-refactoring/tasks/ph1-output.md
 
 ### Implementation
 
-- [ ] T008 [US1] pyproject.toml を作成し、ruff設定を追加:
+- [X] T008 [US1] pyproject.toml を作成し、ruff設定を追加:
   - line-length: 120
   - target-version: "py313"
   - select: ["E", "F", "I", "W"]
-- [ ] T009 [US1] `ruff check src/` を実行して違反を確認
-- [ ] T010 [US1] `ruff check --fix src/` を実行して自動修正可能な違反を修正
-- [ ] T011 [US1] `ruff format src/` を実行してフォーマットを適用
-- [ ] T012 [US1] 残りの手動修正が必要な違反を修正: src/
+- [X] T009 [US1] `ruff check src/` を実行して違反を確認
+- [X] T010 [US1] `ruff check --fix src/` を実行して自動修正可能な違反を修正
+- [X] T011 [US1] `ruff format src/` を実行してフォーマットを適用
+- [X] T012 [US1] 残りの手動修正が必要な違反を修正: src/
 
 ### Verification
 
-- [ ] T013 `ruff check src/` がエラー0件で完了することを確認
-- [ ] T014 `ruff format --check src/` が変更なしで完了することを確認
-- [ ] T015 `make test` で全テストがパスすることを確認
-- [ ] T016 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph2-output.md
+- [X] T013 `ruff check src/` がエラー0件で完了することを確認
+- [X] T014 `ruff format --check src/` が変更なしで完了することを確認
+- [X] T015 `make test` で全テストがパスすることを確認
+- [X] T016 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph2-output.md
 
 **Checkpoint**: ruff check/formatがクリーンな状態
 

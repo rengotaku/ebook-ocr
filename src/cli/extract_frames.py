@@ -1,4 +1,5 @@
 """CLI wrapper for extract_frames."""
+
 from __future__ import annotations
 
 import argparse

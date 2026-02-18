@@ -87,9 +87,7 @@ def consolidate_rover_output(hashdir: str) -> tuple[str, str]:
 
 def main() -> None:
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Consolidate ROVER outputs into book.txt and book.md"
-    )
+    parser = argparse.ArgumentParser(description="Consolidate ROVER outputs into book.txt and book.md")
     parser.add_argument(
         "hashdir",
         help="Output directory (e.g., output/a3f8c2d1e5b7f9c0)",
@@ -99,7 +97,7 @@ def main() -> None:
 
     try:
         text_file, md_file = consolidate_rover_output(hashdir=args.hashdir)
-        print(f"\n✅ Consolidation complete")
+        print("\n✅ Consolidation complete")
         print(f"  book.txt: {text_file}")
         print(f"  book.md:  {md_file}")
     except FileNotFoundError as e:

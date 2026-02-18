@@ -15,7 +15,6 @@ from dataclasses import dataclass
 
 from PIL import Image
 
-
 # Lazy imports for optional dependencies
 _tesseract = None
 _easyocr_reader = None
@@ -28,6 +27,7 @@ def _get_tesseract():
     global _tesseract
     if _tesseract is None:
         import pytesseract
+
         _tesseract = pytesseract
     return _tesseract
 
@@ -37,6 +37,7 @@ def _get_easyocr_reader(lang_list: list[str] | None = None):
     global _easyocr_reader
     if _easyocr_reader is None:
         import easyocr
+
         langs = lang_list or ["ja", "en"]
         _easyocr_reader = easyocr.Reader(langs, gpu=False)
     return _easyocr_reader
@@ -47,8 +48,10 @@ def _get_paddleocr_reader(lang: str = "japan"):
     global _paddleocr_reader
     if _paddleocr_reader is None:
         import logging
+
         logging.getLogger("ppocr").setLevel(logging.WARNING)
         from paddleocr import PaddleOCR
+
         _paddleocr_reader = PaddleOCR(
             lang=lang,
             use_doc_orientation_classify=False,
@@ -64,6 +67,7 @@ def _get_yomitoku_analyzer(device: str = "cpu"):
     global _yomitoku_analyzer
     if _yomitoku_analyzer is None:
         from yomitoku import DocumentAnalyzer
+
         _yomitoku_analyzer = DocumentAnalyzer(
             visualize=False,
             device=device,
@@ -74,6 +78,7 @@ def _get_yomitoku_analyzer(device: str = "cpu"):
 @dataclass
 class TextWithBox:
     """Text with bounding box and confidence."""
+
     text: str
     bbox: tuple[int, int, int, int]  # (x1, y1, x2, y2)
     confidence: float
@@ -87,6 +92,7 @@ class TextWithBox:
 @dataclass
 class EngineResult:
     """Result from a single OCR engine."""
+
     engine: str
     items: list[TextWithBox]
     success: bool
@@ -190,10 +196,7 @@ def _filter_items_by_figures(
     if not figure_bboxes or not result.items:
         return result
 
-    filtered_items = [
-        item for item in result.items
-        if not _is_item_inside_figures(item, figure_bboxes)
-    ]
+    filtered_items = [item for item in result.items if not _is_item_inside_figures(item, figure_bboxes)]
 
     return EngineResult(
         engine=result.engine,
@@ -224,6 +227,7 @@ def run_yomitoku_with_boxes(
     try:
         import cv2
         import numpy as np
+
         analyzer = _get_yomitoku_analyzer(device)
 
         # Convert PIL to cv2 format (BGR)
@@ -237,12 +241,14 @@ def run_yomitoku_with_boxes(
         figure_bboxes: list[tuple[int, int, int, int]] = []
         for fig in results.figures:
             if hasattr(fig, "box") and fig.box:
-                figure_bboxes.append((
-                    int(fig.box[0]),
-                    int(fig.box[1]),
-                    int(fig.box[2]),
-                    int(fig.box[3]),
-                ))
+                figure_bboxes.append(
+                    (
+                        int(fig.box[0]),
+                        int(fig.box[1]),
+                        int(fig.box[2]),
+                        int(fig.box[3]),
+                    )
+                )
 
         # Extract section headings
         headings: list[str] = []
@@ -255,10 +261,7 @@ def run_yomitoku_with_boxes(
                     headings.append(heading_text)
 
         # Filter out words inside figures
-        filtered_words = [
-            w for w in results.words
-            if not _is_word_inside_figures(w, results.figures)
-        ]
+        filtered_words = [w for w in results.words if not _is_word_inside_figures(w, results.figures)]
 
         # Use words for line-level output (not paragraphs)
         items = _cluster_words_to_lines(filtered_words)
@@ -320,13 +323,15 @@ def _cluster_words_to_lines(
             continue
 
         confidence = getattr(word, "rec_score", 1.0)
-        word_data.append({
-            "text": word.content,
-            "bbox": bbox,
-            "y_center": y_center,
-            "x_left": bbox[0],
-            "confidence": confidence,
-        })
+        word_data.append(
+            {
+                "text": word.content,
+                "bbox": bbox,
+                "y_center": y_center,
+                "x_left": bbox[0],
+                "confidence": confidence,
+            }
+        )
 
     if not word_data:
         return []
@@ -367,11 +372,13 @@ def _cluster_words_to_lines(
         # Average confidence
         avg_conf = sum(w["confidence"] for w in line_words) / len(line_words)
 
-        items.append(TextWithBox(
-            text=text,
-            bbox=(x1, y1, x2, y2),
-            confidence=avg_conf,
-        ))
+        items.append(
+            TextWithBox(
+                text=text,
+                bbox=(x1, y1, x2, y2),
+                confidence=avg_conf,
+            )
+        )
 
     return items
 
@@ -417,6 +424,7 @@ def run_paddleocr_with_boxes(
     """
     try:
         import numpy as np
+
         reader = _get_paddleocr_reader(lang)
         img_array = np.array(image)
 
@@ -446,11 +454,13 @@ def run_paddleocr_with_boxes(
 
                     confidence = float(scores[i]) if i < len(scores) else 0.0
 
-                    items.append(TextWithBox(
-                        text=text,
-                        bbox=bbox,
-                        confidence=confidence,
-                    ))
+                    items.append(
+                        TextWithBox(
+                            text=text,
+                            bbox=bbox,
+                            confidence=confidence,
+                        )
+                    )
 
         return EngineResult(engine="paddleocr", items=items, success=True)
     except Exception as e:
@@ -474,12 +484,14 @@ def run_easyocr_with_boxes(
     """
     try:
         import numpy as np
+
         reader = _get_easyocr_reader(lang_list)
         img_array = np.array(image)
 
         # Apply CLAHE preprocessing if enabled
         if apply_preprocessing:
             from ocr_preprocess import apply_clahe
+
             img_array = apply_clahe(img_array)
 
         # EasyOCR returns: [(bbox, text, confidence), ...]
@@ -497,11 +509,13 @@ def run_easyocr_with_boxes(
                 int(max(y_coords)),
             )
 
-            items.append(TextWithBox(
-                text=text,
-                bbox=bbox,
-                confidence=float(confidence),
-            ))
+            items.append(
+                TextWithBox(
+                    text=text,
+                    bbox=bbox,
+                    confidence=float(confidence),
+                )
+            )
 
         return EngineResult(engine="easyocr", items=items, success=True)
     except Exception as e:
@@ -543,11 +557,13 @@ def run_tesseract_with_boxes(
             x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
             bbox = (x, y, x + w, y + h)
 
-            items.append(TextWithBox(
-                text=text,
-                bbox=bbox,
-                confidence=confidence,
-            ))
+            items.append(
+                TextWithBox(
+                    text=text,
+                    bbox=bbox,
+                    confidence=confidence,
+                )
+            )
 
         return EngineResult(engine="tesseract", items=items, success=True)
     except Exception as e:

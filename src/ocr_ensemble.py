@@ -21,10 +21,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Callable
 
 from PIL import Image
-
 
 # Lazy imports for optional dependencies
 _tesseract = None
@@ -38,6 +36,7 @@ def _get_tesseract():
     global _tesseract
     if _tesseract is None:
         import pytesseract
+
         _tesseract = pytesseract
     return _tesseract
 
@@ -47,6 +46,7 @@ def _get_easyocr_reader(lang_list: list[str] | None = None):
     global _easyocr_reader
     if _easyocr_reader is None:
         import easyocr
+
         langs = lang_list or ["ja", "en"]
         _easyocr_reader = easyocr.Reader(langs, gpu=False)
     return _easyocr_reader
@@ -57,9 +57,11 @@ def _get_paddleocr_reader(lang: str = "japan"):
     global _paddleocr_reader
     if _paddleocr_reader is None:
         import logging
+
         # Suppress PaddleOCR verbose logging
         logging.getLogger("ppocr").setLevel(logging.WARNING)
         from paddleocr import PaddleOCR
+
         # PaddleOCR 3.x: disable oneDNN to avoid PIR conversion bug
         # See: https://github.com/PaddlePaddle/PaddleOCR/issues/17539
         _paddleocr_reader = PaddleOCR(
@@ -77,6 +79,7 @@ def _get_yomitoku_analyzer(device: str = "cpu"):
     global _yomitoku_analyzer
     if _yomitoku_analyzer is None:
         from yomitoku import DocumentAnalyzer
+
         _yomitoku_analyzer = DocumentAnalyzer(
             visualize=False,
             device=device,
@@ -87,6 +90,7 @@ def _get_yomitoku_analyzer(device: str = "cpu"):
 @dataclass
 class EngineResult:
     """Result from a single OCR engine."""
+
     engine: str
     text: str
     success: bool
@@ -96,6 +100,7 @@ class EngineResult:
 @dataclass
 class EnsembleResult:
     """Result from ensemble OCR processing."""
+
     merged: str  # Final merged text
     results: dict[str, str]  # engine_name -> text
     similarity_matrix: dict[str, dict[str, float]]  # pairwise similarities
@@ -124,6 +129,7 @@ def ocr_easyocr(
     """Run EasyOCR on an image."""
     try:
         import numpy as np
+
         reader = _get_easyocr_reader(lang_list)
         # Convert PIL to numpy array
         img_array = np.array(image)
@@ -149,6 +155,7 @@ def ocr_paddleocr(
     """
     try:
         import numpy as np
+
         reader = _get_paddleocr_reader(lang)
         # Convert PIL to numpy array
         img_array = np.array(image)
@@ -187,6 +194,7 @@ def ocr_yomitoku_engine(
     try:
         import cv2
         import numpy as np
+
         analyzer = _get_yomitoku_analyzer(device)
 
         # Convert PIL to cv2 format (BGR)
@@ -215,6 +223,7 @@ def ocr_yomitoku_engine(
 @dataclass
 class TextWithBox:
     """Text with bounding box information."""
+
     text: str
     bbox: list[int]  # [x1, y1, x2, y2]
     confidence: float = 0.0
@@ -235,6 +244,7 @@ def ocr_paddleocr_with_boxes(
     """
     try:
         import numpy as np
+
         reader = _get_paddleocr_reader(lang)
         img_array = np.array(image)
 
@@ -259,11 +269,13 @@ def ocr_paddleocr_with_boxes(
 
                     confidence = scores[i] if i < len(scores) else 0.0
 
-                    items.append(TextWithBox(
-                        text=text,
-                        bbox=bbox,
-                        confidence=confidence,
-                    ))
+                    items.append(
+                        TextWithBox(
+                            text=text,
+                            bbox=bbox,
+                            confidence=confidence,
+                        )
+                    )
 
         return items, True, None
     except Exception as e:
@@ -292,18 +304,18 @@ def is_garbage(text: str, min_length: int = 50, ja_ratio_threshold: float = 0.1)
         return True
 
     # Rule 1: Same character repeated 10+ times
-    if re.search(r'(.)\1{9,}', text):
+    if re.search(r"(.)\1{9,}", text):
         return True
 
     # Rule 2: Japanese character ratio too low (only for longer texts)
     if len(text) >= min_length:
-        ja_chars = len(re.findall(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]', text))
+        ja_chars = len(re.findall(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]", text))
         ja_ratio = ja_chars / len(text)
         if ja_ratio < ja_ratio_threshold:
             return True
 
     # Rule 3: Too many consecutive special characters
-    if re.search(r'[^\w\s\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]{10,}', text):
+    if re.search(r"[^\w\s\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]{10,}", text):
         return True
 
     return False
@@ -448,20 +460,13 @@ def vote_best_result(
     # Calculate average agreement score for each engine
     scores: dict[str, float] = {}
     for engine in engines:
-        other_sims = [
-            similarity_matrix[engine][other]
-            for other in engines
-            if other != engine
-        ]
+        other_sims = [similarity_matrix[engine][other] for other in engines if other != engine]
         scores[engine] = sum(other_sims) / len(other_sims) if other_sims else 0
 
     # Count "votes" - how many engines agree with each
     votes: dict[str, int] = {}
     for engine in engines:
-        votes[engine] = sum(
-            1 for other in engines
-            if other != engine and similarity_matrix[engine][other] >= threshold
-        )
+        votes[engine] = sum(1 for other in engines if other != engine and similarity_matrix[engine][other] >= threshold)
 
     # Find winner
     max_votes = max(votes.values()) if votes else 0
@@ -658,9 +663,7 @@ def main() -> None:
     """CLI entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Ensemble OCR (Yomitoku + PaddleOCR + Tesseract + EasyOCR)"
-    )
+    parser = argparse.ArgumentParser(description="Ensemble OCR (Yomitoku + PaddleOCR + Tesseract + EasyOCR)")
     parser.add_argument("pages_dir", help="Directory containing page images")
     parser.add_argument("-o", "--output", default="ocr_texts", help="Output directory")
     parser.add_argument(
@@ -674,16 +677,12 @@ def main() -> None:
         choices=["cpu", "cuda"],
         help="Device for Yomitoku OCR (default: cpu)",
     )
-    parser.add_argument(
-        "--tesseract-lang", default="jpn+eng", help="Tesseract language code(s)"
-    )
-    parser.add_argument(
-        "--easyocr-langs", default="ja,en", help="EasyOCR languages (comma-separated)"
-    )
+    parser.add_argument("--tesseract-lang", default="jpn+eng", help="Tesseract language code(s)")
+    parser.add_argument("--easyocr-langs", default="ja,en", help="EasyOCR languages (comma-separated)")
     args = parser.parse_args()
 
     engines = [e.strip() for e in args.engines.split(",")]
-    easyocr_langs = [l.strip() for l in args.easyocr_langs.split(",")]
+    easyocr_langs = [lang.strip() for lang in args.easyocr_langs.split(",")]
 
     run_ensemble_ocr(
         pages_dir=args.pages_dir,

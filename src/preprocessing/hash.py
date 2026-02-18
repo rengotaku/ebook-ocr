@@ -77,9 +77,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Compute video file hash")
     parser.add_argument("video", help="Input video file path")
-    parser.add_argument(
-        "--prefix-only", action="store_true", help="Output only the hash prefix"
-    )
+    parser.add_argument("--prefix-only", action="store_true", help="Output only the hash prefix")
     args = parser.parse_args()
 
     if not Path(args.video).exists():

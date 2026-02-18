@@ -1,4 +1,5 @@
 """CLI wrapper for split_spreads."""
+
 from __future__ import annotations
 
 import argparse

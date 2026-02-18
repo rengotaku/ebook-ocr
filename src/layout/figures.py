@@ -28,14 +28,14 @@ HF_MODEL_FILE = "doclayout_yolo_docstructbench_imgsz1024.pt"
 
 # Colors for visualization (RGB)
 TYPE_COLORS = {
-    "TITLE": (255, 0, 0),       # Red
-    "TEXT": (0, 128, 0),        # Green
-    "ABANDON": (128, 128, 128), # Gray
-    "FIGURE": (0, 0, 255),      # Blue
-    "CAPTION": (255, 165, 0),   # Orange
-    "TABLE": (128, 0, 128),     # Purple
+    "TITLE": (255, 0, 0),  # Red
+    "TEXT": (0, 128, 0),  # Green
+    "ABANDON": (128, 128, 128),  # Gray
+    "FIGURE": (0, 0, 255),  # Blue
+    "CAPTION": (255, 165, 0),  # Orange
+    "TABLE": (128, 0, 128),  # Purple
     "FOOTNOTE": (0, 128, 128),  # Teal
-    "FORMULA": (255, 0, 255),   # Magenta
+    "FORMULA": (255, 0, 255),  # Magenta
 }
 
 
@@ -134,7 +134,11 @@ def detect_figures(
     for i, page_path in enumerate(pages, 1):
         print(f"Detecting layout: page {i}/{len(pages)} ({page_path.name})")
         results = model.predict(
-            str(page_path), imgsz=1024, conf=min_confidence, device="cpu", verbose=False,
+            str(page_path),
+            imgsz=1024,
+            conf=min_confidence,
+            device="cpu",
+            verbose=False,
         )
 
         page_name = page_path.name
@@ -169,13 +173,15 @@ def detect_figures(
                 cropped = img.crop(bbox)
                 cropped.save(crop_path)
 
-                regions.append({
-                    "type": fig_type,
-                    "label": cls_name,
-                    "bbox": bbox,
-                    "confidence": round(conf, 3),
-                    "cropped_path": f"figures/{crop_name}",
-                })
+                regions.append(
+                    {
+                        "type": fig_type,
+                        "label": cls_name,
+                        "bbox": bbox,
+                        "confidence": round(conf, 3),
+                        "cropped_path": f"figures/{crop_name}",
+                    }
+                )
 
         # Save visualization with bounding boxes
         if regions:

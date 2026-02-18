@@ -129,9 +129,7 @@ def split_spread_pages(
 
         if is_spread_image(img, aspect_ratio_threshold):
             # Split into left and right
-            left_page, right_page = split_spread(
-                img, overlap_px, left_trim_pct, right_trim_pct
-            )
+            left_page, right_page = split_spread(img, overlap_px, left_trim_pct, right_trim_pct)
 
             # Generate output names: page_0001.png → page_0001_L.png, page_0001_R.png
             stem = page_path.stem

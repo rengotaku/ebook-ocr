@@ -15,6 +15,7 @@ from src.book_converter.models import TocEntry as ModelTocEntry
 # Optional requests import for Ollama API
 try:
     import requests
+
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
@@ -56,6 +57,19 @@ def _convert_level_to_int(level_str: str) -> int:
     return level_map.get(level_str.lower(), 1)
 
 
+# System prompt for single TOC entry classification
+SYSTEM_PROMPT = """You are a TOC (Table of Contents) entry classifier.
+
+Classify the TOC entry level based on its number format:
+- "chapter": Single number or "Chapter N" (e.g., "1", "Chapter 1", "第1章")
+- "section": Two-part number (e.g., "2.1", "3.2")
+- "subsection": Three+ part number (e.g., "2.1.1", "2.1.1.1")
+- "other": No hierarchical number (Episode, Column, etc.)
+
+Return ONLY a JSON object:
+{"level": "section", "number": "2.1", "title": "SLOを理解するための4つの要素"}
+"""
+
 # System prompt for batch TOC classification
 BATCH_SYSTEM_PROMPT = """You are a TOC (Table of Contents) parser and classifier.
 
@@ -88,7 +102,9 @@ IMPORTANT:
 """
 
 
-def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", preserve_newlines: bool = False) -> list[ModelTocEntry]:
+def classify_toc_batch_with_llm(
+    toc_text: str, model: str = "gpt-oss:20b", preserve_newlines: bool = False
+) -> list[ModelTocEntry]:
     """Classify entire TOC text using LLM (batch processing).
 
     Args:
@@ -114,7 +130,7 @@ def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", prese
         # Call Ollama API with batch prompt (without JSON format to allow arrays)
         messages = [
             {"role": "system", "content": BATCH_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Parse this TOC:\n\n{toc_text}"}
+            {"role": "user", "content": f"Parse this TOC:\n\n{toc_text}"},
         ]
 
         response = _call_ollama_api(model, messages, use_json_format=False)
@@ -124,7 +140,8 @@ def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", prese
 
         # Extract JSON array from response (may have surrounding text)
         import re
-        json_match = re.search(r'\[[\s\S]*\]', response)
+
+        json_match = re.search(r"\[[\s\S]*\]", response)
         if not json_match:
             return []
 
@@ -141,12 +158,14 @@ def classify_toc_batch_with_llm(toc_text: str, model: str = "gpt-oss:20b", prese
                 continue
 
             level_str = entry_dict.get("level", "other")
-            results.append(ModelTocEntry(
-                text=entry_dict.get("title", ""),
-                level=_convert_level_to_int(level_str),
-                number=entry_dict.get("number", ""),
-                page=""
-            ))
+            results.append(
+                ModelTocEntry(
+                    text=entry_dict.get("title", ""),
+                    level=_convert_level_to_int(level_str),
+                    number=entry_dict.get("number", ""),
+                    page="",
+                )
+            )
 
         return results
 
@@ -179,7 +198,7 @@ def classify_toc_entry_with_llm(entry_text: str, model: str = "gpt-oss:20b") -> 
         # Call Ollama API
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Classify this TOC entry: '{entry_text}'"}
+            {"role": "user", "content": f"Classify this TOC entry: '{entry_text}'"},
         ]
 
         response = _call_ollama_api(model, messages)
@@ -195,7 +214,7 @@ def classify_toc_entry_with_llm(entry_text: str, model: str = "gpt-oss:20b") -> 
             text=result.get("title", entry_text),
             level=_convert_level_to_int(level_str),
             number=result.get("number", ""),
-            page=""
+            page="",
         )
 
     except (json.JSONDecodeError, KeyError, Exception):
@@ -226,7 +245,7 @@ def _call_ollama_api(model: str, messages: list[dict], use_json_format: bool = F
             "options": {
                 "temperature": 0.0,  # Deterministic output
                 "top_p": 1.0,
-            }
+            },
         }
 
         # Only use format: json for single object responses
