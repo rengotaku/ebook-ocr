@@ -81,7 +81,9 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT optional)
 	@$(MAKE) --no-print-directory run-ocr HASHDIR="$(HASHDIR)"
 	@echo "=== Step 5: Consolidate ==="
 	@$(MAKE) --no-print-directory consolidate HASHDIR="$(HASHDIR)"
-	@echo "=== Done: $(HASHDIR)/book.md ==="
+	@echo "=== Step 6: Convert to XML ==="
+	@$(MAKE) --no-print-directory converter INPUT_MD="$(HASHDIR)/book.md" OUTPUT_XML="$(HASHDIR)/book.xml"
+	@echo "=== Done: $(HASHDIR)/book.xml ==="
 
 # === Legacy Targets (for backward compatibility) ===
 
