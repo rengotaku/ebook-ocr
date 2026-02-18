@@ -37,12 +37,12 @@
 
 **Purpose**: 現在の実装を確認し、変更の準備を行う
 
-- [ ] T001 現在のpyproject.tomlの有無を確認（存在しない場合は新規作成対象）
-- [ ] T002 [P] 分割対象ファイル src/ocr_ensemble.py の構造を分析（699行）
-- [ ] T003 [P] 分割対象ファイル src/rover/engines.py の構造を分析（613行）
-- [ ] T004 [P] 既存テストを確認: tests/
-- [ ] T005 `make test` を実行して現在のテスト状態を確認
-- [ ] T006 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph1-output.md
+- [X] T001 現在のpyproject.tomlの有無を確認（存在しない場合は新規作成対象）
+- [X] T002 [P] 分割対象ファイル src/ocr_ensemble.py の構造を分析（699行）
+- [X] T003 [P] 分割対象ファイル src/rover/engines.py の構造を分析（613行）
+- [X] T004 [P] 既存テストを確認: tests/
+- [X] T005 `make test` を実行して現在のテスト状態を確認
+- [X] T006 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph1-output.md
 
 ---
 
