@@ -160,22 +160,22 @@
 
 ### Input
 
-- [ ] T044 セットアップ分析を読み込み: specs/011-code-refactoring/tasks/ph1-output.md
-- [ ] T045 前フェーズ出力を読み込み: specs/011-code-refactoring/tasks/ph4-output.md
+- [X] T044 セットアップ分析を読み込み: specs/011-code-refactoring/tasks/ph1-output.md
+- [X] T045 前フェーズ出力を読み込み: specs/011-code-refactoring/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T046 [P] .claude/agents/phase-executor.md にruff実行手順を追加:
+- [X] T046 [P] .claude/agents/phase-executor.md にruff実行手順を追加:
   - コミット前に `ruff check --fix src/ && ruff format src/` を実行
-- [ ] T047 [P] .claude/agents/tdd-generator.md にruff実行手順を追加:
+- [X] T047 [P] .claude/agents/tdd-generator.md にruff実行手順を追加:
   - コミット前に `ruff check --fix src/ && ruff format src/` を実行
-- [ ] T048 quickstart.md の検証を実行
+- [X] T048 quickstart.md の検証を実行
 
 ### Verification
 
-- [ ] T049 `make test` で全テストがパスすることを確認
-- [ ] T050 `ruff check src/` がエラー0件で完了することを確認
-- [ ] T051 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph5-output.md
+- [X] T049 `make test` で全テストがパスすることを確認
+- [X] T050 `ruff check src/` がエラー0件で完了することを確認
+- [X] T051 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph5-output.md
 
 ---
 
