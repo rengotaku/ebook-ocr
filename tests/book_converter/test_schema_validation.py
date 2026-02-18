@@ -13,9 +13,10 @@ but strict XSD validation would fail. This test validates the semantic structure
 rather than enforcing strict XSD compliance.
 """
 
-import pytest
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
+
+import pytest
 
 
 class TestXMLSchemaStructure:

@@ -11,11 +11,11 @@ Test coverage:
 
 from __future__ import annotations
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import numpy as np
-from PIL import Image
+from unittest.mock import Mock, patch
 
+import numpy as np
+import pytest
+from PIL import Image
 
 # =============================================================================
 # T047: yomitoku words信頼度取得テスト
@@ -81,7 +81,7 @@ class TestYomitokuWordsConfidence:
 
         assert all(item.confidence > 0 for item in result.items)
 
-    @patch("src.rover.engines._get_yomitoku_analyzer")
+    @patch("src.rover.engines.runners._get_yomitoku_analyzer")
     def test_yomitoku_with_boxes_extracts_confidence_from_words(self, mock_get_analyzer):
         """run_yomitoku_with_boxesがwordsから信頼度を取得する"""
         from src.rover.engines import run_yomitoku_with_boxes
@@ -195,7 +195,7 @@ class TestEasyocrWithCLAHE:
         expected_y_center = (100 + 150) / 2.0
         assert item.y_center == expected_y_center
 
-    @patch("src.rover.engines._get_easyocr_reader")
+    @patch("src.rover.engines.runners._get_easyocr_reader")
     def test_easyocr_with_boxes_basic(self, mock_get_reader):
         """run_easyocr_with_boxesが基本的に動作する"""
         from src.rover.engines import run_easyocr_with_boxes
@@ -221,8 +221,9 @@ class TestEasyocrWithCLAHE:
 
     def test_easyocr_apply_preprocessing_parameter_exists(self):
         """apply_preprocessing パラメータが存在することを確認"""
-        from src.rover.engines import run_easyocr_with_boxes
         import inspect
+
+        from src.rover.engines import run_easyocr_with_boxes
 
         # Check function signature
         sig = inspect.signature(run_easyocr_with_boxes)
@@ -233,7 +234,7 @@ class TestEasyocrWithCLAHE:
         # This is intentional for RED phase
         assert "apply_preprocessing" in params or True  # Placeholder for RED
 
-    @patch("src.rover.engines._get_easyocr_reader")
+    @patch("src.rover.engines.runners._get_easyocr_reader")
     @patch("src.ocr_preprocess.apply_clahe")
     def test_easyocr_with_clahe_preprocessing(self, mock_clahe, mock_get_reader):
         """CLAHE前処理が適用される (apply_preprocessing=True)"""
@@ -261,7 +262,7 @@ class TestEasyocrWithCLAHE:
             # Expected in RED phase - parameter doesn't exist yet
             pytest.skip("apply_preprocessing parameter not implemented yet")
 
-    @patch("src.rover.engines._get_easyocr_reader")
+    @patch("src.rover.engines.runners._get_easyocr_reader")
     def test_easyocr_without_clahe_preprocessing(self, mock_get_reader):
         """CLAHE前処理なし (apply_preprocessing=False)"""
         from src.rover.engines import run_easyocr_with_boxes
@@ -310,8 +311,9 @@ class TestRunAllEngines:
         """デフォルトエンジンリストからtesseractが除外されている"""
         # Note: This test will fail until implementation is updated
         # Current default includes tesseract
-        from src.rover.engines import run_all_engines
         import inspect
+
+        from src.rover.engines import run_all_engines
 
         # Check default value in signature
         sig = inspect.signature(run_all_engines)
@@ -323,8 +325,9 @@ class TestRunAllEngines:
 
     def test_run_all_engines_accepts_engine_list(self):
         """エンジンリストを指定可能"""
-        from src.rover.engines import run_all_engines
         import inspect
+
+        from src.rover.engines import run_all_engines
 
         sig = inspect.signature(run_all_engines)
         assert "engines" in sig.parameters
@@ -336,7 +339,7 @@ class TestRunAllEngines:
         self, mock_easyocr, mock_paddle, mock_yomitoku
     ):
         """指定したエンジンのみが実行される"""
-        from src.rover.engines import run_all_engines, EngineResult
+        from src.rover.engines import EngineResult, run_all_engines
 
         # Mock return values
         mock_yomitoku.return_value = EngineResult(

@@ -88,40 +88,40 @@
 
 ### Input
 
-- [ ] T017 セットアップ分析を読み込み: specs/011-code-refactoring/tasks/ph1-output.md
-- [ ] T018 前フェーズ出力を読み込み: specs/011-code-refactoring/tasks/ph2-output.md
+- [X] T017 セットアップ分析を読み込み: specs/011-code-refactoring/tasks/ph1-output.md
+- [X] T018 前フェーズ出力を読み込み: specs/011-code-refactoring/tasks/ph2-output.md
 
 ### Implementation (ocr_ensemble.py 分割)
 
-- [ ] T019 [P] [US3] src/ocr_ensemble/ ディレクトリを作成
-- [ ] T020 [P] [US3] src/ocr_ensemble/models.py を作成（EngineResult, EnsembleResult, TextWithBox）
-- [ ] T021 [P] [US3] src/ocr_ensemble/engines.py を作成（_get_* + ocr_* 関数）
-- [ ] T022 [P] [US3] src/ocr_ensemble/voting.py を作成（is_garbage, calculate_similarity, merge_by_voting等）
-- [ ] T023 [US3] src/ocr_ensemble/__init__.py を作成（公開API re-export + ocr_ensemble, run_ensemble_ocr, main）
-- [ ] T024 [US3] 旧 src/ocr_ensemble.py を削除
+- [X] T019 [P] [US3] src/ocr_ensemble/ ディレクトリを作成
+- [X] T020 [P] [US3] src/ocr_ensemble/models.py を作成（EngineResult, EnsembleResult, TextWithBox）
+- [X] T021 [P] [US3] src/ocr_ensemble/engines.py を作成（_get_* + ocr_* 関数）
+- [X] T022 [P] [US3] src/ocr_ensemble/voting.py を作成（is_garbage, calculate_similarity, merge_by_voting等）
+- [X] T023 [US3] src/ocr_ensemble/__init__.py を作成（公開API re-export + ocr_ensemble, run_ensemble_ocr, main）
+- [X] T024 [US3] 旧 src/ocr_ensemble.py を削除
 
 ### Implementation (rover/engines.py 分割)
 
-- [ ] T025 [P] [US3] src/rover/engines/ ディレクトリを作成
-- [ ] T026 [P] [US3] src/rover/engines/core.py を作成（_get_*, TextWithBox, EngineResult, フィルタリング関数）
-- [ ] T027 [P] [US3] src/rover/engines/runners.py を作成（run_*_with_boxes, run_all_engines）
-- [ ] T028 [US3] src/rover/engines/__init__.py を作成（公開API re-export）
-- [ ] T029 [US3] 旧 src/rover/engines.py を削除
+- [X] T025 [P] [US3] src/rover/engines/ ディレクトリを作成
+- [X] T026 [P] [US3] src/rover/engines/core.py を作成（_get_*, TextWithBox, EngineResult, フィルタリング関数）
+- [X] T027 [P] [US3] src/rover/engines/runners.py を作成（run_*_with_boxes, run_all_engines）
+- [X] T028 [US3] src/rover/engines/__init__.py を作成（公開API re-export）
+- [X] T029 [US3] 旧 src/rover/engines.py を削除
 
 ### Import更新
 
-- [ ] T030 [US3] 内部import文を更新: src/rover/*.py（engines.pyを参照する箇所）
-- [ ] T031 [US3] 内部import文を更新: src/cli/*.py（ocr_ensemble, rover/enginesを参照する箇所）
-- [ ] T032 [US3] テストのimport文を更新: tests/
+- [X] T030 [US3] 内部import文を更新: src/rover/*.py（engines.pyを参照する箇所）
+- [X] T031 [US3] 内部import文を更新: src/cli/*.py（ocr_ensemble, rover/enginesを参照する箇所）
+- [X] T032 [US3] テストのimport文を更新: tests/
 
 ### Verification
 
-- [ ] T033 `ruff check src/` がエラー0件で完了することを確認
-- [ ] T034 `ruff format --check src/` が変更なしで完了することを確認
-- [ ] T035 `make test` で全テストがパスすることを確認
-- [ ] T036 src/ocr_ensemble/ 配下の各ファイルが600行以下であることを確認
-- [ ] T037 src/rover/engines/ 配下の各ファイルが600行以下であることを確認
-- [ ] T038 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph3-output.md
+- [X] T033 `ruff check src/` がエラー0件で完了することを確認
+- [X] T034 `ruff format --check src/` が変更なしで完了することを確認
+- [X] T035 `make test` で全テストがパスすることを確認
+- [X] T036 src/ocr_ensemble/ 配下の各ファイルが600行以下であることを確認
+- [X] T037 src/rover/engines/ 配下の各ファイルが600行以下であることを確認
+- [X] T038 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph3-output.md
 
 **Checkpoint**: ファイル分割完了、全テストパス、公開API維持
 

@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = PROJECT_ROOT / "src"
 REQUIREMENTS_TXT = PROJECT_ROOT / "requirements.txt"
@@ -37,7 +36,7 @@ class TestNoLegacyOcrImport:
                         violations.append(f"{py_file.name}:{i}: {line.strip()}")
 
         assert violations == [], (
-            f"Legacy ocr.py imports found:\n" + "\n".join(violations)
+            "Legacy ocr.py imports found:\n" + "\n".join(violations)
         )
 
     def test_legacy_ocr_module_deleted(self) -> None:
@@ -86,5 +85,5 @@ class TestNoPrivateCrossImports:
                     violations.append(f"{py_file.name}:{i}: {line.strip()}")
 
         assert violations == [], (
-            f"Private cross-imports found:\n" + "\n".join(violations)
+            "Private cross-imports found:\n" + "\n".join(violations)
         )

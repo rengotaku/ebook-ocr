@@ -15,10 +15,9 @@ import pytest
 from src.rover.alignment import (
     AlignedPosition,
     align_texts_character_level,
-    weighted_vote_character,
     vote_aligned_text,
+    weighted_vote_character,
 )
-
 
 # =============================================================================
 # T028: 文字レベルアライメントテスト (align_texts_character_level)

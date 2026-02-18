@@ -10,8 +10,6 @@ Test coverage:
 from __future__ import annotations
 
 import numpy as np
-import pytest
-
 
 # =============================================================================
 # T046: CLAHE前処理テスト (apply_clahe)

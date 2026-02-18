@@ -11,8 +11,6 @@ Category B (Keep): Error recovery fallbacks - NOT TESTED HERE
 
 import inspect
 
-import pytest
-
 
 class TestEnginePriorityFallback:
     """ENGINE_PRIORITY["FALLBACK"] should be renamed to "DEFAULT"."""

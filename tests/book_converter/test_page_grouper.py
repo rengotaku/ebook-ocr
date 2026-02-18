@@ -10,7 +10,6 @@ from xml.etree import ElementTree as ET
 import pytest
 
 from src.book_converter.page_grouper import (
-    SectionNumber,
     TOCEntry,
     extract_section_from_heading,
     extract_section_from_page_metadata,
@@ -19,7 +18,6 @@ from src.book_converter.page_grouper import (
     parse_section_number,
     parse_toc,
 )
-
 
 # =============================================================================
 # Helper Functions for Phase 7 (page comments instead of page tags)

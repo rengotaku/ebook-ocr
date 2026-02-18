@@ -11,8 +11,6 @@ Phase 4の実装が完了するまで、これらのテストはFAILする（RED
 
 import importlib
 
-import pytest
-
 
 class TestNewPackageStructure:
     """新パッケージ構造がインポート可能であることを検証するテスト."""

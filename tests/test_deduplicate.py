@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
 from src.preprocessing.deduplicate import deduplicate_frames
@@ -40,8 +39,9 @@ class TestDeduplicateDifferentImages:
 
     def test_deduplicate_different_images(self, tmp_path: Path) -> None:
         """十分に異なる画像を3つ作成し、全てが保持されることを検証。"""
-        from PIL import ImageDraw
         import random
+
+        from PIL import ImageDraw
 
         frame_dir = tmp_path / "frames"
         frame_dir.mkdir()

@@ -5,18 +5,17 @@ Tests for Phase 2: User Story 1 - TTS Page Navigation and Audio Announcement
 - T013: PageAnnouncement XML conversion test (<pageAnnouncement>)
 """
 
-import pytest
 from xml.etree.ElementTree import Element, tostring
 
+from src.book_converter.models import (
+    Content,
+    Heading,
+    Page,
+    PageAnnouncement,
+)
 from src.book_converter.transformer import (
     transform_page,
     transform_page_announcement,
-)
-from src.book_converter.models import (
-    Page,
-    PageAnnouncement,
-    Content,
-    Heading,
 )
 
 
@@ -353,8 +352,8 @@ class TestTransformContent:
 
     def test_transform_content_with_paragraph(self) -> None:
         """段落を含むコンテンツを変換"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="本文テキストです。"),)
@@ -368,8 +367,8 @@ class TestTransformContent:
 
     def test_transform_content_with_list(self) -> None:
         """リストを含むコンテンツを変換"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import List
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(List(items=("項目1", "項目2", "項目3")),)
@@ -387,8 +386,8 @@ class TestTransformContent:
 
     def test_transform_content_mixed_elements(self) -> None:
         """見出し、段落、リストが混在するコンテンツ"""
+        from src.book_converter.models import List, Paragraph
         from src.book_converter.transformer import transform_content
-        from src.book_converter.models import Paragraph, List
 
         content = Content(
             elements=(
@@ -423,8 +422,8 @@ class TestTransformContent:
 
     def test_transform_content_preserves_element_order(self) -> None:
         """要素の順序を保持"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(
@@ -449,8 +448,8 @@ class TestTransformContentContinued:
 
     def test_content_with_continued_true(self) -> None:
         """continued=trueのコンテンツを変換"""
-        from src.book_converter.transformer import transform_content_with_continued
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_content_with_continued
 
         content = Content(
             elements=(Paragraph(text="継続する本文"),)
@@ -462,8 +461,8 @@ class TestTransformContentContinued:
 
     def test_content_with_continued_false(self) -> None:
         """continued=falseの場合は属性なし"""
-        from src.book_converter.transformer import transform_content_with_continued
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_content_with_continued
 
         content = Content(
             elements=(Paragraph(text="通常の本文"),)
@@ -501,8 +500,8 @@ class TestTransformContentContinued:
 
     def test_continued_paragraph_in_content(self) -> None:
         """ページ跨ぎの段落をXMLで表現"""
-        from src.book_converter.transformer import transform_content_with_continued
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_content_with_continued
 
         # ページの先頭で前ページからの継続を示す
         content = Content(
@@ -520,8 +519,8 @@ class TestTransformContentContinued:
 
     def test_continued_heading_spanning_pages(self) -> None:
         """見出しの後に続くページ"""
-        from src.book_converter.transformer import transform_content_with_continued
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_content_with_continued
 
         # 前ページで見出しが表示され、このページで本文が続く場合
         content = Content(
@@ -545,8 +544,8 @@ class TestTransformFigure:
 
     def test_transform_figure_basic(self) -> None:
         """基本的な図をXMLに変換"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(path="images/fig1.png")
         element = transform_figure(figure)
@@ -556,8 +555,8 @@ class TestTransformFigure:
 
     def test_transform_figure_with_caption(self) -> None:
         """キャプション付きの図を変換"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(
             path="chart.png",
@@ -569,8 +568,8 @@ class TestTransformFigure:
 
     def test_transform_figure_with_marker(self) -> None:
         """マーカー付きの図を変換"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(
             path="diagram.png",
@@ -582,8 +581,8 @@ class TestTransformFigure:
 
     def test_transform_figure_no_read_aloud_attribute(self) -> None:
         """図にreadAloud属性は出力されない"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(path="test.png")
         element = transform_figure(figure)
@@ -593,8 +592,8 @@ class TestTransformFigure:
 
     def test_transform_figure_returns_element(self) -> None:
         """戻り値はElement型"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(path="test.png")
         element = transform_figure(figure)
@@ -603,8 +602,8 @@ class TestTransformFigure:
 
     def test_transform_figure_full(self) -> None:
         """全属性を持つ図を変換"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(
             path="images/architecture.png",
@@ -620,8 +619,8 @@ class TestTransformFigure:
 
     def test_transform_figure_xml_serialization(self) -> None:
         """XMLにシリアライズ可能"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(
             path="test.png",
@@ -636,8 +635,8 @@ class TestTransformFigure:
 
     def test_transform_figure_self_closing(self) -> None:
         """図要素は子要素を持たない（自己終了タグ）"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(path="large_diagram.png")
         element = transform_figure(figure)
@@ -647,8 +646,8 @@ class TestTransformFigure:
 
     def test_transform_figure_preserves_unicode(self) -> None:
         """Unicode文字を保持"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(
             path="日本語/図表.png",
@@ -666,8 +665,8 @@ class TestTransformPageMetadata:
 
     def test_transform_page_metadata_basic(self) -> None:
         """基本的なページメタデータをXMLに変換"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(
             text="3 / 7",
@@ -683,8 +682,8 @@ class TestTransformPageMetadata:
 
     def test_transform_page_metadata_section_page(self) -> None:
         """section-pageタイプを変換"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(
             text="1.2節 2 / 5",
@@ -699,8 +698,8 @@ class TestTransformPageMetadata:
 
     def test_transform_page_metadata_unknown_type(self) -> None:
         """unknownタイプを変換"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(
             text="??? 1 / 1",
@@ -714,8 +713,8 @@ class TestTransformPageMetadata:
 
     def test_transform_page_metadata_returns_element(self) -> None:
         """戻り値はElement型"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(text="1 / 5", current=1, total=5)
         element = transform_page_metadata(metadata)
@@ -732,8 +731,8 @@ class TestTransformPageMetadata:
 
     def test_transform_page_metadata_with_section_name(self) -> None:
         """セクション名を含むメタデータを変換"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(
             text="はじめに 1 / 3",
@@ -751,8 +750,8 @@ class TestTransformPageMetadata:
 
     def test_transform_page_metadata_read_aloud_false(self) -> None:
         """pageMetadataはreadAloud='false'"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(text="1 / 5", current=1, total=5)
         element = transform_page_metadata(metadata)
@@ -762,8 +761,8 @@ class TestTransformPageMetadata:
 
     def test_transform_page_metadata_xml_serialization(self) -> None:
         """XMLにシリアライズ可能"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(
             text="第1章 5 / 20",
@@ -781,8 +780,8 @@ class TestTransformPageMetadata:
 
     def test_transform_page_metadata_preserves_original_text(self) -> None:
         """元のテキストを保持"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         original_text = "まえがき  2  /  10"
         metadata = PageMetadata(
@@ -802,8 +801,8 @@ class TestReadAloudInheritance:
 
     def test_figure_no_read_aloud(self) -> None:
         """figure要素はreadAloud属性を持たない（常に読まない）"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         figure = Figure(path="test.png", caption="図1")
         element = transform_figure(figure)
@@ -813,8 +812,8 @@ class TestReadAloudInheritance:
 
     def test_page_metadata_always_read_aloud_false(self) -> None:
         """pageMetadataは常にreadAloud='false'"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(text="1 / 5", current=1, total=5)
         element = transform_page_metadata(metadata)
@@ -956,8 +955,8 @@ class TestHeadingReadAloudAttribute:
 
     def test_paragraph_read_aloud_default_true(self) -> None:
         """<paragraph>のreadAloudデフォルトはtrue"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="段落テキスト"),)
@@ -980,8 +979,8 @@ class TestEmphasisConversion:
 
     def test_paragraph_with_single_emphasis(self) -> None:
         """単一の強調を含む段落を変換"""
-        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_paragraph
 
         para = Paragraph(text="これは**強調**です。")
         element = transform_paragraph(para)
@@ -993,8 +992,8 @@ class TestEmphasisConversion:
 
     def test_paragraph_with_multiple_emphasis(self) -> None:
         """複数の強調を含む段落を変換"""
-        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_paragraph
 
         para = Paragraph(text="**最初**と**二番目**の強調")
         element = transform_paragraph(para)
@@ -1006,8 +1005,8 @@ class TestEmphasisConversion:
 
     def test_paragraph_without_emphasis(self) -> None:
         """強調なしの段落はそのまま"""
-        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_paragraph
 
         para = Paragraph(text="通常のテキストです。")
         element = transform_paragraph(para)
@@ -1018,8 +1017,8 @@ class TestEmphasisConversion:
 
     def test_paragraph_emphasis_preserves_surrounding_text(self) -> None:
         """強調の前後のテキストを保持"""
-        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_paragraph
 
         para = Paragraph(text="前のテキスト**強調**後のテキスト")
         element = transform_paragraph(para)
@@ -1046,8 +1045,8 @@ class TestEmphasisConversion:
 
     def test_list_item_with_emphasis(self) -> None:
         """強調を含むリストアイテムを変換"""
-        from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=("**重要**な項目", "通常の項目"))
         element = transform_list(lst)
@@ -1065,8 +1064,8 @@ class TestEmphasisConversion:
 
     def test_emphasis_unicode_content(self) -> None:
         """Unicode文字を含む強調を変換"""
-        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_paragraph
 
         para = Paragraph(text="**日本語「テスト」**を含む")
         element = transform_paragraph(para)
@@ -1076,8 +1075,8 @@ class TestEmphasisConversion:
 
     def test_emphasis_xml_serialization(self) -> None:
         """強調を含む要素をXMLにシリアライズ"""
-        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_paragraph
 
         para = Paragraph(text="テスト**強調**です")
         element = transform_paragraph(para)
@@ -1089,8 +1088,8 @@ class TestEmphasisConversion:
 
     def test_full_emphasis_only(self) -> None:
         """テキスト全体が強調の場合"""
-        from src.book_converter.transformer import transform_paragraph
         from src.book_converter.models import Paragraph
+        from src.book_converter.transformer import transform_paragraph
 
         para = Paragraph(text="**全体が強調**")
         element = transform_paragraph(para)
@@ -1102,8 +1101,8 @@ class TestEmphasisConversion:
 
     def test_page_metadata_emphasis_preserved(self) -> None:
         """pageMetadata内の強調も変換"""
-        from src.book_converter.transformer import transform_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.transformer import transform_page_metadata
 
         metadata = PageMetadata(
             text="**はじめに** 1 / 3",
@@ -1134,8 +1133,8 @@ class TestTransformTableOfContents:
 
     def test_transform_table_of_contents_basic(self) -> None:
         """基本的な目次をXMLに変換"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
         toc = TableOfContents(entries=(entry,), begin_page="1", end_page="1")
@@ -1149,8 +1148,8 @@ class TestTransformTableOfContents:
 
     def test_transform_table_of_contents_returns_element(self) -> None:
         """戻り値はElement型"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="テスト", level="chapter")
         toc = TableOfContents(entries=(entry,))
@@ -1161,8 +1160,8 @@ class TestTransformTableOfContents:
 
     def test_transform_table_of_contents_contains_entries(self) -> None:
         """目次にエントリが含まれる"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entry1 = TocEntry(text="第1章", level="chapter", number="1", page="15")
         entry2 = TocEntry(text="1.1 節", level="section", number="1.1", page="20")
@@ -1175,8 +1174,8 @@ class TestTransformTableOfContents:
 
     def test_transform_table_of_contents_multiple_entries(self) -> None:
         """複数エントリの目次を変換"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entries = (
             TocEntry(text="はじめに", level="other", page="1"),
@@ -1194,8 +1193,8 @@ class TestTransformTableOfContents:
 
     def test_transform_table_of_contents_preserves_order(self) -> None:
         """エントリの順序を保持"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entries = (
             TocEntry(text="はじめに", level="other", page="1"),
@@ -1213,8 +1212,8 @@ class TestTransformTableOfContents:
 
     def test_transform_table_of_contents_xml_serialization(self) -> None:
         """XMLにシリアライズ可能"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
         toc = TableOfContents(entries=(entry,), begin_page="5", end_page="7")
@@ -1244,8 +1243,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_basic(self) -> None:
         """基本的なエントリをXMLに変換"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
 
@@ -1256,8 +1255,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_level_attribute(self) -> None:
         """level属性が正しく設定される"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
 
@@ -1267,8 +1266,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_number_attribute(self) -> None:
         """number属性が正しく設定される"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="テスト", level="section", number="2.1", page="20")
 
@@ -1278,8 +1277,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_title_attribute(self) -> None:
         """title属性が正しく設定される"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
 
@@ -1289,8 +1288,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_page_attribute(self) -> None:
         """page属性が正しく設定される"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="テスト", level="chapter", number="1", page="42")
 
@@ -1300,8 +1299,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_chapter(self) -> None:
         """chapter levelのエントリを変換"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
 
@@ -1314,8 +1313,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_section(self) -> None:
         """section levelのエントリを変換"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="SLOの理解", level="section", number="2.1", page="30")
 
@@ -1328,8 +1327,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_subsection(self) -> None:
         """subsection levelのエントリを変換"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="SLA", level="subsection", number="2.1.1", page="35")
 
@@ -1342,8 +1341,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_other(self) -> None:
         """other levelのエントリを変換"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="はじめに", level="other", page="1")
 
@@ -1355,8 +1354,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_without_number(self) -> None:
         """number属性が空の場合"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="はじめに", level="other", number="", page="1")
 
@@ -1368,8 +1367,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_without_page(self) -> None:
         """page属性が空の場合"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="テスト", level="chapter", number="1", page="")
 
@@ -1381,8 +1380,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_returns_element(self) -> None:
         """戻り値はElement型"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="テスト", level="chapter")
 
@@ -1392,8 +1391,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_preserves_unicode(self) -> None:
         """Unicode文字を保持"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="日本語「テスト」", level="chapter", number="1", page="10")
 
@@ -1403,8 +1402,8 @@ class TestTransformTocEntry:
 
     def test_transform_toc_entry_xml_serialization(self) -> None:
         """XMLにシリアライズ可能"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(text="SREとは", level="chapter", number="1", page="15")
 
@@ -1433,8 +1432,8 @@ class TestTableOfContentsPageRange:
 
     def test_toc_has_begin_and_end_attributes(self) -> None:
         """tocにbegin/end属性が設定される"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="第1章", level="chapter", number="1", page="15")
         toc = TableOfContents(entries=(entry,), begin_page="5", end_page="7")
@@ -1448,8 +1447,8 @@ class TestTableOfContentsPageRange:
 
     def test_toc_without_page_range(self) -> None:
         """ページ範囲なしのTOC"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="はじめに", level="other", page="1")
         toc = TableOfContents(entries=(entry,))
@@ -1464,8 +1463,8 @@ class TestTableOfContentsPageRange:
 
     def test_toc_xml_output_with_page_range(self) -> None:
         """XMLシリアライズ時にbegin/end属性が含まれる"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entry = TocEntry(text="テスト", level="chapter", number="1", page="10")
         toc = TableOfContents(entries=(entry,), begin_page="3", end_page="5")
@@ -1479,8 +1478,8 @@ class TestTableOfContentsPageRange:
 
     def test_toc_with_multiple_entries(self) -> None:
         """複数エントリのTOC"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entries = (
             TocEntry(text="はじめに", level="other", page="1"),
@@ -1501,8 +1500,8 @@ class TestTableOfContentsPageRange:
 
     def test_empty_toc_returns_none(self) -> None:
         """空の目次はNoneを返す"""
-        from src.book_converter.transformer import transform_table_of_contents
         from src.book_converter.models import TableOfContents
+        from src.book_converter.transformer import transform_table_of_contents
 
         toc = TableOfContents(entries=())
 
@@ -1526,8 +1525,8 @@ class TestDefaultReadAloudFalse:
 
     def test_content_without_marker_has_read_aloud_false(self) -> None:
         """マーカーなしのcontentはreadAloud=false"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         # read_aloud=Falseのコンテンツ（デフォルト動作）
         content = Content(
@@ -1541,8 +1540,8 @@ class TestDefaultReadAloudFalse:
 
     def test_paragraph_without_marker_has_read_aloud_false(self) -> None:
         """マーカーなしの段落はreadAloud=false"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="段落テキスト", read_aloud=False),),
@@ -1556,8 +1555,8 @@ class TestDefaultReadAloudFalse:
 
     def test_heading_without_marker_has_read_aloud_false(self) -> None:
         """マーカーなしの見出しはreadAloud=false"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Heading
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Heading(level=1, text="見出し", read_aloud=False),),
@@ -1571,8 +1570,8 @@ class TestDefaultReadAloudFalse:
 
     def test_list_without_marker_has_read_aloud_false(self) -> None:
         """マーカーなしのリストはreadAloud=false"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, List
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(List(items=("項目1", "項目2"), read_aloud=False),),
@@ -1603,8 +1602,8 @@ class TestContentMarkerReadAloudTrue:
 
     def test_content_inside_marker_has_read_aloud_true(self) -> None:
         """contentマーカー内のcontentはreadAloud=true"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="読み上げ対象テキスト", read_aloud=True),),
@@ -1617,8 +1616,8 @@ class TestContentMarkerReadAloudTrue:
 
     def test_paragraph_inside_content_marker_has_read_aloud_true(self) -> None:
         """contentマーカー内の段落はreadAloud=true"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="読み上げ対象段落", read_aloud=True),),
@@ -1632,8 +1631,8 @@ class TestContentMarkerReadAloudTrue:
 
     def test_heading_inside_content_marker_has_read_aloud_true(self) -> None:
         """contentマーカー内の見出しはreadAloud=true"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Heading
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Heading(level=1, text="読み上げ対象見出し", read_aloud=True),),
@@ -1647,8 +1646,8 @@ class TestContentMarkerReadAloudTrue:
 
     def test_list_inside_content_marker_has_read_aloud_true(self) -> None:
         """contentマーカー内のリストはreadAloud=true"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, List
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(List(items=("読み上げ項目1", "読み上げ項目2"), read_aloud=True),),
@@ -1662,8 +1661,8 @@ class TestContentMarkerReadAloudTrue:
 
     def test_mixed_elements_inside_content_marker_all_have_read_aloud_true(self) -> None:
         """contentマーカー内の複合要素は全てreadAloud=true"""
+        from src.book_converter.models import Content, Heading, List, Paragraph
         from src.book_converter.transformer import transform_content
-        from src.book_converter.models import Content, Heading, Paragraph, List
 
         content = Content(
             elements=(
@@ -1696,8 +1695,8 @@ class TestSkipMarkerReadAloudFalse:
 
     def test_content_inside_skip_marker_has_read_aloud_false(self) -> None:
         """skipマーカー内のcontentはreadAloud=false"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="索引テキスト", read_aloud=False),),
@@ -1710,8 +1709,8 @@ class TestSkipMarkerReadAloudFalse:
 
     def test_paragraph_inside_skip_marker_has_read_aloud_false(self) -> None:
         """skipマーカー内の段落はreadAloud=false"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="索引段落", read_aloud=False),),
@@ -1735,8 +1734,8 @@ class TestSkipMarkerReadAloudFalse:
             本文続き... (readAloud=true)
         <!-- /content -->
         """
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         # skipマーカー内の段落（ネストの内側）
         content = Content(
@@ -1761,8 +1760,8 @@ class TestSkipMarkerReadAloudFalse:
             索引続き... (readAloud=false)
         <!-- /skip -->
         """
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         # contentマーカーを抜けた後の段落（外側のskipに戻る）
         content = Content(
@@ -1781,8 +1780,8 @@ class TestContentReadAloudXMLSerialization:
 
     def test_content_read_aloud_true_in_xml(self) -> None:
         """readAloud="true"がXMLに出力される"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="テスト", read_aloud=True),),
@@ -1795,8 +1794,8 @@ class TestContentReadAloudXMLSerialization:
 
     def test_content_read_aloud_false_in_xml(self) -> None:
         """readAloud="false"がXMLに出力される"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="テスト", read_aloud=False),),
@@ -1809,8 +1808,8 @@ class TestContentReadAloudXMLSerialization:
 
     def test_paragraph_read_aloud_true_in_xml(self) -> None:
         """段落のreadAloud="true"がXMLに出力される"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="テスト", read_aloud=True),),
@@ -1824,8 +1823,8 @@ class TestContentReadAloudXMLSerialization:
 
     def test_paragraph_read_aloud_false_in_xml(self) -> None:
         """段落のreadAloud="false"がXMLに出力される"""
-        from src.book_converter.transformer import transform_content
         from src.book_converter.models import Content, Paragraph
+        from src.book_converter.transformer import transform_content
 
         content = Content(
             elements=(Paragraph(text="テスト", read_aloud=False),),
@@ -1852,8 +1851,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_level_numeric_1(self) -> None:
         """transform_toc_entry が level="1" を出力する"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="Chapter 1 タイトル",
@@ -1869,8 +1868,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_level_numeric_2(self) -> None:
         """transform_toc_entry が level="2" を出力する"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="Section タイトル",
@@ -1886,8 +1885,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_level_numeric_3(self) -> None:
         """transform_toc_entry が level="3" を出力する"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="Subsection タイトル",
@@ -1903,8 +1902,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_level_numeric_4(self) -> None:
         """transform_toc_entry が level="4" を出力する"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="深い階層の見出し",
@@ -1920,8 +1919,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_level_numeric_5(self) -> None:
         """transform_toc_entry が level="5" を出力する"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="最深階層の見出し",
@@ -1937,8 +1936,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_level_not_chapter_string(self) -> None:
         """transform_toc_entry が level="chapter" ではなく数値文字列を出力する"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="テスト",
@@ -1956,8 +1955,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_level_not_section_string(self) -> None:
         """transform_toc_entry が level="section" ではなく数値文字列を出力する"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="テスト",
@@ -1975,8 +1974,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_level_numeric_xml_serialization(self) -> None:
         """数値レベルがXMLにシリアライズされる"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="SREとは",
@@ -1995,8 +1994,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_all_levels_xml_serialization(self) -> None:
         """全レベル（1-5）がXMLにシリアライズされる"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         for level in range(1, 6):
             entry = TocEntry(
@@ -2013,8 +2012,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_toc_entry_preserves_other_attributes(self) -> None:
         """数値レベル出力時に他の属性も保持される"""
-        from src.book_converter.transformer import transform_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.transformer import transform_toc_entry
 
         entry = TocEntry(
             text="日本語タイトル",
@@ -2032,8 +2031,8 @@ class TestTransformTocEntryLevelNumeric:
 
     def test_transform_table_of_contents_with_numeric_levels(self) -> None:
         """transform_table_of_contents が数値レベルを持つエントリを変換する"""
+        from src.book_converter.models import TableOfContents, TocEntry
         from src.book_converter.transformer import transform_table_of_contents
-        from src.book_converter.models import TocEntry, TableOfContents
 
         entries = (
             TocEntry(text="Chapter 1", level=1, number="1", page="10"),
@@ -2073,8 +2072,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_chapter_basic(self) -> None:
         """chapter コンテナを <chapter> 要素に変換"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="chapter",
@@ -2091,8 +2090,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_chapter_number_attribute(self) -> None:
         """chapter 要素に number 属性が設定される"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="chapter",
@@ -2108,8 +2107,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_chapter_title_attribute(self) -> None:
         """chapter 要素に title 属性が設定される"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="chapter",
@@ -2125,8 +2124,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_section(self) -> None:
         """section コンテナを <section> 要素に変換"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="section",
@@ -2145,8 +2144,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_subsection_level_3(self) -> None:
         """subsection (level 3) コンテナを <subsection> 要素に変換"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="subsection",
@@ -2164,8 +2163,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_subsection_level_4(self) -> None:
         """subsection (level 4) コンテナに level 属性が設定される"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="subsection",
@@ -2183,8 +2182,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_subsection_level_5(self) -> None:
         """subsection (level 5) コンテナに level 属性が設定される"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="subsection",
@@ -2202,8 +2201,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_with_paragraph_child(self) -> None:
         """コンテナに段落を子要素として含める"""
+        from src.book_converter.models import Paragraph, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Paragraph
 
         paragraph = Paragraph(text="This is paragraph text.")
 
@@ -2223,8 +2222,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_with_heading_child(self) -> None:
         """コンテナに見出しを子要素として含める"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         heading = Heading(level=1, text="Chapter 1 Title", read_aloud=True)
 
@@ -2244,8 +2243,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_nested_structure(self) -> None:
         """入れ子構造: chapter > section"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         section = StructureContainer(
             container_type="section",
@@ -2273,8 +2272,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_deep_nesting(self) -> None:
         """深い入れ子構造: chapter > section > subsection"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         subsection = StructureContainer(
             container_type="subsection",
@@ -2311,8 +2310,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_unicode_title(self) -> None:
         """Unicode タイトルが正しく変換される"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="chapter",
@@ -2328,8 +2327,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_empty_number(self) -> None:
         """空の number は属性を出力しないまたは空文字列"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="chapter",
@@ -2347,8 +2346,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_returns_element(self) -> None:
         """戻り値は Element 型"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="chapter",
@@ -2364,8 +2363,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_xml_serialization(self) -> None:
         """XML にシリアライズ可能"""
-        from src.book_converter.transformer import transform_structure_container
         from src.book_converter.models import StructureContainer
+        from src.book_converter.transformer import transform_structure_container
 
         container = StructureContainer(
             container_type="chapter",
@@ -2384,8 +2383,8 @@ class TestTransformStructureContainer:
 
     def test_transform_structure_container_complete_example(self) -> None:
         """完全な例: chapter > heading + section > heading + paragraph"""
+        from src.book_converter.models import Heading, Paragraph, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading, Paragraph
 
         section = StructureContainer(
             container_type="section",
@@ -2450,8 +2449,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_heading_in_structure_container_has_read_aloud_true(self) -> None:
         """構造コンテナ内の heading は readAloud="true" を出力"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         container = StructureContainer(
             container_type="chapter",
@@ -2471,8 +2470,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_heading_read_aloud_true_attribute_value(self) -> None:
         """readAloud 属性の値は "true" 文字列"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         container = StructureContainer(
             container_type="section",
@@ -2493,8 +2492,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_heading_in_nested_structure_has_read_aloud_true(self) -> None:
         """入れ子構造内の heading も readAloud='true'"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         section = StructureContainer(
             container_type="section",
@@ -2532,8 +2531,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_heading_read_aloud_xml_serialization(self) -> None:
         """readAloud 属性が XML にシリアライズされる"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         container = StructureContainer(
             container_type="chapter",
@@ -2552,8 +2551,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_heading_text_preserved_in_structure_container(self) -> None:
         """heading テキストが構造コンテナ内で保持される"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         container = StructureContainer(
             container_type="chapter",
@@ -2573,8 +2572,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_heading_unicode_text_with_read_aloud(self) -> None:
         """Unicode テキストの heading に readAloud 属性"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         container = StructureContainer(
             container_type="chapter",
@@ -2595,8 +2594,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_multiple_headings_in_structure_container(self) -> None:
         """複数の heading が全て readAloud="true" を持つ"""
+        from src.book_converter.models import Heading, Paragraph, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading, Paragraph
 
         container = StructureContainer(
             container_type="chapter",
@@ -2620,8 +2619,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_heading_without_read_aloud_gets_false(self) -> None:
         """read_aloud=False の heading は readAloud="false" を出力"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         container = StructureContainer(
             container_type="chapter",
@@ -2641,8 +2640,8 @@ class TestHeadingReadAloudInStructureContainer:
 
     def test_heading_read_aloud_mixed_values(self) -> None:
         """read_aloud が混在する場合、各 heading が正しい値を持つ"""
+        from src.book_converter.models import Heading, StructureContainer
         from src.book_converter.transformer import transform_structure_container
-        from src.book_converter.models import StructureContainer, Heading
 
         container = StructureContainer(
             container_type="chapter",
@@ -2683,8 +2682,8 @@ class TestTransformListType:
 
     def test_transform_list_basic(self) -> None:
         """基本的なリストを変換"""
-        from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=("項目1", "項目2"))
         element = transform_list(lst)
@@ -2693,8 +2692,8 @@ class TestTransformListType:
 
     def test_transform_list_read_aloud_default(self) -> None:
         """リストのreadAloudデフォルト（属性省略=true）"""
-        from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=("手順1", "手順2"))
         element = transform_list(lst)
@@ -2704,8 +2703,8 @@ class TestTransformListType:
 
     def test_transform_list_has_item_children(self) -> None:
         """リスト要素は <item> 子要素を持つ"""
-        from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=("item1", "item2", "item3"), list_type="unordered")
         element = transform_list(lst)
@@ -2718,9 +2717,10 @@ class TestTransformListType:
 
     def test_transform_list_xml_format(self) -> None:
         """XML出力形式が正しい"""
-        from src.book_converter.transformer import transform_list
-        from src.book_converter.models import List
         from xml.etree.ElementTree import tostring
+
+        from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=("項目A", "項目B"))
         element = transform_list(lst)
@@ -2733,9 +2733,10 @@ class TestTransformListType:
 
     def test_transform_list_read_aloud_false(self) -> None:
         """skip区間内のリストはreadAloud='false'"""
-        from src.book_converter.transformer import transform_list
-        from src.book_converter.models import List
         from xml.etree.ElementTree import tostring
+
+        from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=("手順1", "手順2"), read_aloud=False)
         element = transform_list(lst)
@@ -2745,8 +2746,8 @@ class TestTransformListType:
 
     def test_transform_list_empty_items(self) -> None:
         """空のリストを変換"""
-        from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=())
         element = transform_list(lst)
@@ -2757,8 +2758,8 @@ class TestTransformListType:
 
     def test_transform_list_unicode_items(self) -> None:
         """Unicode 項目を含むリストを変換"""
-        from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(
             items=("日本語項目", "特殊文字<>&\"'"),
@@ -2771,8 +2772,8 @@ class TestTransformListType:
 
     def test_transform_list_single_item(self) -> None:
         """単一項目のリストを変換"""
-        from src.book_converter.transformer import transform_list
         from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=("単一項目",), list_type="ordered")
         element = transform_list(lst)
@@ -2783,9 +2784,10 @@ class TestTransformListType:
 
     def test_transform_list_returns_element(self) -> None:
         """戻り値は Element 型"""
-        from src.book_converter.transformer import transform_list
-        from src.book_converter.models import List
         from xml.etree.ElementTree import Element
+
+        from src.book_converter.models import List
+        from src.book_converter.transformer import transform_list
 
         lst = List(items=("item",), list_type="unordered")
         element = transform_list(lst)
@@ -2807,8 +2809,8 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_new_format_path_attribute(self) -> None:
         """figure 要素は path 属性を持つ"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/fig001.png")
         element = transform_figure(fig)
@@ -2818,8 +2820,8 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_new_format_marker_attribute(self) -> None:
         """figure 要素は marker 属性を持つ"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/fig001.png", marker="図1")
         element = transform_figure(fig)
@@ -2828,8 +2830,8 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_no_read_aloud_attribute(self) -> None:
         """figure 要素は readAloud 属性を持たない（常に読まない）"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/fig001.png")
         element = transform_figure(fig)
@@ -2839,9 +2841,10 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_new_format_xml(self) -> None:
         """XML出力形式が正しい"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
         from xml.etree.ElementTree import tostring
+
+        from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/fig001.png", marker="図1")
         element = transform_figure(fig)
@@ -2853,9 +2856,10 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_without_marker(self) -> None:
         """marker なしの figure を変換"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
         from xml.etree.ElementTree import tostring
+
+        from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/fig001.png")
         element = transform_figure(fig)
@@ -2868,8 +2872,8 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_path_required(self) -> None:
         """path 属性は必須"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/image.png")
         element = transform_figure(fig)
@@ -2879,8 +2883,8 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_self_closing_element(self) -> None:
         """figure 要素は自己終了タグ（子要素なし）"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/fig001.png", marker="図1")
         element = transform_figure(fig)
@@ -2891,8 +2895,8 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_unicode_marker(self) -> None:
         """Unicode マーカーを含む figure を変換"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/fig001.png", marker="図1：システム構成図")
         element = transform_figure(fig)
@@ -2901,8 +2905,8 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_various_paths(self) -> None:
         """様々なファイルパスを変換"""
-        from src.book_converter.transformer import transform_figure
         from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         test_paths = [
             "figures/fig001.png",
@@ -2919,9 +2923,10 @@ class TestTransformFigureNewFormat:
 
     def test_transform_figure_returns_element(self) -> None:
         """戻り値は Element 型"""
-        from src.book_converter.transformer import transform_figure
-        from src.book_converter.models import Figure
         from xml.etree.ElementTree import Element
+
+        from src.book_converter.models import Figure
+        from src.book_converter.transformer import transform_figure
 
         fig = Figure(path="figures/fig001.png")
         element = transform_figure(fig)

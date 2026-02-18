@@ -4,9 +4,10 @@ Tests for Phase 5: CLI & Error Handling
 - T072: E2E test (sample_book.md -> expected_book.xml comparison)
 """
 
-import pytest
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
+
+import pytest
 
 
 class TestE2EConversion:

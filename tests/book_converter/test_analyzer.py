@@ -6,10 +6,7 @@ Phase 2: User Story 1 - T012, T013, T014, T016
 
 from __future__ import annotations
 
-import pytest
-
 from src.book_converter.models import Heading
-
 
 # =============================================================================
 # T012: 柱検出テスト
@@ -299,8 +296,8 @@ class TestHeadingAnalysisIntegration:
         """柱検出から readAloud=False 付与までのフロー"""
         from src.book_converter.analyzer import (
             analyze_headings,
-            detect_running_head,
             apply_read_aloud_rules,
+            detect_running_head,
         )
 
         # 10ページ分の heading を模擬
@@ -397,8 +394,8 @@ class TestHeadingAnalysisIntegration:
         """空の heading リストを処理"""
         from src.book_converter.analyzer import (
             analyze_headings,
-            detect_running_head,
             apply_read_aloud_rules,
+            detect_running_head,
         )
 
         headings = []
@@ -415,8 +412,8 @@ class TestHeadingAnalysisIntegration:
         """Unicode テキストを含む heading を処理"""
         from src.book_converter.analyzer import (
             analyze_headings,
-            detect_running_head,
             apply_read_aloud_rules,
+            detect_running_head,
         )
 
         headings = [
@@ -1070,8 +1067,8 @@ class TestRunningHeadWithTextVariation:
         """ダッシュ表記ゆれを持つ見出しに正しくreadAloud=falseを設定"""
         from src.book_converter.analyzer import (
             analyze_headings,
-            detect_running_head,
             apply_read_aloud_rules,
+            detect_running_head,
         )
 
         headings = [

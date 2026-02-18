@@ -9,15 +9,16 @@ Phase 5: Error Handling Tests
 - T071: Error handling tests (continue on warning, XML comment mark)
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
+from src.book_converter.models import PageAnnouncement
 from src.book_converter.parser import (
-    parse_page_marker,
     create_page_announcement,
     extract_page_number,
+    parse_page_marker,
 )
-from src.book_converter.models import PageAnnouncement
 
 
 class TestParsePageMarker:
@@ -309,8 +310,8 @@ class TestParseHeading:
 
     def test_parse_heading_returns_heading_type(self) -> None:
         """戻り値はHeading型"""
-        from src.book_converter.parser import parse_heading
         from src.book_converter.models import Heading
+        from src.book_converter.parser import parse_heading
 
         result = parse_heading("# テスト")
 
@@ -402,8 +403,8 @@ class TestParseParagraph:
 
     def test_parse_paragraph_returns_paragraph_type(self) -> None:
         """戻り値はParagraph型"""
-        from src.book_converter.parser import parse_paragraph
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import parse_paragraph
 
         result = parse_paragraph(["テスト"])
 
@@ -496,8 +497,8 @@ class TestParseList:
 
     def test_parse_list_returns_list_type(self) -> None:
         """戻り値はList型"""
-        from src.book_converter.parser import parse_list
         from src.book_converter.models import List
+        from src.book_converter.parser import parse_list
 
         result = parse_list(["- 項目"])
 
@@ -685,8 +686,8 @@ class TestParseFigureDescription:
 
     def test_parse_figure_returns_figure_type(self) -> None:
         """戻り値はFigure型"""
-        from src.book_converter.parser import parse_figure
         from src.book_converter.models import Figure
+        from src.book_converter.parser import parse_figure
 
         lines = ["<!-- FIGURE: test.png -->"]
         result = parse_figure(lines)
@@ -801,8 +802,8 @@ class TestParsePageMetadata:
 
     def test_parse_page_metadata_returns_type(self) -> None:
         """戻り値はPageMetadata型"""
-        from src.book_converter.parser import parse_page_metadata
         from src.book_converter.models import PageMetadata
+        from src.book_converter.parser import parse_page_metadata
 
         result = parse_page_metadata("1 / 5")
 
@@ -900,8 +901,8 @@ class TestErrorHandlingContinueOnWarning:
         self, tmp_path: Path
     ) -> None:
         """欠落したページ番号のエラーを記録"""
-        from src.book_converter.parser import parse_pages_with_errors
         from src.book_converter.models import ConversionError
+        from src.book_converter.parser import parse_pages_with_errors
 
         input_file = tmp_path / "test.md"
         input_file.write_text(
@@ -1144,8 +1145,8 @@ class TestParseTocMarker:
 
     def test_parse_toc_start_marker(self) -> None:
         """目次開始マーカーを検出"""
-        from src.book_converter.parser import parse_toc_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_toc_marker
 
         result = parse_toc_marker("<!-- toc -->")
 
@@ -1154,8 +1155,8 @@ class TestParseTocMarker:
 
     def test_parse_toc_end_marker(self) -> None:
         """目次終了マーカーを検出"""
-        from src.book_converter.parser import parse_toc_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_toc_marker
 
         result = parse_toc_marker("<!-- /toc -->")
 
@@ -1164,8 +1165,8 @@ class TestParseTocMarker:
 
     def test_parse_toc_marker_case_insensitive_lowercase(self) -> None:
         """小文字のtocマーカーを検出"""
-        from src.book_converter.parser import parse_toc_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_toc_marker
 
         result = parse_toc_marker("<!-- toc -->")
 
@@ -1173,8 +1174,8 @@ class TestParseTocMarker:
 
     def test_parse_toc_marker_case_insensitive_uppercase(self) -> None:
         """大文字のTOCマーカーを検出"""
-        from src.book_converter.parser import parse_toc_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_toc_marker
 
         result = parse_toc_marker("<!-- TOC -->")
 
@@ -1182,8 +1183,8 @@ class TestParseTocMarker:
 
     def test_parse_toc_marker_case_insensitive_mixed(self) -> None:
         """大文字小文字混在のTocマーカーを検出"""
-        from src.book_converter.parser import parse_toc_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_toc_marker
 
         result = parse_toc_marker("<!-- Toc -->")
 
@@ -1191,8 +1192,8 @@ class TestParseTocMarker:
 
     def test_parse_toc_marker_with_extra_spaces(self) -> None:
         """余分なスペースがあっても検出"""
-        from src.book_converter.parser import parse_toc_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_toc_marker
 
         result = parse_toc_marker("<!--   toc   -->")
 
@@ -1200,8 +1201,8 @@ class TestParseTocMarker:
 
     def test_parse_toc_end_marker_uppercase(self) -> None:
         """大文字の終了マーカーを検出"""
-        from src.book_converter.parser import parse_toc_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_toc_marker
 
         result = parse_toc_marker("<!-- /TOC -->")
 
@@ -1227,8 +1228,8 @@ class TestParseTocMarker:
 
     def test_parse_toc_marker_with_leading_spaces(self) -> None:
         """先頭にスペースがあっても検出"""
-        from src.book_converter.parser import parse_toc_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_toc_marker
 
         result = parse_toc_marker("  <!-- toc -->")
 
@@ -1249,8 +1250,8 @@ class TestParseTocEntry:
 
     def test_parse_chapter_pattern_basic(self) -> None:
         """Chapter N パターンを解析"""
-        from src.book_converter.parser import parse_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.parser import parse_toc_entry
 
         result = parse_toc_entry("Chapter 1 SRE Overview")
 
@@ -1499,6 +1500,7 @@ class TestTocModels:
     def test_toc_entry_is_dataclass(self) -> None:
         """TocEntryはdataclass"""
         from dataclasses import is_dataclass
+
         from src.book_converter.models import TocEntry
 
         assert is_dataclass(TocEntry)
@@ -1575,13 +1577,14 @@ class TestTocModels:
     def test_table_of_contents_is_dataclass(self) -> None:
         """TableOfContentsはdataclass"""
         from dataclasses import is_dataclass
+
         from src.book_converter.models import TableOfContents
 
         assert is_dataclass(TableOfContents)
 
     def test_table_of_contents_is_frozen(self) -> None:
         """TableOfContentsはイミュータブル"""
-        from src.book_converter.models import TocEntry, TableOfContents
+        from src.book_converter.models import TableOfContents, TocEntry
 
         entry = TocEntry(text="テスト", level="chapter")
         toc = TableOfContents(entries=(entry,))
@@ -1591,7 +1594,7 @@ class TestTocModels:
 
     def test_table_of_contents_with_entries(self) -> None:
         """TableOfContentsがエントリを保持"""
-        from src.book_converter.models import TocEntry, TableOfContents
+        from src.book_converter.models import TableOfContents, TocEntry
 
         entry1 = TocEntry(text="第1章", level="chapter", number="1", page="15")
         entry2 = TocEntry(text="1.1 節", level="section", number="1.1", page="20")
@@ -1623,6 +1626,7 @@ class TestTocModels:
     def test_marker_type_is_enum(self) -> None:
         """MarkerTypeはEnum"""
         from enum import Enum
+
         from src.book_converter.models import MarkerType
 
         assert issubclass(MarkerType, Enum)
@@ -1644,8 +1648,8 @@ class TestParseContentMarker:
 
     def test_parse_content_start_marker(self) -> None:
         """content開始マーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- content -->")
 
@@ -1654,8 +1658,8 @@ class TestParseContentMarker:
 
     def test_parse_content_end_marker(self) -> None:
         """content終了マーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- /content -->")
 
@@ -1664,8 +1668,8 @@ class TestParseContentMarker:
 
     def test_parse_content_marker_case_insensitive_lowercase(self) -> None:
         """小文字のcontentマーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- content -->")
 
@@ -1673,8 +1677,8 @@ class TestParseContentMarker:
 
     def test_parse_content_marker_case_insensitive_uppercase(self) -> None:
         """大文字のCONTENTマーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- CONTENT -->")
 
@@ -1682,8 +1686,8 @@ class TestParseContentMarker:
 
     def test_parse_content_marker_case_insensitive_mixed(self) -> None:
         """大文字小文字混在のContentマーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- Content -->")
 
@@ -1691,8 +1695,8 @@ class TestParseContentMarker:
 
     def test_parse_content_marker_with_extra_spaces(self) -> None:
         """余分なスペースがあっても検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!--   content   -->")
 
@@ -1700,8 +1704,8 @@ class TestParseContentMarker:
 
     def test_parse_content_end_marker_uppercase(self) -> None:
         """大文字の終了マーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- /CONTENT -->")
 
@@ -1709,8 +1713,8 @@ class TestParseContentMarker:
 
     def test_parse_content_marker_with_leading_spaces(self) -> None:
         """先頭にスペースがあっても検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("  <!-- content -->")
 
@@ -1746,8 +1750,8 @@ class TestParseSkipMarker:
 
     def test_parse_skip_start_marker(self) -> None:
         """skip開始マーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- skip -->")
 
@@ -1756,8 +1760,8 @@ class TestParseSkipMarker:
 
     def test_parse_skip_end_marker(self) -> None:
         """skip終了マーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- /skip -->")
 
@@ -1766,8 +1770,8 @@ class TestParseSkipMarker:
 
     def test_parse_skip_marker_case_insensitive_uppercase(self) -> None:
         """大文字のSKIPマーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- SKIP -->")
 
@@ -1775,8 +1779,8 @@ class TestParseSkipMarker:
 
     def test_parse_skip_marker_case_insensitive_mixed(self) -> None:
         """大文字小文字混在のSkipマーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- Skip -->")
 
@@ -1784,8 +1788,8 @@ class TestParseSkipMarker:
 
     def test_parse_skip_marker_with_extra_spaces(self) -> None:
         """余分なスペースがあっても検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!--   skip   -->")
 
@@ -1793,8 +1797,8 @@ class TestParseSkipMarker:
 
     def test_parse_skip_end_marker_uppercase(self) -> None:
         """大文字の終了マーカーを検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("<!-- /SKIP -->")
 
@@ -1802,8 +1806,8 @@ class TestParseSkipMarker:
 
     def test_parse_skip_marker_with_leading_spaces(self) -> None:
         """先頭にスペースがあっても検出"""
-        from src.book_converter.parser import parse_content_marker
         from src.book_converter.models import MarkerType
+        from src.book_converter.parser import parse_content_marker
 
         result = parse_content_marker("  <!-- skip -->")
 
@@ -2336,8 +2340,8 @@ class TestParseTocEntryChapterFormat:
 
     def test_parse_chapter_n_format(self) -> None:
         """「Chapter 1 「企画」で失敗」をchapterとして認識"""
-        from src.book_converter.parser import parse_toc_entry
         from src.book_converter.models import TocEntry
+        from src.book_converter.parser import parse_toc_entry
 
         result = parse_toc_entry("Chapter 1 「企画」で失敗")
 
@@ -2889,8 +2893,8 @@ class TestParagraphSplitByBlankLines:
 
     def test_split_paragraphs_returns_paragraph_objects(self) -> None:
         """Paragraphオブジェクトのリストを返す"""
-        from src.book_converter.parser import split_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import split_paragraphs
 
         result = split_paragraphs("テスト。")
 
@@ -2988,8 +2992,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_basic(self) -> None:
         """句点なしの段落は次と結合"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="継続する文章の途中", read_aloud=True),
@@ -3002,8 +3006,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_no_continuation_with_period(self) -> None:
         """句点で終わる段落は結合しない"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="完結する文章。", read_aloud=True),
@@ -3017,8 +3021,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_multiple_paragraphs(self) -> None:
         """複数の継続段落を結合"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="段落1の途中", read_aloud=True),
@@ -3034,8 +3038,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_exclamation_mark(self) -> None:
         """感嘆符で終わる段落は結合しない"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="感嘆の文章!", read_aloud=True),
@@ -3047,8 +3051,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_question_mark(self) -> None:
         """疑問符で終わる段落は結合しない"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="疑問の文章?", read_aloud=True),
@@ -3060,8 +3064,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_japanese_period(self) -> None:
         """日本語句点（。）で終わる段落は結合しない"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="日本語の文章。", read_aloud=True),
@@ -3073,8 +3077,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_closing_bracket_period(self) -> None:
         """閉じ括弧+句点で終わる段落は結合しない"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="引用（テスト）。", read_aloud=True),
@@ -3094,8 +3098,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_single_paragraph(self) -> None:
         """1つの段落はそのまま"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [Paragraph(text="単独の段落。", read_aloud=True)]
         result = merge_continuation_paragraphs(paragraphs)
@@ -3105,8 +3109,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_preserves_read_aloud(self) -> None:
         """結合時にread_aloud属性を保持（先頭の値を使用）"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="途中", read_aloud=True),
@@ -3120,8 +3124,8 @@ class TestParagraphContinuationAcrossPages:
 
     def test_continuation_trailing_whitespace_period(self) -> None:
         """句点の後に空白がある場合も結合しない"""
-        from src.book_converter.parser import merge_continuation_paragraphs
         from src.book_converter.models import Paragraph
+        from src.book_converter.parser import merge_continuation_paragraphs
 
         paragraphs = [
             Paragraph(text="文章。   ", read_aloud=True),  # 末尾に空白
@@ -3328,6 +3332,7 @@ class TestLegacyPatternRemovalInParser:
     def test_parser_has_no_legacy_patterns_comment(self) -> None:
         """parser.py should not have 'Legacy patterns' comment marker."""
         import inspect
+
         from src.book_converter import parser
 
         # Get the parse_toc_line function source
@@ -3342,6 +3347,7 @@ class TestLegacyPatternRemovalInParser:
     def test_parser_has_no_legacy_annotation(self) -> None:
         """parser.py should not have '- legacy' annotations in comments."""
         import inspect
+
         from src.book_converter import parser
 
         module_source = inspect.getsource(parser)
@@ -3361,6 +3367,7 @@ class TestLegacyPatternRemovalInParser:
         This is redundant because the new pattern uses re.IGNORECASE flag.
         """
         import inspect
+
         from src.book_converter import parser
 
         module_source = inspect.getsource(parser)
@@ -3374,6 +3381,7 @@ class TestLegacyPatternRemovalInParser:
     def test_parser_uses_ignorecase_for_chapter(self) -> None:
         """parser.py should use re.IGNORECASE for Chapter pattern."""
         import inspect
+
         from src.book_converter import parser
 
         module_source = inspect.getsource(parser)

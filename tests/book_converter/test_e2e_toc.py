@@ -1,6 +1,5 @@
 """E2E tests for TOC marker feature using real book.md samples."""
 
-import tempfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 

@@ -9,14 +9,14 @@ Acceptance Scenarios:
 3. ページ境界でアナウンスが生成される
 """
 
-import pytest
 from pathlib import Path
-from xml.etree.ElementTree import fromstring, Element
+from xml.etree.ElementTree import fromstring
 
-from src.book_converter.parser import parse_pages
-from src.book_converter.transformer import transform_page
-from src.book_converter.xml_builder import build_xml
+import pytest
+
 from src.book_converter.models import Book, BookMetadata
+from src.book_converter.parser import parse_pages
+from src.book_converter.xml_builder import build_xml
 
 
 class TestMarkdownToXMLConversion:
@@ -273,7 +273,7 @@ class TestEdgeCases:
 
     def test_single_page_book(self) -> None:
         """1ページの書籍を変換"""
-        from src.book_converter.models import Page, Content
+        from src.book_converter.models import Content, Page
 
         page = Page(
             number="1",
@@ -294,7 +294,7 @@ class TestEdgeCases:
 
     def test_page_with_unicode_content(self) -> None:
         """Unicode文字を含むページ"""
-        from src.book_converter.models import Page, Content, Paragraph
+        from src.book_converter.models import Content, Page, Paragraph
 
         page = Page(
             number="1",

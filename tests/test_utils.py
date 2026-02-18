@@ -10,7 +10,6 @@ import base64
 import io
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
 from src.utils import (
@@ -19,7 +18,6 @@ from src.utils import (
     format_figure_markers,
     mask_figure_regions,
 )
-
 
 # ---------- encode_image_file ----------
 

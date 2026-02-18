@@ -4,9 +4,9 @@ Tests for Phase 3: User Story 2 - chapter/heading タグの役割明確化
 - T026: ページコメント生成テスト (<!-- page N -->)
 """
 
-import pytest
-from xml.etree.ElementTree import Element, tostring, Comment
+from xml.etree.ElementTree import Element, tostring
 
+import pytest
 
 # =============================================================================
 # Phase 3 (009-converter-redesign): T026 ページコメント生成テスト
@@ -209,13 +209,13 @@ class TestBuildXMLWithPageComments:
 
     def test_build_xml_includes_page_comments(self) -> None:
         """build_xml で生成される XML にページコメントが含まれる"""
-        from src.book_converter.xml_builder import build_xml
         from src.book_converter.models import (
             Book,
             BookMetadata,
-            StructureContainer,
             Heading,
+            StructureContainer,
         )
+        from src.book_converter.xml_builder import build_xml
 
         # StructureContainer を使用した Book を作成
         chapter = StructureContainer(
@@ -242,14 +242,14 @@ class TestBuildXMLWithPageComments:
     @pytest.mark.skip(reason="page_numbers設計が不明確 - parserで実装予定")
     def test_build_xml_page_comment_in_section(self) -> None:
         """section 内のページコメントが正しく生成される"""
-        from src.book_converter.xml_builder import build_xml
         from src.book_converter.models import (
             Book,
             BookMetadata,
-            StructureContainer,
             Heading,
             Paragraph,
+            StructureContainer,
         )
+        from src.book_converter.xml_builder import build_xml
 
         section = StructureContainer(
             container_type="section",
@@ -287,13 +287,13 @@ class TestBuildXMLWithPageComments:
     @pytest.mark.skip(reason="page_numbers設計が不明確 - parserで実装予定")
     def test_build_xml_multiple_page_comments(self) -> None:
         """複数のページコメントが正しく生成される"""
-        from src.book_converter.xml_builder import build_xml
         from src.book_converter.models import (
             Book,
             BookMetadata,
-            StructureContainer,
             Heading,
+            StructureContainer,
         )
+        from src.book_converter.xml_builder import build_xml
 
         chapter = StructureContainer(
             container_type="chapter",

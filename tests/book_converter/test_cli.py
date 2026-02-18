@@ -5,10 +5,9 @@ Tests for Phase 5: CLI & Error Handling
 - T073: Error rate warning tests (>10% error rate warning message)
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import patch
-from io import StringIO
+
+import pytest
 
 
 class TestCLIArguments:

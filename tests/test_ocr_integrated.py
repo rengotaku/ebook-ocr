@@ -1,6 +1,5 @@
 """Tests for ocr_integrated module."""
 
-import pytest
 from PIL import Image
 
 from src.ocr_ensemble import create_text_mask, is_garbage

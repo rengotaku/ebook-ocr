@@ -5,9 +5,9 @@ Tests for Phase 2: User Story 1 - ExclusionPattern and HeadingAnalysis models.
 
 from __future__ import annotations
 
-import pytest
 import re
 
+import pytest
 
 # =============================================================================
 # T010: ExclusionPattern モデルテスト
@@ -624,7 +624,7 @@ class TestStructureContainer:
 
     def test_structure_container_children_with_content_element(self) -> None:
         """children に ContentElement（Paragraph等）を含めることができる"""
-        from src.book_converter.models import StructureContainer, Paragraph
+        from src.book_converter.models import Paragraph, StructureContainer
 
         paragraph = Paragraph(text="This is a paragraph.")
 
@@ -665,7 +665,7 @@ class TestStructureContainer:
 
     def test_structure_container_children_mixed(self) -> None:
         """children に ContentElement と StructureContainer を混在させることができる"""
-        from src.book_converter.models import StructureContainer, Heading, Paragraph
+        from src.book_converter.models import Heading, Paragraph, StructureContainer
 
         heading = Heading(level=1, text="Chapter 1 Title")
         paragraph = Paragraph(text="Introduction text.")

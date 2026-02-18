@@ -1,14 +1,13 @@
 """Tests for src.ocr_ensemble ensemble OCR module."""
 
-import pytest
 
 from src.ocr_ensemble import (
+    EngineResult,
+    EnsembleResult,
     calculate_similarity,
     calculate_similarity_matrix,
-    vote_best_result,
     merge_by_voting,
-    EnsembleResult,
-    EngineResult,
+    vote_best_result,
 )
 
 

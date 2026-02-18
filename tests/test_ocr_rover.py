@@ -16,14 +16,13 @@ import pytest
 
 from src.rover.engines import EngineResult, TextWithBox
 from src.rover.ensemble import (
-    OCRLine,
     AlignedLine,
+    OCRLine,
     ROVERResult,
-    cluster_lines_by_y,
     align_lines_by_y,
+    cluster_lines_by_y,
     rover_merge,
 )
-
 
 # =============================================================================
 # T009: ゴミ判定テスト (is_garbage)
@@ -514,7 +513,6 @@ class TestRoverMergeBasic:
 
     def test_rover_merge_filters_garbage(self):
         """ゴミ出力はフィルタリングされる"""
-        from src.rover.ensemble import is_garbage
 
         engine_results = {
             "yomitoku": EngineResult(
@@ -722,8 +720,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_software(self):
         """「ソフトウェア」vs「ソフトウエア」の文字レベル投票"""
-        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
         from src.rover.engines import TextWithBox
+        from src.rover.ensemble import OCRLine, vote_line_text
 
         # 3エンジンの行を作成
         yomitoku_line = OCRLine(
@@ -764,8 +762,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_returns_three_values(self):
         """vote_line_textが3つの値を返す (text, engines, confidence)"""
-        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
         from src.rover.engines import TextWithBox
+        from src.rover.ensemble import OCRLine, vote_line_text
 
         line = OCRLine(
             items=[TextWithBox(text="テスト", bbox=(0, 100, 50, 120), confidence=0.9)],
@@ -790,8 +788,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_with_normalized_confidence(self):
         """正規化された信頼度が投票の重みとして使用される"""
-        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine, normalize_confidence
         from src.rover.engines import TextWithBox
+        from src.rover.ensemble import OCRLine, vote_line_text
 
         # yomitokuの信頼度は高いがテキストが異なる
         # paddleocr + easyocrが一致
@@ -831,8 +829,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_single_engine(self):
         """単一エンジンの場合はそのまま採用"""
-        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
         from src.rover.engines import TextWithBox
+        from src.rover.ensemble import OCRLine, vote_line_text
 
         line = OCRLine(
             items=[TextWithBox(text="単一エンジン", bbox=(0, 100, 80, 120), confidence=0.9)],
@@ -853,8 +851,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_partial_match(self):
         """部分的に一致するテキストの文字レベル投票"""
-        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
         from src.rover.engines import TextWithBox
+        from src.rover.ensemble import OCRLine, vote_line_text
 
         # 「チーム開発」vs「チム開発」（一文字欠損）
         yomitoku_line = OCRLine(
@@ -886,7 +884,7 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_empty_lines(self):
         """全ての行がNoneの場合"""
-        from src.rover.ensemble import vote_line_text, AlignedLine
+        from src.rover.ensemble import vote_line_text
 
         aligned_line = AlignedLine(
             lines={"yomitoku": None, "paddleocr": None, "easyocr": None},
@@ -900,8 +898,8 @@ class TestVoteLineTextCharacterLevel:
 
     def test_vote_line_text_character_level_all_agree(self):
         """全エンジンが完全一致の場合"""
-        from src.rover.ensemble import vote_line_text, OCRLine, AlignedLine
         from src.rover.engines import TextWithBox
+        from src.rover.ensemble import OCRLine, vote_line_text
 
         text = "完全一致テスト"
 
@@ -936,7 +934,6 @@ class TestRoverBatchRawOutput:
 
     def test_rover_batch_raw_output_directory_created(self, tmp_path):
         """raw出力ディレクトリが作成される"""
-        from pathlib import Path
 
         output_dir = tmp_path / "output"
 
@@ -952,7 +949,6 @@ class TestRoverBatchRawOutput:
 
     def test_rover_batch_raw_output_per_engine(self, tmp_path):
         """各エンジンのraw出力がエンジン名のサブディレクトリに保存される"""
-        from pathlib import Path
 
         output_dir = tmp_path / "output"
         raw_dir = output_dir / "raw"
@@ -974,7 +970,6 @@ class TestRoverBatchRawOutput:
 
     def test_rover_batch_raw_output_content(self, tmp_path):
         """raw出力ファイルにエンジンの生テキストが保存される"""
-        from pathlib import Path
 
         raw_file = tmp_path / "raw" / "yomitoku" / "page_0001.txt"
         raw_file.parent.mkdir(parents=True)
@@ -1004,7 +999,6 @@ class TestRoverBatchRawOutput:
 
     def test_rover_batch_raw_output_filename_matches_page(self, tmp_path):
         """rawファイル名がページ名と一致する"""
-        from pathlib import Path
 
         page_names = ["page_0001", "page_0002", "page_0010"]
 
@@ -1028,7 +1022,6 @@ class TestRoverBatchRoverOutput:
 
     def test_rover_batch_rover_output_directory_created(self, tmp_path):
         """rover出力ディレクトリが作成される"""
-        from pathlib import Path
 
         output_dir = tmp_path / "output"
         rover_dir = output_dir / "rover"
@@ -1038,7 +1031,6 @@ class TestRoverBatchRoverOutput:
 
     def test_rover_batch_rover_output_file_created(self, tmp_path):
         """rover出力ファイルが作成される"""
-        from pathlib import Path
 
         rover_dir = tmp_path / "output" / "rover"
         rover_dir.mkdir(parents=True)
@@ -1050,7 +1042,6 @@ class TestRoverBatchRoverOutput:
 
     def test_rover_batch_rover_output_content(self, tmp_path):
         """rover出力ファイルにマージ結果が保存される"""
-        from pathlib import Path
 
         rover_file = tmp_path / "rover" / "page_0001.txt"
         rover_file.parent.mkdir(parents=True)
@@ -1075,7 +1066,6 @@ class TestRoverBatchRoverOutput:
 
     def test_rover_batch_rover_output_filename_matches_page(self, tmp_path):
         """roverファイル名がページ名と一致する"""
-        from pathlib import Path
 
         rover_dir = tmp_path / "rover"
         rover_dir.mkdir(parents=True)
@@ -1088,7 +1078,6 @@ class TestRoverBatchRoverOutput:
 
     def test_rover_batch_both_raw_and_rover_outputs(self, tmp_path):
         """raw/とrover/の両方に出力が作成される"""
-        from pathlib import Path
 
         output_dir = tmp_path / "output"
 
@@ -1114,7 +1103,6 @@ class TestRoverBatchRoverOutput:
 
     def test_rover_batch_output_structure_comparison(self, tmp_path):
         """出力ディレクトリ構造が比較可能"""
-        from pathlib import Path
 
         output_dir = tmp_path / "output"
 
@@ -1168,8 +1156,9 @@ class TestRunRoverBatchIntegration:
 
     def test_run_rover_batch_returns_list_of_results(self):
         """run_rover_batchがリストを返す"""
-        from src.rover.ensemble import run_rover_batch
         import inspect
+
+        from src.rover.ensemble import run_rover_batch
 
         # Verify function signature
         sig = inspect.signature(run_rover_batch)
@@ -1178,16 +1167,18 @@ class TestRunRoverBatchIntegration:
 
     def test_run_rover_batch_accepts_engines_parameter(self):
         """enginesパラメータを受け付ける"""
-        from src.rover.ensemble import run_rover_batch
         import inspect
+
+        from src.rover.ensemble import run_rover_batch
 
         sig = inspect.signature(run_rover_batch)
         assert "engines" in sig.parameters
 
     def test_run_rover_batch_accepts_min_confidence_parameter(self):
         """min_confidenceパラメータを受け付ける（Phase 4で追加予定）"""
-        from src.rover.ensemble import run_rover_batch
         import inspect
+
+        from src.rover.ensemble import run_rover_batch
 
         sig = inspect.signature(run_rover_batch)
         # Note: This parameter may need to be added

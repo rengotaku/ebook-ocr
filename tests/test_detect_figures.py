@@ -127,8 +127,9 @@ class TestLayoutJsonRegionsStructure:
         {"page_001.png": {"regions": [...], "page_size": [w, h]}}
         """
         import json
+        from unittest.mock import MagicMock, patch
+
         from PIL import Image
-        from unittest.mock import patch, MagicMock
 
         # テスト用ページ画像を作成
         page_dir = tmp_path / "pages"
@@ -163,6 +164,7 @@ class TestLayoutJsonRegionsStructure:
         }):
             # Force reload to pick up mocked modules
             import importlib
+
             import src.layout.figures
             importlib.reload(src.layout.figures)
             layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
@@ -203,8 +205,9 @@ class TestLayoutJsonPageSize:
         }
         """
         import json
+        from unittest.mock import MagicMock, patch
+
         from PIL import Image
-        from unittest.mock import patch, MagicMock
 
         # テスト用ページ画像を作成
         page_dir = tmp_path / "pages"
@@ -241,6 +244,7 @@ class TestLayoutJsonPageSize:
         }):
             # Force reload to pick up mocked modules
             import importlib
+
             import src.layout.figures
             importlib.reload(src.layout.figures)
             layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
@@ -290,8 +294,9 @@ class TestMinAreaFiltering:
         - 小さな領域 (50x50 = 2,500 px) → 除外 (< 1%)
         """
         import json
+        from unittest.mock import MagicMock, patch
+
         from PIL import Image
-        from unittest.mock import patch, MagicMock
 
         # テスト用ページ画像を作成
         page_dir = tmp_path / "pages"
@@ -336,6 +341,7 @@ class TestMinAreaFiltering:
         }):
             # Force reload to pick up mocked modules
             import importlib
+
             import src.layout.figures
             importlib.reload(src.layout.figures)
             layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
@@ -367,6 +373,7 @@ class TestMinAreaFiltering:
     def test_detect_figures_min_area_parameter(self) -> None:
         """detect_figures() が min_area パラメータを受け入れることを検証。"""
         import inspect
+
         from src.layout.figures import detect_figures
 
         sig = inspect.signature(detect_figures)
