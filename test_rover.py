@@ -1,20 +1,19 @@
 """Quick test for ROVER OCR implementation."""
 
-from pathlib import Path
-from PIL import Image
 import sys
+from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from ocr_engines import TextWithBox, EngineResult
+from ocr_engines import EngineResult, TextWithBox
 from ocr_rover import (
-    align_lines_by_y,
-    vote_line_text,
-    rover_merge,
-    OCRLine,
     AlignedLine,
+    OCRLine,
+    align_lines_by_y,
     cluster_lines_by_y,
+    rover_merge,
+    vote_line_text,
 )
 
 
@@ -32,7 +31,7 @@ def test_cluster_lines():
     lines = cluster_lines_by_y(items, y_tolerance=20)
 
     assert len(lines) == 2, f"Expected 2 lines, got {len(lines)}"
-    assert len(lines[0].items) == 2, f"Expected 2 items in first line"
+    assert len(lines[0].items) == 2, "Expected 2 items in first line"
     assert lines[0].text == "HelloWorld"
     assert lines[1].text == "NextLine"
 
@@ -174,6 +173,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Error: {e}\n")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

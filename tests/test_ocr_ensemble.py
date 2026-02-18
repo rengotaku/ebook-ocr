@@ -1,6 +1,5 @@
 """Tests for src.ocr_ensemble ensemble OCR module."""
 
-
 from src.ocr_ensemble import (
     EngineResult,
     EnsembleResult,

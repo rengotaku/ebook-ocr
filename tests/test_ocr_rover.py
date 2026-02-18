@@ -683,10 +683,7 @@ class TestEdgeCases:
 
     def test_cluster_lines_large_document(self):
         """大量のアイテムでも正しく動作する"""
-        items = [
-            TextWithBox(text=f"行{i}", bbox=(0, i * 50, 30, i * 50 + 20), confidence=0.9)
-            for i in range(100)
-        ]
+        items = [TextWithBox(text=f"行{i}", bbox=(0, i * 50, 30, i * 50 + 20), confidence=0.9) for i in range(100)]
         result = cluster_lines_by_y(items, y_tolerance=10)
 
         assert len(result) == 100
@@ -1180,7 +1177,7 @@ class TestRunRoverBatchIntegration:
 
         from src.rover.ensemble import run_rover_batch
 
-        sig = inspect.signature(run_rover_batch)
+        inspect.signature(run_rover_batch)
         # Note: This parameter may need to be added
         # For now, check if function is callable
         assert callable(run_rover_batch)
@@ -1381,5 +1378,5 @@ class TestRoverMergeNoDuplicates:
 
         # 各AlignedLineに両エンジンが含まれる
         for aligned in result.aligned:
-            engines_present = [e for e, l in aligned.lines.items() if l is not None]
+            engines_present = [e for e, line_val in aligned.lines.items() if line_val is not None]
             assert len(engines_present) == 2, f"期待: 2エンジン, 実際: {engines_present}"

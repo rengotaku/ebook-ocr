@@ -198,9 +198,7 @@ class TestTransformPageAnnouncement:
 
     def test_transform_announcement_chapter_format(self) -> None:
         """chapterフォーマットを変換"""
-        announcement = PageAnnouncement(
-            text="第1章 5ページ目", format="chapter"
-        )
+        announcement = PageAnnouncement(text="第1章 5ページ目", format="chapter")
 
         element = transform_page_announcement(announcement)
 
@@ -338,9 +336,7 @@ class TestTransformContent:
         """見出しを含むコンテンツを変換"""
         from src.book_converter.transformer import transform_content
 
-        content = Content(
-            elements=(Heading(level=1, text="タイトル"),)
-        )
+        content = Content(elements=(Heading(level=1, text="タイトル"),))
         element = transform_content(content)
 
         assert element is not None
@@ -355,9 +351,7 @@ class TestTransformContent:
         from src.book_converter.models import Paragraph
         from src.book_converter.transformer import transform_content
 
-        content = Content(
-            elements=(Paragraph(text="本文テキストです。"),)
-        )
+        content = Content(elements=(Paragraph(text="本文テキストです。"),))
         element = transform_content(content)
 
         assert element is not None
@@ -370,9 +364,7 @@ class TestTransformContent:
         from src.book_converter.models import List
         from src.book_converter.transformer import transform_content
 
-        content = Content(
-            elements=(List(items=("項目1", "項目2", "項目3")),)
-        )
+        content = Content(elements=(List(items=("項目1", "項目2", "項目3")),))
         element = transform_content(content)
 
         assert element is not None
@@ -451,9 +443,7 @@ class TestTransformContentContinued:
         from src.book_converter.models import Paragraph
         from src.book_converter.transformer import transform_content_with_continued
 
-        content = Content(
-            elements=(Paragraph(text="継続する本文"),)
-        )
+        content = Content(elements=(Paragraph(text="継続する本文"),))
         element = transform_content_with_continued(content, continued=True)
 
         assert element is not None
@@ -464,9 +454,7 @@ class TestTransformContentContinued:
         from src.book_converter.models import Paragraph
         from src.book_converter.transformer import transform_content_with_continued
 
-        content = Content(
-            elements=(Paragraph(text="通常の本文"),)
-        )
+        content = Content(elements=(Paragraph(text="通常の本文"),))
         element = transform_content_with_continued(content, continued=False)
 
         assert element is not None
@@ -504,11 +492,7 @@ class TestTransformContentContinued:
         from src.book_converter.transformer import transform_content_with_continued
 
         # ページの先頭で前ページからの継続を示す
-        content = Content(
-            elements=(
-                Paragraph(text="（前ページからの続き）本文が続きます。"),
-            )
-        )
+        content = Content(elements=(Paragraph(text="（前ページからの続き）本文が続きます。"),))
         element = transform_content_with_continued(content, continued=True)
 
         assert element is not None
@@ -523,11 +507,7 @@ class TestTransformContentContinued:
         from src.book_converter.transformer import transform_content_with_continued
 
         # 前ページで見出しが表示され、このページで本文が続く場合
-        content = Content(
-            elements=(
-                Paragraph(text="前ページの見出しに続く本文です。"),
-            )
-        )
+        content = Content(elements=(Paragraph(text="前ページの見出しに続く本文です。"),))
         element = transform_content_with_continued(content, continued=True)
 
         assert element is not None
@@ -958,9 +938,7 @@ class TestHeadingReadAloudAttribute:
         from src.book_converter.models import Paragraph
         from src.book_converter.transformer import transform_content
 
-        content = Content(
-            elements=(Paragraph(text="段落テキスト"),)
-        )
+        content = Content(elements=(Paragraph(text="段落テキスト"),))
         element = transform_content(content)
         para_elem = element.find("paragraph")
 
@@ -2457,9 +2435,7 @@ class TestHeadingReadAloudInStructureContainer:
             level=1,
             number="1",
             title="Chapter Title",
-            children=(
-                Heading(level=1, text="Chapter 1 Title", read_aloud=True),
-            ),
+            children=(Heading(level=1, text="Chapter 1 Title", read_aloud=True),),
         )
 
         element = transform_structure_container(container)
@@ -2478,9 +2454,7 @@ class TestHeadingReadAloudInStructureContainer:
             level=2,
             number="1",
             title="Section Title",
-            children=(
-                Heading(level=2, text="Section 1 Title", read_aloud=True),
-            ),
+            children=(Heading(level=2, text="Section 1 Title", read_aloud=True),),
         )
 
         element = transform_structure_container(container)
@@ -2500,9 +2474,7 @@ class TestHeadingReadAloudInStructureContainer:
             level=2,
             number="1",
             title="Section Title",
-            children=(
-                Heading(level=2, text="Episode 01 Title", read_aloud=True),
-            ),
+            children=(Heading(level=2, text="Episode 01 Title", read_aloud=True),),
         )
 
         chapter = StructureContainer(
@@ -2539,9 +2511,7 @@ class TestHeadingReadAloudInStructureContainer:
             level=1,
             number="1",
             title="Chapter Title",
-            children=(
-                Heading(level=1, text="Chapter 1 Title", read_aloud=True),
-            ),
+            children=(Heading(level=1, text="Chapter 1 Title", read_aloud=True),),
         )
 
         element = transform_structure_container(container)
@@ -2559,9 +2529,7 @@ class TestHeadingReadAloudInStructureContainer:
             level=1,
             number="1",
             title="Chapter Title",
-            children=(
-                Heading(level=1, text="Chapter 1 Introduction to Python", read_aloud=True),
-            ),
+            children=(Heading(level=1, text="Chapter 1 Introduction to Python", read_aloud=True),),
         )
 
         element = transform_structure_container(container)
@@ -2580,9 +2548,7 @@ class TestHeadingReadAloudInStructureContainer:
             level=1,
             number="1",
             title="日本語タイトル",
-            children=(
-                Heading(level=1, text="第1章 日本語タイトル「テスト」", read_aloud=True),
-            ),
+            children=(Heading(level=1, text="第1章 日本語タイトル「テスト」", read_aloud=True),),
         )
 
         element = transform_structure_container(container)
@@ -2627,9 +2593,7 @@ class TestHeadingReadAloudInStructureContainer:
             level=1,
             number="1",
             title="Chapter Title",
-            children=(
-                Heading(level=1, text="Non-readable heading", read_aloud=False),
-            ),
+            children=(Heading(level=1, text="Non-readable heading", read_aloud=False),),
         )
 
         element = transform_structure_container(container)

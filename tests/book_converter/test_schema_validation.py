@@ -160,9 +160,7 @@ class TestXMLSchemaStructure:
             # 許可された子要素のみ
             allowed_children = ["title", "isbn", "sourceFormat", "conversionDate"]
             for child in metadata:
-                assert (
-                    child.tag in allowed_children
-                ), f"Invalid metadata child: {child.tag}"
+                assert child.tag in allowed_children, f"Invalid metadata child: {child.tag}"
 
     def test_figure_structure(self, sample_xml: Path) -> None:
         """figure要素が正しい構造を持つ"""
@@ -189,9 +187,7 @@ class TestXMLSchemaStructure:
             # 許可された子要素のみ
             allowed_children = ["heading", "paragraph", "list"]
             for child in content:
-                assert (
-                    child.tag in allowed_children
-                ), f"Invalid content child: {child.tag}"
+                assert child.tag in allowed_children, f"Invalid content child: {child.tag}"
 
     def test_list_child_elements_structure(self, sample_xml: Path) -> None:
         """list要素がitem子要素を含む"""
@@ -258,7 +254,7 @@ class TestXMLSchemaCompliance:
         input_file.write_text(
             "--- Page 1 (page_0001.png) ---\n\n"
             "# Title with <special> & characters\n\n"
-            'Text with "quotes" and \'apostrophes\'\n'
+            "Text with \"quotes\" and 'apostrophes'\n"
         )
 
         output_file = tmp_path / "output.xml"

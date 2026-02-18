@@ -316,20 +316,14 @@ class TestHeadingAnalysisIntegration:
         analyses_with_running_head = detect_running_head(analyses, total_pages)
 
         # readAloud ルール適用
-        processed_headings = apply_read_aloud_rules(
-            headings, analyses_with_running_head
-        )
+        processed_headings = apply_read_aloud_rules(headings, analyses_with_running_head)
 
         # 柱は readAloud=False
-        running_head_headings = [
-            h for h in processed_headings if h.text == "SREの知識地図"
-        ]
+        running_head_headings = [h for h in processed_headings if h.text == "SREの知識地図"]
         assert all(h.read_aloud is False for h in running_head_headings)
 
         # 本文見出しは readAloud=True
-        section_headings = [
-            h for h in processed_headings if h.text.startswith("セクション")
-        ]
+        section_headings = [h for h in processed_headings if h.text.startswith("セクション")]
         assert all(h.read_aloud is True for h in section_headings)
 
     def test_full_flow_page_number_exclusion(self) -> None:
@@ -350,9 +344,7 @@ class TestHeadingAnalysisIntegration:
         assert all(h.read_aloud is False for h in page_number_headings)
 
         # 通常の見出しは readAloud=True
-        normal_headings = [
-            h for h in processed_headings if h.text == "なぜSREが重要なのか"
-        ]
+        normal_headings = [h for h in processed_headings if h.text == "なぜSREが重要なのか"]
         assert all(h.read_aloud is True for h in normal_headings)
 
     def test_full_flow_level_reassignment(self) -> None:
@@ -375,19 +367,13 @@ class TestHeadingAnalysisIntegration:
         total_pages = 10
 
         analyses_with_running_head = detect_running_head(analyses, total_pages)
-        running_head_texts = {
-            a.text for a in analyses_with_running_head if a.is_running_head
-        }
+        running_head_texts = {a.text for a in analyses_with_running_head if a.is_running_head}
 
         # level 再配置
-        reassigned_headings = [
-            reassign_heading_level(h, running_head_texts) for h in headings
-        ]
+        reassigned_headings = [reassign_heading_level(h, running_head_texts) for h in headings]
 
         # 全ての柱テキストは level=1 に再配置
-        running_head_result = [
-            h for h in reassigned_headings if h.text == "SREの知識地図"
-        ]
+        running_head_result = [h for h in reassigned_headings if h.text == "SREの知識地図"]
         assert all(h.level == 1 for h in running_head_result)
 
     def test_full_flow_empty_headings(self) -> None:
@@ -402,9 +388,7 @@ class TestHeadingAnalysisIntegration:
 
         analyses = analyze_headings(headings)
         analyses_with_running_head = detect_running_head(analyses, 0)
-        processed_headings = apply_read_aloud_rules(
-            headings, analyses_with_running_head
-        )
+        processed_headings = apply_read_aloud_rules(headings, analyses_with_running_head)
 
         assert processed_headings == []
 
@@ -429,9 +413,7 @@ class TestHeadingAnalysisIntegration:
         total_pages = 10
 
         analyses_with_running_head = detect_running_head(analyses, total_pages)
-        processed_headings = apply_read_aloud_rules(
-            headings, analyses_with_running_head
-        )
+        processed_headings = apply_read_aloud_rules(headings, analyses_with_running_head)
 
         # Unicode テキストでも正しく処理
         assert len(processed_headings) == 6
@@ -725,10 +707,10 @@ class TestNormalHeadingNotExcluded:
         from src.book_converter.analyzer import apply_read_aloud_rules
 
         headings = [
-            Heading(level=1, text="第1章：はじめに"),        # 通常 → True
-            Heading(level=2, text="◆◆◆"),                   # 装飾 → False
-            Heading(level=2, text="1.1 概要"),               # 通常 → True
-            Heading(level=3, text="Section 2.3"),            # ラベル → False
+            Heading(level=1, text="第1章：はじめに"),  # 通常 → True
+            Heading(level=2, text="◆◆◆"),  # 装飾 → False
+            Heading(level=2, text="1.1 概要"),  # 通常 → True
+            Heading(level=3, text="Section 2.3"),  # ラベル → False
             Heading(level=2, text="3.2.1 モニタリングの基本"),  # 通常 → True
         ]
 
@@ -925,11 +907,11 @@ class TestUserStory3Integration:
         from src.book_converter.analyzer import apply_read_aloud_rules
 
         headings = [
-            Heading(level=1, text="第1章：はじめに"),        # 通常 → True
-            Heading(level=2, text="Webサイト"),              # 参照 → False
-            Heading(level=2, text="1.1 概要"),               # 通常 → True
-            Heading(level=3, text="注3.1"),                  # 脚注 → False
-            Heading(level=2, text="参考文献"),               # 通常 → True
+            Heading(level=1, text="第1章：はじめに"),  # 通常 → True
+            Heading(level=2, text="Webサイト"),  # 参照 → False
+            Heading(level=2, text="1.1 概要"),  # 通常 → True
+            Heading(level=3, text="注3.1"),  # 脚注 → False
+            Heading(level=2, text="参考文献"),  # 通常 → True
         ]
 
         processed = apply_read_aloud_rules(headings, [])
@@ -951,12 +933,12 @@ class TestUserStory3Integration:
         from src.book_converter.analyzer import apply_read_aloud_rules
 
         headings = [
-            Heading(level=1, text="第1章：はじめに"),           # 通常 → True
-            Heading(level=2, text="◆◆◆"),                      # 装飾 → False (US2)
-            Heading(level=3, text="Section 2.3"),               # ラベル → False (US2)
-            Heading(level=2, text="Webサイト"),                 # 参照 → False (US3)
-            Heading(level=3, text="注10.5"),                    # 脚注 → False (US3)
-            Heading(level=2, text="1.1.1 概要 — 1 / 3"),        # ページ番号 → False (US1)
+            Heading(level=1, text="第1章：はじめに"),  # 通常 → True
+            Heading(level=2, text="◆◆◆"),  # 装飾 → False (US2)
+            Heading(level=3, text="Section 2.3"),  # ラベル → False (US2)
+            Heading(level=2, text="Webサイト"),  # 参照 → False (US3)
+            Heading(level=3, text="注10.5"),  # 脚注 → False (US3)
+            Heading(level=2, text="1.1.1 概要 — 1 / 3"),  # ページ番号 → False (US1)
             Heading(level=2, text="3.2.1 モニタリングの基本"),  # 通常 → True
         ]
 

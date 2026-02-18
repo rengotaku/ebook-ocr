@@ -38,9 +38,7 @@ class TestSelectOcrEngine:
         engine = select_ocr_engine("TEXT")
 
         # Assert
-        assert engine == "yomitoku", (
-            f"TEXT region should use yomitoku engine. Got: {engine}"
-        )
+        assert engine == "yomitoku", f"TEXT region should use yomitoku engine. Got: {engine}"
 
     def test_select_ocr_engine_title_returns_yomitoku(self) -> None:
         """TITLE領域に対してYomitokuが選択されることを検証。"""
@@ -50,9 +48,7 @@ class TestSelectOcrEngine:
         engine = select_ocr_engine("TITLE")
 
         # Assert
-        assert engine == "yomitoku", (
-            f"TITLE region should use yomitoku engine. Got: {engine}"
-        )
+        assert engine == "yomitoku", f"TITLE region should use yomitoku engine. Got: {engine}"
 
     def test_select_ocr_engine_figure_returns_skip(self) -> None:
         """FIGURE領域がスキップされることを検証。"""
@@ -62,9 +58,7 @@ class TestSelectOcrEngine:
         engine = select_ocr_engine("FIGURE")
 
         # Assert
-        assert engine == "skip", (
-            f"FIGURE region should be skipped. Got: {engine}"
-        )
+        assert engine == "skip", f"FIGURE region should be skipped. Got: {engine}"
 
     def test_select_ocr_engine_table_returns_yomitoku(self) -> None:
         """TABLE領域に対してYomitokuが選択されることを検証。"""
@@ -74,9 +68,7 @@ class TestSelectOcrEngine:
         engine = select_ocr_engine("TABLE")
 
         # Assert
-        assert engine == "yomitoku", (
-            f"TABLE region should use yomitoku engine. Got: {engine}"
-        )
+        assert engine == "yomitoku", f"TABLE region should use yomitoku engine. Got: {engine}"
 
     def test_select_ocr_engine_caption_returns_yomitoku(self) -> None:
         """CAPTION領域に対してYomitokuが選択されることを検証。"""
@@ -86,9 +78,7 @@ class TestSelectOcrEngine:
         engine = select_ocr_engine("CAPTION")
 
         # Assert
-        assert engine == "yomitoku", (
-            f"CAPTION region should use yomitoku engine. Got: {engine}"
-        )
+        assert engine == "yomitoku", f"CAPTION region should use yomitoku engine. Got: {engine}"
 
     def test_select_ocr_engine_footnote_returns_yomitoku(self) -> None:
         """FOOTNOTE領域に対してYomitokuが選択されることを検証。"""
@@ -98,9 +88,7 @@ class TestSelectOcrEngine:
         engine = select_ocr_engine("FOOTNOTE")
 
         # Assert
-        assert engine == "yomitoku", (
-            f"FOOTNOTE region should use yomitoku engine. Got: {engine}"
-        )
+        assert engine == "yomitoku", f"FOOTNOTE region should use yomitoku engine. Got: {engine}"
 
     def test_select_ocr_engine_formula_returns_yomitoku(self) -> None:
         """FORMULA領域に対してYomitokuが選択されることを検証。"""
@@ -110,9 +98,7 @@ class TestSelectOcrEngine:
         engine = select_ocr_engine("FORMULA")
 
         # Assert
-        assert engine == "yomitoku", (
-            f"FORMULA region should use yomitoku engine. Got: {engine}"
-        )
+        assert engine == "yomitoku", f"FORMULA region should use yomitoku engine. Got: {engine}"
 
     def test_select_ocr_engine_abandon_returns_skip(self) -> None:
         """ABANDON領域に対してスキップが選択されることを検証。"""
@@ -122,9 +108,7 @@ class TestSelectOcrEngine:
         engine = select_ocr_engine("ABANDON")
 
         # Assert
-        assert engine == "skip", (
-            f"ABANDON region should be skipped. Got: {engine}"
-        )
+        assert engine == "skip", f"ABANDON region should be skipped. Got: {engine}"
 
 
 class TestFormatOcrResult:
@@ -144,9 +128,7 @@ class TestFormatOcrResult:
         formatted = format_ocr_result("TITLE", text)
 
         # Assert
-        assert formatted == "## 第1章 はじめに", (
-            f"TITLE should be formatted as '## {{text}}'. Got: {formatted}"
-        )
+        assert formatted == "## 第1章 はじめに", f"TITLE should be formatted as '## {{text}}'. Got: {formatted}"
 
     def test_format_ocr_result_text_unchanged(self) -> None:
         """TEXT領域のOCR結果がそのまま出力されることを検証。
@@ -162,9 +144,7 @@ class TestFormatOcrResult:
         formatted = format_ocr_result("TEXT", text)
 
         # Assert
-        assert formatted == "これは本文テキストです。", (
-            f"TEXT should remain unchanged. Got: {formatted}"
-        )
+        assert formatted == "これは本文テキストです。", f"TEXT should remain unchanged. Got: {formatted}"
 
     def test_format_ocr_result_figure_returns_empty(self) -> None:
         """FIGURE領域に対して空文字が返されることを検証（VLM削除後）。
@@ -180,9 +160,7 @@ class TestFormatOcrResult:
         formatted = format_ocr_result("FIGURE", description)
 
         # Assert
-        assert formatted == "", (
-            f"FIGURE should return empty string (skipped). Got: {formatted}"
-        )
+        assert formatted == "", f"FIGURE should return empty string (skipped). Got: {formatted}"
 
     def test_format_ocr_result_caption_adds_italic(self) -> None:
         """CAPTION領域のOCR結果がイタリックで出力されることを検証。
@@ -198,9 +176,7 @@ class TestFormatOcrResult:
         formatted = format_ocr_result("CAPTION", text)
 
         # Assert
-        assert formatted == "*図1: システム構成図*", (
-            f"CAPTION should be formatted as '*{{text}}*'. Got: {formatted}"
-        )
+        assert formatted == "*図1: システム構成図*", f"CAPTION should be formatted as '*{{text}}*'. Got: {formatted}"
 
     def test_format_ocr_result_footnote_adds_superscript(self) -> None:
         """FOOTNOTE領域のOCR結果がスーパースクリプトで出力されることを検証。
@@ -234,9 +210,7 @@ class TestFormatOcrResult:
         formatted = format_ocr_result("FORMULA", text)
 
         # Assert
-        assert formatted == "$$E = mc^2$$", (
-            f"FORMULA should be formatted as '$${{text}}$$'. Got: {formatted}"
-        )
+        assert formatted == "$$E = mc^2$$", f"FORMULA should be formatted as '$${{text}}$$'. Got: {formatted}"
 
     def test_format_ocr_result_table_unchanged(self) -> None:
         """TABLE領域のOCR結果がそのまま出力されることを検証。
@@ -264,9 +238,7 @@ class TestFormatOcrResult:
         formatted = format_ocr_result("ABANDON", "ignored text")
 
         # Assert
-        assert formatted == "", (
-            f"ABANDON should return empty string. Got: {formatted}"
-        )
+        assert formatted == "", f"ABANDON should return empty string. Got: {formatted}"
 
 
 class TestCropRegion:
@@ -284,9 +256,7 @@ class TestCropRegion:
         cropped = crop_region(img, bbox)
 
         # Assert
-        assert cropped.size == (40, 40), (
-            f"Cropped size should be (40, 40) for bbox [10,20,50,60]. Got: {cropped.size}"
-        )
+        assert cropped.size == (40, 40), f"Cropped size should be (40, 40) for bbox [10,20,50,60]. Got: {cropped.size}"
 
     def test_crop_region_full_image(self) -> None:
         """bbox=[0, 0, w, h]で全画像がクロップされることを検証。"""
@@ -300,9 +270,7 @@ class TestCropRegion:
         cropped = crop_region(img, bbox)
 
         # Assert
-        assert cropped.size == (200, 150), (
-            f"Full image crop should match original size. Got: {cropped.size}"
-        )
+        assert cropped.size == (200, 150), f"Full image crop should match original size. Got: {cropped.size}"
 
     def test_crop_region_boundary_clamp(self) -> None:
         """bboxが画像境界を超えた場合のハンドリングを検証。"""
@@ -339,7 +307,7 @@ class TestTextRegionOcr:
 
         # Act & Assert: ocr_page_yomitoku をモック
         with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="テキスト内容") as mock_ocr:
-            result = ocr_region(img, region)
+            ocr_region(img, region)
 
             # Yomitokuが呼ばれたことを確認
             assert mock_ocr.called, "ocr_page_yomitoku should be called for TEXT region"
@@ -361,12 +329,8 @@ class TestTextRegionOcr:
             result = ocr_region(img, region)
 
         # Assert: TEXTはそのまま出力
-        assert result.text == "これは本文です。", (
-            f"OCR text should be extracted. Got: {result.text}"
-        )
-        assert result.formatted == "これは本文です。", (
-            f"TEXT should remain unchanged. Got: {result.formatted}"
-        )
+        assert result.text == "これは本文です。", f"OCR text should be extracted. Got: {result.text}"
+        assert result.formatted == "これは本文です。", f"TEXT should remain unchanged. Got: {result.formatted}"
 
 
 class TestFigureRegionOcr:
@@ -388,12 +352,8 @@ class TestFigureRegionOcr:
         result = ocr_region(img, region)
 
         # Assert: FIGUREはスキップされ、空文字を返す
-        assert result.text == "", (
-            f"FIGURE region should return empty text (skipped). Got: {result.text}"
-        )
-        assert result.formatted == "", (
-            f"FIGURE should return empty formatted text. Got: {result.formatted}"
-        )
+        assert result.text == "", f"FIGURE region should return empty text (skipped). Got: {result.text}"
+        assert result.formatted == "", f"FIGURE should return empty formatted text. Got: {result.formatted}"
 
 
 class TestTitleRegionOcr:
@@ -413,7 +373,7 @@ class TestTitleRegionOcr:
 
         # Act & Assert: ocr_page_yomitoku をモック
         with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="第2章 システム設計") as mock_ocr:
-            result = ocr_region(img, region)
+            ocr_region(img, region)
 
             # Yomitokuが呼ばれたことを確認
             assert mock_ocr.called, "ocr_page_yomitoku should be called for TITLE region"
@@ -502,9 +462,7 @@ class TestResultConcatenation:
 
         # Assert: 順序が維持されている
         types = [r.region_type for r in results]
-        assert types == ["TITLE", "CAPTION", "TEXT"], (
-            f"Results should maintain region order. Got: {types}"
-        )
+        assert types == ["TITLE", "CAPTION", "TEXT"], f"Results should maintain region order. Got: {types}"
 
     def test_ocr_by_layout_skips_abandon_regions(self, tmp_path: Path) -> None:
         """ABANDON領域がスキップされることを検証。"""
@@ -530,9 +488,7 @@ class TestResultConcatenation:
 
         # Assert: ABANDONは結果に含まれない
         assert len(results) == 1, f"Only TEXT region should be processed. Got: {len(results)}"
-        assert results[0].region_type == "TEXT", (
-            f"Result should be TEXT only. Got: {results[0].region_type}"
-        )
+        assert results[0].region_type == "TEXT", f"Result should be TEXT only. Got: {results[0].region_type}"
 
 
 class TestOcrResultDataclass:
@@ -629,11 +585,11 @@ class TestOcrByLayoutEdgeCases:
 
         # 各領域タイプに応じたモックレスポンス（上から下の順、FIGUREは除外）
         mock_yomitoku_responses = [
-            "第5章 結論",           # TITLE (y=50)
-            "左カラムのテキスト",      # TEXT (y=120)
-            "図5.1: 統計データ",     # CAPTION (y=460)
-            "結論の本文テキスト",      # TEXT (y=510)
-            "脚注: 参考文献より",      # FOOTNOTE (y=750)
+            "第5章 結論",  # TITLE (y=50)
+            "左カラムのテキスト",  # TEXT (y=120)
+            "図5.1: 統計データ",  # CAPTION (y=460)
+            "結論の本文テキスト",  # TEXT (y=510)
+            "脚注: 参考文献より",  # FOOTNOTE (y=750)
         ]
 
         # Act
@@ -692,9 +648,7 @@ class TestCalculateCoverage:
         coverage = calculate_coverage(regions, page_size)
 
         # Assert
-        assert coverage == 0.25, (
-            f"50x50 region on 100x100 page should be 25% coverage. Got: {coverage}"
-        )
+        assert coverage == 0.25, f"50x50 region on 100x100 page should be 25% coverage. Got: {coverage}"
 
     def test_calculate_coverage_multiple_regions(self) -> None:
         """複数領域の合計カバー率が正しく計算されることを検証。
@@ -715,9 +669,7 @@ class TestCalculateCoverage:
 
         # Assert
         expected = (25 * 25 + 25 * 25) / (100 * 100)  # 0.125
-        assert coverage == expected, (
-            f"Two 25x25 regions on 100x100 page should be 12.5% coverage. Got: {coverage}"
-        )
+        assert coverage == expected, f"Two 25x25 regions on 100x100 page should be 12.5% coverage. Got: {coverage}"
 
     def test_calculate_coverage_full_page(self) -> None:
         """ページ全体をカバーする領域の場合、カバー率が100%であることを検証。"""
@@ -733,9 +685,7 @@ class TestCalculateCoverage:
         coverage = calculate_coverage(regions, page_size)
 
         # Assert
-        assert coverage == 1.0, (
-            f"Full page coverage should be 100%. Got: {coverage}"
-        )
+        assert coverage == 1.0, f"Full page coverage should be 100%. Got: {coverage}"
 
     def test_calculate_coverage_empty_regions(self) -> None:
         """空の領域リストの場合、カバー率が0%であることを検証。"""
@@ -749,9 +699,7 @@ class TestCalculateCoverage:
         coverage = calculate_coverage(regions, page_size)
 
         # Assert
-        assert coverage == 0.0, (
-            f"Empty regions should have 0% coverage. Got: {coverage}"
-        )
+        assert coverage == 0.0, f"Empty regions should have 0% coverage. Got: {coverage}"
 
     def test_calculate_coverage_real_world_example(self) -> None:
         """実際のページに近い例でカバー率を計算。
@@ -763,7 +711,7 @@ class TestCalculateCoverage:
         # Arrange: 複雑なレイアウト
         regions = [
             {"type": "TITLE", "bbox": [100, 50, 1820, 120], "confidence": 0.95},  # 1720x70
-            {"type": "TEXT", "bbox": [100, 150, 900, 800], "confidence": 0.9},   # 800x650
+            {"type": "TEXT", "bbox": [100, 150, 900, 800], "confidence": 0.9},  # 800x650
             {"type": "FIGURE", "bbox": [950, 150, 1820, 600], "confidence": 0.88},  # 870x450
             {"type": "TEXT", "bbox": [100, 850, 1820, 1030], "confidence": 0.9},  # 1720x180
         ]
@@ -781,9 +729,7 @@ class TestCalculateCoverage:
 
         # Assert
         expected = (120400 + 520000 + 391500 + 309600) / (1920 * 1080)
-        assert abs(coverage - expected) < 0.001, (
-            f"Coverage should be approximately {expected:.3f}. Got: {coverage:.3f}"
-        )
+        assert abs(coverage - expected) < 0.001, f"Coverage should be approximately {expected:.3f}. Got: {coverage:.3f}"
 
 
 class TestShouldFallback:
@@ -801,9 +747,7 @@ class TestShouldFallback:
         result = should_fallback(regions, page_size)
 
         # Assert
-        assert result is True, (
-            "Empty regions should trigger fallback"
-        )
+        assert result is True, "Empty regions should trigger fallback"
 
     def test_should_fallback_low_coverage(self) -> None:
         """カバー率が30%未満の場合、フォールバックすることを検証。
@@ -822,9 +766,7 @@ class TestShouldFallback:
         result = should_fallback(regions, page_size)
 
         # Assert
-        assert result is True, (
-            "Coverage below 30% should trigger fallback"
-        )
+        assert result is True, "Coverage below 30% should trigger fallback"
 
     def test_should_fallback_sufficient_coverage(self) -> None:
         """カバー率が30%以上の場合、フォールバックしないことを検証。
@@ -843,9 +785,7 @@ class TestShouldFallback:
         result = should_fallback(regions, page_size)
 
         # Assert
-        assert result is False, (
-            "Coverage above 30% should not trigger fallback"
-        )
+        assert result is False, "Coverage above 30% should not trigger fallback"
 
     def test_should_fallback_exactly_30_percent(self) -> None:
         """カバー率がちょうど30%の場合、フォールバックしないことを検証（境界値）。
@@ -865,9 +805,7 @@ class TestShouldFallback:
         result = should_fallback(regions, page_size)
 
         # Assert: 30%は閾値以上なのでフォールバックしない
-        assert result is False, (
-            "Coverage at exactly 30% should not trigger fallback"
-        )
+        assert result is False, "Coverage at exactly 30% should not trigger fallback"
 
     def test_should_fallback_custom_threshold(self) -> None:
         """カスタムしきい値でフォールバック判定ができることを検証。
@@ -886,9 +824,7 @@ class TestShouldFallback:
         result = should_fallback(regions, page_size, threshold=0.5)
 
         # Assert
-        assert result is True, (
-            "40% coverage with 50% threshold should trigger fallback"
-        )
+        assert result is True, "40% coverage with 50% threshold should trigger fallback"
 
     def test_should_fallback_single_figure_full_page(self) -> None:
         """ページ全体が1つのFIGUREとして検出された場合、フォールバックすることを検証。
@@ -908,9 +844,7 @@ class TestShouldFallback:
         result = should_fallback(regions, page_size)
 
         # Assert: 全ページFIGUREはフォールバック
-        assert result is True, (
-            "Single FIGURE covering full page should trigger fallback"
-        )
+        assert result is True, "Single FIGURE covering full page should trigger fallback"
 
     def test_should_fallback_multiple_figures_not_fallback(self) -> None:
         """複数のFIGURE領域がある場合はフォールバックしないことを検証。"""
@@ -929,9 +863,7 @@ class TestShouldFallback:
         result = should_fallback(regions, page_size)
 
         # Assert
-        assert result is False, (
-            "Multiple regions with sufficient coverage should not trigger fallback"
-        )
+        assert result is False, "Multiple regions with sufficient coverage should not trigger fallback"
 
 
 class TestFallbackEmptyLayout:
@@ -962,9 +894,7 @@ class TestFallbackEmptyLayout:
             results = ocr_by_layout(str(img_path), layout)
 
             # Assert: フォールバックでページ全体OCRが実行される
-            assert len(results) == 1, (
-                f"Fallback should return 1 result for full page OCR. Got: {len(results)}"
-            )
+            assert len(results) == 1, f"Fallback should return 1 result for full page OCR. Got: {len(results)}"
             # フォールバック時は特別なマーカー "FALLBACK" または "TEXT" としてマーク
             assert results[0].region_type in ("FALLBACK", "TEXT"), (
                 f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
@@ -991,9 +921,7 @@ class TestFallbackEmptyLayout:
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert
-        assert len(results) == 1, (
-            f"Missing regions key should trigger fallback. Got: {len(results)}"
-        )
+        assert len(results) == 1, f"Missing regions key should trigger fallback. Got: {len(results)}"
 
 
 class TestFallbackLowCoverage:
@@ -1027,9 +955,7 @@ class TestFallbackLowCoverage:
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: フォールバックが実行される
-        assert len(results) == 1, (
-            f"Low coverage should trigger fallback. Got: {len(results)}"
-        )
+        assert len(results) == 1, f"Low coverage should trigger fallback. Got: {len(results)}"
         assert results[0].region_type in ("FALLBACK", "TEXT"), (
             f"Fallback result should have FALLBACK or TEXT type. Got: {results[0].region_type}"
         )
@@ -1057,9 +983,7 @@ class TestFallbackLowCoverage:
 
         # Assert: 領域別OCRが実行される（フォールバックしない）
         assert len(results) == 1, f"Should return 1 result. Got: {len(results)}"
-        assert results[0].region_type == "TEXT", (
-            f"Result should be TEXT (not FALLBACK). Got: {results[0].region_type}"
-        )
+        assert results[0].region_type == "TEXT", f"Result should be TEXT (not FALLBACK). Got: {results[0].region_type}"
 
     def test_ocr_by_layout_fallback_29_percent_coverage(self, tmp_path: Path) -> None:
         """29%カバー率（境界値直下）でフォールバックすることを検証。"""
@@ -1118,9 +1042,7 @@ class TestFallbackSingleFigure:
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: フォールバックが実行される
-        assert len(results) == 1, (
-            f"Full page FIGURE should trigger fallback. Got: {len(results)}"
-        )
+        assert len(results) == 1, f"Full page FIGURE should trigger fallback. Got: {len(results)}"
         # フォールバック結果は FALLBACK または TEXT
         assert results[0].region_type in ("FALLBACK", "TEXT"), (
             f"Fallback result type should be FALLBACK or TEXT. Got: {results[0].region_type}"
@@ -1142,9 +1064,7 @@ class TestFallbackEdgeCases:
         try:
             coverage = calculate_coverage(regions, (0, 0))
             # ゼロ除算を避けて0.0を返す実装の場合
-            assert coverage == 0.0, (
-                f"Zero page size should return 0.0 coverage. Got: {coverage}"
-            )
+            assert coverage == 0.0, f"Zero page size should return 0.0 coverage. Got: {coverage}"
         except (ZeroDivisionError, ValueError):
             # エラーを投げる実装も許容
             pass
@@ -1166,9 +1086,7 @@ class TestFallbackEdgeCases:
         # または実装がクランプする場合
         # ここでは単純計算を想定
         expected = (60 * 60) / (100 * 100)  # 0.36
-        assert coverage == expected or coverage >= 0, (
-            f"Negative bbox should be handled. Got: {coverage}"
-        )
+        assert coverage == expected or coverage >= 0, f"Negative bbox should be handled. Got: {coverage}"
 
     def test_should_fallback_only_abandon_regions(self) -> None:
         """ABANDON領域のみの場合もフォールバックすることを検証。"""
@@ -1185,9 +1103,7 @@ class TestFallbackEdgeCases:
         result = should_fallback(regions, page_size)
 
         # Assert: ABANDON領域のみならフォールバック（OCR対象がない）
-        assert result is True, (
-            "Only ABANDON regions should trigger fallback"
-        )
+        assert result is True, "Only ABANDON regions should trigger fallback"
 
 
 # ============================================================================
@@ -1215,9 +1131,7 @@ class TestIsTitleFunction:
         result = is_title(region, yomitoku_result)
 
         # Assert
-        assert result is True, (
-            "Region with type='TITLE' should be recognized as title"
-        )
+        assert result is True, "Region with type='TITLE' should be recognized as title"
 
     def test_is_title_yomitoku_section_headings_role(self) -> None:
         """Yomitokuのroleがsection_headingsの場合、is_titleがTrueを返すことを検証。"""
@@ -1231,9 +1145,7 @@ class TestIsTitleFunction:
         result = is_title(region, yomitoku_result)
 
         # Assert
-        assert result is True, (
-            "Region with yomitoku role='section_headings' should be recognized as title"
-        )
+        assert result is True, "Region with yomitoku role='section_headings' should be recognized as title"
 
     def test_is_title_text_without_role_returns_false(self) -> None:
         """YOLO=TEXT、Yomitokuのroleなしの場合、is_titleがFalseを返すことを検証。"""
@@ -1247,9 +1159,7 @@ class TestIsTitleFunction:
         result = is_title(region, yomitoku_result)
 
         # Assert
-        assert result is False, (
-            "Regular TEXT region without section_headings role should not be title"
-        )
+        assert result is False, "Regular TEXT region without section_headings role should not be title"
 
     def test_is_title_yomitoku_paragraph_role(self) -> None:
         """Yomitokuのroleがparagraphの場合、is_titleがFalseを返すことを検証。"""
@@ -1263,9 +1173,7 @@ class TestIsTitleFunction:
         result = is_title(region, yomitoku_result)
 
         # Assert
-        assert result is False, (
-            "Region with yomitoku role='paragraph' should not be title"
-        )
+        assert result is False, "Region with yomitoku role='paragraph' should not be title"
 
     def test_is_title_both_yolo_and_yomitoku_agree(self) -> None:
         """YOLOとYomitoku両方がTITLEと判定した場合、Trueを返すことを検証。"""
@@ -1279,9 +1187,7 @@ class TestIsTitleFunction:
         result = is_title(region, yomitoku_result)
 
         # Assert
-        assert result is True, (
-            "Region detected as TITLE by both YOLO and Yomitoku should be title"
-        )
+        assert result is True, "Region detected as TITLE by both YOLO and Yomitoku should be title"
 
 
 class TestIsLowQualityFunction:
@@ -1301,9 +1207,7 @@ class TestIsLowQualityFunction:
         result = is_low_quality("")
 
         # Assert
-        assert result is True, (
-            "Empty string should be considered low quality"
-        )
+        assert result is True, "Empty string should be considered low quality"
 
     def test_is_low_quality_short_text(self) -> None:
         """10文字未満のテキストが低品質と判定されることを検証。"""
@@ -1331,9 +1235,7 @@ class TestIsLowQualityFunction:
         result = is_low_quality(text)
 
         # Assert
-        assert result is False, (
-            "Text with exactly 10 characters should not be low quality"
-        )
+        assert result is False, "Text with exactly 10 characters should not be low quality"
 
     def test_is_low_quality_high_non_char_ratio(self) -> None:
         """非文字率が50%を超えるテキストが低品質と判定されることを検証。"""
@@ -1346,9 +1248,7 @@ class TestIsLowQualityFunction:
         result = is_low_quality(text)
 
         # Assert
-        assert result is True, (
-            "Text with >50% non-character ratio should be low quality"
-        )
+        assert result is True, "Text with >50% non-character ratio should be low quality"
 
     def test_is_low_quality_normal_japanese_text(self) -> None:
         """通常の日本語テキストは低品質でないことを検証。"""
@@ -1361,9 +1261,7 @@ class TestIsLowQualityFunction:
         result = is_low_quality(text)
 
         # Assert
-        assert result is False, (
-            "Normal Japanese text should not be low quality"
-        )
+        assert result is False, "Normal Japanese text should not be low quality"
 
     def test_is_low_quality_mixed_content(self) -> None:
         """日本語と記号が混在するが正常なテキストを検証。"""
@@ -1376,9 +1274,7 @@ class TestIsLowQualityFunction:
         result = is_low_quality(text)
 
         # Assert
-        assert result is False, (
-            "Mixed text with reasonable symbol ratio should not be low quality"
-        )
+        assert result is False, "Mixed text with reasonable symbol ratio should not be low quality"
 
     def test_is_low_quality_whitespace_only(self) -> None:
         """空白のみのテキストが低品質と判定されることを検証。"""
@@ -1391,9 +1287,7 @@ class TestIsLowQualityFunction:
         result = is_low_quality(text)
 
         # Assert
-        assert result is True, (
-            "Whitespace-only text should be low quality"
-        )
+        assert result is True, "Whitespace-only text should be low quality"
 
 
 class TestCalcNonCharRatio:
@@ -1413,9 +1307,7 @@ class TestCalcNonCharRatio:
         ratio = calc_non_char_ratio(text)
 
         # Assert
-        assert ratio == 0.0, (
-            f"Pure Japanese text should have 0% non-char ratio. Got: {ratio}"
-        )
+        assert ratio == 0.0, f"Pure Japanese text should have 0% non-char ratio. Got: {ratio}"
 
     def test_calc_non_char_ratio_all_symbols(self) -> None:
         """全て記号の場合、非文字率が1であることを検証。"""
@@ -1428,9 +1320,7 @@ class TestCalcNonCharRatio:
         ratio = calc_non_char_ratio(text)
 
         # Assert
-        assert ratio == 1.0, (
-            f"All-symbol text should have 100% non-char ratio. Got: {ratio}"
-        )
+        assert ratio == 1.0, f"All-symbol text should have 100% non-char ratio. Got: {ratio}"
 
     def test_calc_non_char_ratio_half_and_half(self) -> None:
         """半分が文字、半分が記号の場合を検証。"""
@@ -1443,9 +1333,7 @@ class TestCalcNonCharRatio:
         ratio = calc_non_char_ratio(text)
 
         # Assert
-        assert 0.45 <= ratio <= 0.55, (
-            f"Half-and-half text should have ~50% non-char ratio. Got: {ratio}"
-        )
+        assert 0.45 <= ratio <= 0.55, f"Half-and-half text should have ~50% non-char ratio. Got: {ratio}"
 
     def test_calc_non_char_ratio_empty_string(self) -> None:
         """空文字列の場合の処理を検証。"""
@@ -1455,9 +1343,7 @@ class TestCalcNonCharRatio:
         ratio = calc_non_char_ratio("")
 
         # Assert: 空文字列は0.0を返す（または別の定義による）
-        assert ratio == 0.0 or ratio == 1.0, (
-            f"Empty string non-char ratio should be 0.0 or 1.0. Got: {ratio}"
-        )
+        assert ratio == 0.0 or ratio == 1.0, f"Empty string non-char ratio should be 0.0 or 1.0. Got: {ratio}"
 
     def test_calc_non_char_ratio_english_and_numbers(self) -> None:
         """英数字は文字としてカウントされることを検証。"""
@@ -1470,9 +1356,7 @@ class TestCalcNonCharRatio:
         ratio = calc_non_char_ratio(text)
 
         # Assert
-        assert ratio == 0.0, (
-            f"Alphanumeric text should have 0% non-char ratio. Got: {ratio}"
-        )
+        assert ratio == 0.0, f"Alphanumeric text should have 0% non-char ratio. Got: {ratio}"
 
 
 class TestOcrWithFallback:
@@ -1496,12 +1380,8 @@ class TestOcrWithFallback:
             text, engine_used = ocr_with_fallback(img)
 
         # Assert
-        assert engine_used == "yomitoku", (
-            f"Should use yomitoku when it succeeds. Got: {engine_used}"
-        )
-        assert text == "正常なOCR結果テキスト", (
-            f"Should return yomitoku result. Got: {text}"
-        )
+        assert engine_used == "yomitoku", f"Should use yomitoku when it succeeds. Got: {engine_used}"
+        assert text == "正常なOCR結果テキスト", f"Should return yomitoku result. Got: {text}"
 
     def test_ocr_with_fallback_yomitoku_empty_uses_paddleocr(self) -> None:
         """Yomitokuが空結果の場合、PaddleOCRにフォールバックすることを検証。"""
@@ -1513,15 +1393,11 @@ class TestOcrWithFallback:
         # Act: Yomitokuが空を返し、PaddleOCRが成功
         with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=""):
             with patch("src.ocr_ensemble.ocr_paddleocr") as mock_paddle:
-                mock_paddle.return_value = MagicMock(
-                    success=True, text="PaddleOCRからの結果"
-                )
+                mock_paddle.return_value = MagicMock(success=True, text="PaddleOCRからの結果")
                 text, engine_used = ocr_with_fallback(img)
 
         # Assert
-        assert engine_used == "paddleocr", (
-            f"Should fallback to paddleocr when yomitoku is empty. Got: {engine_used}"
-        )
+        assert engine_used == "paddleocr", f"Should fallback to paddleocr when yomitoku is empty. Got: {engine_used}"
 
     def test_ocr_with_fallback_yomitoku_low_quality_uses_paddleocr(self) -> None:
         """Yomitokuが低品質結果の場合、PaddleOCRにフォールバックすることを検証。"""
@@ -1533,9 +1409,7 @@ class TestOcrWithFallback:
         # Act: Yomitokuが短いゴミ結果を返す
         with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="!!!???"):
             with patch("src.ocr_ensemble.ocr_paddleocr") as mock_paddle:
-                mock_paddle.return_value = MagicMock(
-                    success=True, text="PaddleOCRからの正常な結果テキスト"
-                )
+                mock_paddle.return_value = MagicMock(success=True, text="PaddleOCRからの正常な結果テキスト")
                 text, engine_used = ocr_with_fallback(img)
 
         # Assert
@@ -1555,15 +1429,11 @@ class TestOcrWithFallback:
             with patch("src.ocr_ensemble.ocr_paddleocr") as mock_paddle:
                 mock_paddle.return_value = MagicMock(success=False, text="", error="OCR failed")
                 with patch("src.ocr_ensemble.ocr_tesseract") as mock_tesseract:
-                    mock_tesseract.return_value = MagicMock(
-                        success=True, text="Tesseractからの結果"
-                    )
+                    mock_tesseract.return_value = MagicMock(success=True, text="Tesseractからの結果")
                     text, engine_used = ocr_with_fallback(img)
 
         # Assert
-        assert engine_used == "tesseract", (
-            f"Should fallback to tesseract when others fail. Got: {engine_used}"
-        )
+        assert engine_used == "tesseract", f"Should fallback to tesseract when others fail. Got: {engine_used}"
 
     def test_ocr_with_fallback_all_fail_returns_empty(self) -> None:
         """全エンジンが失敗した場合、空文字列を返すことを検証。"""
@@ -1582,9 +1452,7 @@ class TestOcrWithFallback:
 
         # Assert
         assert text == "", "Should return empty string when all engines fail"
-        assert engine_used == "none", (
-            f"Should indicate no engine succeeded. Got: {engine_used}"
-        )
+        assert engine_used == "none", f"Should indicate no engine succeeded. Got: {engine_used}"
 
 
 class TestMaskFigures:
@@ -1609,15 +1477,11 @@ class TestMaskFigures:
         # Assert: マスク領域が白になっている
         # 領域の中心ピクセルを確認
         center_pixel = masked.getpixel((30, 30))
-        assert center_pixel == (255, 255, 255), (
-            f"FIGURE region should be white. Got: {center_pixel}"
-        )
+        assert center_pixel == (255, 255, 255), f"FIGURE region should be white. Got: {center_pixel}"
 
         # 領域外は元のまま（赤）
         outside_pixel = masked.getpixel((80, 80))
-        assert outside_pixel == (255, 0, 0), (
-            f"Outside FIGURE region should remain unchanged. Got: {outside_pixel}"
-        )
+        assert outside_pixel == (255, 0, 0), f"Outside FIGURE region should remain unchanged. Got: {outside_pixel}"
 
     def test_mask_figures_multiple_figures(self) -> None:
         """複数のFIGURE領域が全て白塗りされることを検証。"""
@@ -1689,9 +1553,7 @@ class TestMaskFigures:
         masked = mask_figures(img, regions)
 
         # Assert: 元画像は変更されていない
-        assert img.getpixel((30, 30)) == original_pixel, (
-            "Original image should not be modified"
-        )
+        assert img.getpixel((30, 30)) == original_pixel, "Original image should not be modified"
         assert masked is not img, "Should return a new image object"
 
 
@@ -1771,21 +1633,15 @@ class TestResultConcatenationWithReadingOrder:
         }
 
         # Mock OCR responses - 各領域に異なるテキストを返す
-        mock_texts = {
-            "TITLE": "タイトル",
-            "TEXT_LEFT": "左カラム本文",
-            "TEXT_RIGHT1": "右カラム上部",
-            "TEXT_RIGHT2": "右カラム下部",
-        }
 
         # Act
         with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
             # 読み順でソートされた後に呼ばれるので、順番を設定
             mock_ocr.side_effect = [
-                "タイトル",      # 左カラム TITLE
-                "左カラム本文",   # 左カラム TEXT
-                "右カラム上部",   # 右カラム TEXT (上)
-                "右カラム下部",   # 右カラム TEXT (下)
+                "タイトル",  # 左カラム TITLE
+                "左カラム本文",  # 左カラム TEXT
+                "右カラム上部",  # 右カラム TEXT (上)
+                "右カラム下部",  # 右カラム TEXT (下)
             ]
             results = ocr_by_layout(str(img_path), layout)
 
@@ -1793,13 +1649,9 @@ class TestResultConcatenationWithReadingOrder:
         assert len(results) == 4, f"Should have 4 results. Got: {len(results)}"
 
         # 最初はTITLE（左カラム上部）
-        assert results[0].region_type == "TITLE", (
-            f"First result should be TITLE. Got: {results[0].region_type}"
-        )
+        assert results[0].region_type == "TITLE", f"First result should be TITLE. Got: {results[0].region_type}"
         # 2番目は左カラムのTEXT
-        assert results[1].region_type == "TEXT", (
-            f"Second result should be TEXT. Got: {results[1].region_type}"
-        )
+        assert results[1].region_type == "TEXT", f"Second result should be TEXT. Got: {results[1].region_type}"
 
     def test_results_maintain_sorted_order_for_single_column(self, tmp_path: Path) -> None:
         """単一カラムレイアウトでも上から下の順序が維持されることを検証。"""

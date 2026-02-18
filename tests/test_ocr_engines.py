@@ -255,7 +255,7 @@ class TestEasyocrWithCLAHE:
         # Call with preprocessing
         # Note: This will fail until implementation is updated
         try:
-            result = run_easyocr_with_boxes(img, apply_preprocessing=True)
+            run_easyocr_with_boxes(img, apply_preprocessing=True)
             # If it doesn't raise, verify CLAHE was called
             # mock_clahe.assert_called_once()  # Uncomment after implementation
         except TypeError:
@@ -317,7 +317,7 @@ class TestRunAllEngines:
 
         # Check default value in signature
         sig = inspect.signature(run_all_engines)
-        engines_param = sig.parameters.get("engines")
+        sig.parameters.get("engines")
 
         # If there's a default, check it doesn't include tesseract
         # For now, we just verify the function exists
@@ -335,29 +335,19 @@ class TestRunAllEngines:
     @patch("src.rover.engines.run_yomitoku_with_boxes")
     @patch("src.rover.engines.run_paddleocr_with_boxes")
     @patch("src.rover.engines.run_easyocr_with_boxes")
-    def test_run_all_engines_explicit_engines(
-        self, mock_easyocr, mock_paddle, mock_yomitoku
-    ):
+    def test_run_all_engines_explicit_engines(self, mock_easyocr, mock_paddle, mock_yomitoku):
         """指定したエンジンのみが実行される"""
         from src.rover.engines import EngineResult, run_all_engines
 
         # Mock return values
-        mock_yomitoku.return_value = EngineResult(
-            engine="yomitoku", items=[], success=True
-        )
-        mock_paddle.return_value = EngineResult(
-            engine="paddleocr", items=[], success=True
-        )
-        mock_easyocr.return_value = EngineResult(
-            engine="easyocr", items=[], success=True
-        )
+        mock_yomitoku.return_value = EngineResult(engine="yomitoku", items=[], success=True)
+        mock_paddle.return_value = EngineResult(engine="paddleocr", items=[], success=True)
+        mock_easyocr.return_value = EngineResult(engine="easyocr", items=[], success=True)
 
         img = Image.new("RGB", (100, 80), color=(200, 200, 200))
 
         # Run with explicit engines (no tesseract)
-        results = run_all_engines(
-            img, engines=["yomitoku", "paddleocr", "easyocr"]
-        )
+        results = run_all_engines(img, engines=["yomitoku", "paddleocr", "easyocr"])
 
         assert "yomitoku" in results
         assert "paddleocr" in results

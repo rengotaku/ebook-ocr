@@ -223,9 +223,7 @@ class TestBuildXMLWithPageComments:
             level=1,
             number="1",
             title="Chapter Title",
-            children=(
-                Heading(level=1, text="Chapter 1 Title", read_aloud=True),
-            ),
+            children=(Heading(level=1, text="Chapter 1 Title", read_aloud=True),),
         )
 
         book = Book(
@@ -300,9 +298,7 @@ class TestBuildXMLWithPageComments:
             level=1,
             number="1",
             title="Chapter Title",
-            children=(
-                Heading(level=1, text="Chapter 1 Title", read_aloud=True),
-            ),
+            children=(Heading(level=1, text="Chapter 1 Title", read_aloud=True),),
         )
 
         book = Book(

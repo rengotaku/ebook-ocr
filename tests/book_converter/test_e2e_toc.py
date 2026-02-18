@@ -575,9 +575,7 @@ class TestE2ENormalFileConversion:
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
         assert normal_file_path.exists()
 
-    def test_normal_file_conversion_succeeds(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_normal_file_conversion_succeeds(self, normal_file_path: Path, tmp_path: Path) -> None:
         """正常ファイルの変換が成功する"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
@@ -625,16 +623,11 @@ class TestE2ENormalFileConversion:
             matching = [
                 e
                 for e in chapter_entries
-                if e.get("number") == expected["number"]
-                and expected["title_contains"] in (e.get("title") or "")
+                if e.get("number") == expected["number"] and expected["title_contains"] in (e.get("title") or "")
             ]
-            assert len(matching) > 0, (
-                f"チャプター {expected['number']} ({expected['title_contains']}) が見つかりません"
-            )
+            assert len(matching) > 0, f"チャプター {expected['number']} ({expected['title_contains']}) が見つかりません"
 
-    def test_page_count_preserved(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_page_count_preserved(self, normal_file_path: Path, tmp_path: Path) -> None:
         """ページ数が保持される"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
@@ -653,9 +646,7 @@ class TestE2ENormalFileConversion:
             f"XMLページ数 ({len(pages)}) と結果ページ数 ({result.total_pages}) が不一致"
         )
 
-    def test_no_page_loss(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_no_page_loss(self, normal_file_path: Path, tmp_path: Path) -> None:
         """ページ欠損がない（PageValidationErrorが発生しない）"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
@@ -671,9 +662,7 @@ class TestE2ENormalFileConversion:
         except PageValidationError as e:
             pytest.fail(f"PageValidationErrorが発生しました: {e}")
 
-    def test_japanese_chapter_format_recognized(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_japanese_chapter_format_recognized(self, normal_file_path: Path, tmp_path: Path) -> None:
         """日本語の第N章形式が正しく認識される"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
@@ -700,9 +689,7 @@ class TestE2ENormalFileConversion:
         assert len(chapter1) > 0, "第1章が見つかりません"
         assert chapter1[0].get("level") == "1"  # chapter
 
-    def test_section_format_recognized(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_section_format_recognized(self, normal_file_path: Path, tmp_path: Path) -> None:
         """N.N節形式が正しく認識される"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
@@ -727,9 +714,7 @@ class TestE2ENormalFileConversion:
         # セクションエントリが存在する
         assert len(section_entries) > 0, "セクションエントリがありません"
 
-    def test_xml_structure_valid(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_xml_structure_valid(self, normal_file_path: Path, tmp_path: Path) -> None:
         """生成されるXML構造が有効"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
@@ -763,9 +748,7 @@ class TestE2ENormalFileRegressionDetailed:
         """正常ファイルのパス"""
         return Path("/mnt/hugevolume/Data/BOOKS/OCR/output/4fd5500620491ebe/book.md")
 
-    def test_toc_begin_end_attributes(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_toc_begin_end_attributes(self, normal_file_path: Path, tmp_path: Path) -> None:
         """TOCのbegin/end属性が正しく設定される"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
@@ -794,9 +777,7 @@ class TestE2ENormalFileRegressionDetailed:
         # begin <= end であること
         assert int(begin) <= int(end), f"begin ({begin}) > end ({end})"
 
-    def test_page_numbers_sequential(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_page_numbers_sequential(self, normal_file_path: Path, tmp_path: Path) -> None:
         """ページ番号が存在する"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")
@@ -811,13 +792,9 @@ class TestE2ENormalFileRegressionDetailed:
         page_numbers = [p.get("number") for p in pages]
 
         # すべてのページに番号がある
-        assert all(pn is not None and pn != "" for pn in page_numbers), (
-            "ページ番号が欠落しているページがあります"
-        )
+        assert all(pn is not None and pn != "" for pn in page_numbers), "ページ番号が欠落しているページがあります"
 
-    def test_content_elements_present(
-        self, normal_file_path: Path, tmp_path: Path
-    ) -> None:
+    def test_content_elements_present(self, normal_file_path: Path, tmp_path: Path) -> None:
         """コンテンツ要素が存在する"""
         if not normal_file_path.exists():
             pytest.skip("正常テストファイルが見つかりません (4fd5500620491ebe)")

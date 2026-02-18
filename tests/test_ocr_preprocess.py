@@ -61,8 +61,8 @@ class TestApplyCLAHE:
 
         # CLAHE should increase the range of values (enhance contrast)
         # The output should have a larger standard deviation or range
-        input_std = img.std()
-        output_std = result.std()
+        img.std()
+        result.std()
 
         # After CLAHE, contrast should be enhanced or at least not reduced significantly
         # (allowing for cases where the original has almost no variance)
@@ -105,7 +105,7 @@ class TestApplyCLAHE:
         img = np.zeros((100, 100, 3), dtype=np.uint8)
         img[:, :, 0] = 200  # Red channel
         img[:, :, 1] = 100  # Green channel
-        img[:, :, 2] = 50   # Blue channel
+        img[:, :, 2] = 50  # Blue channel
 
         result = apply_clahe(img)
 

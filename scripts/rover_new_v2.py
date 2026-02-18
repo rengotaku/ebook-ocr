@@ -5,16 +5,15 @@ Key improvement: Merge similar lines from different engines to avoid duplication
 """
 
 import sys
-from pathlib import Path
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from PIL import Image
 import numpy as np
-
-from ocr_engines import TextWithBox, EngineResult
+from ocr_engines import EngineResult, TextWithBox
+from PIL import Image
 
 ENGINE_WEIGHTS = {
     "yomitoku": 1.5,
@@ -28,6 +27,7 @@ CONFIDENCE_THRESHOLD = 0.5
 @dataclass
 class LineCandidate:
     """Line candidate from an engine."""
+
     engine: str
     text: str
     confidence: float
@@ -43,7 +43,7 @@ def is_garbage(text: str, confidence: float) -> bool:
         return True
     if len(text) >= 5:
         for i in range(len(text) - 4):
-            if len(set(text[i:i+5])) == 1:
+            if len(set(text[i : i + 5])) == 1:
                 return True
     return False
 
@@ -89,13 +89,13 @@ def char_level_vote(texts: list[tuple[str, str, float]]) -> str:
         matcher = SequenceMatcher(None, ref_text, text)
 
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'equal':
+            if tag == "equal":
                 for k in range(i2 - i1):
                     pos_idx = i1 + k
                     char = text[j1 + k]
                     if pos_idx < len(positions):
                         positions[pos_idx][char] = positions[pos_idx].get(char, 0) + weight
-            elif tag == 'replace':
+            elif tag == "replace":
                 for k in range(min(i2 - i1, j2 - j1)):
                     pos_idx = i1 + k
                     char = text[j1 + k]
@@ -109,7 +109,7 @@ def char_level_vote(texts: list[tuple[str, str, float]]) -> str:
             best_char = max(pos_votes.items(), key=lambda x: x[1])[0]
             result.append(best_char)
 
-    return ''.join(result)
+    return "".join(result)
 
 
 def extract_lines(result: EngineResult, engine: str) -> list[LineCandidate]:
@@ -137,7 +137,7 @@ def extract_lines(result: EngineResult, engine: str) -> list[LineCandidate]:
     # Convert to LineCandidate
     candidates = []
     for line_items in lines:
-        text = ''.join(item.text for item in line_items)
+        text = "".join(item.text for item in line_items)
         conf = sum(item.confidence for item in line_items) / len(line_items)
         y_center = sum(item.y_center for item in line_items) / len(line_items)
         y_min = min(item.bbox[1] for item in line_items)
@@ -174,10 +174,7 @@ def merge_similar_lines(all_lines: list[LineCandidate], similarity_threshold: fl
                 continue
 
             # Check y-range overlap
-            y_overlap = (
-                line.y_range[0] <= other.y_range[1] and
-                other.y_range[0] <= line.y_range[1]
-            )
+            y_overlap = line.y_range[0] <= other.y_range[1] and other.y_range[0] <= line.y_range[1]
 
             # Check text similarity
             sim = text_similarity(line.text, other.text)
@@ -231,7 +228,7 @@ def new_rover_v2(engine_results: dict[str, EngineResult]) -> tuple[str, dict[str
                 if sim >= 0.7:
                     contributions[line.engine] += 1
 
-    return '\n'.join(final_lines), contributions
+    return "\n".join(final_lines), contributions
 
 
 def run_easyocr_with_clahe(image: Image.Image) -> EngineResult:
@@ -239,14 +236,14 @@ def run_easyocr_with_clahe(image: Image.Image) -> EngineResult:
     import cv2
     import easyocr
 
-    img_array = np.array(image.convert('RGB'))
+    img_array = np.array(image.convert("RGB"))
     lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     lab[:, :, 0] = clahe.apply(lab[:, :, 0])
     processed = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
 
     try:
-        reader = easyocr.Reader(['ja', 'en'], gpu=False)
+        reader = easyocr.Reader(["ja", "en"], gpu=False)
         results = reader.readtext(processed, detail=1)
 
         items: list[TextWithBox] = []
@@ -292,15 +289,15 @@ def main():
     print(merged_text)
 
     # Count lines
-    lines = merged_text.split('\n')
-    print(f"\n--- Stats ---")
+    lines = merged_text.split("\n")
+    print("\n--- Stats ---")
     print(f"Total lines: {len(lines)}")
 
     output_file = output_dir / "page_0024_rover_new_v2.txt"
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write("# NEW ROVER v2 OCR output for page_0024.png\n")
         f.write("# 新ROVERアルゴリズム（文字レベル投票 + 重複排除）\n")
-        f.write(f"# Engines: yomitoku, easyocr (with CLAHE)\n")
+        f.write("# Engines: yomitoku, easyocr (with CLAHE)\n")
         f.write(f"# Contributions: {contributions}\n")
         f.write(f"# Total lines: {len(lines)}\n\n")
         f.write(merged_text)

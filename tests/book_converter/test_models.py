@@ -322,8 +322,7 @@ class TestTocEntryLevelInt:
         # dataclass の型アノテーションを検証
         field_type = TocEntry.__dataclass_fields__["level"].type
         # 型アノテーションが int であること
-        assert field_type == int or field_type == "int", \
-            f"TocEntry.level type should be int, but got {field_type}"
+        assert field_type is int or field_type == "int", f"TocEntry.level type should be int, but got {field_type}"
 
     def test_toc_entry_level_int_basic(self) -> None:
         """TocEntry.level が int 型で作成できる"""
@@ -767,8 +766,7 @@ class TestListTypeAttribute:
         from src.book_converter.models import List
 
         # list_type フィールドが存在することを確認
-        assert "list_type" in List.__dataclass_fields__, \
-            "List should have list_type field"
+        assert "list_type" in List.__dataclass_fields__, "List should have list_type field"
 
     def test_list_type_unordered(self) -> None:
         """List(list_type="unordered") が作成できる"""
@@ -809,8 +807,7 @@ class TestListTypeAttribute:
         from src.book_converter.models import List
 
         field_type = List.__dataclass_fields__["list_type"].type
-        assert field_type == str or field_type == "str", \
-            f"List.list_type type should be str, but got {field_type}"
+        assert field_type is str or field_type == "str", f"List.list_type type should be str, but got {field_type}"
 
     def test_list_is_immutable(self) -> None:
         """List は frozen dataclass（イミュータブル）"""
@@ -859,15 +856,13 @@ class TestFigurePathMarker:
         """Figure dataclass に path フィールドが存在する"""
         from src.book_converter.models import Figure
 
-        assert "path" in Figure.__dataclass_fields__, \
-            "Figure should have path field"
+        assert "path" in Figure.__dataclass_fields__, "Figure should have path field"
 
     def test_figure_has_marker_field(self) -> None:
         """Figure dataclass に marker フィールドが存在する"""
         from src.book_converter.models import Figure
 
-        assert "marker" in Figure.__dataclass_fields__, \
-            "Figure should have marker field"
+        assert "marker" in Figure.__dataclass_fields__, "Figure should have marker field"
 
     def test_figure_path_required(self) -> None:
         """Figure の path は必須フィールド"""

@@ -135,20 +135,20 @@
 
 ### Input
 
-- [ ] T039 セットアップ分析を読み込み: specs/011-code-refactoring/tasks/ph1-output.md
-- [ ] T040 前フェーズ出力を読み込み: specs/011-code-refactoring/tasks/ph3-output.md
+- [X] T039 セットアップ分析を読み込み: specs/011-code-refactoring/tasks/ph1-output.md
+- [X] T040 前フェーズ出力を読み込み: specs/011-code-refactoring/tasks/ph3-output.md
 
 ### Implementation
 
-- [ ] T041 [US2] .pre-commit-config.yaml を作成:
+- [X] T041 [US2] .pre-commit-config.yaml を作成:
   - repo: https://github.com/astral-sh/ruff-pre-commit
   - rev: v0.9.6
   - hooks: ruff (--fix), ruff-format
 
 ### Verification
 
-- [ ] T042 `pre-commit run --all-files` が正常に完了することを確認
-- [ ] T043 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph4-output.md
+- [X] T042 `pre-commit run --all-files` が正常に完了することを確認
+- [X] T043 フェーズ出力を生成: specs/011-code-refactoring/tasks/ph4-output.md
 
 **Checkpoint**: pre-commit設定完了
 

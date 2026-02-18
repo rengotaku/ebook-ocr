@@ -100,9 +100,7 @@ class TestExtractPageNumber:
     # 正常系
     def test_extract_page_number_from_marker(self) -> None:
         """ページマーカーからページ番号を抽出"""
-        page_number, source_file = extract_page_number(
-            "--- Page 42 (page_0042.png) ---"
-        )
+        page_number, source_file = extract_page_number("--- Page 42 (page_0042.png) ---")
         assert page_number == "42"
         assert source_file == "page_0042.png"
 
@@ -119,9 +117,7 @@ class TestExtractPageNumber:
     # 欠落系
     def test_missing_page_number_returns_empty(self) -> None:
         """ページ番号が欠落している場合は空文字列"""
-        page_number, source_file = extract_page_number(
-            "--- Page (page_0001.png) ---"
-        )
+        page_number, source_file = extract_page_number("--- Page (page_0001.png) ---")
         assert page_number == ""
         assert source_file == "page_0001.png"
 
@@ -632,9 +628,7 @@ class TestParseFigureComment:
         """複雑なパスを解析"""
         from src.book_converter.parser import parse_figure_comment
 
-        result = parse_figure_comment(
-            "<!-- FIGURE: output/chapter_01/fig_2-3_diagram.png -->"
-        )
+        result = parse_figure_comment("<!-- FIGURE: output/chapter_01/fig_2-3_diagram.png -->")
 
         assert result is not None
         assert result == "output/chapter_01/fig_2-3_diagram.png"
@@ -859,9 +853,7 @@ class TestParsePageMetadata:
 class TestErrorHandlingContinueOnWarning:
     """T071: エラーハンドリングテスト - 警告継続"""
 
-    def test_parse_pages_continues_on_missing_page_number(
-        self, tmp_path: Path
-    ) -> None:
+    def test_parse_pages_continues_on_missing_page_number(self, tmp_path: Path) -> None:
         """ページ番号が欠落しても解析を継続"""
         from src.book_converter.parser import parse_pages_with_errors
 
@@ -879,9 +871,7 @@ class TestErrorHandlingContinueOnWarning:
         # エラーが記録される
         assert len(errors) >= 1
 
-    def test_parse_pages_continues_on_invalid_heading(
-        self, tmp_path: Path
-    ) -> None:
+    def test_parse_pages_continues_on_invalid_heading(self, tmp_path: Path) -> None:
         """不正な見出しがあっても解析を継続"""
         from src.book_converter.parser import parse_pages_with_errors
 
@@ -897,9 +887,7 @@ class TestErrorHandlingContinueOnWarning:
         # ページは解析される
         assert len(pages) == 1
 
-    def test_parse_pages_records_error_for_missing_number(
-        self, tmp_path: Path
-    ) -> None:
+    def test_parse_pages_records_error_for_missing_number(self, tmp_path: Path) -> None:
         """欠落したページ番号のエラーを記録"""
         from src.book_converter.models import ConversionError
         from src.book_converter.parser import parse_pages_with_errors
@@ -915,9 +903,7 @@ class TestErrorHandlingContinueOnWarning:
         assert isinstance(errors[0], ConversionError)
         assert "PAGE_NUMBER" in errors[0].error_type or "NUMBER" in errors[0].error_type
 
-    def test_parse_pages_records_error_for_deep_heading(
-        self, tmp_path: Path
-    ) -> None:
+    def test_parse_pages_records_error_for_deep_heading(self, tmp_path: Path) -> None:
         """4階層以上の見出しのエラーを記録"""
         from src.book_converter.parser import parse_pages_with_errors
 
@@ -932,14 +918,11 @@ class TestErrorHandlingContinueOnWarning:
 
         # 警告/エラーが記録される
         has_heading_warning = any(
-            "HEADING" in e.error_type or "LEVEL" in e.error_type or "階層" in e.message
-            for e in errors
+            "HEADING" in e.error_type or "LEVEL" in e.error_type or "階層" in e.message for e in errors
         )
         assert has_heading_warning
 
-    def test_error_contains_line_number(
-        self, tmp_path: Path
-    ) -> None:
+    def test_error_contains_line_number(self, tmp_path: Path) -> None:
         """エラーに行番号が含まれる"""
         from src.book_converter.parser import parse_pages_with_errors
 
@@ -961,9 +944,7 @@ class TestErrorHandlingContinueOnWarning:
 class TestErrorHandlingXMLComment:
     """T071: エラーハンドリングテスト - XMLコメントマーク"""
 
-    def test_xml_contains_error_comment_for_missing_number(
-        self, tmp_path: Path
-    ) -> None:
+    def test_xml_contains_error_comment_for_missing_number(self, tmp_path: Path) -> None:
         """ページ番号欠落時にXMLコメントを挿入"""
         from src.book_converter.cli import convert_book
 
@@ -979,16 +960,12 @@ class TestErrorHandlingXMLComment:
         # エラーコメントが含まれる
         assert "<!-- ERROR:" in content or "<!--" in content
 
-    def test_xml_contains_error_type(
-        self, tmp_path: Path
-    ) -> None:
+    def test_xml_contains_error_type(self, tmp_path: Path) -> None:
         """XMLコメントにエラータイプが含まれる"""
         from src.book_converter.cli import convert_book
 
         input_file = tmp_path / "test.md"
-        input_file.write_text(
-            "--- Page (page_0001.png) ---\n\n# Title\n"
-        )
+        input_file.write_text("--- Page (page_0001.png) ---\n\n# Title\n")
 
         output_file = tmp_path / "output.xml"
         convert_book(input_file, output_file)
@@ -997,29 +974,24 @@ class TestErrorHandlingXMLComment:
         # エラータイプが含まれる
         assert "ERROR" in content or "PAGE" in content
 
-    def test_xml_comment_format(
-        self, tmp_path: Path
-    ) -> None:
+    def test_xml_comment_format(self, tmp_path: Path) -> None:
         """XMLコメントが正しい形式 <!-- ERROR: [type] - [message] -->"""
         from src.book_converter.cli import convert_book
 
         input_file = tmp_path / "test.md"
-        input_file.write_text(
-            "--- Page (page_0001.png) ---\n\n# Title\n"
-        )
+        input_file.write_text("--- Page (page_0001.png) ---\n\n# Title\n")
 
         output_file = tmp_path / "output.xml"
         convert_book(input_file, output_file)
 
         content = output_file.read_text(encoding="utf-8")
         import re
+
         # XMLコメント形式: <!-- ERROR: TYPE - message -->
         pattern = r"<!--\s*ERROR:\s*\w+.*-->"
         assert re.search(pattern, content) is not None
 
-    def test_xml_contains_error_comment_for_deep_heading(
-        self, tmp_path: Path
-    ) -> None:
+    def test_xml_contains_error_comment_for_deep_heading(self, tmp_path: Path) -> None:
         """4階層見出し時にXMLコメントを挿入"""
         from src.book_converter.cli import convert_book
 
@@ -1047,9 +1019,7 @@ class TestErrorHandlingParseWithErrors:
 
         assert callable(parse_pages_with_errors)
 
-    def test_returns_tuple_of_pages_errors_and_toc(
-        self, tmp_path: Path
-    ) -> None:
+    def test_returns_tuple_of_pages_errors_and_toc(self, tmp_path: Path) -> None:
         """ページリストとエラーリストとTOCのタプルを返す"""
         from src.book_converter.parser import parse_pages_with_errors
 
@@ -1066,9 +1036,7 @@ class TestErrorHandlingParseWithErrors:
         # toc is None when no TOC markers
         assert toc is None
 
-    def test_pages_are_list(
-        self, tmp_path: Path
-    ) -> None:
+    def test_pages_are_list(self, tmp_path: Path) -> None:
         """ページはリストで返される"""
         from src.book_converter.parser import parse_pages_with_errors
 
@@ -1079,9 +1047,7 @@ class TestErrorHandlingParseWithErrors:
 
         assert isinstance(pages, (list, tuple))
 
-    def test_errors_are_list(
-        self, tmp_path: Path
-    ) -> None:
+    def test_errors_are_list(self, tmp_path: Path) -> None:
         """エラーはリストで返される"""
         from src.book_converter.parser import parse_pages_with_errors
 
@@ -1092,26 +1058,18 @@ class TestErrorHandlingParseWithErrors:
 
         assert isinstance(errors, (list, tuple))
 
-    def test_no_errors_for_valid_input(
-        self, tmp_path: Path
-    ) -> None:
+    def test_no_errors_for_valid_input(self, tmp_path: Path) -> None:
         """有効な入力ではエラーなし"""
         from src.book_converter.parser import parse_pages_with_errors
 
         input_file = tmp_path / "test.md"
-        input_file.write_text(
-            "--- Page 1 (page_0001.png) ---\n\n"
-            "# Title\n\n"
-            "Content here.\n"
-        )
+        input_file.write_text("--- Page 1 (page_0001.png) ---\n\n# Title\n\nContent here.\n")
 
         pages, errors, _ = parse_pages_with_errors(input_file)
 
         assert len(errors) == 0
 
-    def test_multiple_errors_collected(
-        self, tmp_path: Path
-    ) -> None:
+    def test_multiple_errors_collected(self, tmp_path: Path) -> None:
         """複数のエラーを収集"""
         from src.book_converter.parser import parse_pages_with_errors
 
@@ -3354,8 +3312,7 @@ class TestLegacyPatternRemovalInParser:
 
         # Check for the specific legacy annotation pattern
         assert "- legacy" not in module_source, (
-            "parser.py should not contain '- legacy' annotations. "
-            "Remove the redundant legacy Chapter pattern."
+            "parser.py should not contain '- legacy' annotations. Remove the redundant legacy Chapter pattern."
         )
 
     def test_parser_no_character_class_case_insensitive_pattern(self) -> None:

@@ -32,8 +32,7 @@ class TestSortReadingOrderSimple:
         # Assert: Y座標の小さい順にソート
         y_coords = [r["bbox"][1] for r in sorted_regions]
         assert y_coords == [100, 200, 300], (
-            f"Regions should be sorted top-to-bottom by Y coordinate. "
-            f"Expected Y coords [100, 200, 300], got {y_coords}"
+            f"Regions should be sorted top-to-bottom by Y coordinate. Expected Y coords [100, 200, 300], got {y_coords}"
         )
 
     def test_sort_reading_order_left_to_right_same_row(self) -> None:
@@ -76,9 +75,7 @@ class TestSortReadingOrderSimple:
         sorted_regions = sort_reading_order(regions, page_width)
 
         # Assert
-        assert sorted_regions == [], (
-            f"Empty input should return empty list, got {sorted_regions}"
-        )
+        assert sorted_regions == [], f"Empty input should return empty list, got {sorted_regions}"
 
     def test_sort_reading_order_single_region(self) -> None:
         """単一領域の場合、そのまま返すことを検証。"""
@@ -95,12 +92,9 @@ class TestSortReadingOrderSimple:
 
         # Assert
         assert len(sorted_regions) == 1, (
-            f"Single region input should return single region, "
-            f"got {len(sorted_regions)} regions"
+            f"Single region input should return single region, got {len(sorted_regions)} regions"
         )
-        assert sorted_regions[0]["bbox"] == [100, 100, 500, 200], (
-            "Single region should be unchanged"
-        )
+        assert sorted_regions[0]["bbox"] == [100, 100, 500, 200], "Single region should be unchanged"
 
 
 class TestSortReadingOrderTwoColumn:
@@ -158,7 +152,7 @@ class TestSortReadingOrderTwoColumn:
             {"type": "TEXT", "bbox": [100, 200, 300, 280], "confidence": 0.9},  # 左中
             {"type": "TEXT", "bbox": [600, 150, 800, 230], "confidence": 0.9},  # 右下
             {"type": "TEXT", "bbox": [100, 100, 300, 180], "confidence": 0.9},  # 左上
-            {"type": "TEXT", "bbox": [600, 50, 800, 130], "confidence": 0.9},   # 右上
+            {"type": "TEXT", "bbox": [600, 50, 800, 130], "confidence": 0.9},  # 右上
             {"type": "TEXT", "bbox": [100, 300, 300, 380], "confidence": 0.9},  # 左下
         ]
         page_width = 1000
@@ -170,8 +164,7 @@ class TestSortReadingOrderTwoColumn:
         expected_y_order = [100, 200, 300, 50, 150]
         actual_y_order = [r["bbox"][1] for r in sorted_regions]
         assert actual_y_order == expected_y_order, (
-            f"Each column should be sorted by Y coordinate. "
-            f"Expected Y order: {expected_y_order}, got: {actual_y_order}"
+            f"Each column should be sorted by Y coordinate. Expected Y order: {expected_y_order}, got: {actual_y_order}"
         )
 
     def test_sort_reading_order_center_regions(self) -> None:
@@ -193,12 +186,8 @@ class TestSortReadingOrderTwoColumn:
         sorted_regions = sort_reading_order(regions, page_width)
 
         # Assert: 左 → 中央(右扱い) の順序
-        assert sorted_regions[0]["bbox"][0] == 100, (
-            "Left region should come first"
-        )
-        assert sorted_regions[1]["bbox"][0] == 400, (
-            "Center region (treated as right) should come second"
-        )
+        assert sorted_regions[0]["bbox"][0] == 100, "Left region should come first"
+        assert sorted_regions[1]["bbox"][0] == 400, "Center region (treated as right) should come second"
 
 
 class TestSortReadingOrderTitlePriority:
@@ -224,8 +213,7 @@ class TestSortReadingOrderTitlePriority:
 
         # Assert: TITLEが先
         assert sorted_regions[0]["type"] == "TITLE", (
-            f"TITLE should come before TEXT at same Y coordinate. "
-            f"Got: {sorted_regions[0]['type']} first"
+            f"TITLE should come before TEXT at same Y coordinate. Got: {sorted_regions[0]['type']} first"
         )
 
     def test_sort_reading_order_title_priority_with_y_sort(self) -> None:
@@ -273,8 +261,7 @@ class TestSortReadingOrderTitlePriority:
 
         # Assert: TITLEが最初
         assert sorted_regions[0]["type"] == "TITLE", (
-            f"TITLE at top of page should be first. "
-            f"Got: {sorted_regions[0]['type']} first"
+            f"TITLE at top of page should be first. Got: {sorted_regions[0]['type']} first"
         )
         # 後続のTEXTはY座標順
         assert sorted_regions[1]["bbox"][1] == 150, "Second should be TEXT at Y=150"
@@ -299,9 +286,7 @@ class TestRemoveOverlaps:
         result = remove_overlaps(regions)
 
         # Assert
-        assert len(result) == 3, (
-            f"No overlaps: all 3 regions should remain. Got {len(result)} regions"
-        )
+        assert len(result) == 3, f"No overlaps: all 3 regions should remain. Got {len(result)} regions"
 
     def test_remove_overlaps_complete_overlap(self) -> None:
         """完全に重複する領域の場合、信頼度の高い方が残ることを検証。"""
@@ -317,12 +302,9 @@ class TestRemoveOverlaps:
         result = remove_overlaps(regions)
 
         # Assert: 信頼度の高い方(0.9)が残る
-        assert len(result) == 1, (
-            f"Complete overlap: only 1 region should remain. Got {len(result)} regions"
-        )
+        assert len(result) == 1, f"Complete overlap: only 1 region should remain. Got {len(result)} regions"
         assert result[0]["confidence"] == 0.9, (
-            f"Higher confidence region should be kept. "
-            f"Expected confidence=0.9, got {result[0]['confidence']}"
+            f"Higher confidence region should be kept. Expected confidence=0.9, got {result[0]['confidence']}"
         )
 
     def test_remove_overlaps_partial_overlap(self) -> None:
@@ -345,13 +327,9 @@ class TestRemoveOverlaps:
         result = remove_overlaps(regions)
 
         # Assert: 高重複率の場合、1つのみ残る
-        assert len(result) == 1, (
-            f"High overlap (50%+): only 1 region should remain. "
-            f"Got {len(result)} regions"
-        )
+        assert len(result) == 1, f"High overlap (50%+): only 1 region should remain. Got {len(result)} regions"
         assert result[0]["confidence"] == 0.9, (
-            f"Higher confidence region should be kept. "
-            f"Expected confidence=0.9, got {result[0]['confidence']}"
+            f"Higher confidence region should be kept. Expected confidence=0.9, got {result[0]['confidence']}"
         )
 
     def test_remove_overlaps_low_overlap_both_kept(self) -> None:
@@ -371,10 +349,7 @@ class TestRemoveOverlaps:
         result = remove_overlaps(regions)
 
         # Assert: 低重複率の場合、両方残る
-        assert len(result) == 2, (
-            f"Low overlap (<30%): both regions should remain. "
-            f"Got {len(result)} regions"
-        )
+        assert len(result) == 2, f"Low overlap (<30%): both regions should remain. Got {len(result)} regions"
 
     def test_remove_overlaps_empty_list(self) -> None:
         """空のリストが渡された場合、空のリストを返すことを検証。"""
@@ -406,10 +381,7 @@ class TestRemoveOverlaps:
         result = remove_overlaps(regions)
 
         # Assert: 異なるタイプは両方残す
-        assert len(result) == 2, (
-            f"Different types with overlap should both remain. "
-            f"Got {len(result)} regions"
-        )
+        assert len(result) == 2, f"Different types with overlap should both remain. Got {len(result)} regions"
         types_in_result = {r["type"] for r in result}
         assert types_in_result == {"TITLE", "TEXT"}, (
             f"Both TITLE and TEXT should be in result. Got types: {types_in_result}"
@@ -444,9 +416,7 @@ class TestSortReadingOrderEdgeCases:
         sorted_regions = sort_reading_order(regions, page_width)
 
         # Assert: 追加フィールドが保持される
-        assert all("label" in r for r in sorted_regions), (
-            "Additional fields should be preserved during sorting"
-        )
+        assert all("label" in r for r in sorted_regions), "Additional fields should be preserved during sorting"
 
     def test_sort_reading_order_immutable_input(self) -> None:
         """入力リストが変更されないことを検証（イミュータビリティ）。"""
@@ -461,13 +431,12 @@ class TestSortReadingOrderEdgeCases:
         page_width = 1000
 
         # Act
-        sorted_regions = sort_reading_order(regions, page_width)
+        sort_reading_order(regions, page_width)
 
         # Assert: 元のリストは変更されない
         current_order = [r["bbox"][1] for r in regions]
         assert current_order == original_order, (
-            f"Original list should not be modified. "
-            f"Expected order {original_order}, got {current_order}"
+            f"Original list should not be modified. Expected order {original_order}, got {current_order}"
         )
 
     def test_sort_reading_order_large_page(self) -> None:

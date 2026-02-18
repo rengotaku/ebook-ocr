@@ -49,9 +49,7 @@ class TestCLIErrorHandling:
             ("src.cli.consolidate", ["/nonexistent/ocr", "-o", "/tmp/out"]),
         ],
     )
-    def test_nonexistent_input_shows_error_message(
-        self, module: str, args: list[str]
-    ):
+    def test_nonexistent_input_shows_error_message(self, module: str, args: list[str]):
         """Verify all CLIs show error message to stderr for nonexistent input."""
         result = subprocess.run(
             [sys.executable, "-m", module] + args,
@@ -59,8 +57,7 @@ class TestCLIErrorHandling:
             text=True,
         )
         assert "error" in result.stderr.lower(), (
-            f"{module} should show 'error' in stderr for nonexistent input. "
-            f"stderr: {result.stderr}"
+            f"{module} should show 'error' in stderr for nonexistent input. stderr: {result.stderr}"
         )
 
     @pytest.mark.parametrize(
@@ -82,12 +79,9 @@ class TestCLIErrorHandling:
             text=True,
         )
         assert result.returncode == 0, (
-            f"{module} --help should return 0, got {result.returncode}. "
-            f"stderr: {result.stderr}"
+            f"{module} --help should return 0, got {result.returncode}. stderr: {result.stderr}"
         )
-        assert "usage" in result.stdout.lower(), (
-            f"{module} --help should show 'usage'. stdout: {result.stdout}"
-        )
+        assert "usage" in result.stdout.lower(), f"{module} --help should show 'usage'. stdout: {result.stdout}"
 
     @pytest.mark.parametrize(
         "module",
@@ -107,10 +101,7 @@ class TestCLIErrorHandling:
             capture_output=True,
             text=True,
         )
-        assert result.returncode != 0, (
-            f"{module} without args should fail. "
-            f"returncode: {result.returncode}"
-        )
+        assert result.returncode != 0, f"{module} without args should fail. returncode: {result.returncode}"
 
 
 class TestCLIExitCodes:

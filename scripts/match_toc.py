@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """TOCエントリごとにbook.mdから最もマッチする行を検索"""
-import sys
+
 import re
-from pathlib import Path
+import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
 
 # fuzzy_match.pyをインポート
 sys.path.insert(0, str(Path(__file__).parent))
-from fuzzy_match import search_file, normalize, fuzzy_match
+from fuzzy_match import fuzzy_match, normalize, search_file
+
 
 def extract_key_phrases(toc_entry: str) -> list[str]:
     """TOCエントリからキーフレーズを抽出
@@ -21,24 +23,27 @@ def extract_key_phrases(toc_entry: str) -> list[str]:
     phrases = []
 
     # Episode XX または Chapter X を抽出
-    if m := re.search(r'(Episode|Chapter)\s+\d+', toc_entry):
+    if m := re.search(r"(Episode|Chapter)\s+\d+", toc_entry):
         phrases.append(normalize(m.group()))
 
     # 「...」（鍵括弧内）を抽出
-    for m in re.finditer(r'「([^」]+)」', toc_entry):
+    for m in re.finditer(r"「([^」]+)」", toc_entry):
         phrases.append(normalize(m.group(1)))
 
     # Column の場合は後続テキストも追加
-    if toc_entry.startswith('Column'):
+    if toc_entry.startswith("Column"):
         # Columnの後のテキスト
-        text = re.sub(r'^Column\s+', '', toc_entry)
-        text = re.sub(r'「[^」]+」', '', text).strip()
+        text = re.sub(r"^Column\s+", "", toc_entry)
+        text = re.sub(r"「[^」]+」", "", text).strip()
         if text:
             phrases.append(normalize(text))
 
     return phrases
 
-def search_by_key_phrases(entry: str, content_file: str, threshold: float, start_line: int, max_range: int = 30) -> dict | None:
+
+def search_by_key_phrases(
+    entry: str, content_file: str, threshold: float, start_line: int, max_range: int = 30
+) -> dict | None:
     """キーフレーズ分割マッチ（fallback用）
 
     Args:
@@ -51,7 +56,7 @@ def search_by_key_phrases(entry: str, content_file: str, threshold: float, start
     Returns:
         マッチ結果 or None
     """
-    lines = Path(content_file).read_text(encoding='utf-8').splitlines()
+    lines = Path(content_file).read_text(encoding="utf-8").splitlines()
     key_phrases = extract_key_phrases(entry)
 
     if not key_phrases:
@@ -92,16 +97,17 @@ def search_by_key_phrases(entry: str, content_file: str, threshold: float, start
             avg_ratio = sum(r for _, _, r in matched_lines) / len(matched_lines)
 
             return {
-                'toc': entry,
-                'line_num': start,
-                'line_end': end,
-                'ratio': avg_ratio,
-                'matched': f"[Key-phrase match: {len(key_phrases)} phrases in {end-start+1} lines]",
-                'lines_joined': end - start + 1,
-                'method': 'key_phrase',
+                "toc": entry,
+                "line_num": start,
+                "line_end": end,
+                "ratio": avg_ratio,
+                "matched": f"[Key-phrase match: {len(key_phrases)} phrases in {end - start + 1} lines]",
+                "lines_joined": end - start + 1,
+                "method": "key_phrase",
             }
 
     return None
+
 
 def _search_single_entry(args):
     """単一エントリを検索（並列処理用）"""
@@ -113,13 +119,13 @@ def _search_single_entry(args):
     if matches:
         best = matches[0]
         return {
-            'toc': entry,
-            'line_num': best['line_num'],
-            'line_end': best.get('line_end', best['line_num']),
-            'ratio': best['ratio'],
-            'matched': best['line'],
-            'lines_joined': best.get('lines_joined', 1),
-            'method': 'full_text',
+            "toc": entry,
+            "line_num": best["line_num"],
+            "line_end": best.get("line_end", best["line_num"]),
+            "ratio": best["ratio"],
+            "matched": best["line"],
+            "lines_joined": best.get("lines_joined", 1),
+            "method": "full_text",
         }
 
     # Fallback: キーフレーズ分割マッチ
@@ -129,33 +135,37 @@ def _search_single_entry(args):
 
     # どちらも失敗
     return {
-        'toc': entry,
-        'line_num': None,
-        'line_end': None,
-        'ratio': 0.0,
-        'matched': '--- NOT FOUND ---',
-        'lines_joined': 0,
-        'method': 'none',
+        "toc": entry,
+        "line_num": None,
+        "line_end": None,
+        "ratio": 0.0,
+        "matched": "--- NOT FOUND ---",
+        "lines_joined": 0,
+        "method": "none",
     }
+
 
 def find_toc_end(content_file: str) -> int:
     """TOCセクション終了行を検出"""
-    lines = Path(content_file).read_text(encoding='utf-8').splitlines()
+    lines = Path(content_file).read_text(encoding="utf-8").splitlines()
     last_toc_end = 0
     for i, line in enumerate(lines):
-        if '<!-- /toc -->' in line:
+        if "<!-- /toc -->" in line:
             last_toc_end = i + 1
     return last_toc_end + 1  # 次の行から開始
 
-def match_toc_entries(toc_file: str, content_file: str, threshold: float = 0.6, workers: int = 4, start_line: int = None):
+
+def match_toc_entries(
+    toc_file: str, content_file: str, threshold: float = 0.6, workers: int = 4, start_line: int = None
+):
     """各TOCエントリに対して最もマッチする行を検索（並列処理）"""
-    toc_lines = Path(toc_file).read_text(encoding='utf-8').splitlines()
+    toc_lines = Path(toc_file).read_text(encoding="utf-8").splitlines()
 
     # 有効なエントリを抽出
     entries = []
     for toc_entry in toc_lines:
         entry = toc_entry.strip()
-        if entry and not entry.startswith('<!--'):
+        if entry and not entry.startswith("<!--"):
             entries.append(entry)
 
     # TOC終了位置を自動検出
@@ -176,9 +186,10 @@ def match_toc_entries(toc_file: str, content_file: str, threshold: float = 0.6, 
 
     # 元の順序でソート
     entry_order = {e: i for i, e in enumerate(entries)}
-    results.sort(key=lambda x: entry_order.get(x['toc'], 999))
+    results.sort(key=lambda x: entry_order.get(x["toc"], 999))
 
     return results
+
 
 def print_results(results, show_all=False):
     """結果を表示"""
@@ -186,12 +197,12 @@ def print_results(results, show_all=False):
     print("-" * 90)
 
     for r in results:
-        ratio_pct = int(r['ratio'] * 100)
-        line_info = f"{r['line_num']}" if r['line_num'] else "N/A"
-        if r.get('line_end') and r['line_end'] != r['line_num']:
+        ratio_pct = int(r["ratio"] * 100)
+        line_info = f"{r['line_num']}" if r["line_num"] else "N/A"
+        if r.get("line_end") and r["line_end"] != r["line_num"]:
             line_info = f"{r['line_num']}-{r['line_end']}"
 
-        toc_display = r['toc'][:48] + '..' if len(r['toc']) > 50 else r['toc']
+        toc_display = r["toc"][:48] + ".." if len(r["toc"]) > 50 else r["toc"]
 
         # 色分け
         if ratio_pct >= 80:
@@ -202,48 +213,53 @@ def print_results(results, show_all=False):
             status = "✗"
 
         # マッチ方法
-        method = r.get('method', 'unknown')
-        method_display = 'Full' if method == 'full_text' else 'Key' if method == 'key_phrase' else '-'
+        method = r.get("method", "unknown")
+        method_display = "Full" if method == "full_text" else "Key" if method == "key_phrase" else "-"
 
         print(f"{status} {toc_display:<48} {line_info:>8} {ratio_pct:>7}% {r['lines_joined']:>4} {method_display:>8}")
 
-        if show_all and r['matched'] != '--- NOT FOUND ---':
-            matched_short = r['matched'][:70] + '...' if len(r['matched']) > 70 else r['matched']
+        if show_all and r["matched"] != "--- NOT FOUND ---":
+            matched_short = r["matched"][:70] + "..." if len(r["matched"]) > 70 else r["matched"]
             print(f"  → {matched_short}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description='Match TOC entries to content file')
-    parser.add_argument('toc', help='TOC file')
-    parser.add_argument('content', help='Content file to search')
-    parser.add_argument('-t', '--threshold', type=float, default=0.6,
-                       help='Similarity threshold (default: 0.6)')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                       help='Show matched text')
-    parser.add_argument('--json', action='store_true',
-                       help='Output as JSON')
-    parser.add_argument('-s', '--start-line', type=int, default=None,
-                       help='Start searching from this line (default: auto-detect after TOC)')
-    parser.add_argument('-w', '--workers', type=int, default=4,
-                       help='Number of parallel workers (default: 4)')
+    parser = argparse.ArgumentParser(description="Match TOC entries to content file")
+    parser.add_argument("toc", help="TOC file")
+    parser.add_argument("content", help="Content file to search")
+    parser.add_argument("-t", "--threshold", type=float, default=0.6, help="Similarity threshold (default: 0.6)")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show matched text")
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    parser.add_argument(
+        "-s",
+        "--start-line",
+        type=int,
+        default=None,
+        help="Start searching from this line (default: auto-detect after TOC)",
+    )
+    parser.add_argument("-w", "--workers", type=int, default=4, help="Number of parallel workers (default: 4)")
 
     args = parser.parse_args()
 
-    results = match_toc_entries(args.toc, args.content, args.threshold, workers=args.workers, start_line=args.start_line)
+    results = match_toc_entries(
+        args.toc, args.content, args.threshold, workers=args.workers, start_line=args.start_line
+    )
 
     if args.json:
         import json
+
         print(json.dumps(results, ensure_ascii=False, indent=2))
     else:
         print_results(results, show_all=args.verbose)
 
         # サマリー
-        found = sum(1 for r in results if r['line_num'])
+        found = sum(1 for r in results if r["line_num"])
         total = len(results)
-        high_match = sum(1 for r in results if r['ratio'] >= 0.8)
-        full_text = sum(1 for r in results if r.get('method') == 'full_text')
-        key_phrase = sum(1 for r in results if r.get('method') == 'key_phrase')
+        high_match = sum(1 for r in results if r["ratio"] >= 0.8)
+        full_text = sum(1 for r in results if r.get("method") == "full_text")
+        key_phrase = sum(1 for r in results if r.get("method") == "key_phrase")
         print()
         print(f"合計: {total}件, 検出: {found}件, 高一致(≥80%): {high_match}件")
         print(f"方法: 全文={full_text}件, キーフレーズ={key_phrase}件")
