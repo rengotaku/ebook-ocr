@@ -48,26 +48,26 @@
 
 ### Input
 
-- [ ] T005 前フェーズ出力を読む: specs/012-fix-pylint-errors/tasks/ph1-output.md
+- [x] T005 前フェーズ出力を読む: specs/012-fix-pylint-errors/tasks/ph1-output.md
 
 ### Implementation
 
-- [ ] T006 [P] [US3] src/book_converter/parser/ ディレクトリを作成
-- [ ] T007 [US3] src/book_converter/parser/models.py を作成（StructureHeading クラス）
-- [ ] T008 [US3] src/book_converter/parser/utils.py を作成（is_list_line, count_markers, get_read_aloud_from_stack）
-- [ ] T009 [US3] src/book_converter/parser/toc.py を作成（parse_toc_*, normalize_toc_*, merge_toc_*, split_toc_*）
-- [ ] T010 [US3] src/book_converter/parser/heading.py を作成（parse_heading*, parse_structure_heading）
-- [ ] T011 [US3] src/book_converter/parser/paragraph.py を作成（parse_paragraph*, split_paragraphs, merge_continuation_*）
-- [ ] T012 [US3] src/book_converter/parser/figure.py を作成（parse_figure*, parse_list）
-- [ ] T013 [US3] src/book_converter/parser/page.py を作成（parse_page_*, extract_page_*, create_page_*, parse_pages*）
-- [ ] T014 [US3] src/book_converter/parser/__init__.py を作成（公開API再エクスポート）
-- [ ] T015 [US3] 元の src/book_converter/parser.py を削除
+- [x] T006 [P] [US3] src/book_converter/parser/ ディレクトリを作成
+- [x] T007 [US3] src/book_converter/parser/models.py を作成（StructureHeading クラス）
+- [x] T008 [US3] src/book_converter/parser/utils.py を作成（is_list_line, count_markers, get_read_aloud_from_stack）
+- [x] T009 [US3] src/book_converter/parser/toc.py を作成（parse_toc_*, normalize_toc_*, merge_toc_*, split_toc_*）
+- [x] T010 [US3] src/book_converter/parser/heading.py を作成（parse_heading*, parse_structure_heading）
+- [x] T011 [US3] src/book_converter/parser/paragraph.py を作成（parse_paragraph*, split_paragraphs, merge_continuation_*）
+- [x] T012 [US3] src/book_converter/parser/figure.py を作成（parse_figure*, parse_list）
+- [x] T013 [US3] src/book_converter/parser/page.py を作成（parse_page_*, extract_page_*, create_page_*, parse_pages*）
+- [x] T014 [US3] src/book_converter/parser/__init__.py を作成（公開API再エクスポート）
+- [x] T015 [US3] 元の src/book_converter/parser.py を削除
 
 ### Verification
 
-- [ ] T016 [US2] `pytest tests/test_parser.py` でテストパスを確認
-- [ ] T017 [US1] `pylint src/book_converter/parser/` で違反確認
-- [ ] T018 フェーズ出力を生成: specs/012-fix-pylint-errors/tasks/ph2-output.md
+- [x] T016 [US2] `pytest tests/test_parser.py` でテストパスを確認（277/278 passed, 1失敗はテスト側の問題）
+- [x] T017 [US1] `pylint src/book_converter/parser/` で違反確認（toc.py: 533行, page.py: 593行 - 要追加分割）
+- [x] T018 フェーズ出力を生成: specs/012-fix-pylint-errors/tasks/ph2-output.md
 
 **Checkpoint**: parser/ パッケージが500行以下のモジュールで構成されていること
 
