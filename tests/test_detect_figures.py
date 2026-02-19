@@ -29,63 +29,47 @@ class TestLabelTypeMapExtension:
 
     def test_label_type_map_contains_title(self) -> None:
         """LABEL_TYPE_MAP が 'title' クラスを含むことを検証。"""
-        assert "title" in LABEL_TYPE_MAP, (
-            "'title' class should be in LABEL_TYPE_MAP"
-        )
-        assert LABEL_TYPE_MAP["title"] == "TITLE", (
-            f"'title' should map to 'TITLE', got '{LABEL_TYPE_MAP.get('title')}'"
-        )
+        assert "title" in LABEL_TYPE_MAP, "'title' class should be in LABEL_TYPE_MAP"
+        assert LABEL_TYPE_MAP["title"] == "TITLE", f"'title' should map to 'TITLE', got '{LABEL_TYPE_MAP.get('title')}'"
 
     def test_label_type_map_contains_plain_text(self) -> None:
         """LABEL_TYPE_MAP が 'plain text' クラスを含むことを検証。"""
-        assert "plain text" in LABEL_TYPE_MAP, (
-            "'plain text' class should be in LABEL_TYPE_MAP"
-        )
+        assert "plain text" in LABEL_TYPE_MAP, "'plain text' class should be in LABEL_TYPE_MAP"
         assert LABEL_TYPE_MAP["plain text"] == "TEXT", (
             f"'plain text' should map to 'TEXT', got '{LABEL_TYPE_MAP.get('plain text')}'"
         )
 
     def test_label_type_map_contains_abandon(self) -> None:
         """LABEL_TYPE_MAP が 'abandon' クラスを含むことを検証。"""
-        assert "abandon" in LABEL_TYPE_MAP, (
-            "'abandon' class should be in LABEL_TYPE_MAP"
-        )
+        assert "abandon" in LABEL_TYPE_MAP, "'abandon' class should be in LABEL_TYPE_MAP"
         assert LABEL_TYPE_MAP["abandon"] == "ABANDON", (
             f"'abandon' should map to 'ABANDON', got '{LABEL_TYPE_MAP.get('abandon')}'"
         )
 
     def test_label_type_map_contains_figure_caption(self) -> None:
         """LABEL_TYPE_MAP が 'figure_caption' クラスを含むことを検証。"""
-        assert "figure_caption" in LABEL_TYPE_MAP, (
-            "'figure_caption' class should be in LABEL_TYPE_MAP"
-        )
+        assert "figure_caption" in LABEL_TYPE_MAP, "'figure_caption' class should be in LABEL_TYPE_MAP"
         assert LABEL_TYPE_MAP["figure_caption"] == "CAPTION", (
             f"'figure_caption' should map to 'CAPTION', got '{LABEL_TYPE_MAP.get('figure_caption')}'"
         )
 
     def test_label_type_map_contains_table_caption(self) -> None:
         """LABEL_TYPE_MAP が 'table_caption' クラスを含むことを検証。"""
-        assert "table_caption" in LABEL_TYPE_MAP, (
-            "'table_caption' class should be in LABEL_TYPE_MAP"
-        )
+        assert "table_caption" in LABEL_TYPE_MAP, "'table_caption' class should be in LABEL_TYPE_MAP"
         assert LABEL_TYPE_MAP["table_caption"] == "CAPTION", (
             f"'table_caption' should map to 'CAPTION', got '{LABEL_TYPE_MAP.get('table_caption')}'"
         )
 
     def test_label_type_map_contains_table_footnote(self) -> None:
         """LABEL_TYPE_MAP が 'table_footnote' クラスを含むことを検証。"""
-        assert "table_footnote" in LABEL_TYPE_MAP, (
-            "'table_footnote' class should be in LABEL_TYPE_MAP"
-        )
+        assert "table_footnote" in LABEL_TYPE_MAP, "'table_footnote' class should be in LABEL_TYPE_MAP"
         assert LABEL_TYPE_MAP["table_footnote"] == "FOOTNOTE", (
             f"'table_footnote' should map to 'FOOTNOTE', got '{LABEL_TYPE_MAP.get('table_footnote')}'"
         )
 
     def test_label_type_map_contains_formula_caption(self) -> None:
         """LABEL_TYPE_MAP が 'formula_caption' クラスを含むことを検証。"""
-        assert "formula_caption" in LABEL_TYPE_MAP, (
-            "'formula_caption' class should be in LABEL_TYPE_MAP"
-        )
+        assert "formula_caption" in LABEL_TYPE_MAP, "'formula_caption' class should be in LABEL_TYPE_MAP"
         assert LABEL_TYPE_MAP["formula_caption"] == "CAPTION", (
             f"'formula_caption' should map to 'CAPTION', got '{LABEL_TYPE_MAP.get('formula_caption')}'"
         )
@@ -94,9 +78,7 @@ class TestLabelTypeMapExtension:
         """既存クラス (table, figure, isolated formula) が保持されていることを検証。"""
         # table
         assert "table" in LABEL_TYPE_MAP, "'table' should be in LABEL_TYPE_MAP"
-        assert LABEL_TYPE_MAP["table"] == "TABLE", (
-            f"'table' should map to 'TABLE', got '{LABEL_TYPE_MAP.get('table')}'"
-        )
+        assert LABEL_TYPE_MAP["table"] == "TABLE", f"'table' should map to 'TABLE', got '{LABEL_TYPE_MAP.get('table')}'"
 
         # figure
         assert "figure" in LABEL_TYPE_MAP, "'figure' should be in LABEL_TYPE_MAP"
@@ -105,12 +87,9 @@ class TestLabelTypeMapExtension:
         )
 
         # isolated formula
-        assert "isolated formula" in LABEL_TYPE_MAP, (
-            "'isolated formula' should be in LABEL_TYPE_MAP"
-        )
+        assert "isolated formula" in LABEL_TYPE_MAP, "'isolated formula' should be in LABEL_TYPE_MAP"
         assert LABEL_TYPE_MAP["isolated formula"] == "FORMULA", (
-            f"'isolated formula' should map to 'FORMULA', "
-            f"got '{LABEL_TYPE_MAP.get('isolated formula')}'"
+            f"'isolated formula' should map to 'FORMULA', got '{LABEL_TYPE_MAP.get('isolated formula')}'"
         )
 
 
@@ -127,8 +106,9 @@ class TestLayoutJsonRegionsStructure:
         {"page_001.png": {"regions": [...], "page_size": [w, h]}}
         """
         import json
+        from unittest.mock import MagicMock, patch
+
         from PIL import Image
-        from unittest.mock import patch, MagicMock
 
         # テスト用ページ画像を作成
         page_dir = tmp_path / "pages"
@@ -157,13 +137,18 @@ class TestLayoutJsonRegionsStructure:
         mock_model.predict.return_value = [mock_result]
 
         # detect_figures imports inside the function, so we need to patch the modules
-        with patch.dict("sys.modules", {
-            "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
-            "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
+                "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
+            },
+        ):
             # Force reload to pick up mocked modules
             import importlib
+
             import src.layout.figures
+
             importlib.reload(src.layout.figures)
             layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
 
@@ -180,12 +165,9 @@ class TestLayoutJsonRegionsStructure:
             page_data = layout_data[page_key]
 
             assert "regions" in page_data, (
-                f"Page data should have 'regions' key instead of 'figures'. "
-                f"Got keys: {list(page_data.keys())}"
+                f"Page data should have 'regions' key instead of 'figures'. Got keys: {list(page_data.keys())}"
             )
-            assert "figures" not in page_data, (
-                "'figures' key should be replaced with 'regions'"
-            )
+            assert "figures" not in page_data, "'figures' key should be replaced with 'regions'"
 
 
 class TestLayoutJsonPageSize:
@@ -203,8 +185,9 @@ class TestLayoutJsonPageSize:
         }
         """
         import json
+        from unittest.mock import MagicMock, patch
+
         from PIL import Image
-        from unittest.mock import patch, MagicMock
 
         # テスト用ページ画像を作成
         page_dir = tmp_path / "pages"
@@ -235,13 +218,18 @@ class TestLayoutJsonPageSize:
         mock_model.predict.return_value = [mock_result]
 
         # detect_figures imports inside the function, so we need to patch the modules
-        with patch.dict("sys.modules", {
-            "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
-            "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
+                "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
+            },
+        ):
             # Force reload to pick up mocked modules
             import importlib
+
             import src.layout.figures
+
             importlib.reload(src.layout.figures)
             layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
 
@@ -262,18 +250,10 @@ class TestLayoutJsonPageSize:
             )
 
             page_size = page_data["page_size"]
-            assert isinstance(page_size, list), (
-                f"page_size should be a list, got {type(page_size)}"
-            )
-            assert len(page_size) == 2, (
-                f"page_size should have 2 elements [width, height], got {page_size}"
-            )
-            assert page_size[0] == expected_width, (
-                f"page_size width should be {expected_width}, got {page_size[0]}"
-            )
-            assert page_size[1] == expected_height, (
-                f"page_size height should be {expected_height}, got {page_size[1]}"
-            )
+            assert isinstance(page_size, list), f"page_size should be a list, got {type(page_size)}"
+            assert len(page_size) == 2, f"page_size should have 2 elements [width, height], got {page_size}"
+            assert page_size[0] == expected_width, f"page_size width should be {expected_width}, got {page_size[0]}"
+            assert page_size[1] == expected_height, f"page_size height should be {expected_height}, got {page_size[1]}"
 
 
 class TestMinAreaFiltering:
@@ -290,8 +270,9 @@ class TestMinAreaFiltering:
         - 小さな領域 (50x50 = 2,500 px) → 除外 (< 1%)
         """
         import json
+        from unittest.mock import MagicMock, patch
+
         from PIL import Image
-        from unittest.mock import patch, MagicMock
 
         # テスト用ページ画像を作成
         page_dir = tmp_path / "pages"
@@ -330,13 +311,18 @@ class TestMinAreaFiltering:
         mock_model.predict.return_value = [mock_result]
 
         # detect_figures imports inside the function, so we need to patch the modules
-        with patch.dict("sys.modules", {
-            "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
-            "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "doclayout_yolo": MagicMock(YOLOv10=MagicMock(return_value=mock_model)),
+                "huggingface_hub": MagicMock(hf_hub_download=MagicMock(return_value="/tmp/model.pt")),
+            },
+        ):
             # Force reload to pick up mocked modules
             import importlib
+
             import src.layout.figures
+
             importlib.reload(src.layout.figures)
             layout = src.layout.figures.detect_figures(str(page_dir), str(output_dir))
 
@@ -367,12 +353,12 @@ class TestMinAreaFiltering:
     def test_detect_figures_min_area_parameter(self) -> None:
         """detect_figures() が min_area パラメータを受け入れることを検証。"""
         import inspect
+
         from src.layout.figures import detect_figures
 
         sig = inspect.signature(detect_figures)
         param_names = list(sig.parameters.keys())
 
         assert "min_area" in param_names, (
-            f"detect_figures() should accept 'min_area' parameter. "
-            f"Current parameters: {param_names}"
+            f"detect_figures() should accept 'min_area' parameter. Current parameters: {param_names}"
         )

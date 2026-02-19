@@ -15,10 +15,9 @@ import pytest
 from src.rover.alignment import (
     AlignedPosition,
     align_texts_character_level,
-    weighted_vote_character,
     vote_aligned_text,
+    weighted_vote_character,
 )
-
 
 # =============================================================================
 # T028: 文字レベルアライメントテスト (align_texts_character_level)
@@ -78,7 +77,7 @@ class TestAlignTextsCharacterLevel:
         """短いテキストを含むアライメント (ギャップ発生)"""
         texts = {
             "yomitoku": "チーム開発",  # 5文字
-            "paddleocr": "チム開発",   # 4文字 (ー が欠損)
+            "paddleocr": "チム開発",  # 4文字 (ー が欠損)
         }
         result = align_texts_character_level(texts)
 
@@ -91,7 +90,7 @@ class TestAlignTextsCharacterLevel:
         """複数文字が欠損しているテキストのアライメント"""
         texts = {
             "yomitoku": "全部入りソフトウェア",  # 10文字
-            "paddleocr": "全部入りソウ",        # 6文字 (フト と ェア が欠損)
+            "paddleocr": "全部入りソウ",  # 6文字 (フト と ェア が欠損)
         }
         result = align_texts_character_level(texts)
 
@@ -346,10 +345,7 @@ class TestWeightedVoteCharacter:
         }
 
         # 同じ入力で同じ結果を返すこと（決定的）
-        results = [
-            weighted_vote_character(candidates, confidences, engine_weights)
-            for _ in range(10)
-        ]
+        results = [weighted_vote_character(candidates, confidences, engine_weights) for _ in range(10)]
         assert all(r[0] == results[0][0] for r in results)
 
 
@@ -387,9 +383,7 @@ class TestVoteAlignedText:
             "easyocr": 1.0,
         }
 
-        voted_text, avg_confidence = vote_aligned_text(
-            aligned, confidences, engine_weights
-        )
+        voted_text, avg_confidence = vote_aligned_text(aligned, confidences, engine_weights)
 
         # 多数決で「ソフトウェア」が採用される
         assert voted_text == "ソフトウェア"
@@ -419,7 +413,7 @@ class TestVoteAlignedText:
         """ギャップを含むテキストの投票"""
         texts = {
             "yomitoku": "チーム開発",  # 完全
-            "paddleocr": "チム開発",   # 「ー」欠損
+            "paddleocr": "チム開発",  # 「ー」欠損
         }
 
         aligned = align_texts_character_level(texts)
@@ -485,9 +479,7 @@ class TestVoteAlignedText:
             "yomitoku": 1.5,
         }
 
-        voted_text, avg_confidence = vote_aligned_text(
-            aligned, confidences, engine_weights
-        )
+        voted_text, avg_confidence = vote_aligned_text(aligned, confidences, engine_weights)
 
         assert voted_text == "AB"
         assert avg_confidence > 0
@@ -664,7 +656,7 @@ class TestAlignmentEdgeCases:
         """空白文字を含むテキストの処理"""
         texts = {
             "yomitoku": "チーム 開発",  # スペースあり
-            "paddleocr": "チーム開発",   # スペースなし
+            "paddleocr": "チーム開発",  # スペースなし
         }
 
         aligned = align_texts_character_level(texts)

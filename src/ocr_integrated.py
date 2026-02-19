@@ -21,15 +21,10 @@ from pathlib import Path
 from PIL import Image
 
 from src.ocr_ensemble import (
-    EngineResult,
-    EnsembleResult,
     TextWithBox,
     bbox_contains,
-    calculate_similarity,
-    create_text_mask,
     is_garbage,
     ocr_easyocr,
-    ocr_paddleocr,
     ocr_paddleocr_with_boxes,
     ocr_tesseract,
     ocr_yomitoku_engine,
@@ -118,10 +113,7 @@ def group_text_by_regions(
         List of (region, [items]) tuples, sorted by Y position.
     """
     # Filter and sort regions by Y position (top to bottom)
-    text_regions = [
-        r for r in regions
-        if r.get("type") in ["TEXT", "TITLE", "CAPTION", "FOOTNOTE"]
-    ]
+    text_regions = [r for r in regions if r.get("type") in ["TEXT", "TITLE", "CAPTION", "FOOTNOTE"]]
     text_regions.sort(key=lambda r: r.get("bbox", [0, 0, 0, 0])[1])
 
     # Map items to regions (use lower threshold for better coverage)
@@ -441,9 +433,7 @@ def run_integrated_ocr(
             dominant_type = max(type_counts.items(), key=lambda x: x[1])[0]
 
     # 3. Select best result
-    selected_text, selected_engine = select_best_engine(
-        results, dominant_type, quality_flags
-    )
+    selected_text, selected_engine = select_best_engine(results, dominant_type, quality_flags)
 
     # 4. Structure output by paragraphs using YOLO regions
     if regions and paddle_items:
@@ -555,9 +545,7 @@ def main() -> None:
     """CLI entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Integrated OCR (Yomitoku + PaddleOCR + Tesseract + EasyOCR)"
-    )
+    parser = argparse.ArgumentParser(description="Integrated OCR (Yomitoku + PaddleOCR + Tesseract + EasyOCR)")
     parser.add_argument("pages_dir", help="Directory containing page images")
     parser.add_argument("-o", "--output", default="ocr_texts", help="Output directory")
     parser.add_argument("--layout", help="Path to layout.json file (optional)")
@@ -567,15 +555,9 @@ def main() -> None:
         choices=["cpu", "cuda"],
         help="Device for Yomitoku OCR (default: cpu)",
     )
-    parser.add_argument(
-        "--tesseract-lang", default="jpn+eng", help="Tesseract language code(s)"
-    )
-    parser.add_argument(
-        "--easyocr-langs", default="ja,en", help="EasyOCR languages (comma-separated)"
-    )
-    parser.add_argument(
-        "--paddleocr-lang", default="japan", help="PaddleOCR language code"
-    )
+    parser.add_argument("--tesseract-lang", default="jpn+eng", help="Tesseract language code(s)")
+    parser.add_argument("--easyocr-langs", default="ja,en", help="EasyOCR languages (comma-separated)")
+    parser.add_argument("--paddleocr-lang", default="japan", help="PaddleOCR language code")
     args = parser.parse_args()
 
     easyocr_langs = [lang.strip() for lang in args.easyocr_langs.split(",")]

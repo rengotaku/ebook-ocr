@@ -11,19 +11,17 @@ from xml.etree import ElementTree as ET
 
 from src.book_converter.errors import PageValidationError
 from src.book_converter.models import (
-    HeaderLevelConfig,
     Book,
     BookMetadata,
     Chapter,
-    Section,
-    TableOfContents,
-    TocEntry,
+    HeaderLevelConfig,
+    Heading,
     Page,
     Paragraph,
-    Heading,
-    List,
-    Figure,
+    Section,
     SectionElement,
+    TableOfContents,
+    TocEntry,
 )
 from src.book_converter.transformer import is_duplicate_heading
 
@@ -93,10 +91,10 @@ def parse_section_number(section_str: str | None) -> SectionNumber | None:
         return None
 
     # Validate pattern: digits separated by dots
-    if not re.match(r'^\d+(?:\.\d+)*$', section_str):
+    if not re.match(r"^\d+(?:\.\d+)*$", section_str):
         return None
 
-    parts = tuple(int(x) for x in section_str.split('.'))
+    parts = tuple(int(x) for x in section_str.split("."))
 
     # Determine level (1=chapter, 2=section, 3=subsection)
     if len(parts) == 1:
@@ -130,7 +128,7 @@ def normalize_for_matching(text: str) -> str:
         "Line breaks"
     """
     # Compress consecutive whitespace (including newlines) to single space
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
@@ -155,10 +153,10 @@ def _extract_number_by_keyword(
         keywords = config.get_keywords_for_level(level)
         for keyword in keywords:
             # Pattern: "Keyword N" or "Keyword NN" (e.g., "Chapter 2", "Episode 07")
-            pattern = rf'^{re.escape(keyword)}\s*(\d+)'
+            pattern = rf"^{re.escape(keyword)}\s*(\d+)"
             match = re.match(pattern, text, re.IGNORECASE)
             if match:
-                return match.group(1).lstrip('0') or '0'
+                return match.group(1).lstrip("0") or "0"
 
     return None
 
@@ -183,7 +181,7 @@ def extract_section_from_page_metadata(
     metadata = normalize_for_matching(metadata)
 
     # Skip emphasis tags (front-matter)
-    if '<emphasis>' in metadata:
+    if "<emphasis>" in metadata:
         return None
 
     # Config-based keyword extraction
@@ -193,27 +191,23 @@ def extract_section_from_page_metadata(
     # Fallback patterns (no config required):
 
     # 1. Direct section number at start (e.g., "1.1 Title", "2.3.1 Title")
-    section_match = re.match(r'^(\d+(?:\.\d+)+)\s+', metadata)
+    section_match = re.match(r"^(\d+(?:\.\d+)+)\s+", metadata)
     if section_match:
         return section_match.group(1)
 
     # 2. Single number at start followed by non-numeric non-slash text (e.g., "1 Chapter Title")
     # Avoid matching "1 / 1" (page number format)
-    chapter_match = re.match(r'^(\d+)\s+(?![/\d])', metadata)
+    chapter_match = re.match(r"^(\d+)\s+(?![/\d])", metadata)
     if chapter_match:
         return chapter_match.group(1)
 
     # 3. Japanese chapter pattern (e.g., "第1章 Title")
-    japanese_chapter_match = re.match(r'^第(\d+)章', metadata)
+    japanese_chapter_match = re.match(r"^第(\d+)章", metadata)
     if japanese_chapter_match:
         return japanese_chapter_match.group(1)
 
     # 4. Keyword prefix with number (e.g., "Section 1.1 Title")
-    keyword_number_match = re.match(
-        r'^(?:Section|Chapter|Episode|Part)\s+(\d+(?:\.\d+)*)',
-        metadata,
-        re.IGNORECASE
-    )
+    keyword_number_match = re.match(r"^(?:Section|Chapter|Episode|Part)\s+(\d+(?:\.\d+)*)", metadata, re.IGNORECASE)
     if keyword_number_match:
         return keyword_number_match.group(1)
 
@@ -246,27 +240,23 @@ def extract_section_from_heading(
     # Fallback patterns (no config required):
 
     # 1. Direct section number at start (e.g., "1.1 Title", "2.3.1 Title")
-    section_match = re.match(r'^(\d+(?:\.\d+)+)\s+', heading)
+    section_match = re.match(r"^(\d+(?:\.\d+)+)\s+", heading)
     if section_match:
         return section_match.group(1)
 
     # 2. Single number at start followed by non-numeric non-slash text (e.g., "1 Chapter Title")
     # Avoid matching "1 / 1" (page number format)
-    chapter_match = re.match(r'^(\d+)\s+(?![/\d])', heading)
+    chapter_match = re.match(r"^(\d+)\s+(?![/\d])", heading)
     if chapter_match:
         return chapter_match.group(1)
 
     # 3. Japanese chapter pattern (e.g., "第1章 Title")
-    japanese_chapter_match = re.match(r'^第(\d+)章', heading)
+    japanese_chapter_match = re.match(r"^第(\d+)章", heading)
     if japanese_chapter_match:
         return japanese_chapter_match.group(1)
 
     # 4. Keyword prefix with number (e.g., "Section 1.1 Title", "Chapter 2 Title")
-    keyword_number_match = re.match(
-        r'^(?:Section|Chapter|Episode|Part)\s+(\d+(?:\.\d+)*)',
-        heading,
-        re.IGNORECASE
-    )
+    keyword_number_match = re.match(r"^(?:Section|Chapter|Episode|Part)\s+(\d+(?:\.\d+)*)", heading, re.IGNORECASE)
     if keyword_number_match:
         return keyword_number_match.group(1)
 
@@ -286,15 +276,15 @@ def is_chapter_title_page(page: ET.Element) -> bool:
         True if the page is a chapter title page, False otherwise
     """
     # Pattern to detect chapter title: "第N章"
-    chapter_pattern = re.compile(r'^第\d+章')
+    chapter_pattern = re.compile(r"^第\d+章")
 
     # Check pageMetadata for "第N章"
-    page_metadata = page.find('pageMetadata')
+    page_metadata = page.find("pageMetadata")
     if page_metadata is not None:
-        metadata_text = ''.join(page_metadata.itertext())
+        metadata_text = "".join(page_metadata.itertext())
 
         # Skip emphasis tags (front-matter pages like "はじめに")
-        if '<emphasis>' in ET.tostring(page_metadata, encoding='unicode'):
+        if "<emphasis>" in ET.tostring(page_metadata, encoding="unicode"):
             return False
 
         # Check for chapter pattern
@@ -302,10 +292,10 @@ def is_chapter_title_page(page: ET.Element) -> bool:
             return True
 
     # Check content/heading for "第N章"
-    content = page.find('content')
+    content = page.find("content")
     if content is not None:
-        for heading in content.iter('heading'):
-            heading_text = ''.join(heading.itertext()) if heading.text or len(heading) > 0 else ''
+        for heading in content.iter("heading"):
+            heading_text = "".join(heading.itertext()) if heading.text or len(heading) > 0 else ""
             if chapter_pattern.search(heading_text):
                 return True
 
@@ -346,11 +336,11 @@ def parse_toc(toc_element: ET.Element) -> list[TOCEntry]:
         List of TOCEntry objects
     """
     entries = []
-    for entry in toc_element.findall('entry'):
-        level_raw = entry.get('level', '')
+    for entry in toc_element.findall("entry"):
+        level_raw = entry.get("level", "")
         level = _normalize_level(level_raw)
-        number = entry.get('number', '')
-        title = entry.get('title', '')
+        number = entry.get("number", "")
+        title = entry.get("title", "")
         entries.append(TOCEntry(level=level, number=number, title=title))
     return entries
 
@@ -405,10 +395,10 @@ def _flatten_pages_in_element(
     stats = FlattenStats()
 
     # Find all page elements to process
-    pages_to_process = list(element.findall('page'))
+    pages_to_process = list(element.findall("page"))
 
     for page in pages_to_process:
-        page_number = page.get('number', '')
+        page_number = page.get("number", "")
 
         # Get index of page element
         page_index = list(element).index(page)
@@ -424,15 +414,15 @@ def _flatten_pages_in_element(
 
         # Extract content elements (skip pageAnnouncement, pageMetadata)
         for child in page:
-            if child.tag in ('pageAnnouncement', 'pageMetadata'):
+            if child.tag in ("pageAnnouncement", "pageMetadata"):
                 # Skip page-level metadata (not content)
                 continue
-            elif child.tag == 'content':
+            elif child.tag == "content":
                 # Extract content's children directly
                 for content_child in child:
                     # Check for duplicate heading
-                    if content_child.tag == 'heading' and container_title:
-                        heading_text = ''.join(content_child.itertext())
+                    if content_child.tag == "heading" and container_title:
+                        heading_text = "".join(content_child.itertext())
                         if is_duplicate_heading(heading_text, container_number, container_title):
                             # Skip duplicate heading
                             stats.headings_removed += 1
@@ -448,9 +438,9 @@ def _flatten_pages_in_element(
 
     # Recursively process child elements (chapter, section, subsection, front-matter)
     for child in element:
-        if child.tag in ('chapter', 'section', 'subsection', 'front-matter'):
-            child_number = child.get('number')
-            child_title = child.get('title', '')
+        if child.tag in ("chapter", "section", "subsection", "front-matter"):
+            child_number = child.get("number")
+            child_title = child.get("title", "")
             stats += _flatten_pages_in_element(child, child_number, child_title)
 
     return stats
@@ -473,23 +463,23 @@ def group_pages_by_toc(
     root = ET.fromstring(xml_input)
 
     # Extract metadata and TOC
-    metadata = root.find('metadata')
-    toc_element = root.find('toc')
+    metadata = root.find("metadata")
+    toc_element = root.find("toc")
 
     # Get TOC begin/end
     toc_begin = None
     toc_end = None
     toc_entries = []
     if toc_element is not None:
-        toc_begin = int(toc_element.get('begin', '0'))
-        toc_end = int(toc_element.get('end', '0'))
+        toc_begin = int(toc_element.get("begin", "0"))
+        toc_end = int(toc_element.get("end", "0"))
         toc_entries = parse_toc(toc_element)
 
     # Build TOC lookup: section number -> TOCEntry (skip entries without number)
     toc_lookup = {entry.number: entry for entry in toc_entries if entry.number}
 
     # Create new book element
-    new_book = ET.Element('book')
+    new_book = ET.Element("book")
 
     # Add metadata
     if metadata is not None:
@@ -500,11 +490,11 @@ def group_pages_by_toc(
         new_book.append(toc_element)
 
     # Collect all pages and classify them
-    pages = root.findall('page')
+    pages = root.findall("page")
 
     # If no TOC entries exist, place all pages in front-matter
     if not toc_entries:
-        front_matter_elem = ET.Element('front-matter')
+        front_matter_elem = ET.Element("front-matter")
         for page in pages:
             front_matter_elem.append(page)
         new_book.append(front_matter_elem)
@@ -514,7 +504,7 @@ def group_pages_by_toc(
         content_pages = []
 
         for page in pages:
-            page_num = int(page.get('number', '0'))
+            page_num = int(page.get("number", "0"))
             if toc_begin and page_num <= toc_end:
                 front_matter_pages.append(page)
             else:
@@ -522,47 +512,48 @@ def group_pages_by_toc(
 
         # Create front-matter section
         if front_matter_pages:
-            front_matter_elem = ET.Element('front-matter')
+            front_matter_elem = ET.Element("front-matter")
             for page in front_matter_pages:
                 front_matter_elem.append(page)
             new_book.append(front_matter_elem)
 
         # Assign content pages to sections
-        page_assignments = _assign_pages_to_sections(
-            content_pages, toc_lookup, header_level_config
-        )
+        page_assignments = _assign_pages_to_sections(content_pages, toc_lookup, header_level_config)
 
         # Build hierarchical structure
         _build_hierarchical_structure(new_book, page_assignments, toc_lookup)
 
     # Validate page count (before flattening)
     input_count = len(pages)
-    output_count = len(new_book.findall('.//page'))
+    output_count = len(new_book.findall(".//page"))
     validate_page_count(input_count, output_count)
 
     # Count structure elements created
-    chapters_count = len(new_book.findall('.//chapter'))
-    sections_count = len(new_book.findall('.//section'))
-    subsections_count = len(new_book.findall('.//subsection'))
+    chapters_count = len(new_book.findall(".//chapter"))
+    sections_count = len(new_book.findall(".//section"))
+    subsections_count = len(new_book.findall(".//subsection"))
 
     # Count content elements before flattening
-    headings_before = len(new_book.findall('.//heading'))
-    paragraphs_count = len(new_book.findall('.//paragraph'))
-    lists_count = len(new_book.findall('.//list'))
-    figures_count = len(new_book.findall('.//figure'))
+    headings_before = len(new_book.findall(".//heading"))
+    paragraphs_count = len(new_book.findall(".//paragraph"))
+    lists_count = len(new_book.findall(".//list"))
+    figures_count = len(new_book.findall(".//figure"))
 
     # Flatten pages: convert <page> to <!-- page N --> comments
     # and extract content elements directly
     flatten_stats = _flatten_pages_in_element(new_book)
 
     # Count headings after flattening
-    headings_after = len(new_book.findall('.//heading'))
+    headings_after = len(new_book.findall(".//heading"))
 
     # Print statistics
-    print(f"グループ化統計:")
+    print("グループ化統計:")
     print(f"  TOCエントリ: {len(toc_entries)}件")
     print(f"  構造タグ: chapter={chapters_count}, section={sections_count}, subsection={subsections_count}")
-    print(f"  コンテンツタグ: heading={headings_after}, paragraph={paragraphs_count}, list={lists_count}, figure={figures_count}")
+    print(
+        f"  コンテンツタグ: heading={headings_after}, paragraph={paragraphs_count}, "
+        f"list={lists_count}, figure={figures_count}"
+    )
     print(f"  重複heading削除: {flatten_stats.headings_removed}件 ({headings_before}→{headings_after})")
 
     # Serialize to string
@@ -616,10 +607,7 @@ def _find_first_chapter(toc_lookup: dict[str, TOCEntry]) -> str | None:
         First chapter number or None if no chapters exist
     """
     # Find all chapter entries (level=1) with valid numeric section numbers
-    chapter_numbers = [
-        num for num, entry in toc_lookup.items()
-        if entry.level == 1 and num and num.isdigit()
-    ]
+    chapter_numbers = [num for num, entry in toc_lookup.items() if entry.level == 1 and num and num.isdigit()]
 
     if not chapter_numbers:
         return None
@@ -647,24 +635,24 @@ def _extract_section_from_page(
         Section number string or None
     """
     # Try heading first (new format: Chapter N / Section N.N)
-    content = page.find('content')
+    content = page.find("content")
     if content is not None:
-        heading = content.find('heading')
+        heading = content.find("heading")
         if heading is not None:
-            heading_text = ''.join(heading.itertext()).strip()
+            heading_text = "".join(heading.itertext()).strip()
 
             # New format: "Chapter N Title"
-            chapter_match = re.match(r'^Chapter\s+(\d+)', heading_text, re.IGNORECASE)
+            chapter_match = re.match(r"^Chapter\s+(\d+)", heading_text, re.IGNORECASE)
             if chapter_match:
                 return chapter_match.group(1)
 
             # New format: "Section N.N Title"
-            section_match = re.match(r'^Section\s+(\d+\.\d+)', heading_text, re.IGNORECASE)
+            section_match = re.match(r"^Section\s+(\d+\.\d+)", heading_text, re.IGNORECASE)
             if section_match:
                 return section_match.group(1)
 
             # New format: "Subsection N.N.N Title"
-            subsection_match = re.match(r'^Subsection\s+(\d+\.\d+\.\d+)', heading_text, re.IGNORECASE)
+            subsection_match = re.match(r"^Subsection\s+(\d+\.\d+\.\d+)", heading_text, re.IGNORECASE)
             if subsection_match:
                 return subsection_match.group(1)
 
@@ -674,9 +662,9 @@ def _extract_section_from_page(
                 return section
 
     # Try pageMetadata (for legacy support)
-    page_metadata = page.find('pageMetadata')
+    page_metadata = page.find("pageMetadata")
     if page_metadata is not None:
-        metadata_text = ''.join(page_metadata.itertext())
+        metadata_text = "".join(page_metadata.itertext())
         section = extract_section_from_page_metadata(metadata_text, config)
         if section:
             return section
@@ -717,9 +705,9 @@ def _build_hierarchical_structure(
         if not chapter_entry:
             continue
 
-        chapter_elem = ET.Element('chapter')
-        chapter_elem.set('number', chapter_num)
-        chapter_elem.set('title', chapter_entry.title)
+        chapter_elem = ET.Element("chapter")
+        chapter_elem.set("number", chapter_num)
+        chapter_elem.set("title", chapter_entry.title)
 
         # Get sections in this chapter
         chapter_sections = chapters[chapter_num]
@@ -735,9 +723,9 @@ def _build_hierarchical_structure(
             chapter_num = entry.number
             if chapter_num not in chapters:
                 # Create empty chapter
-                chapter_elem = ET.Element('chapter')
-                chapter_elem.set('number', chapter_num)
-                chapter_elem.set('title', entry.title)
+                chapter_elem = ET.Element("chapter")
+                chapter_elem.set("number", chapter_num)
+                chapter_elem.set("title", entry.title)
                 book_elem.append(chapter_elem)
 
 
@@ -766,16 +754,16 @@ def _add_sections_to_chapter(
             for page in pages:
                 # Mark chapter title pages with type attribute
                 if is_chapter_title_page(page):
-                    page.set('type', 'chapter-title')
+                    page.set("type", "chapter-title")
                 chapter_elem.append(page)
         elif section_parts.is_section:
             # Section level
             if section_num not in section_map:
                 section_map[section_num] = {}
-            section_map[section_num]['_pages'] = pages
+            section_map[section_num]["_pages"] = pages
         elif section_parts.is_subsection:
             # Subsection - find parent section
-            parent_section = '.'.join(section_num.split('.')[:2])
+            parent_section = ".".join(section_num.split(".")[:2])
             if parent_section not in section_map:
                 section_map[parent_section] = {}
             section_map[parent_section][section_num] = pages
@@ -786,27 +774,27 @@ def _add_sections_to_chapter(
         if not section_entry:
             continue
 
-        section_elem = ET.Element('section')
-        section_elem.set('number', section_num)
-        section_elem.set('title', section_entry.title)
+        section_elem = ET.Element("section")
+        section_elem.set("number", section_num)
+        section_elem.set("title", section_entry.title)
 
         # Add section pages
-        if '_pages' in section_map[section_num]:
-            for page in section_map[section_num]['_pages']:
+        if "_pages" in section_map[section_num]:
+            for page in section_map[section_num]["_pages"]:
                 section_elem.append(page)
 
         # Add subsections
         for subsection_num, pages in section_map[section_num].items():
-            if subsection_num == '_pages':
+            if subsection_num == "_pages":
                 continue
 
             subsection_entry = toc_lookup.get(subsection_num)
             if not subsection_entry:
                 continue
 
-            subsection_elem = ET.Element('subsection')
-            subsection_elem.set('number', subsection_num)
-            subsection_elem.set('title', subsection_entry.title)
+            subsection_elem = ET.Element("subsection")
+            subsection_elem.set("number", subsection_num)
+            subsection_elem.set("title", subsection_entry.title)
 
             for page in pages:
                 subsection_elem.append(page)
@@ -825,7 +813,7 @@ def _section_sort_key(section_num: str) -> tuple[int, ...]:
     Returns:
         Tuple of integers for sorting
     """
-    return tuple(int(x) for x in section_num.split('.'))
+    return tuple(int(x) for x in section_num.split("."))
 
 
 def _serialize_to_xml(element: ET.Element) -> str:
@@ -837,7 +825,7 @@ def _serialize_to_xml(element: ET.Element) -> str:
     Returns:
         XML string with declaration
     """
-    xml_str = ET.tostring(element, encoding='unicode')
+    xml_str = ET.tostring(element, encoding="unicode")
     return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
 
 
@@ -921,10 +909,7 @@ def _assign_pages_to_sections_new(
 
 def _find_first_chapter_entry(toc_lookup: dict[str, TocEntry]) -> str | None:
     """Find the first chapter number in TOC."""
-    chapter_numbers = [
-        num for num, entry in toc_lookup.items()
-        if entry.level == 1 and num and num.isdigit()
-    ]
+    chapter_numbers = [num for num, entry in toc_lookup.items() if entry.level == 1 and num and num.isdigit()]
     if not chapter_numbers:
         return None
     return min(chapter_numbers, key=lambda x: int(x))
@@ -1109,8 +1094,8 @@ def _is_title_duplicate(text: str, title: str) -> bool:
         return True
 
     # Text starts with "Chapter N" or "Section N.N" followed by title
-    chapter_pattern = r'^(?:Chapter|Section|第\d+章)\s*\d*\.?\d*\s*'
-    stripped = re.sub(chapter_pattern, '', text, flags=re.IGNORECASE)
+    chapter_pattern = r"^(?:Chapter|Section|第\d+章)\s*\d*\.?\d*\s*"
+    stripped = re.sub(chapter_pattern, "", text, flags=re.IGNORECASE)
     if normalize_for_matching(stripped) == title:
         return True
 
@@ -1130,18 +1115,14 @@ def main() -> int:
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(
-        description='Group pages by TOC structure'
-    )
-    parser.add_argument('input', help='Input book.xml file')
-    parser.add_argument(
-        '-o', '--output', help='Output file (default: stdout)'
-    )
+    parser = argparse.ArgumentParser(description="Group pages by TOC structure")
+    parser.add_argument("input", help="Input book.xml file")
+    parser.add_argument("-o", "--output", help="Output file (default: stdout)")
     args = parser.parse_args()
 
     try:
         # Read input file
-        with open(args.input, 'r', encoding='utf-8') as f:
+        with open(args.input, "r", encoding="utf-8") as f:
             input_xml = f.read()
 
         # Group pages
@@ -1149,7 +1130,7 @@ def main() -> int:
 
         # Write output
         if args.output:
-            with open(args.output, 'w', encoding='utf-8') as f:
+            with open(args.output, "w", encoding="utf-8") as f:
                 f.write(result)
         else:
             print(result)
@@ -1161,6 +1142,7 @@ def main() -> int:
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
+
     sys.exit(main())

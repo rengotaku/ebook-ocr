@@ -4,9 +4,10 @@ Tests for Phase 5: CLI & Error Handling
 - T072: E2E test (sample_book.md -> expected_book.xml comparison)
 """
 
-import pytest
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
+
+import pytest
 
 
 class TestE2EConversion:
@@ -27,16 +28,12 @@ class TestE2EConversion:
         """Get expected_book.xml path."""
         return fixtures_dir / "expected_book.xml"
 
-    def test_sample_files_exist(
-        self, sample_book_md: Path, expected_book_xml: Path
-    ) -> None:
+    def test_sample_files_exist(self, sample_book_md: Path, expected_book_xml: Path) -> None:
         """サンプルファイルが存在する"""
         assert sample_book_md.exists(), f"sample_book.md not found at {sample_book_md}"
         assert expected_book_xml.exists(), f"expected_book.xml not found at {expected_book_xml}"
 
-    def test_convert_sample_book(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_convert_sample_book(self, sample_book_md: Path, tmp_path: Path) -> None:
         """sample_book.mdを変換できる"""
         from src.book_converter.cli import convert_book
 
@@ -47,9 +44,7 @@ class TestE2EConversion:
         assert result.success is True
         assert output_file.exists()
 
-    def test_output_is_valid_xml(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_output_is_valid_xml(self, sample_book_md: Path, tmp_path: Path) -> None:
         """出力が有効なXMLである"""
         from src.book_converter.cli import convert_book
 
@@ -66,9 +61,7 @@ class TestE2EConversion:
         root = tree.getroot()
         assert root is not None
 
-    def test_output_has_book_root_element(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_output_has_book_root_element(self, sample_book_md: Path, tmp_path: Path) -> None:
         """出力にbook要素がある"""
         from src.book_converter.cli import convert_book
 
@@ -80,9 +73,7 @@ class TestE2EConversion:
 
         assert root.tag == "book"
 
-    def test_output_has_metadata(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_output_has_metadata(self, sample_book_md: Path, tmp_path: Path) -> None:
         """出力にmetadataがある"""
         from src.book_converter.cli import convert_book
 
@@ -95,9 +86,7 @@ class TestE2EConversion:
         metadata = root.find("metadata")
         assert metadata is not None
 
-    def test_output_has_pages(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_output_has_pages(self, sample_book_md: Path, tmp_path: Path) -> None:
         """出力にページがある"""
         from src.book_converter.cli import convert_book
 
@@ -110,9 +99,7 @@ class TestE2EConversion:
         pages = root.findall("page")
         assert len(pages) > 0
 
-    def test_output_page_count_matches_input(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_output_page_count_matches_input(self, sample_book_md: Path, tmp_path: Path) -> None:
         """出力のページ数が入力と一致"""
         from src.book_converter.cli import convert_book
 
@@ -122,6 +109,7 @@ class TestE2EConversion:
         # Count pages in input
         input_content = sample_book_md.read_text(encoding="utf-8")
         import re
+
         input_page_count = len(re.findall(r"--- Page \d+ \([^)]+\) ---", input_content))
 
         tree = ET.parse(output_file)
@@ -130,9 +118,7 @@ class TestE2EConversion:
 
         assert len(pages) == input_page_count
 
-    def test_pages_have_number_attribute(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_pages_have_number_attribute(self, sample_book_md: Path, tmp_path: Path) -> None:
         """ページにnumber属性がある"""
         from src.book_converter.cli import convert_book
 
@@ -146,9 +132,7 @@ class TestE2EConversion:
         for page in pages:
             assert "number" in page.attrib
 
-    def test_pages_have_source_file_attribute(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_pages_have_source_file_attribute(self, sample_book_md: Path, tmp_path: Path) -> None:
         """ページにsourceFile属性がある"""
         from src.book_converter.cli import convert_book
 
@@ -162,9 +146,7 @@ class TestE2EConversion:
         for page in pages:
             assert "sourceFile" in page.attrib
 
-    def test_pages_have_page_announcement(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_pages_have_page_announcement(self, sample_book_md: Path, tmp_path: Path) -> None:
         """ページにpageAnnouncementがある"""
         from src.book_converter.cli import convert_book
 
@@ -179,9 +161,7 @@ class TestE2EConversion:
             announcement = page.find("pageAnnouncement")
             assert announcement is not None, f"Page {page.get('number')} missing pageAnnouncement"
 
-    def test_xpath_query_for_page(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_xpath_query_for_page(self, sample_book_md: Path, tmp_path: Path) -> None:
         """XPathでページを検索できる"""
         from src.book_converter.cli import convert_book
 
@@ -195,9 +175,7 @@ class TestE2EConversion:
         page_1 = root.find(".//page[@number='1']")
         assert page_1 is not None, "Page 1 not found by XPath"
 
-    def test_xpath_query_for_heading(
-        self, sample_book_md: Path, tmp_path: Path
-    ) -> None:
+    def test_xpath_query_for_heading(self, sample_book_md: Path, tmp_path: Path) -> None:
         """XPathで見出しを検索できる"""
         from src.book_converter.cli import convert_book
 
@@ -293,20 +271,12 @@ class TestE2EComparison:
         expected_tree = ET.parse(expected_book_xml)
         actual_tree = ET.parse(output_file)
 
-        expected_headings = [
-            (h.get("level"), h.text)
-            for h in expected_tree.getroot().findall(".//heading")
-        ]
-        actual_headings = [
-            (h.get("level"), h.text)
-            for h in actual_tree.getroot().findall(".//heading")
-        ]
+        expected_headings = [(h.get("level"), h.text) for h in expected_tree.getroot().findall(".//heading")]
+        actual_headings = [(h.get("level"), h.text) for h in actual_tree.getroot().findall(".//heading")]
 
         assert actual_headings == expected_headings
 
-    def test_output_contains_figures(
-        self, sample_book_md: Path, expected_book_xml: Path, tmp_path: Path
-    ) -> None:
+    def test_output_contains_figures(self, sample_book_md: Path, expected_book_xml: Path, tmp_path: Path) -> None:
         """出力に図が含まれる"""
         from src.book_converter.cli import convert_book
 
@@ -321,9 +291,7 @@ class TestE2EComparison:
 
         assert len(actual_figures) == len(expected_figures)
 
-    def test_output_contains_page_metadata(
-        self, sample_book_md: Path, expected_book_xml: Path, tmp_path: Path
-    ) -> None:
+    def test_output_contains_page_metadata(self, sample_book_md: Path, expected_book_xml: Path, tmp_path: Path) -> None:
         """出力にページメタデータが含まれる"""
         from src.book_converter.cli import convert_book
 
@@ -351,7 +319,7 @@ class TestE2EEdgeCases:
 
         output_file = tmp_path / "output.xml"
 
-        result = convert_book(input_file, output_file)
+        convert_book(input_file, output_file)
 
         # 空ファイルでも有効なXMLを生成
         assert output_file.exists()
@@ -367,7 +335,7 @@ class TestE2EEdgeCases:
 
         output_file = tmp_path / "output.xml"
 
-        result = convert_book(input_file, output_file)
+        convert_book(input_file, output_file)
 
         tree = ET.parse(output_file)
         pages = tree.getroot().findall("page")
@@ -379,15 +347,12 @@ class TestE2EEdgeCases:
 
         input_file = tmp_path / "unicode.md"
         input_file.write_text(
-            "--- Page 1 (page_0001.png) ---\n\n"
-            "# 日本語タイトル\n\n"
-            "日本語の本文。特殊文字: 「」『』\n",
-            encoding="utf-8"
+            "--- Page 1 (page_0001.png) ---\n\n# 日本語タイトル\n\n日本語の本文。特殊文字: 「」『』\n", encoding="utf-8"
         )
 
         output_file = tmp_path / "output.xml"
 
-        result = convert_book(input_file, output_file)
+        convert_book(input_file, output_file)
 
         content = output_file.read_text(encoding="utf-8")
         assert "日本語タイトル" in content
@@ -407,7 +372,7 @@ class TestE2EEdgeCases:
 
         output_file = tmp_path / "output.xml"
 
-        result = convert_book(input_file, output_file)
+        convert_book(input_file, output_file)
 
         tree = ET.parse(output_file)
         pages = tree.getroot().findall("page")
@@ -426,7 +391,7 @@ class TestE2EEdgeCases:
 
         output_file = tmp_path / "output.xml"
 
-        result = convert_book(input_file, output_file)
+        convert_book(input_file, output_file)
 
         content = output_file.read_text(encoding="utf-8")
         # 4階層警告がコメントとして含まれる

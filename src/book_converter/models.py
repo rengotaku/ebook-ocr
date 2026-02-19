@@ -244,6 +244,7 @@ class HeaderLevelConfig:
         Returns:
             HeaderLevelConfig
         """
+
         def parse(value: str | None) -> tuple[str, ...]:
             if not value:
                 return ()
@@ -261,6 +262,7 @@ class HeaderLevelConfig:
 # ============================================================
 # Legacy models (parser.py との互換性用、段階的に削除予定)
 # ============================================================
+
 
 @dataclass(frozen=True)
 class PageAnnouncement:

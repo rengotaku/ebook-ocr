@@ -12,15 +12,19 @@ from src.book_converter.models import (
     Book,
     BookMetadata,
     Chapter,
-    Section,
-    Paragraph,
+    Content,
+    Figure,
     Heading,
     List,
-    Figure,
-    TocEntry,
+    Page,
+    PageAnnouncement,
+    PageMetadata,
+    Paragraph,
+    Section,
+    StructureContainer,
     TableOfContents,
+    TocEntry,
 )
-
 
 # ============================================================
 # Phase 7: Heading Normalization and Duplicate Detection
@@ -49,13 +53,13 @@ def normalize_heading_for_comparison(heading_text: str) -> str:
     text = heading_text
 
     # Remove "Chapter N" prefix (case-insensitive)
-    text = re.sub(r'^[Cc][Hh][Aa][Pp][Tt][Ee][Rr]\s+(\d+)\s*', r'\1 ', text)
+    text = re.sub(r"^[Cc][Hh][Aa][Pp][Tt][Ee][Rr]\s+(\d+)\s*", r"\1 ", text)
 
     # Remove "Section N.N" prefix (case-insensitive)
-    text = re.sub(r'^[Ss][Ee][Cc][Tt][Ii][Oo][Nn]\s+(\d+\.\d+)\s*', r'\1 ', text)
+    text = re.sub(r"^[Ss][Ee][Cc][Tt][Ii][Oo][Nn]\s+(\d+\.\d+)\s*", r"\1 ", text)
 
     # Normalize whitespace (collapse multiple spaces to single space)
-    text = ' '.join(text.split())
+    text = " ".join(text.split())
 
     return text.strip()
 
@@ -406,14 +410,6 @@ def apply_emphasis(text: str, parent: Element) -> None:
 # ============================================================
 # Legacy functions (parser.py との互換性用)
 # ============================================================
-
-from src.book_converter.models import (
-    Page,
-    PageAnnouncement,
-    Content,
-    PageMetadata,
-    StructureContainer,
-)
 
 
 def transform_page(page: Page) -> Element:

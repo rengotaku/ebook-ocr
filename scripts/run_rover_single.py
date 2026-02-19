@@ -7,10 +7,10 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from PIL import Image
-
 from ocr_engines import run_all_engines
 from ocr_rover import rover_merge
+from PIL import Image
+
 
 def main():
     image_path = sys.argv[1] if len(sys.argv) > 1 else "output/157012a97dcbebed/pages/page_0024.png"
@@ -76,6 +76,7 @@ def main():
 
     print(f"\nSaved: {rover_file}")
     print("\n✅ Done!")
+
 
 if __name__ == "__main__":
     main()

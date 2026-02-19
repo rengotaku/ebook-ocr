@@ -5,6 +5,7 @@ Phase 3 (US2): 命名規則の統一テスト
 
 このテストは命名規則違反を検出し、リファクタリングが必要な箇所を明確にする。
 """
+
 from __future__ import annotations
 
 import re
@@ -40,8 +41,7 @@ class TestYomitokuNamingInCLI:
             # yomitoku_device=args.device のような呼び出しを検出
             matches = re.findall(r"yomitoku_device\s*=", content)
             assert not matches, (
-                f"{py_file.name}: yomitoku_device引数を使用しています。"
-                f"deviceにリネームしてください: {matches}"
+                f"{py_file.name}: yomitoku_device引数を使用しています。deviceにリネームしてください: {matches}"
             )
 
     def test_no_yomitoku_in_argparse_dest(self, cli_dir: Path) -> None:
@@ -56,9 +56,7 @@ class TestYomitokuNamingInCLI:
             content = py_file.read_text()
             # --yomitoku で始まる引数を検出
             matches = re.findall(r"['\"]--yomitoku[^'\"]*['\"]", content)
-            assert not matches, (
-                f"{py_file.name}: yomitokuを含むargparse引数が存在します: {matches}"
-            )
+            assert not matches, f"{py_file.name}: yomitokuを含むargparse引数が存在します: {matches}"
 
     def test_no_yomitoku_in_cli_variable_names(self, cli_dir: Path) -> None:
         """CLIスクリプト内にyomitoku_*変数がないこと.
@@ -80,10 +78,7 @@ class TestYomitokuNamingInCLI:
                     continue
                 if re.search(r"\byomitoku_\w+\b", line):
                     violations.append(f"L{i}: {stripped}")
-            assert not violations, (
-                f"{py_file.name}: yomitoku_*変数が存在します:\n"
-                + "\n".join(violations)
-            )
+            assert not violations, f"{py_file.name}: yomitoku_*変数が存在します:\n" + "\n".join(violations)
 
 
 class TestYomitokuFunctionNaming:
@@ -109,8 +104,7 @@ class TestYomitokuFunctionNaming:
         if detect_layout_file.exists():
             content = detect_layout_file.read_text()
             assert "detect_layout_yomitoku" not in content, (
-                "detect_layout.py: detect_layout_yomitoku関数を使用しています。"
-                "detect_layout にリネームしてください。"
+                "detect_layout.py: detect_layout_yomitoku関数を使用しています。detect_layout にリネームしてください。"
             )
 
     def test_no_yomitoku_function_calls_in_cli(self, cli_dir: Path) -> None:
@@ -134,10 +128,7 @@ class TestYomitokuFunctionNaming:
                 # 関数呼び出しパターンを検出
                 if re.search(r"\b\w*yomitoku\w*\s*\(", line, re.IGNORECASE):
                     violations.append(f"L{i}: {stripped}")
-            assert not violations, (
-                f"{py_file.name}: yomitoku関数を呼び出しています:\n"
-                + "\n".join(violations)
-            )
+            assert not violations, f"{py_file.name}: yomitoku関数を呼び出しています:\n" + "\n".join(violations)
 
 
 class TestRoverOcrNaming:
@@ -157,12 +148,8 @@ class TestRoverOcrNaming:
         for py_file in src_dir.rglob("*.py"):
             # ファイル名にrover-ocrまたはrover_ocrが含まれていないこと
             filename = py_file.name.lower()
-            assert "rover-ocr" not in filename, (
-                f"{py_file}: ファイル名にrover-ocrが含まれています"
-            )
-            assert "rover_ocr" not in filename, (
-                f"{py_file}: ファイル名にrover_ocrが含まれています"
-            )
+            assert "rover-ocr" not in filename, f"{py_file}: ファイル名にrover-ocrが含まれています"
+            assert "rover_ocr" not in filename, f"{py_file}: ファイル名にrover_ocrが含まれています"
 
     def test_no_rover_ocr_in_code_comments(self, project_root: Path) -> None:
         """src/cli/内のコードでrover-ocr/rover_ocrがコメントに含まれていないこと.
@@ -176,15 +163,10 @@ class TestRoverOcrNaming:
             content = py_file.read_text().lower()
             # コメント行のみを抽出
             lines = content.split("\n")
-            comment_lines = [
-                line for line in lines
-                if line.strip().startswith("#")
-            ]
+            comment_lines = [line for line in lines if line.strip().startswith("#")]
             comment_text = "\n".join(comment_lines)
             violations = re.findall(r"rover[-_]ocr", comment_text)
-            assert not violations, (
-                f"{py_file.name}: コメントにrover-ocr/rover_ocrが含まれています"
-            )
+            assert not violations, f"{py_file.name}: コメントにrover-ocr/rover_ocrが含まれています"
 
 
 class TestGrepVerification:
@@ -211,9 +193,7 @@ class TestGrepVerification:
             cwd=project_root,
         )
         # grep返り値: 0=マッチあり, 1=マッチなし, 2=エラー
-        assert result.returncode == 1, (
-            f"CLIにyomitoku_deviceが見つかりました:\n{result.stdout}"
-        )
+        assert result.returncode == 1, f"CLIにyomitoku_deviceが見つかりました:\n{result.stdout}"
 
     def test_grep_no_detect_layout_yomitoku_in_cli(self, project_root: Path) -> None:
         """grep検証: CLIにdetect_layout_yomitokuがないこと.
@@ -227,9 +207,7 @@ class TestGrepVerification:
             text=True,
             cwd=project_root,
         )
-        assert result.returncode == 1, (
-            f"CLIにdetect_layout_yomitokuが見つかりました:\n{result.stdout}"
-        )
+        assert result.returncode == 1, f"CLIにdetect_layout_yomitokuが見つかりました:\n{result.stdout}"
 
     def test_grep_no_ocr_yomitoku_import_in_cli(self, project_root: Path) -> None:
         """grep検証: CLIでocr_yomitokuモジュールをインポートしていないこと.
@@ -243,6 +221,4 @@ class TestGrepVerification:
             text=True,
             cwd=project_root,
         )
-        assert result.returncode == 1, (
-            f"CLIでocr_yomitokuをインポートしています:\n{result.stdout}"
-        )
+        assert result.returncode == 1, f"CLIでocr_yomitokuをインポートしています:\n{result.stdout}"

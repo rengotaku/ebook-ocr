@@ -105,6 +105,17 @@ Mark completed tasks as `[x]`.
 
 Generate `{FEATURE_DIR}/tasks/ph{N}-output.md`.
 
+## Pre-Commit Compliance
+
+コードを書いた後、コミット前に以下を実行:
+
+```bash
+ruff check --fix src/
+ruff format src/
+```
+
+これによりpre-commitフックの失敗を防止する。
+
 # Rules
 
 - Execute tasks in listed order

@@ -9,23 +9,22 @@ import argparse
 import sys
 from pathlib import Path
 
+from src.book_converter.analyzer import (
+    analyze_headings,
+    apply_read_aloud_rules,
+    detect_running_head,
+)
 from src.book_converter.models import (
     Book,
     BookMetadata,
-    ConversionResult,
-    ConversionError,
-    Heading,
-    HeaderLevelConfig,
-    Page,
     Content,
+    ConversionResult,
+    HeaderLevelConfig,
+    Heading,
+    Page,
 )
-from src.book_converter.parser import parse_pages_with_errors, count_markers
+from src.book_converter.parser import count_markers, parse_pages_with_errors
 from src.book_converter.xml_builder import build_xml_with_errors
-from src.book_converter.analyzer import (
-    analyze_headings,
-    detect_running_head,
-    apply_read_aloud_rules,
-)
 
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
@@ -37,24 +36,14 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     Returns:
         Parsed arguments namespace.
     """
-    parser = argparse.ArgumentParser(
-        description="Convert book.md to book.xml"
-    )
+    parser = argparse.ArgumentParser(description="Convert book.md to book.xml")
     parser.add_argument("input", help="Input markdown file")
     parser.add_argument("output", help="Output XML file")
 
     # Mutually exclusive group for verbose and quiet
     group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="Verbose output (show exclusion reasons)"
-    )
-    group.add_argument(
-        "-q", "--quiet",
-        action="store_true",
-        help="Quiet mode"
-    )
+    group.add_argument("-v", "--verbose", action="store_true", help="Verbose output (show exclusion reasons)")
+    group.add_argument("-q", "--quiet", action="store_true", help="Quiet mode")
 
     # Heading analysis options
     parser.add_argument(
@@ -62,49 +51,33 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         type=float,
         default=0.5,
         metavar="RATIO",
-        help="Running head detection threshold as ratio of total pages (default: 0.5)"
+        help="Running head detection threshold as ratio of total pages (default: 0.5)",
     )
 
     # Page grouping option
     parser.add_argument(
         "--group-pages",
         action="store_true",
-        help="Group pages by TOC structure (front-matter, chapter, section, subsection)"
+        help="Group pages by TOC structure (front-matter, chapter, section, subsection)",
     )
 
     # Header level mapping options
     parser.add_argument(
-        "--header-level1",
-        metavar="KEYWORDS",
-        help="Level 1 keywords (pipe-separated, e.g., 'chapter')"
+        "--header-level1", metavar="KEYWORDS", help="Level 1 keywords (pipe-separated, e.g., 'chapter')"
     )
     parser.add_argument(
-        "--header-level2",
-        metavar="KEYWORDS",
-        help="Level 2 keywords (pipe-separated, e.g., 'episode|column')"
+        "--header-level2", metavar="KEYWORDS", help="Level 2 keywords (pipe-separated, e.g., 'episode|column')"
     )
-    parser.add_argument(
-        "--header-level3",
-        metavar="KEYWORDS",
-        help="Level 3 keywords (pipe-separated)"
-    )
-    parser.add_argument(
-        "--header-level4",
-        metavar="KEYWORDS",
-        help="Level 4 keywords (pipe-separated)"
-    )
-    parser.add_argument(
-        "--header-level5",
-        metavar="KEYWORDS",
-        help="Level 5 keywords (pipe-separated)"
-    )
+    parser.add_argument("--header-level3", metavar="KEYWORDS", help="Level 3 keywords (pipe-separated)")
+    parser.add_argument("--header-level4", metavar="KEYWORDS", help="Level 4 keywords (pipe-separated)")
+    parser.add_argument("--header-level5", metavar="KEYWORDS", help="Level 5 keywords (pipe-separated)")
 
     # Figure marker options
     parser.add_argument(
         "--figure-markers",
         metavar="KEYWORDS",
         default="図|写真|表",
-        help="Figure marker keywords (pipe-separated, default: '図|写真|表')"
+        help="Figure marker keywords (pipe-separated, default: '図|写真|表')",
     )
 
     return parser.parse_args(args)
@@ -127,10 +100,7 @@ def _extract_headings(pages: list[Page]) -> list[Heading]:
     return all_headings
 
 
-def _process_pages_with_headings(
-    pages: list[Page],
-    heading_map: dict[int, Heading]
-) -> list[Page]:
+def _process_pages_with_headings(pages: list[Page], heading_map: dict[int, Heading]) -> list[Page]:
     """Replace headings in pages with processed versions.
 
     Args:
@@ -211,6 +181,7 @@ def convert_book(
     # Group pages if requested
     if group_pages:
         from src.book_converter.page_grouper import group_pages_by_toc
+
         xml_string = group_pages_by_toc(xml_string, header_level_config=header_level_config)
 
     # Write to output file
@@ -258,7 +229,10 @@ def main(args: list[str] | None = None) -> int:
         if parsed.verbose:
             print(f"変換中: {input_path} -> {output_path}")
             if header_level_config.has_any_config():
-                print(f"見出しレベル設定: L1={header_level_config.level1}, L2={header_level_config.level2}, L3={header_level_config.level3}")
+                print(
+                    f"見出しレベル設定: L1={header_level_config.level1}, "
+                    f"L2={header_level_config.level2}, L3={header_level_config.level3}"
+                )
 
         result = convert_book(
             input_path,

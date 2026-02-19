@@ -10,7 +10,6 @@ from xml.etree import ElementTree as ET
 import pytest
 
 from src.book_converter.page_grouper import (
-    SectionNumber,
     TOCEntry,
     extract_section_from_heading,
     extract_section_from_page_metadata,
@@ -19,7 +18,6 @@ from src.book_converter.page_grouper import (
     parse_section_number,
     parse_toc,
 )
-
 
 # =============================================================================
 # Helper Functions for Phase 7 (page comments instead of page tags)
@@ -40,7 +38,8 @@ def extract_page_numbers_from_comments(xml_string: str) -> list[str]:
         ['1', '2']
     """
     import re
-    return re.findall(r'<!-- page (\d+) -->', xml_string)
+
+    return re.findall(r"<!-- page (\d+) -->", xml_string)
 
 
 def count_page_comments(xml_string: str) -> int:
@@ -75,12 +74,13 @@ def extract_element_string(xml_string: str, tag: str, attr_pattern: str = "") ->
         '<section number="1"><!-- page 1 --></section>'
     """
     import re
+
     # Match opening tag with attributes, content (including nested tags), and closing tag
     # Use non-greedy matching for the content
     if attr_pattern:
-        pattern = rf'<{tag}\s+[^>]*{attr_pattern}[^>]*>.*?</{tag}>'
+        pattern = rf"<{tag}\s+[^>]*{attr_pattern}[^>]*>.*?</{tag}>"
     else:
-        pattern = rf'<{tag}[^>]*>.*?</{tag}>'
+        pattern = rf"<{tag}[^>]*>.*?</{tag}>"
 
     match = re.search(pattern, xml_string, re.DOTALL)
     return match.group(0) if match else None
@@ -452,7 +452,7 @@ class TestGroupFrontMatter:
         assert front_matter is not None
 
         # Phase 7: pages are now comments, extract from full result
-        page_numbers = extract_page_numbers_in_element(result, 'front-matter', '')
+        page_numbers = extract_page_numbers_in_element(result, "front-matter", "")
 
         # Pages 1-6 (before TOC) should be in front-matter
         assert "1" in page_numbers
@@ -470,7 +470,7 @@ class TestGroupFrontMatter:
         assert front_matter is not None
 
         # Phase 7: pages are now comments, extract from full result
-        page_numbers = extract_page_numbers_in_element(result, 'front-matter', '')
+        page_numbers = extract_page_numbers_in_element(result, "front-matter", "")
 
         # TOC pages should also be in front-matter section
         assert "7" in page_numbers
@@ -545,7 +545,7 @@ class TestGroupPagesBySection:
         assert section1_1 is not None
 
         # Phase 7: pages are now comments, extract from full result
-        page_numbers = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
+        page_numbers = extract_page_numbers_in_element(result, "section", 'number="1.1"')
 
         # Pages 15, 16, 17 have section number 1.1
         assert "15" in page_numbers
@@ -563,7 +563,7 @@ class TestGroupPagesBySection:
         assert subsection1_1_1 is not None
 
         # Phase 7: pages are now comments, extract from full result
-        page_numbers = extract_page_numbers_in_element(result, 'subsection', 'number="1.1.1"')
+        page_numbers = extract_page_numbers_in_element(result, "subsection", 'number="1.1.1"')
 
         # Page 18 has section number 1.1.1
         assert "18" in page_numbers
@@ -625,7 +625,7 @@ class TestBuildHierarchicalXml:
 
         # Phase 7: page attributes become page comments with number only
         # Check that page 15 comment exists in section 1.1
-        page_numbers = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
+        page_numbers = extract_page_numbers_in_element(result, "section", 'number="1.1"')
         assert "15" in page_numbers, "Page 15 comment should exist in section 1.1"
 
     def test_build_page_preserves_all_children(self, sample_book_xml: str) -> None:
@@ -681,7 +681,7 @@ class TestEdgeCases:
         front_matter = root.find("front-matter")
         assert front_matter is not None
         # Phase 7: pages are now comments
-        page_numbers = extract_page_numbers_in_element(result, 'front-matter', '')
+        page_numbers = extract_page_numbers_in_element(result, "front-matter", "")
         assert len(page_numbers) == 1
 
     def test_empty_chapter(self) -> None:
@@ -839,7 +839,7 @@ class TestChapterTitlePageTypeAttribute:
         assert chapter1 is not None
 
         # Phase 7: page 2 should be a comment at chapter level
-        chapter_xml = extract_element_string(result, 'chapter', 'number="1"')
+        chapter_xml = extract_element_string(result, "chapter", 'number="1"')
         assert chapter_xml is not None
         assert "<!-- page 2 -->" in chapter_xml, "Chapter title page comment should exist"
 
@@ -870,13 +870,13 @@ class TestChapterTitlePageTypeAttribute:
         # Phase 7: Chapter 1's page 2 comment should exist
         chapter1 = root.find("chapter[@number='1']")
         assert chapter1 is not None
-        chapter1_pages = extract_page_numbers_in_element(result, 'chapter', 'number="1"')
+        chapter1_pages = extract_page_numbers_in_element(result, "chapter", 'number="1"')
         assert "2" in chapter1_pages, "Page 2 should be in chapter 1"
 
         # Chapter 2's page 5 comment should exist
         chapter2 = root.find("chapter[@number='2']")
         assert chapter2 is not None
-        chapter2_pages = extract_page_numbers_in_element(result, 'chapter', 'number="2"')
+        chapter2_pages = extract_page_numbers_in_element(result, "chapter", 'number="2"')
         assert "5" in chapter2_pages, "Page 5 should be in chapter 2"
 
     def test_non_chapter_title_pages_no_type_attribute(self) -> None:
@@ -914,13 +914,13 @@ class TestChapterTitlePageTypeAttribute:
         # Phase 7: page 3 comment should be in section 1.1
         section = chapter1.find("section[@number='1.1']")
         assert section is not None
-        section_pages = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
+        section_pages = extract_page_numbers_in_element(result, "section", 'number="1.1"')
         assert "3" in section_pages, "Page 3 should be in section 1.1"
 
         # Phase 7: page 4 comment should be in subsection 1.1.1
         subsection = section.find("subsection[@number='1.1.1']")
         assert subsection is not None
-        subsection_pages = extract_page_numbers_in_element(result, 'subsection', 'number="1.1.1"')
+        subsection_pages = extract_page_numbers_in_element(result, "subsection", 'number="1.1.1"')
         assert "4" in subsection_pages, "Page 4 should be in subsection 1.1.1"
 
     def test_front_matter_pages_no_type_attribute(self) -> None:
@@ -950,7 +950,7 @@ class TestChapterTitlePageTypeAttribute:
         assert front_matter is not None
 
         # Phase 7: Front-matter pages should be comments
-        front_matter_pages = extract_page_numbers_in_element(result, 'front-matter', '')
+        front_matter_pages = extract_page_numbers_in_element(result, "front-matter", "")
         assert "1" in front_matter_pages, "Page 1 should be in front-matter"
         assert "2" in front_matter_pages, "Page 2 should be in front-matter"
 
@@ -980,7 +980,7 @@ class TestChapterTitlePageEdgeCases:
         chapter1 = root.find("chapter[@number='1']")
         assert chapter1 is not None
         # Phase 7: page 2 should be a comment in chapter 1
-        chapter_pages = extract_page_numbers_in_element(result, 'chapter', 'number="1"')
+        chapter_pages = extract_page_numbers_in_element(result, "chapter", 'number="1"')
         assert "2" in chapter_pages, "Page 2 should be in chapter 1"
 
     def test_multiple_chapters_all_get_type_attribute(self) -> None:
@@ -1016,7 +1016,7 @@ class TestChapterTitlePageEdgeCases:
         for chapter_num, page_num in [("1", "2"), ("2", "3"), ("3", "4")]:
             chapter = root.find(f"chapter[@number='{chapter_num}']")
             assert chapter is not None
-            chapter_pages = extract_page_numbers_in_element(result, 'chapter', f'number="{chapter_num}"')
+            chapter_pages = extract_page_numbers_in_element(result, "chapter", f'number="{chapter_num}"')
             assert page_num in chapter_pages, f"Page {page_num} should be in chapter {chapter_num}"
 
 
@@ -1085,11 +1085,11 @@ class TestFallbackToPreviousSection:
 
         # Phase 7: page tags are now comments, check section content
         # Use helper to extract page numbers from full result string (comments are lost in ET.fromstring)
-        page_numbers = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
+        page_numbers = extract_page_numbers_in_element(result, "section", 'number="1.1"')
 
-        assert '3' in page_numbers, "Page 3 (with section info) should be in section 1.1"
-        assert '4' in page_numbers, "Page 4 (no section info) should fallback to section 1.1"
-        assert '5' in page_numbers, "Page 5 (no section info) should fallback to section 1.1"
+        assert "3" in page_numbers, "Page 3 (with section info) should be in section 1.1"
+        assert "4" in page_numbers, "Page 4 (no section info) should fallback to section 1.1"
+        assert "5" in page_numbers, "Page 5 (no section info) should fallback to section 1.1"
 
     def test_consecutive_missing_sections(self) -> None:
         """Multiple consecutive pages without section numbers all go to the same section.
@@ -1152,7 +1152,7 @@ class TestFallbackToPreviousSection:
 
         # Phase 7: page tags are now comments
         # Use helper to extract from full result (comments lost in ET.fromstring)
-        page_numbers = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
+        page_numbers = extract_page_numbers_in_element(result, "section", 'number="1.1"')
 
         assert len(page_numbers) == 6, f"Section 1.1 should contain 6 pages, got {len(page_numbers)}"
         for num in ["3", "4", "5", "6", "7", "8"]:
@@ -1197,7 +1197,7 @@ class TestFallbackToPreviousSection:
 
         # Phase 7: page tags are now comments
         # Extract chapter string from full result (preserves comments)
-        chapter_xml = extract_element_string(result, 'chapter', 'number="1"')
+        chapter_xml = extract_element_string(result, "chapter", 'number="1"')
         assert chapter_xml is not None
 
         # Page 2 should be at chapter level (chapter-title)
@@ -1215,8 +1215,8 @@ class TestFallbackToPreviousSection:
         # Page 4 should be in section 1.1
         section1_1 = chapter1.find("section[@number='1.1']")
         assert section1_1 is not None
-        page_numbers = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
-        assert '4' in page_numbers, "Page 4 should be in section 1.1"
+        page_numbers = extract_page_numbers_in_element(result, "section", 'number="1.1"')
+        assert "4" in page_numbers, "Page 4 should be in section 1.1"
 
     def test_fallback_preserves_page_order(self) -> None:
         """Pages maintain correct order after fallback assignment.
@@ -1266,7 +1266,7 @@ class TestFallbackToPreviousSection:
 
         # Phase 7: page tags are now comments
         # Use helper to extract from full result (comments lost in ET.fromstring)
-        page_numbers = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
+        page_numbers = extract_page_numbers_in_element(result, "section", 'number="1.1"')
 
         # Verify order is preserved: 3, 4, 5
         assert page_numbers == ["3", "4", "5"], f"Pages should be in order [3, 4, 5], got {page_numbers}"
@@ -1317,7 +1317,7 @@ class TestFallbackToPreviousSection:
 
         # Phase 7: page tags are now comments
         # Use helper to extract from full result (comments lost in ET.fromstring)
-        page_numbers = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
+        page_numbers = extract_page_numbers_in_element(result, "section", 'number="1.1"')
 
         assert "3" in page_numbers, "Page 3 should be in section 1.1"
         # Page 4 has section 1.2 which is NOT in TOC, so should fallback to 1.1
@@ -1375,12 +1375,12 @@ class TestFallbackToPreviousSection:
 
         # Phase 7: page tags are now comments
         # Section 1.1 should contain pages 3 and 4
-        page_numbers_1_1 = extract_page_numbers_in_element(result, 'section', 'number="1.1"')
+        page_numbers_1_1 = extract_page_numbers_in_element(result, "section", 'number="1.1"')
         assert "3" in page_numbers_1_1, "Page 3 should be in section 1.1"
         assert "4" in page_numbers_1_1, "Page 4 (no section) should fallback to section 1.1"
 
         # Section 1.2 should contain only page 5
-        page_numbers_1_2 = extract_page_numbers_in_element(result, 'section', 'number="1.2"')
+        page_numbers_1_2 = extract_page_numbers_in_element(result, "section", 'number="1.2"')
         assert "5" in page_numbers_1_2, "Page 5 should be in section 1.2"
         assert "4" not in page_numbers_1_2, "Page 4 should NOT be in section 1.2"
 
@@ -1420,10 +1420,7 @@ class TestFallbackToPreviousSection:
         # Page 2 should NOT be dropped - check for page comment
         all_page_numbers = extract_page_numbers_from_comments(result)
 
-        assert "2" in all_page_numbers, (
-            "Page 2 should NOT be dropped from output. "
-            f"Found pages: {all_page_numbers}"
-        )
+        assert "2" in all_page_numbers, f"Page 2 should NOT be dropped from output. Found pages: {all_page_numbers}"
 
         # Page 2 should be in chapter 1 (at chapter level since no section info)
         root = ET.fromstring(result)
@@ -1432,10 +1429,8 @@ class TestFallbackToPreviousSection:
 
         # Page 2 should be directly under chapter (not in a section)
         # Extract chapter pages from full result (comments lost in ET.fromstring)
-        chapter_pages = extract_page_numbers_in_element(result, 'chapter', 'number="1"')
-        assert "2" in chapter_pages, (
-            "Page 2 (first content page without section) should be at chapter level"
-        )
+        chapter_pages = extract_page_numbers_in_element(result, "chapter", 'number="1"')
+        assert "2" in chapter_pages, "Page 2 (first content page without section) should be at chapter level"
 
 
 # =============================================================================
@@ -1611,9 +1606,7 @@ class TestGroupPagesPreservation:
         page_numbers = extract_page_numbers_from_comments(result)
 
         # Check no duplicates
-        assert len(page_numbers) == len(set(page_numbers)), (
-            f"Duplicate pages found: {page_numbers}"
-        )
+        assert len(page_numbers) == len(set(page_numbers)), f"Duplicate pages found: {page_numbers}"
 
     def test_page_content_preserved(self) -> None:
         """Page content is not lost during grouping."""
@@ -1643,7 +1636,7 @@ class TestGroupPagesPreservation:
         assert chapter is not None
 
         # Check page comment exists (use full result, not subtree which loses comments)
-        chapter_xml = extract_element_string(result, 'chapter', 'number="1"')
+        chapter_xml = extract_element_string(result, "chapter", 'number="1"')
         assert chapter_xml is not None
         assert "<!-- page 2 -->" in chapter_xml, "Page 2 comment should exist"
 
@@ -1660,8 +1653,8 @@ class TestGroupPagesPreservation:
         for i in range(1, 182):
             pages_xml.append(
                 f'<page number="{i}" sourceFile="page_{i:04d}.png">'
-                f'<content><paragraph>Page {i}</paragraph></content>'
-                f'</page>'
+                f"<content><paragraph>Page {i}</paragraph></content>"
+                f"</page>"
             )
 
         book_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -1671,15 +1664,14 @@ class TestGroupPagesPreservation:
         <entry level="1" number="1" title="Chapter One" page="6" />
         <entry level="1" number="2" title="Chapter Two" page="100" />
     </toc>
-    {''.join(pages_xml)}
+    {"".join(pages_xml)}
 </book>"""
         result = group_pages_by_toc(book_xml)
 
         # Phase 7: page tags are now comments
         all_page_numbers = extract_page_numbers_from_comments(result)
         assert len(all_page_numbers) == 181, (
-            f"Expected 181 pages, found {len(all_page_numbers)}. "
-            f"Page loss: {181 - len(all_page_numbers)} pages"
+            f"Expected 181 pages, found {len(all_page_numbers)}. Page loss: {181 - len(all_page_numbers)} pages"
         )
 
 
@@ -1714,7 +1706,7 @@ class TestGroupPagesEmptyToc:
         assert front_matter is not None, "Front-matter should exist"
 
         # Phase 7: page tags are now comments (use full result to preserve comments)
-        page_numbers = extract_page_numbers_in_element(result, 'front-matter', '')
+        page_numbers = extract_page_numbers_in_element(result, "front-matter", "")
         assert len(page_numbers) == 3, f"All 3 pages should be in front-matter, found {len(page_numbers)}"
 
         # Verify no chapters were created
@@ -1763,7 +1755,7 @@ class TestGroupPagesEmptyToc:
         assert front_matter is not None
 
         # Phase 7: page tags are now comments (use full result to preserve comments)
-        page_numbers = extract_page_numbers_in_element(result, 'front-matter', '')
+        page_numbers = extract_page_numbers_in_element(result, "front-matter", "")
 
         # Order should be preserved: 1, 2, 3
         assert page_numbers == ["1", "2", "3"], (

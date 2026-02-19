@@ -86,6 +86,17 @@ Mark test implementation tasks as `[x]`.
 
 Output to `{FEATURE_DIR}/red-tests/ph{N}-test.md`.
 
+## Pre-Commit Compliance
+
+コードを書いた後、コミット前に以下を実行:
+
+```bash
+ruff check --fix src/
+ruff format src/
+```
+
+これによりpre-commitフックの失敗を防止する。
+
 # Rules
 
 - **Do NOT write implementation code** (test code only)

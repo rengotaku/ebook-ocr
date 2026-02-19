@@ -39,11 +39,7 @@ class PageValidationError(BookConverterError):
         self.output_count = output_count
 
         if message is None:
-            loss_percent = (
-                (input_count - output_count) / input_count * 100
-                if input_count > 0
-                else 0
-            )
+            loss_percent = (input_count - output_count) / input_count * 100 if input_count > 0 else 0
             message = (
                 f"Page validation failed: {output_count} pages in output vs "
                 f"{input_count} pages in input ({loss_percent:.1f}% loss). "

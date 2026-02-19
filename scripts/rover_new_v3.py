@@ -6,16 +6,15 @@ Solution: Map easyocr lines to yomitoku paragraphs by y-range, then vote.
 """
 
 import sys
-from pathlib import Path
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from PIL import Image
 import numpy as np
-
-from ocr_engines import TextWithBox, EngineResult
+from ocr_engines import EngineResult, TextWithBox
+from PIL import Image
 
 ENGINE_WEIGHTS = {
     "yomitoku": 1.5,
@@ -75,13 +74,13 @@ def char_level_vote(texts: list[tuple[str, str, float]]) -> str:
         matcher = SequenceMatcher(None, ref_text, text)
 
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'equal':
+            if tag == "equal":
                 for k in range(i2 - i1):
                     pos_idx = i1 + k
                     if pos_idx < len(positions):
                         char = text[j1 + k]
                         positions[pos_idx][char] = positions[pos_idx].get(char, 0) + weight
-            elif tag == 'replace':
+            elif tag == "replace":
                 for k in range(min(i2 - i1, j2 - j1)):
                     pos_idx = i1 + k
                     if pos_idx < len(positions):
@@ -95,12 +94,13 @@ def char_level_vote(texts: list[tuple[str, str, float]]) -> str:
             best_char = max(pos_votes.items(), key=lambda x: x[1])[0]
             result.append(best_char)
 
-    return ''.join(result)
+    return "".join(result)
 
 
 @dataclass
 class Paragraph:
     """A paragraph with y-range."""
+
     engine: str
     text: str
     confidence: float
@@ -112,13 +112,15 @@ def extract_paragraphs_yomitoku(result: EngineResult) -> list[Paragraph]:
     """Extract paragraphs from yomitoku result."""
     paragraphs = []
     for item in result.items:
-        paragraphs.append(Paragraph(
-            engine="yomitoku",
-            text=item.text,
-            confidence=item.confidence,
-            y_min=item.bbox[1],
-            y_max=item.bbox[3],
-        ))
+        paragraphs.append(
+            Paragraph(
+                engine="yomitoku",
+                text=item.text,
+                confidence=item.confidence,
+                y_min=item.bbox[1],
+                y_max=item.bbox[3],
+            )
+        )
     return paragraphs
 
 
@@ -147,7 +149,7 @@ def extract_lines_easyocr(result: EngineResult) -> list[Paragraph]:
     # Convert to Paragraph
     paragraphs = []
     for line_items in lines:
-        text = ''.join(item.text for item in line_items)
+        text = "".join(item.text for item in line_items)
         conf = sum(item.confidence for item in line_items) / len(line_items)
         y_min = min(item.bbox[1] for item in line_items)
         y_max = max(item.bbox[3] for item in line_items)
@@ -171,7 +173,7 @@ def new_rover_v3(engine_results: dict[str, EngineResult]) -> tuple[str, dict[str
     if not yomitoku_result or not yomitoku_result.success:
         # Fall back to easyocr only
         if easyocr_result and easyocr_result.success:
-            return '\n'.join(item.text for item in easyocr_result.items), {"easyocr": len(easyocr_result.items)}
+            return "\n".join(item.text for item in easyocr_result.items), {"easyocr": len(easyocr_result.items)}
         return "", {}
 
     # Extract paragraphs
@@ -190,14 +192,13 @@ def new_rover_v3(engine_results: dict[str, EngineResult]) -> tuple[str, dict[str
         # Find overlapping easyocr lines (with margin)
         margin = 30
         overlapping = [
-            line for line in easyocr_lines
-            if (line.y_min <= para.y_max + margin and line.y_max >= para.y_min - margin)
+            line for line in easyocr_lines if (line.y_min <= para.y_max + margin and line.y_max >= para.y_min - margin)
         ]
 
         if overlapping:
             # Sort by y position and concatenate
             overlapping.sort(key=lambda x: x.y_min)
-            easyocr_text = ''.join(line.text for line in overlapping)
+            easyocr_text = "".join(line.text for line in overlapping)
             easyocr_conf = sum(line.confidence for line in overlapping) / len(overlapping)
 
             # Character-level vote
@@ -222,7 +223,7 @@ def new_rover_v3(engine_results: dict[str, EngineResult]) -> tuple[str, dict[str
             final_lines.append(para.text)
             contributions["yomitoku"] += 1
 
-    return '\n'.join(final_lines), contributions
+    return "\n".join(final_lines), contributions
 
 
 def run_easyocr_with_clahe(image: Image.Image) -> EngineResult:
@@ -230,14 +231,14 @@ def run_easyocr_with_clahe(image: Image.Image) -> EngineResult:
     import cv2
     import easyocr
 
-    img_array = np.array(image.convert('RGB'))
+    img_array = np.array(image.convert("RGB"))
     lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     lab[:, :, 0] = clahe.apply(lab[:, :, 0])
     processed = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
 
     try:
-        reader = easyocr.Reader(['ja', 'en'], gpu=False)
+        reader = easyocr.Reader(["ja", "en"], gpu=False)
         results = reader.readtext(processed, detail=1)
 
         items: list[TextWithBox] = []
@@ -282,26 +283,26 @@ def main():
     print("\n=== NEW ROVER v3 OUTPUT ===")
     print(merged_text)
 
-    lines = merged_text.split('\n')
-    print(f"\n--- Stats ---")
+    lines = merged_text.split("\n")
+    print("\n--- Stats ---")
     print(f"Total paragraphs: {len(lines)}")
 
     # Compare with golden
     golden_path = output_dir / "page_0024_golden.txt"
     if golden_path.exists():
-        with open(golden_path, 'r', encoding='utf-8') as f:
+        with open(golden_path, "r", encoding="utf-8") as f:
             golden_text = f.read()
         # Skip header lines
-        golden_content = '\n'.join(line for line in golden_text.split('\n') if not line.startswith('#'))
+        golden_content = "\n".join(line for line in golden_text.split("\n") if not line.startswith("#"))
         similarity = text_similarity(merged_text, golden_content.strip())
         print(f"Similarity to golden: {similarity:.2%}")
 
     output_file = output_dir / "page_0024_rover_new_v3.txt"
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write("# NEW ROVER v3 OCR output for page_0024.png\n")
         f.write("# 新ROVERアルゴリズム（段落ベース + 文字レベル投票）\n")
         f.write("# Strategy: yomitoku paragraphs as base, merge overlapping easyocr lines\n")
-        f.write(f"# Engines: yomitoku, easyocr (with CLAHE)\n")
+        f.write("# Engines: yomitoku, easyocr (with CLAHE)\n")
         f.write(f"# Contributions: {contributions}\n")
         f.write(f"# Total paragraphs: {len(lines)}\n\n")
         f.write(merged_text)

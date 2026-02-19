@@ -1,4 +1,5 @@
 """CLI wrapper for detect_layout."""
+
 from __future__ import annotations
 
 import argparse

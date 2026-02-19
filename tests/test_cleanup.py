@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = PROJECT_ROOT / "src"
 REQUIREMENTS_TXT = PROJECT_ROOT / "requirements.txt"
@@ -36,16 +35,12 @@ class TestNoLegacyOcrImport:
                     if pattern.search(line):
                         violations.append(f"{py_file.name}:{i}: {line.strip()}")
 
-        assert violations == [], (
-            f"Legacy ocr.py imports found:\n" + "\n".join(violations)
-        )
+        assert violations == [], "Legacy ocr.py imports found:\n" + "\n".join(violations)
 
     def test_legacy_ocr_module_deleted(self) -> None:
         """レガシー ocr.py が削除されていること。"""
         ocr_path = SRC_DIR / "ocr.py"
-        assert not ocr_path.exists(), (
-            f"Legacy ocr.py should be deleted but still exists at {ocr_path}"
-        )
+        assert not ocr_path.exists(), f"Legacy ocr.py should be deleted but still exists at {ocr_path}"
 
 
 class TestNoUnusedDependencies:
@@ -59,14 +54,10 @@ class TestNoUnusedDependencies:
         """requirements.txt に opencv-python が含まれないこと。"""
         content = REQUIREMENTS_TXT.read_text(encoding="utf-8")
         lines = [
-            line.strip().lower()
-            for line in content.splitlines()
-            if line.strip() and not line.strip().startswith("#")
+            line.strip().lower() for line in content.splitlines() if line.strip() and not line.strip().startswith("#")
         ]
-        matching = [l for l in lines if l == "opencv-python" or l.startswith("opencv-python")]
-        assert matching == [], (
-            f"Legacy dependency 'opencv-python' found in requirements.txt: {matching}"
-        )
+        matching = [line for line in lines if line == "opencv-python" or line.startswith("opencv-python")]
+        assert matching == [], f"Legacy dependency 'opencv-python' found in requirements.txt: {matching}"
 
 
 class TestNoPrivateCrossImports:
@@ -74,9 +65,7 @@ class TestNoPrivateCrossImports:
 
     def test_no_private_cross_imports(self) -> None:
         """src/ 内に 'from src.xxx import _something' パターンが存在しないこと。"""
-        private_import_pattern = re.compile(
-            r"^\s*from\s+src\.\w+\s+import\s+.*\b_\w+"
-        )
+        private_import_pattern = re.compile(r"^\s*from\s+src\.\w+\s+import\s+.*\b_\w+")
         violations: list[str] = []
 
         for py_file in sorted(SRC_DIR.glob("*.py")):
@@ -85,6 +74,4 @@ class TestNoPrivateCrossImports:
                 if private_import_pattern.search(line):
                     violations.append(f"{py_file.name}:{i}: {line.strip()}")
 
-        assert violations == [], (
-            f"Private cross-imports found:\n" + "\n".join(violations)
-        )
+        assert violations == [], "Private cross-imports found:\n" + "\n".join(violations)

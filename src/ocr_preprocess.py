@@ -37,10 +37,7 @@ def apply_clahe(
     lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
 
     # 2. CLAHE作成
-    clahe = cv2.createCLAHE(
-        clipLimit=clip_limit,
-        tileGridSize=(tile_size, tile_size)
-    )
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_size, tile_size))
 
     # 3. Lチャンネルに適用
     lab[:, :, 0] = clahe.apply(lab[:, :, 0])

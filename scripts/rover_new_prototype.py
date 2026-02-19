@@ -5,17 +5,16 @@ Based on specs/008-rover-redesign/spec.md
 """
 
 import sys
-from pathlib import Path
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from PIL import Image
 import numpy as np
-
-from ocr_engines import TextWithBox, EngineResult
+from ocr_engines import EngineResult, TextWithBox
+from PIL import Image
 
 # Engine weights
 ENGINE_WEIGHTS = {
@@ -31,6 +30,7 @@ CONFIDENCE_THRESHOLD = 0.5
 @dataclass
 class CharVote:
     """Vote for a single character position."""
+
     char: str
     weight: float
     engine: str
@@ -54,7 +54,7 @@ def is_garbage(text: str, confidence: float) -> bool:
     # Repeated character check
     if len(text) >= 5:
         for i in range(len(text) - 4):
-            if len(set(text[i:i+5])) == 1:
+            if len(set(text[i : i + 5])) == 1:
                 return True
 
     return False
@@ -73,11 +73,7 @@ def align_texts_char_level(texts: list[tuple[str, str, float]]) -> list[list[Cha
         return []
 
     # Filter garbage
-    valid_texts = [
-        (engine, text, conf)
-        for engine, text, conf in texts
-        if not is_garbage(text, conf)
-    ]
+    valid_texts = [(engine, text, conf) for engine, text, conf in texts if not is_garbage(text, conf)]
 
     if not valid_texts:
         # Fall back to highest weight engine if all filtered
@@ -103,21 +99,21 @@ def align_texts_char_level(texts: list[tuple[str, str, float]]) -> list[list[Cha
         matcher = SequenceMatcher(None, ref_text, text)
 
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'equal':
+            if tag == "equal":
                 # Characters match - add votes
                 for k, pos_idx in enumerate(range(i1, i2)):
                     if pos_idx < len(positions):
                         positions[pos_idx].append(CharVote(text[j1 + k], weight, engine))
-            elif tag == 'replace':
+            elif tag == "replace":
                 # Different characters - add as alternative votes
                 for k, pos_idx in enumerate(range(i1, i2)):
                     if pos_idx < len(positions) and j1 + k < len(text):
                         positions[pos_idx].append(CharVote(text[j1 + k], weight, engine))
-            elif tag == 'insert':
+            elif tag == "insert":
                 # Text has extra characters - could insert new positions
                 # For now, skip (simplification)
                 pass
-            elif tag == 'delete':
+            elif tag == "delete":
                 # Reference has extra characters - mark as potential deletion
                 # Keep reference chars but note they're not in this engine
                 pass
@@ -148,7 +144,7 @@ def vote_characters(positions: list[list[CharVote]]) -> str:
         best_char = max(char_weights.items(), key=lambda x: x[1])[0]
         result.append(best_char)
 
-    return ''.join(result)
+    return "".join(result)
 
 
 def cluster_by_y(items: list[TextWithBox], y_tolerance: int = 20) -> list[list[TextWithBox]]:
@@ -254,7 +250,7 @@ def new_rover_merge(
         for engine, items in line_dict.items():
             if items:
                 # Concatenate items in line
-                line_text = ''.join(item.text for item in items)
+                line_text = "".join(item.text for item in items)
                 avg_conf = sum(item.confidence for item in items) / len(items)
                 texts.append((engine, line_text, avg_conf))
 
@@ -274,7 +270,7 @@ def new_rover_merge(
                 if matching > len(voted_text) * 0.5:
                     contributions[engine] += 1
 
-    return '\n'.join(final_lines), contributions
+    return "\n".join(final_lines), contributions
 
 
 def run_easyocr_with_clahe(image: Image.Image) -> EngineResult:
@@ -283,7 +279,7 @@ def run_easyocr_with_clahe(image: Image.Image) -> EngineResult:
     import easyocr
 
     # Convert to numpy
-    img_array = np.array(image.convert('RGB'))
+    img_array = np.array(image.convert("RGB"))
 
     # Apply CLAHE
     lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
@@ -293,7 +289,7 @@ def run_easyocr_with_clahe(image: Image.Image) -> EngineResult:
 
     # Run EasyOCR
     try:
-        reader = easyocr.Reader(['ja', 'en'], gpu=False)
+        reader = easyocr.Reader(["ja", "en"], gpu=False)
         results = reader.readtext(processed, detail=1)
 
         items: list[TextWithBox] = []
@@ -347,10 +343,10 @@ def main():
 
     # Save result
     output_file = output_dir / "page_0024_rover_new.txt"
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write("# NEW ROVER OCR output for page_0024.png\n")
         f.write("# 新ROVERアルゴリズム（文字レベル投票 + 信頼度重み付き）\n")
-        f.write(f"# Engines: yomitoku, easyocr (with CLAHE)\n")
+        f.write("# Engines: yomitoku, easyocr (with CLAHE)\n")
         f.write(f"# Contributions: {contributions}\n\n")
         f.write(merged_text)
 

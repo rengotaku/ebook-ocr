@@ -10,7 +10,6 @@ import base64
 import io
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
 from src.utils import (
@@ -19,7 +18,6 @@ from src.utils import (
     format_figure_markers,
     mask_figure_regions,
 )
-
 
 # ---------- encode_image_file ----------
 
@@ -97,9 +95,7 @@ class TestFormatFigureMarkers:
 
     def test_format_figure_markers_low_confidence(self, sample_layout: dict) -> None:
         """min_confidence=0.9 で confidence=0.85 のエントリが除外される。"""
-        result = format_figure_markers(
-            "page_0001.png", sample_layout, min_confidence=0.9
-        )
+        result = format_figure_markers("page_0001.png", sample_layout, min_confidence=0.9)
 
         # Only the FIGURE entry (confidence=0.95) should remain
         # The TABLE entry (confidence=0.85) should be excluded
@@ -113,45 +109,29 @@ class TestFormatFigureMarkers:
 class TestMaskFigureRegions:
     """mask_figure_regions: apply white mask over figure bounding boxes."""
 
-    def test_mask_figure_regions(
-        self, sample_pil_image: Image.Image, sample_layout: dict
-    ) -> None:
+    def test_mask_figure_regions(self, sample_pil_image: Image.Image, sample_layout: dict) -> None:
         """100x80 の灰色画像に対して bbox [10,20,50,60] のマスクを適用し、マスク領域が白。"""
-        result = mask_figure_regions(
-            sample_pil_image, "page_0001.png", sample_layout
-        )
+        result = mask_figure_regions(sample_pil_image, "page_0001.png", sample_layout)
 
         # Check that the masked region [10,20,50,60] is white
         for x in range(10, 50):
             for y in range(20, 60):
                 pixel = result.getpixel((x, y))
-                assert pixel == (255, 255, 255), (
-                    f"Pixel at ({x},{y}) should be white (255,255,255), got {pixel}"
-                )
+                assert pixel == (255, 255, 255), f"Pixel at ({x},{y}) should be white (255,255,255), got {pixel}"
 
-    def test_mask_figure_regions_preserves_outside(
-        self, sample_pil_image: Image.Image, sample_layout: dict
-    ) -> None:
+    def test_mask_figure_regions_preserves_outside(self, sample_pil_image: Image.Image, sample_layout: dict) -> None:
         """マスク領域外のピクセルは元の灰色のまま。"""
-        result = mask_figure_regions(
-            sample_pil_image, "page_0001.png", sample_layout
-        )
+        result = mask_figure_regions(sample_pil_image, "page_0001.png", sample_layout)
 
         # Check a pixel outside all bounding boxes remains gray
         # bbox1=[10,20,50,60], bbox2=[60,10,90,70]
         # (0, 0) is outside both
         pixel = result.getpixel((0, 0))
-        assert pixel == (200, 200, 200), (
-            f"Pixel at (0,0) should remain gray (200,200,200), got {pixel}"
-        )
+        assert pixel == (200, 200, 200), f"Pixel at (0,0) should remain gray (200,200,200), got {pixel}"
 
-    def test_mask_figure_regions_no_figures(
-        self, sample_pil_image: Image.Image, sample_layout: dict
-    ) -> None:
+    def test_mask_figure_regions_no_figures(self, sample_pil_image: Image.Image, sample_layout: dict) -> None:
         """図のないページに対してマスクを適用し、元画像と同じオブジェクトが返る。"""
-        result = mask_figure_regions(
-            sample_pil_image, "nonexistent_page.png", sample_layout
-        )
+        result = mask_figure_regions(sample_pil_image, "nonexistent_page.png", sample_layout)
 
         # Should return the exact same object (identity check)
         assert result is sample_pil_image
@@ -178,6 +158,4 @@ class TestMaskFigureRegions:
         for x in range(100):
             for y in range(80):
                 pixel = result.getpixel((x, y))
-                assert pixel == (255, 255, 255), (
-                    f"Pixel at ({x},{y}) should be white after clamp, got {pixel}"
-                )
+                assert pixel == (255, 255, 255), f"Pixel at ({x},{y}) should be white after clamp, got {pixel}"

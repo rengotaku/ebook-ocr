@@ -9,9 +9,8 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 
-from src.book_converter.models import Heading, HeadingAnalysis, ExclusionPattern
 from src.book_converter.config import DEFAULT_EXCLUSION_PATTERNS
-
+from src.book_converter.models import ExclusionPattern, Heading, HeadingAnalysis
 
 # 表記ゆれ正規化用の文字マッピング（ダッシュ類を統一）
 _DASH_CHARS = "—–―‐−ー－"  # em dash, en dash, horizontal bar, hyphen, minus, katakana dash, fullwidth hyphen
@@ -54,12 +53,14 @@ def analyze_headings(headings: list[Heading]) -> list[HeadingAnalysis]:
         return []
 
     # 正規化テキストごとの統計情報を集計
-    stats: dict[str, dict] = defaultdict(lambda: {
-        "count": 0,
-        "levels": [],
-        "level_counts": defaultdict(int),
-        "original_text": None,  # 最初に出現したオリジナルテキスト
-    })
+    stats: dict[str, dict] = defaultdict(
+        lambda: {
+            "count": 0,
+            "levels": [],
+            "level_counts": defaultdict(int),
+            "original_text": None,  # 最初に出現したオリジナルテキスト
+        }
+    )
 
     for heading in headings:
         normalized = normalize_text(heading.text)
@@ -79,7 +80,7 @@ def analyze_headings(headings: list[Heading]) -> list[HeadingAnalysis]:
         # 最頻出レベルを決定
         most_frequent_level = max(
             data["level_counts"].items(),
-            key=lambda x: (x[1], -x[0])  # 出現数が多い順、同数なら小さいlevel優先
+            key=lambda x: (x[1], -x[0]),  # 出現数が多い順、同数なら小さいlevel優先
         )[0]
 
         # 出現したlevelsをソート済みタプルに変換
@@ -99,9 +100,7 @@ def analyze_headings(headings: list[Heading]) -> list[HeadingAnalysis]:
 
 
 def detect_running_head(
-    analyses: list[HeadingAnalysis],
-    total_pages: int,
-    threshold_ratio: float = 0.5
+    analyses: list[HeadingAnalysis], total_pages: int, threshold_ratio: float = 0.5
 ) -> list[HeadingAnalysis]:
     """柱検出（デフォルト閾値50%）
 
@@ -182,10 +181,7 @@ def match_exclusion_pattern(text: str) -> ExclusionPattern | None:
     return None
 
 
-def reassign_heading_level(
-    heading: Heading,
-    running_head_texts: set[str]
-) -> Heading:
+def reassign_heading_level(heading: Heading, running_head_texts: set[str]) -> Heading:
     """level再配置
 
     柱テキストがlevel 2,3で出現している場合、level 1に再配置する。
@@ -214,9 +210,7 @@ def reassign_heading_level(
 
 
 def apply_read_aloud_rules(
-    headings: list[Heading],
-    analyses: list[HeadingAnalysis],
-    verbose: bool = False
+    headings: list[Heading], analyses: list[HeadingAnalysis], verbose: bool = False
 ) -> list[Heading]:
     """readAloud属性付与
 
@@ -232,15 +226,13 @@ def apply_read_aloud_rules(
         return []
 
     # 柱テキスト（正規化済み）のセットを作成
-    running_head_texts = {
-        a.text for a in analyses if a.is_running_head
-    }
+    running_head_texts = {a.text for a in analyses if a.is_running_head}
 
     # 柱検出情報を表示（verbose モード）
     if verbose and running_head_texts:
         for analysis in analyses:
             if analysis.is_running_head:
-                print(f"[INFO] Detected running head: \"{analysis.text}\" ({analysis.count} occurrences)")
+                print(f'[INFO] Detected running head: "{analysis.text}" ({analysis.count} occurrences)')
 
     # 各headingにルールを適用
     processed = []
@@ -260,7 +252,7 @@ def apply_read_aloud_rules(
                 read_aloud=False,
             )
             if verbose:
-                print(f"[INFO] Excluded heading (running-head): \"{heading.text}\"")
+                print(f'[INFO] Excluded heading (running-head): "{heading.text}"')
         elif matched_pattern:
             # 除外パターンにマッチした場合
             new_heading = Heading(
@@ -269,7 +261,7 @@ def apply_read_aloud_rules(
                 read_aloud=False,
             )
             if verbose:
-                print(f"[INFO] Excluded heading ({matched_pattern.id}): \"{heading.text}\"")
+                print(f'[INFO] Excluded heading ({matched_pattern.id}): "{heading.text}"')
         else:
             # それ以外は元のread_aloud値を保持
             new_heading = heading

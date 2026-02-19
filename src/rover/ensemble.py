@@ -16,22 +16,22 @@ from pathlib import Path
 
 from PIL import Image
 
+from src.rover.alignment import align_texts_character_level, vote_aligned_text
 from src.rover.engines import EngineResult, TextWithBox, run_all_engines
 from src.rover.output import ROVEROutput
-from src.rover.alignment import align_texts_character_level, vote_aligned_text
-
 
 # Engine priority weights for voting (Tesseract excluded from ROVER)
 ENGINE_WEIGHTS = {
-    "yomitoku": 1.5,    # Best for Japanese
-    "paddleocr": 1.2,   # High accuracy
-    "easyocr": 1.0,     # Balanced
+    "yomitoku": 1.5,  # Best for Japanese
+    "paddleocr": 1.2,  # High accuracy
+    "easyocr": 1.0,  # Balanced
 }
 
 
 @dataclass
 class OCRLine:
     """Single line of OCR result."""
+
     items: list[TextWithBox]
     engine: str
     y_center: float
@@ -57,6 +57,7 @@ class OCRLine:
 @dataclass
 class AlignedLine:
     """Aligned line from multiple engines."""
+
     lines: dict[str, OCRLine | None]  # engine -> line
     y_center: float
     voted_text: str = ""
@@ -66,6 +67,7 @@ class AlignedLine:
 @dataclass
 class ROVERResult:
     """ROVER processing result."""
+
     text: str
     lines: list[str]
     aligned: list[AlignedLine]
@@ -104,14 +106,14 @@ def is_garbage(
         return True
 
     # 3. No Japanese chars and len <= 5
-    has_japanese = any('\u3040' <= ch <= '\u30ff' or '\u4e00' <= ch <= '\u9fff' for ch in text)
+    has_japanese = any("\u3040" <= ch <= "\u30ff" or "\u4e00" <= ch <= "\u9fff" for ch in text)
     if not has_japanese and len(text) <= 5:
         return True
 
     # 4. Same character repeated >= 5 times
     if len(text) >= 5:
         for i in range(len(text) - 4):
-            if text[i] == text[i+1] == text[i+2] == text[i+3] == text[i+4]:
+            if text[i] == text[i + 1] == text[i + 2] == text[i + 3] == text[i + 4]:
                 return True
 
     # 5. Punctuation only
@@ -229,12 +231,14 @@ def cluster_lines_by_y(
         line_items.sort(key=lambda x: x.bbox[0])
         y_center = sum(item.y_center for item in line_items) / len(line_items)
         avg_conf = sum(item.confidence for item in line_items) / len(line_items)
-        ocr_lines.append(OCRLine(
-            items=line_items,
-            engine="",  # Will be set by caller
-            y_center=y_center,
-            confidence=avg_conf,
-        ))
+        ocr_lines.append(
+            OCRLine(
+                items=line_items,
+                engine="",  # Will be set by caller
+                y_center=y_center,
+                confidence=avg_conf,
+            )
+        )
 
     return ocr_lines
 
@@ -292,10 +296,12 @@ def align_lines_by_y(
                 break
 
         avg_y = y_sum / count
-        aligned.append(AlignedLine(
-            lines=lines_dict,
-            y_center=avg_y,
-        ))
+        aligned.append(
+            AlignedLine(
+                lines=lines_dict,
+                y_center=avg_y,
+            )
+        )
 
         i = j if j > i + 1 else i + 1
 
@@ -321,11 +327,7 @@ def vote_line_text(
         engine_weights = ENGINE_WEIGHTS
 
     # Get valid lines (non-None)
-    valid_lines = {
-        engine: line
-        for engine, line in aligned_line.lines.items()
-        if line is not None
-    }
+    valid_lines = {engine: line for engine, line in aligned_line.lines.items() if line is not None}
 
     if not valid_lines:
         return "", [], 0.0
@@ -337,8 +339,7 @@ def vote_line_text(
 
     # Character-level alignment and voting (Phase 3: True ROVER)
     texts = {engine: line.text for engine, line in valid_lines.items()}
-    confidences = {engine: normalize_confidence(line.confidence, engine)
-                   for engine, line in valid_lines.items()}
+    confidences = {engine: normalize_confidence(line.confidence, engine) for engine, line in valid_lines.items()}
 
     # Align texts at character level
     aligned_positions = align_texts_character_level(texts)
@@ -378,10 +379,7 @@ def rover_merge(
     for engine, result in engine_results.items():
         if result.success and result.items:
             # Filter out garbage items
-            filtered_items = [
-                item for item in result.items
-                if not is_garbage(item.text, item.confidence)
-            ]
+            filtered_items = [item for item in result.items if not is_garbage(item.text, item.confidence)]
             if filtered_items:
                 lines = cluster_lines_by_y(filtered_items)
                 for line in lines:
@@ -535,16 +533,13 @@ def run_rover_batch(
             output.save_rover(page_name, rover_result.text)
 
             # Report
-            contrib_str = ", ".join(
-                f"{e}:{c}" for e, c in rover_result.engine_contributions.items()
-                if c > 0
-            )
+            contrib_str = ", ".join(f"{e}:{c}" for e, c in rover_result.engine_contributions.items() if c > 0)
             print(f"  ROVER: {len(rover_result.lines)} lines, gaps_filled={rover_result.gaps_filled}")
             print(f"  Contributions: {contrib_str}")
 
             all_results.append((page_name, rover_result))
 
-    print(f"\n✅ ROVER OCR complete")
+    print("\n✅ ROVER OCR complete")
     print(f"  Raw outputs: {output.raw_dir}")
     print(f"  ROVER outputs: {output.rover_dir}")
 
@@ -555,9 +550,7 @@ def main() -> None:
     """CLI entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="ROVER OCR: Multi-engine voting for improved accuracy"
-    )
+    parser = argparse.ArgumentParser(description="ROVER OCR: Multi-engine voting for improved accuracy")
     parser.add_argument("pages_dir", help="Directory containing page images")
     parser.add_argument("-o", "--output", default="ocr_output", help="Output directory")
     parser.add_argument(

@@ -9,14 +9,14 @@ Acceptance Scenarios:
 3. ページ境界でアナウンスが生成される
 """
 
-import pytest
 from pathlib import Path
-from xml.etree.ElementTree import fromstring, Element
+from xml.etree.ElementTree import fromstring
 
-from src.book_converter.parser import parse_pages
-from src.book_converter.transformer import transform_page
-from src.book_converter.xml_builder import build_xml
+import pytest
+
 from src.book_converter.models import Book, BookMetadata
+from src.book_converter.parser import parse_pages
+from src.book_converter.xml_builder import build_xml
 
 
 class TestMarkdownToXMLConversion:
@@ -273,7 +273,7 @@ class TestEdgeCases:
 
     def test_single_page_book(self) -> None:
         """1ページの書籍を変換"""
-        from src.book_converter.models import Page, Content
+        from src.book_converter.models import Content, Page
 
         page = Page(
             number="1",
@@ -294,7 +294,7 @@ class TestEdgeCases:
 
     def test_page_with_unicode_content(self) -> None:
         """Unicode文字を含むページ"""
-        from src.book_converter.models import Page, Content, Paragraph
+        from src.book_converter.models import Content, Page, Paragraph
 
         page = Page(
             number="1",
@@ -307,7 +307,7 @@ class TestEdgeCases:
         )
 
         xml_string = build_xml(book)
-        root = fromstring(xml_string)
+        fromstring(xml_string)
 
         # Unicodeが正しく処理される
         assert "日本語テキスト" in xml_string
@@ -326,9 +326,7 @@ class TestTocMarkerIntegration:
     book.mdに目次マーカーを含む場合、変換後のXMLに<toc>が生成される
     """
 
-    def test_book_with_toc_marker_generates_table_of_contents(
-        self, tmp_path: Path
-    ) -> None:
+    def test_book_with_toc_marker_generates_table_of_contents(self, tmp_path: Path) -> None:
         """目次マーカー付きの書籍で<toc>が生成される"""
         input_file = tmp_path / "book_with_toc.md"
         input_file.write_text(
@@ -555,9 +553,7 @@ class TestTocMarkerBackwardCompatibility:
     US1: 目次マーカーがない場合、既存動作を維持（後方互換性）
     """
 
-    def test_book_without_toc_marker_no_table_of_contents(
-        self, tmp_path: Path
-    ) -> None:
+    def test_book_without_toc_marker_no_table_of_contents(self, tmp_path: Path) -> None:
         """目次マーカーなしの書籍で<toc>は生成されない"""
         input_file = tmp_path / "book_without_toc.md"
         input_file.write_text(
@@ -593,9 +589,7 @@ class TestTocMarkerBackwardCompatibility:
         toc_elem = root.find("toc")
         assert toc_elem is None
 
-    def test_backward_compatible_page_structure(
-        self, tmp_path: Path
-    ) -> None:
+    def test_backward_compatible_page_structure(self, tmp_path: Path) -> None:
         """目次マーカーなしでも既存のページ構造は維持"""
         input_file = tmp_path / "book_without_toc.md"
         input_file.write_text(
@@ -637,9 +631,7 @@ class TestTocMarkerBackwardCompatibility:
         assert announcement is not None
         assert announcement.text == "1ページ"
 
-    def test_backward_compatible_content_parsing(
-        self, tmp_path: Path
-    ) -> None:
+    def test_backward_compatible_content_parsing(self, tmp_path: Path) -> None:
         """目次マーカーなしでも既存のコンテンツ解析は維持"""
         input_file = tmp_path / "book_without_toc.md"
         input_file.write_text(
@@ -724,9 +716,7 @@ class TestTocPageRangeIntegration:
     - 変換後のXMLで<toc begin="N" end="M">となっていることを確認
     """
 
-    def test_generated_xml_contains_begin_end(
-        self, tmp_path: Path
-    ) -> None:
+    def test_generated_xml_contains_begin_end(self, tmp_path: Path) -> None:
         """生成されたXMLにbegin/end属性が含まれる"""
         input_file = tmp_path / "book_with_toc.md"
         input_file.write_text(
@@ -761,9 +751,7 @@ class TestTocPageRangeIntegration:
         assert toc_elem.get("begin") == "1"
         assert toc_elem.get("end") == "1"
 
-    def test_multi_entry_toc_single_page(
-        self, tmp_path: Path
-    ) -> None:
+    def test_multi_entry_toc_single_page(self, tmp_path: Path) -> None:
         """複数エントリの目次（単一ページ）"""
         input_file = tmp_path / "book_with_toc.md"
         input_file.write_text(
@@ -810,9 +798,7 @@ class TestTocPageRangeIntegration:
         entries = toc_elem.findall("entry")
         assert len(entries) == 6
 
-    def test_multi_page_toc_begin_end(
-        self, tmp_path: Path
-    ) -> None:
+    def test_multi_page_toc_begin_end(self, tmp_path: Path) -> None:
         """複数ページにまたがる目次のbegin/end"""
         input_file = tmp_path / "book_with_toc.md"
         input_file.write_text(
@@ -865,9 +851,7 @@ class TestTocPageRangeIntegration:
         entries = toc_elem.findall("entry")
         assert len(entries) == 3
 
-    def test_xml_string_contains_toc_element(
-        self, tmp_path: Path
-    ) -> None:
+    def test_xml_string_contains_toc_element(self, tmp_path: Path) -> None:
         """XMLシリアライズ結果に<toc>が含まれる"""
         input_file = tmp_path / "book_with_toc.md"
         input_file.write_text(
@@ -898,9 +882,7 @@ class TestTocPageRangeIntegration:
         assert "<toc " in xml_string
         assert 'begin="1"' in xml_string
 
-    def test_backward_compatible_without_toc_marker(
-        self, tmp_path: Path
-    ) -> None:
+    def test_backward_compatible_without_toc_marker(self, tmp_path: Path) -> None:
         """目次マーカーなしの場合、tocは生成されない（後方互換）"""
         input_file = tmp_path / "book_without_toc.md"
         input_file.write_text(
@@ -946,9 +928,7 @@ class TestContentSkipMarkerIntegration:
     - ネストした場合、内側のマーカーが優先
     """
 
-    def test_content_marker_sets_read_aloud_true(
-        self, tmp_path: Path
-    ) -> None:
+    def test_content_marker_sets_read_aloud_true(self, tmp_path: Path) -> None:
         """contentマーカー内の要素はreadAloud="true"になる"""
         input_file = tmp_path / "book_with_content.md"
         input_file.write_text(
@@ -985,9 +965,7 @@ class TestContentSkipMarkerIntegration:
         assert content is not None
         assert content.get("readAloud") == "true"
 
-    def test_skip_marker_sets_read_aloud_false(
-        self, tmp_path: Path
-    ) -> None:
+    def test_skip_marker_sets_read_aloud_false(self, tmp_path: Path) -> None:
         """skipマーカー内の要素はreadAloud="false"になる"""
         input_file = tmp_path / "book_with_skip.md"
         input_file.write_text(
@@ -1025,9 +1003,7 @@ A
         assert content is not None
         assert content.get("readAloud") == "false"
 
-    def test_no_marker_defaults_to_read_aloud_true(
-        self, tmp_path: Path
-    ) -> None:
+    def test_no_marker_defaults_to_read_aloud_true(self, tmp_path: Path) -> None:
         """マーカーなしの要素はデフォルトでreadAloud=true（属性省略）"""
         input_file = tmp_path / "book_no_marker.md"
         input_file.write_text(
@@ -1062,9 +1038,7 @@ A
         read_aloud = content.get("readAloud")
         assert read_aloud is None or read_aloud == "true"
 
-    def test_mixed_content_and_skip_markers(
-        self, tmp_path: Path
-    ) -> None:
+    def test_mixed_content_and_skip_markers(self, tmp_path: Path) -> None:
         """content/skipマーカーが混在する場合"""
         input_file = tmp_path / "book_mixed.md"
         input_file.write_text(
@@ -1109,15 +1083,13 @@ A
         )
 
         xml_string = build_xml(book)
-        root = fromstring(xml_string)
+        fromstring(xml_string)
 
         # XMLに両方のreadAloud属性が含まれている
         assert 'readAloud="true"' in xml_string
         assert 'readAloud="false"' in xml_string
 
-    def test_nested_skip_in_content(
-        self, tmp_path: Path
-    ) -> None:
+    def test_nested_skip_in_content(self, tmp_path: Path) -> None:
         """content内にskipがネストした場合、内側が優先"""
         input_file = tmp_path / "book_nested.md"
         input_file.write_text(
@@ -1158,9 +1130,7 @@ A
         page = root.find(".//page[@number='1']")
         assert page is not None
 
-    def test_content_spanning_multiple_pages(
-        self, tmp_path: Path
-    ) -> None:
+    def test_content_spanning_multiple_pages(self, tmp_path: Path) -> None:
         """contentマーカーが複数ページにまたがる場合"""
         input_file = tmp_path / "book_multipage.md"
         input_file.write_text(
@@ -1201,9 +1171,7 @@ A
         pages_elem = root.findall(".//page")
         assert len(pages_elem) == 3
 
-    def test_multiple_content_blocks_on_same_page(
-        self, tmp_path: Path
-    ) -> None:
+    def test_multiple_content_blocks_on_same_page(self, tmp_path: Path) -> None:
         """同じページに複数のcontentブロックがある場合"""
         input_file = tmp_path / "book_multiblock.md"
         input_file.write_text(
@@ -1246,9 +1214,7 @@ A
         page = root.find(".//page[@number='1']")
         assert page is not None
 
-    def test_content_with_toc_and_skip_markers(
-        self, tmp_path: Path
-    ) -> None:
+    def test_content_with_toc_and_skip_markers(self, tmp_path: Path) -> None:
         """content/skip/tocマーカーが混在する場合（完全な書籍構造）"""
         input_file = tmp_path / "book_full.md"
         input_file.write_text(
@@ -1324,9 +1290,7 @@ A
         entries = toc_elem.findall("entry")
         assert len(entries) == 2
 
-    def test_xml_read_aloud_attribute_serialization(
-        self, tmp_path: Path
-    ) -> None:
+    def test_xml_read_aloud_attribute_serialization(self, tmp_path: Path) -> None:
         """readAloud属性がXMLに正しくシリアライズされる"""
         input_file = tmp_path / "book_serialize.md"
         input_file.write_text(
@@ -1356,11 +1320,9 @@ A
 
         # XMLに readAloud="true" と readAloud="false" が含まれている
         # content内は true、pageAnnouncementは false
-        assert 'readAloud=' in xml_string
+        assert "readAloud=" in xml_string
 
-    def test_backward_compatible_without_content_skip_markers(
-        self, tmp_path: Path
-    ) -> None:
+    def test_backward_compatible_without_content_skip_markers(self, tmp_path: Path) -> None:
         """content/skipマーカーなしでも動作する"""
         input_file = tmp_path / "book_backward.md"
         input_file.write_text(

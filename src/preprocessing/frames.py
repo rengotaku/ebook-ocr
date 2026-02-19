@@ -26,9 +26,12 @@ def extract_frames(
     fps = 1.0 / interval_sec
     cmd = [
         "ffmpeg",
-        "-i", video_path,
-        "-vf", f"fps={fps}",
-        "-q:v", "2",
+        "-i",
+        video_path,
+        "-vf",
+        f"fps={fps}",
+        "-q:v",
+        "2",
         "-y",
         str(out / "frame_%04d.png"),
     ]

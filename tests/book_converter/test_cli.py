@@ -5,10 +5,9 @@ Tests for Phase 5: CLI & Error Handling
 - T073: Error rate warning tests (>10% error rate warning message)
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import patch
-from io import StringIO
+
+import pytest
 
 
 class TestCLIArguments:
@@ -148,9 +147,7 @@ class TestCLIExecution:
         content = output_file.read_text(encoding="utf-8")
         assert "<?xml" in content or "<book>" in content
 
-    def test_cli_verbose_outputs_progress(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_cli_verbose_outputs_progress(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """--verbose時に進捗情報を出力"""
         from src.book_converter.cli import main
 
@@ -165,9 +162,7 @@ class TestCLIExecution:
         # 進捗情報またはログが出力されていること
         assert len(captured.out) > 0 or len(captured.err) > 0
 
-    def test_cli_quiet_suppresses_output(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_cli_quiet_suppresses_output(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """--quiet時は出力を抑制"""
         from src.book_converter.cli import main
 
@@ -187,16 +182,13 @@ class TestCLIExecution:
 class TestCLIConversionResult:
     """CLI変換結果テスト"""
 
-    def test_cli_outputs_summary_on_completion(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_cli_outputs_summary_on_completion(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """変換完了時にサマリーを出力"""
         from src.book_converter.cli import main
 
         input_file = tmp_path / "input.md"
         input_file.write_text(
-            "--- Page 1 (page_0001.png) ---\n\n# Title\n\n"
-            "--- Page 2 (page_0002.png) ---\n\n## Chapter 1\n"
+            "--- Page 1 (page_0001.png) ---\n\n# Title\n\n--- Page 2 (page_0002.png) ---\n\n## Chapter 1\n"
         )
 
         output_file = tmp_path / "output.xml"
@@ -271,9 +263,7 @@ class TestErrorRateWarning:
         # (他の警告は出る可能性があるので、10%特有のメッセージを確認)
         assert "10%" not in output
 
-    def test_error_count_displayed_in_summary(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_error_count_displayed_in_summary(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """サマリーにエラー数が表示される"""
         from src.book_converter.cli import main
 
@@ -293,9 +283,7 @@ class TestErrorRateWarning:
         # エラー数または警告数が表示される
         assert "error" in output.lower() or "エラー" in output or "warning" in output.lower() or "警告" in output
 
-    def test_error_summary_at_end(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_error_summary_at_end(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """最後にエラーサマリーを表示"""
         from src.book_converter.cli import main
 
@@ -345,8 +333,7 @@ class TestCLIConvertFunction:
 
         input_file = tmp_path / "input.md"
         input_file.write_text(
-            "--- Page 1 (page_0001.png) ---\n\n# Title\n\n"
-            "--- Page 2 (page_0002.png) ---\n\n## Chapter 1\n"
+            "--- Page 1 (page_0001.png) ---\n\n# Title\n\n--- Page 2 (page_0002.png) ---\n\n## Chapter 1\n"
         )
 
         output_file = tmp_path / "output.xml"

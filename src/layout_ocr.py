@@ -27,7 +27,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from src.layout.reading_order import sort_reading_order, remove_overlaps
+from src.layout.reading_order import remove_overlaps, sort_reading_order
 
 
 @dataclass(frozen=True)
@@ -70,8 +70,9 @@ def calc_non_char_ratio(text: str) -> float:
         return 0.0
 
     import re
+
     # 日本語（ひらがな/カタカナ/漢字）、英数字をカウント
-    char_pattern = r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\w]'
+    char_pattern = r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\w]"
     chars = len(re.findall(char_pattern, text))
     return 1.0 - (chars / len(text))
 
@@ -102,8 +103,8 @@ def ocr_with_fallback(image: Image.Image, device: str = "cpu") -> tuple[str, str
     Returns:
         (text, engine_name) tuple where engine_name is 'yomitoku', 'paddleocr', or 'tesseract'
     """
-    from src.ocr_yomitoku import ocr_page_yomitoku
     from src.ocr_ensemble import ocr_paddleocr, ocr_tesseract
+    from src.ocr_yomitoku import ocr_page_yomitoku
 
     # 1. Yomitoku
     text = ocr_page_yomitoku("", device=device, img=image)
@@ -222,6 +223,7 @@ def ocr_region(
 
     # 4. OCR実行 (Yomitoku)
     from src.ocr_yomitoku import ocr_page_yomitoku
+
     ocr_text = ocr_page_yomitoku("", device=device, img=cropped_img)
 
     # 5. フォーマット
@@ -248,10 +250,7 @@ def calculate_coverage(regions: list[dict], page_size: tuple[int, int]) -> float
         return 0.0
 
     page_area = page_size[0] * page_size[1]
-    total_region_area = sum(
-        (r["bbox"][2] - r["bbox"][0]) * (r["bbox"][3] - r["bbox"][1])
-        for r in regions
-    )
+    total_region_area = sum((r["bbox"][2] - r["bbox"][0]) * (r["bbox"][3] - r["bbox"][1]) for r in regions)
     return total_region_area / page_area
 
 
@@ -315,6 +314,7 @@ def ocr_by_layout(
     if should_fallback(regions, page_size):
         # ページ全体OCRを実行 (Yomitoku)
         from src.ocr_yomitoku import ocr_page_yomitoku
+
         ocr_text = ocr_page_yomitoku(page_path, device=device)
 
         # フォールバック結果を返す
@@ -342,7 +342,8 @@ def ocr_by_layout(
             continue
 
         result = ocr_region(
-            img, region,
+            img,
+            region,
             device=device,
         )
         results.append(result)
@@ -383,6 +384,7 @@ def run_layout_ocr(
     if warmup:
         print("  Initializing Yomitoku OCR...")
         from src.ocr_yomitoku import ocr_page_yomitoku
+
         start = time.time()
         # Warm up by running a dummy OCR
         dummy_img = Image.new("RGB", (100, 100), color=(255, 255, 255))
@@ -422,7 +424,7 @@ def run_layout_ocr(
 
         # Report status
         if ocr_results and ocr_results[0].region_type == "FALLBACK":
-            print(f"    → Fallback: page-level OCR (low coverage or detection failure)")
+            print("    → Fallback: page-level OCR (low coverage or detection failure)")
         else:
             print(f"    → Processed {len(ocr_results)} regions")
 
@@ -453,23 +455,17 @@ def main() -> None:
     import argparse
     import json
 
-    parser = argparse.ArgumentParser(
-        description="Run layout-aware OCR on page images with detected regions."
-    )
+    parser = argparse.ArgumentParser(description="Run layout-aware OCR on page images with detected regions.")
     parser.add_argument("pages_dir", help="Directory containing page images")
     parser.add_argument("-o", "--output", required=True, help="Output text file")
-    parser.add_argument(
-        "--layout", required=True, help="Path to layout.json file"
-    )
+    parser.add_argument("--layout", required=True, help="Path to layout.json file")
     parser.add_argument(
         "--device",
         default="cpu",
         choices=["cpu", "cuda"],
         help="Device for Yomitoku OCR (default: cpu)",
     )
-    parser.add_argument(
-        "--no-warmup", action="store_true", help="Skip model warm-up"
-    )
+    parser.add_argument("--no-warmup", action="store_true", help="Skip model warm-up")
     args = parser.parse_args()
 
     # Load layout.json
@@ -504,8 +500,9 @@ def run_yomitoku_ocr(
     Returns:
         List of (page_name, formatted_text) tuples.
     """
-    from src.ocr_yomitoku import get_analyzer, load_yomitoku_results
     import cv2
+
+    from src.ocr_yomitoku import get_analyzer, load_yomitoku_results
 
     pages_path = Path(pages_dir)
     output_path = Path(output_file)
@@ -544,19 +541,19 @@ def run_yomitoku_ocr(
 
             cv_img = cv2.imread(str(page_path))
             if cv_img is None:
-                print(f"    → Failed to load image")
+                print("    → Failed to load image")
                 continue
 
             results, _, _ = analyzer(cv_img)
-            print(f"    → Analyzed (no cache)")
+            print("    → Analyzed (no cache)")
         else:
             cache_hits += 1
-            print(f"    → Loaded from cache")
+            print("    → Loaded from cache")
 
         # Format paragraphs based on role
         formatted_parts = []
         for p in results.paragraphs:
-            if not hasattr(p, 'contents') or not p.contents:
+            if not hasattr(p, "contents") or not p.contents:
                 continue
 
             text = p.contents.strip()
@@ -564,7 +561,7 @@ def run_yomitoku_ocr(
                 continue
 
             # Apply formatting based on role
-            if hasattr(p, 'role') and p.role == 'section_headings':
+            if hasattr(p, "role") and p.role == "section_headings":
                 formatted_parts.append(f"## {text}")
             else:
                 formatted_parts.append(text)

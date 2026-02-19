@@ -9,8 +9,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 
 class TestDetectLayoutCLI:
     """Test CLI entry point for detect_layout."""

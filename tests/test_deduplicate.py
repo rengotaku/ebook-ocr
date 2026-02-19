@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
 from src.preprocessing.deduplicate import deduplicate_frames
@@ -29,9 +28,7 @@ class TestDeduplicateIdenticalImages:
 
         result = deduplicate_frames(str(frame_dir), str(output_dir))
 
-        assert len(result) == 1, (
-            f"Identical images should deduplicate to 1, got {len(result)}"
-        )
+        assert len(result) == 1, f"Identical images should deduplicate to 1, got {len(result)}"
         assert all(isinstance(p, Path) for p in result)
 
 
@@ -40,8 +37,9 @@ class TestDeduplicateDifferentImages:
 
     def test_deduplicate_different_images(self, tmp_path: Path) -> None:
         """十分に異なる画像を3つ作成し、全てが保持されることを検証。"""
-        from PIL import ImageDraw
         import random
+
+        from PIL import ImageDraw
 
         frame_dir = tmp_path / "frames"
         frame_dir.mkdir()
@@ -65,7 +63,7 @@ class TestDeduplicateDifferentImages:
         for _ in range(8):
             x, y = random.randint(10, 190), random.randint(10, 140)
             r = random.randint(5, 15)
-            draw2.ellipse([x-r, y-r, x+r, y+r], fill=(0, 0, 0))
+            draw2.ellipse([x - r, y - r, x + r, y + r], fill=(0, 0, 0))
         img2.save(frame_dir / "frame_0002.png")
 
         # 画像3: ランダムな線パターン
@@ -79,9 +77,7 @@ class TestDeduplicateDifferentImages:
 
         result = deduplicate_frames(str(frame_dir), str(output_dir))
 
-        assert len(result) == 3, (
-            f"Different images should all be kept, got {len(result)} instead of 3"
-        )
+        assert len(result) == 3, f"Different images should all be kept, got {len(result)} instead of 3"
 
 
 class TestDeduplicateEmptyDir:
@@ -123,6 +119,5 @@ class TestDeduplicateContextManager:
         """Image.open() がコンテキストマネージャで使われていることを検証。"""
         source = Path("src/preprocessing/deduplicate.py").read_text(encoding="utf-8")
         assert "with Image.open" in source, (
-            "Image.open should use context manager (with statement) "
-            "to ensure file handles are properly closed"
+            "Image.open should use context manager (with statement) to ensure file handles are properly closed"
         )

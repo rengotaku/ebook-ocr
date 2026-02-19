@@ -5,33 +5,35 @@ Provides functions to parse Markdown content into structured data models.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
 from src.book_converter.models import (
+    Content,
+    ConversionError,
+    Figure,
+    Heading,
+    List,
+    MarkerStats,
+    MarkerType,
     Page,
     PageAnnouncement,
-    Content,
-    Heading,
-    Paragraph,
-    List,
-    Figure,
     PageMetadata,
-    ConversionError,
-    MarkerType,
-    MarkerStats,
-    TocEntry,
+    Paragraph,
     TableOfContents,
+    TocEntry,
 )
 
 # Optional LLM-based TOC classifier
 try:
     from src.book_converter.toc_classifier import (
-        classify_toc_entry_with_llm,
         classify_toc_batch_with_llm,
+        classify_toc_entry_with_llm,
         is_llm_classification_enabled,
     )
+
     TOC_CLASSIFIER_AVAILABLE = True
 except ImportError:
     TOC_CLASSIFIER_AVAILABLE = False
@@ -43,22 +45,30 @@ except ImportError:
 
 # Unordered list markers (bullet points)
 BULLET_MARKERS = (
-    '●', '○', '◎',  # Circle variants
-    '•', '·', '・',  # Dot variants
-    '◆', '◇',       # Diamond variants
-    '■', '□',       # Square variants
-    '▶', '▷', '►',  # Triangle variants
-    '-', '*',        # Standard markdown
+    "●",
+    "○",
+    "◎",  # Circle variants
+    "•",
+    "·",
+    "・",  # Dot variants
+    "◆",
+    "◇",  # Diamond variants
+    "■",
+    "□",  # Square variants
+    "▶",
+    "▷",
+    "►",  # Triangle variants
+    "-",
+    "*",  # Standard markdown
 )
 
 # Ordered list patterns (compiled regex)
-import re
 ORDERED_LIST_PATTERN = re.compile(
-    r'^\s*('
-    r'[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]'  # Circled numbers
-    r'|[（(]\d+[)）]'                           # (1) (2) etc
-    r'|\d+[.．)）]'                              # 1. 2. etc
-    r')\s*(.*)$'
+    r"^\s*("
+    r"[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]"  # Circled numbers
+    r"|[（(]\d+[)）]"  # (1) (2) etc
+    r"|\d+[.．)）]"  # 1. 2. etc
+    r")\s*(.*)$"
 )
 
 
@@ -82,7 +92,7 @@ def is_list_line(line: str) -> tuple[bool, str, str]:
     for marker in BULLET_MARKERS:
         if stripped.startswith(marker):
             # Ensure there's content after marker (with optional space)
-            rest = stripped[len(marker):].lstrip()
+            rest = stripped[len(marker) :].lstrip()
             if rest:  # Has content
                 return True, "unordered", rest
 
@@ -220,10 +230,11 @@ def normalize_toc_line(line: str) -> str:
         "Episode 24"
     """
     import re
+
     # Remove heading markers (###), list markers (-, *) from the beginning
-    line = re.sub(r'^[#\-*]+\s*', '', line.strip())
+    line = re.sub(r"^[#\-*]+\s*", "", line.strip())
     # Remove ** emphasis markers
-    line = re.sub(r'\*\*', '', line)
+    line = re.sub(r"\*\*", "", line)
     return line
 
 
@@ -273,19 +284,19 @@ def merge_toc_lines(lines: list[str]) -> list[str]:
         merge_pattern = None
 
         # Pattern 1: Just "Chapter" (case insensitive)
-        if re.match(r'^Chapter$', line, re.IGNORECASE):
+        if re.match(r"^Chapter$", line, re.IGNORECASE):
             needs_merge = True
-            merge_pattern = 'chapter'
+            merge_pattern = "chapter"
 
         # Pattern 2: "Episode NN" without title
-        elif re.match(r'^Episode\s+\d+$', line, re.IGNORECASE):
+        elif re.match(r"^Episode\s+\d+$", line, re.IGNORECASE):
             needs_merge = True
-            merge_pattern = 'episode'
+            merge_pattern = "episode"
 
         # Pattern 3: Just "Column" (case insensitive)
-        elif re.match(r'^[Cc][Oo][Ll][Uu][Mm][Nn]$', line):
+        elif re.match(r"^[Cc][Oo][Ll][Uu][Mm][Nn]$", line):
             needs_merge = True
-            merge_pattern = 'column'
+            merge_pattern = "column"
 
         if needs_merge:
             # Find next non-empty line to merge with
@@ -302,13 +313,13 @@ def merge_toc_lines(lines: list[str]) -> list[str]:
             # Validate that the next line is appropriate for merging
             should_merge = False
             if next_line:
-                if merge_pattern == 'chapter':
+                if merge_pattern == "chapter":
                     # For Chapter, next line should start with a digit (N Title format)
-                    should_merge = bool(re.match(r'^\d+\s+', next_line))
-                elif merge_pattern == 'episode':
+                    should_merge = bool(re.match(r"^\d+\s+", next_line))
+                elif merge_pattern == "episode":
                     # For Episode, any non-empty line is acceptable as title
                     should_merge = True
-                elif merge_pattern == 'column':
+                elif merge_pattern == "column":
                     # For Column, any non-empty line is acceptable as title
                     should_merge = True
 
@@ -358,11 +369,12 @@ def normalize_toc_text(lines: list[str]) -> str:
         "Line with spaces"
     """
     import re
+
     # Normalize each line and join with space
     normalized = [normalize_toc_line(line) for line in lines]
-    text = ' '.join(normalized)
+    text = " ".join(normalized)
     # Compress consecutive whitespace to single space
-    return re.sub(r'\s+', ' ', text).strip()
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def split_toc_entries(normalized_text: str) -> list[str]:
@@ -389,6 +401,7 @@ def split_toc_entries(normalized_text: str) -> list[str]:
         ["第1章 タイトル", "第2章 次"]
     """
     import re
+
     if not normalized_text.strip():
         return []
 
@@ -404,17 +417,17 @@ def split_toc_entries(normalized_text: str) -> list[str]:
     # - N.N (section)
     # - N (standalone chapter number at start or after whitespace)
     pattern = (
-        r'(?='
-        r'(?:Chapter|CHAPTER|chapter)\s+\d+|'
-        r'(?:Section|SECTION|section)\s+\d+\.\d+|'
-        r'(?:Subsection|SUBSECTION|subsection)\s+\d+\.\d+\.\d+|'
-        r'(?:Episode|EPISODE|episode)\s+\d+|'
-        r'(?:Column|COLUMN|column)\s+|'
-        r'第\d+章|'
-        r'\d+\.\d+\.\d+\s|'
-        r'\d+\.\d+\s|'
-        r'(?:^|\s)\d+\s+(?=[^\d\.])'
-        r')'
+        r"(?="
+        r"(?:Chapter|CHAPTER|chapter)\s+\d+|"
+        r"(?:Section|SECTION|section)\s+\d+\.\d+|"
+        r"(?:Subsection|SUBSECTION|subsection)\s+\d+\.\d+\.\d+|"
+        r"(?:Episode|EPISODE|episode)\s+\d+|"
+        r"(?:Column|COLUMN|column)\s+|"
+        r"第\d+章|"
+        r"\d+\.\d+\.\d+\s|"
+        r"\d+\.\d+\s|"
+        r"(?:^|\s)\d+\s+(?=[^\d\.])"
+        r")"
     )
 
     entries = re.split(pattern, normalized_text)
@@ -796,21 +809,21 @@ def parse_structure_heading(line: str) -> StructureHeading | None:
     md_level = len(markers)
 
     # Try Chapter pattern: Chapter N Title
-    chapter_match = re.match(r'^Chapter\s+(\d+)\s*(.*)?$', text, re.IGNORECASE)
+    chapter_match = re.match(r"^Chapter\s+(\d+)\s*(.*)?$", text, re.IGNORECASE)
     if chapter_match and md_level == 1:
         number = chapter_match.group(1)
         title = (chapter_match.group(2) or "").strip()
         return StructureHeading(level=1, number=number, title=title, raw_text=text)
 
     # Try Section pattern: Section N.N Title
-    section_match = re.match(r'^Section\s+(\d+\.\d+)\s*(.*)?$', text, re.IGNORECASE)
+    section_match = re.match(r"^Section\s+(\d+\.\d+)\s*(.*)?$", text, re.IGNORECASE)
     if section_match and md_level == 2:
         number = section_match.group(1)
         title = (section_match.group(2) or "").strip()
         return StructureHeading(level=2, number=number, title=title, raw_text=text)
 
     # Try Subsection pattern: Subsection N.N.N Title
-    subsection_match = re.match(r'^Subsection\s+(\d+\.\d+\.\d+)\s*(.*)?$', text, re.IGNORECASE)
+    subsection_match = re.match(r"^Subsection\s+(\d+\.\d+\.\d+)\s*(.*)?$", text, re.IGNORECASE)
     if subsection_match and md_level == 3:
         number = subsection_match.group(1)
         title = (subsection_match.group(2) or "").strip()
@@ -915,7 +928,8 @@ def parse_paragraph_lines(lines: list[str]) -> Paragraph | None:
 
     # 連続空白を1つに圧縮
     import re
-    text = re.sub(r'\s+', ' ', text).strip()
+
+    text = re.sub(r"\s+", " ", text).strip()
 
     if not text:
         return None
@@ -945,8 +959,6 @@ def split_paragraphs(text: str) -> list[Paragraph]:
         >>> split_paragraphs("Line 1\\nLine 2\\n\\nLine 3")
         [Paragraph(text="Line 1 Line 2", read_aloud=True), Paragraph(text="Line 3", read_aloud=True)]
     """
-    import re
-    from src.book_converter.models import Paragraph
 
     if not text.strip():
         return []
@@ -957,7 +969,7 @@ def split_paragraphs(text: str) -> list[Paragraph]:
     paragraphs = []
     current_lines = []
 
-    for line in text.split('\n'):
+    for line in text.split("\n"):
         # 空白のみの行（スペース、タブ、全角スペース含む）
         if not line.strip():
             # 現在の段落を保存
@@ -1009,7 +1021,7 @@ def merge_continuation_paragraphs(paragraphs: list[Paragraph]) -> list[Paragraph
         return paragraphs
 
     # 終端文字のパターン
-    terminating_chars = {'。', '.', '!', '！', '?', '？'}
+    terminating_chars = {"。", ".", "!", "！", "?", "？"}
 
     result = []
     idx = 0
@@ -1027,7 +1039,7 @@ def merge_continuation_paragraphs(paragraphs: list[Paragraph]) -> list[Paragraph
             # 閉じ括弧+句点パターン: ）。 」。
             elif len(current_text) >= 2:
                 last_two = current_text[-2:]
-                if last_two in {'）。', '」。'}:
+                if last_two in {"）。", "」。"}:
                     ends_with_terminator = True
 
         # 終端文字で終わる場合、または最後の段落の場合は結合しない
@@ -1232,8 +1244,6 @@ def parse_figure(lines: list[str]) -> Figure | None:
             # Other non-empty lines become description
             description_lines.append(line.strip())
 
-    description = "\n".join(description_lines) if description_lines else ""
-
     # 新形式: path と caption のみ
     return Figure(
         path=file_path,
@@ -1347,9 +1357,9 @@ def parse_pages_with_errors(
     if verbose:
         print(f"[DEBUG] Parsing file: {input_path}", file=sys.stderr)
         print(f"[DEBUG] Total lines: {len(lines)}", file=sys.stderr)
-        print(f"[DEBUG] First 5 lines:", file=sys.stderr)
-        for i, l in enumerate(lines[:5], start=1):
-            print(f"  {i}: {l!r}", file=sys.stderr)
+        print("[DEBUG] First 5 lines:", file=sys.stderr)
+        for i, line_text in enumerate(lines[:5], start=1):
+            print(f"  {i}: {line_text!r}", file=sys.stderr)
 
     for line_idx, line in enumerate(lines, start=1):
         # Check if this is a page marker (including those with missing numbers)
@@ -1378,12 +1388,14 @@ def parse_pages_with_errors(
 
                 # Check for missing page number on previous page
                 if not current_page_number:
-                    errors.append(ConversionError(
-                        error_type="PAGE_NUMBER_NOT_FOUND",
-                        message="ページ番号が見つかりません",
-                        page_number="",
-                        line_number=last_page_marker_line,
-                    ))
+                    errors.append(
+                        ConversionError(
+                            error_type="PAGE_NUMBER_NOT_FOUND",
+                            message="ページ番号が見つかりません",
+                            page_number="",
+                            line_number=last_page_marker_line,
+                        )
+                    )
 
             # Start new page
             current_page_number = page_num
@@ -1417,12 +1429,14 @@ def parse_pages_with_errors(
 
         # Check for missing page number on final page
         if not current_page_number:
-            errors.append(ConversionError(
-                error_type="PAGE_NUMBER_NOT_FOUND",
-                message="ページ番号が見つかりません",
-                page_number="",
-                line_number=last_page_marker_line,
-            ))
+            errors.append(
+                ConversionError(
+                    error_type="PAGE_NUMBER_NOT_FOUND",
+                    message="ページ番号が見つかりません",
+                    page_number="",
+                    line_number=last_page_marker_line,
+                )
+            )
 
     # Build TableOfContents if any entries found
     toc = None
@@ -1489,7 +1503,7 @@ def _parse_single_page_content(
                     normalized_lines = [normalize_toc_line(line) for line in toc_lines]
                     # Filter out empty lines
                     normalized_lines = [line for line in normalized_lines if line.strip()]
-                    raw_text = '\n'.join(normalized_lines)
+                    raw_text = "\n".join(normalized_lines)
                     llm_entries = classify_toc_batch_with_llm(raw_text, preserve_newlines=True)
                     if llm_entries:
                         # LLM succeeded - use its results directly
@@ -1538,12 +1552,14 @@ def _parse_single_page_content(
         # Check for deep heading warning
         heading, warning = parse_heading_with_warning(line)
         if warning is not None:
-            errors.append(ConversionError(
-                error_type="DEEP_HEADING",
-                message=warning,
-                page_number=page_number,
-                line_number=line_num,
-            ))
+            errors.append(
+                ConversionError(
+                    error_type="DEEP_HEADING",
+                    message=warning,
+                    page_number=page_number,
+                    line_number=line_num,
+                )
+            )
 
         # Check for heading
         if heading is not None:
@@ -1663,7 +1679,7 @@ def _parse_single_page_content(
             normalized_lines = [normalize_toc_line(line) for line in toc_lines]
             # Filter out empty lines
             normalized_lines = [line for line in normalized_lines if line.strip()]
-            raw_text = '\n'.join(normalized_lines)
+            raw_text = "\n".join(normalized_lines)
             llm_entries = classify_toc_batch_with_llm(raw_text, preserve_newlines=True)
             if llm_entries:
                 toc_entries.extend(llm_entries)
@@ -1676,9 +1692,7 @@ def _parse_single_page_content(
 
     # Create Page object
     # Content readAloud is true if ANY child element has readAloud=true
-    content_read_aloud = any(
-        elem.read_aloud for elem in content_elements
-    ) if content_elements else False
+    content_read_aloud = any(elem.read_aloud for elem in content_elements) if content_elements else False
     content = Content(elements=tuple(content_elements), read_aloud=content_read_aloud)
     announcement = create_page_announcement(page_number)
 

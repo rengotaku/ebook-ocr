@@ -6,7 +6,6 @@ horizontal layout documents (left-to-right, top-to-bottom).
 
 from __future__ import annotations
 
-
 # TYPE_PRIORITY for sorting: TITLE comes before TEXT at same Y coordinate
 TYPE_PRIORITY = {
     "TITLE": 0,

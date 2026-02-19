@@ -1,4 +1,5 @@
 """CLI wrapper for run_ocr."""
+
 from __future__ import annotations
 
 import argparse

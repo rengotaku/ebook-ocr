@@ -5,13 +5,13 @@ Provides functions to build and serialize XML from data models.
 
 from __future__ import annotations
 
-from xml.etree.ElementTree import Element, tostring, Comment
+from xml.etree.ElementTree import Comment, Element, tostring
 
 from src.book_converter.models import Book, ConversionError
 from src.book_converter.transformer import (
     transform_page,
-    transform_table_of_contents,
     transform_structure_container,
+    transform_table_of_contents,
 )
 
 
@@ -67,10 +67,7 @@ def build_xml(book: Book, page_numbers: dict[int, int | str] | None = None) -> s
     xml_string = xml_bytes.decode("UTF-8")
 
     # Fix XML declaration to use double quotes instead of single quotes
-    xml_string = xml_string.replace(
-        "<?xml version='1.0' encoding='UTF-8'?>",
-        '<?xml version="1.0" encoding="UTF-8"?>'
-    )
+    xml_string = xml_string.replace("<?xml version='1.0' encoding='UTF-8'?>", '<?xml version="1.0" encoding="UTF-8"?>')
 
     return xml_string
 
@@ -190,9 +187,6 @@ def build_xml_with_errors(book: Book, errors: list[ConversionError]) -> str:
     xml_string = xml_bytes.decode("UTF-8")
 
     # Fix XML declaration to use double quotes instead of single quotes
-    xml_string = xml_string.replace(
-        "<?xml version='1.0' encoding='UTF-8'?>",
-        '<?xml version="1.0" encoding="UTF-8"?>'
-    )
+    xml_string = xml_string.replace("<?xml version='1.0' encoding='UTF-8'?>", '<?xml version="1.0" encoding="UTF-8"?>')
 
     return xml_string
