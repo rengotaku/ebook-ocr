@@ -636,7 +636,7 @@ class TestCalculateCoverage:
 
         100x100のページに50x50の領域 = 25%のカバー率
         """
-        from src.layout_ocr import calculate_coverage
+        from src.layout_ocr_utils import calculate_coverage
 
         # Arrange
         regions = [
@@ -655,7 +655,7 @@ class TestCalculateCoverage:
 
         100x100のページに25x25の領域2つ = (625 + 625) / 10000 = 12.5%
         """
-        from src.layout_ocr import calculate_coverage
+        from src.layout_ocr_utils import calculate_coverage
 
         # Arrange
         regions = [
@@ -673,7 +673,7 @@ class TestCalculateCoverage:
 
     def test_calculate_coverage_full_page(self) -> None:
         """ページ全体をカバーする領域の場合、カバー率が100%であることを検証。"""
-        from src.layout_ocr import calculate_coverage
+        from src.layout_ocr_utils import calculate_coverage
 
         # Arrange
         regions = [
@@ -689,7 +689,7 @@ class TestCalculateCoverage:
 
     def test_calculate_coverage_empty_regions(self) -> None:
         """空の領域リストの場合、カバー率が0%であることを検証。"""
-        from src.layout_ocr import calculate_coverage
+        from src.layout_ocr_utils import calculate_coverage
 
         # Arrange
         regions: list[dict] = []
@@ -706,7 +706,7 @@ class TestCalculateCoverage:
 
         1920x1080ページに複数の領域があるケース
         """
-        from src.layout_ocr import calculate_coverage
+        from src.layout_ocr_utils import calculate_coverage
 
         # Arrange: 複雑なレイアウト
         regions = [
@@ -1054,7 +1054,7 @@ class TestFallbackEdgeCases:
 
     def test_calculate_coverage_zero_page_size(self) -> None:
         """ページサイズがゼロの場合のハンドリングを検証。"""
-        from src.layout_ocr import calculate_coverage
+        from src.layout_ocr_utils import calculate_coverage
 
         # Arrange
         regions = [{"type": "TEXT", "bbox": [0, 0, 100, 100], "confidence": 0.9}]
@@ -1071,7 +1071,7 @@ class TestFallbackEdgeCases:
 
     def test_calculate_coverage_negative_bbox(self) -> None:
         """負のbbox座標の場合のハンドリングを検証。"""
-        from src.layout_ocr import calculate_coverage
+        from src.layout_ocr_utils import calculate_coverage
 
         # Arrange: Invalid bbox with negative values
         regions = [
@@ -1121,7 +1121,7 @@ class TestIsTitleFunction:
 
     def test_is_title_yolo_title_type(self) -> None:
         """YOLOでTITLEとして検出された場合、is_titleがTrueを返すことを検証。"""
-        from src.layout_ocr import is_title
+        from src.layout_ocr_utils import is_title
 
         # Arrange: YOLOがTITLEとして検出
         region = {"type": "TITLE", "bbox": [50, 50, 700, 100], "confidence": 0.95}
@@ -1135,7 +1135,7 @@ class TestIsTitleFunction:
 
     def test_is_title_yomitoku_section_headings_role(self) -> None:
         """Yomitokuのroleがsection_headingsの場合、is_titleがTrueを返すことを検証。"""
-        from src.layout_ocr import is_title
+        from src.layout_ocr_utils import is_title
 
         # Arrange: YOLOはTEXTだが、Yomitokuがsection_headingsと判定
         region = {"type": "TEXT", "bbox": [50, 50, 700, 100], "confidence": 0.9}
@@ -1149,7 +1149,7 @@ class TestIsTitleFunction:
 
     def test_is_title_text_without_role_returns_false(self) -> None:
         """YOLO=TEXT、Yomitokuのroleなしの場合、is_titleがFalseを返すことを検証。"""
-        from src.layout_ocr import is_title
+        from src.layout_ocr_utils import is_title
 
         # Arrange: 通常のTEXT領域
         region = {"type": "TEXT", "bbox": [50, 100, 700, 500], "confidence": 0.9}
@@ -1163,7 +1163,7 @@ class TestIsTitleFunction:
 
     def test_is_title_yomitoku_paragraph_role(self) -> None:
         """Yomitokuのroleがparagraphの場合、is_titleがFalseを返すことを検証。"""
-        from src.layout_ocr import is_title
+        from src.layout_ocr_utils import is_title
 
         # Arrange: Yomitokuがparagraphと判定
         region = {"type": "TEXT", "bbox": [50, 100, 700, 500], "confidence": 0.9}
@@ -1177,7 +1177,7 @@ class TestIsTitleFunction:
 
     def test_is_title_both_yolo_and_yomitoku_agree(self) -> None:
         """YOLOとYomitoku両方がTITLEと判定した場合、Trueを返すことを検証。"""
-        from src.layout_ocr import is_title
+        from src.layout_ocr_utils import is_title
 
         # Arrange: 両方がTITLEと判定
         region = {"type": "TITLE", "bbox": [50, 50, 700, 100], "confidence": 0.98}
@@ -1298,7 +1298,7 @@ class TestCalcNonCharRatio:
 
     def test_calc_non_char_ratio_all_japanese(self) -> None:
         """全て日本語文字の場合、非文字率が0であることを検証。"""
-        from src.layout_ocr import calc_non_char_ratio
+        from src.layout_ocr_utils import calc_non_char_ratio
 
         # Arrange
         text = "日本語テキスト"
@@ -1311,7 +1311,7 @@ class TestCalcNonCharRatio:
 
     def test_calc_non_char_ratio_all_symbols(self) -> None:
         """全て記号の場合、非文字率が1であることを検証。"""
-        from src.layout_ocr import calc_non_char_ratio
+        from src.layout_ocr_utils import calc_non_char_ratio
 
         # Arrange
         text = "!!!@@@###$$$%%%"
@@ -1324,7 +1324,7 @@ class TestCalcNonCharRatio:
 
     def test_calc_non_char_ratio_half_and_half(self) -> None:
         """半分が文字、半分が記号の場合を検証。"""
-        from src.layout_ocr import calc_non_char_ratio
+        from src.layout_ocr_utils import calc_non_char_ratio
 
         # Arrange: 5文字 + 5記号 = 50%
         text = "あいうえお!@#$%"
@@ -1337,7 +1337,7 @@ class TestCalcNonCharRatio:
 
     def test_calc_non_char_ratio_empty_string(self) -> None:
         """空文字列の場合の処理を検証。"""
-        from src.layout_ocr import calc_non_char_ratio
+        from src.layout_ocr_utils import calc_non_char_ratio
 
         # Act
         ratio = calc_non_char_ratio("")
@@ -1347,7 +1347,7 @@ class TestCalcNonCharRatio:
 
     def test_calc_non_char_ratio_english_and_numbers(self) -> None:
         """英数字は文字としてカウントされることを検証。"""
-        from src.layout_ocr import calc_non_char_ratio
+        from src.layout_ocr_utils import calc_non_char_ratio
 
         # Arrange: 英数字のみ
         text = "ABC123xyz"

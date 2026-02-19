@@ -114,28 +114,28 @@
 
 ### Input
 
-- [ ] T033 セットアップ分析を読む: specs/012-fix-pylint-errors/tasks/ph1-output.md
-- [ ] T034 前フェーズ出力を読む: specs/012-fix-pylint-errors/tasks/ph3-output.md
+- [x] T033 セットアップ分析を読む: specs/012-fix-pylint-errors/tasks/ph1-output.md
+- [x] T034 前フェーズ出力を読む: specs/012-fix-pylint-errors/tasks/ph3-output.md
 
 ### Implementation
 
-- [ ] T035 [P] [US3] src/layout_ocr_utils.py を作成（is_title, calc_non_char_ratio, is_low_quality, crop_region, calculate_coverage, should_fallback, format_ocr_result, select_ocr_engine）
-- [ ] T036 [P] [US3] src/layout_ocr.py を更新（ヘルパー関数をimportに変更）
-- [ ] T037 [P] [US3] src/ocr_integrated_utils.py を作成（filter_overlapping_regions, group_text_by_regions, structure_text_by_paragraphs, extract_titles_from_regions, structure_text_with_titles, select_best_engine）
-- [ ] T038 [P] [US3] src/ocr_integrated.py を更新（ヘルパー関数をimportに変更）
-- [ ] T039 [P] [US3] src/rover/line_processing.py を作成（is_garbage, normalize_confidence, split_multiline_items, cluster_lines_by_y, align_lines_by_y）
-- [ ] T040 [P] [US3] src/rover/ensemble.py を更新（ヘルパー関数をimportに変更）
-- [ ] T041 [P] [US3] src/yomitoku_io.py を作成（save_yomitoku_results, load_yomitoku_results, reset_analyzer）
-- [ ] T042 [P] [US3] src/yomitoku_layout.py を作成（paragraphs_to_layout, visualize_layout, detect_layout_yomitoku）
-- [ ] T043 [P] [US3] src/ocr_yomitoku.py を更新（ヘルパー関数をimportに変更）
-- [ ] T044 [P] [US3] src/book_converter/transformer_utils.py を作成（normalize_heading_*, is_duplicate_*, apply_emphasis）
-- [ ] T045 [P] [US3] src/book_converter/transformer.py を更新（ヘルパー関数をimportに変更）
+- [x] T035 [P] [US3] src/layout_ocr_utils.py を作成（is_title, calc_non_char_ratio, is_low_quality, crop_region, calculate_coverage, should_fallback, format_ocr_result, select_ocr_engine）
+- [x] T036 [P] [US3] src/layout_ocr.py を更新（ヘルパー関数をimportに変更）
+- [x] T037 [P] [US3] src/ocr_integrated_utils.py を作成（filter_overlapping_regions, group_text_by_regions, structure_text_by_paragraphs, extract_titles_from_regions, structure_text_with_titles, select_best_engine）
+- [x] T038 [P] [US3] src/ocr_integrated.py を更新（ヘルパー関数をimportに変更）
+- [x] T039 [P] [US3] src/rover/line_processing.py を作成（is_garbage, normalize_confidence, split_multiline_items, cluster_lines_by_y, align_lines_by_y）
+- [x] T040 [P] [US3] src/rover/ensemble.py を更新（ヘルパー関数をimportに変更）
+- [x] T041 [P] [US3] src/yomitoku_io.py を作成（save_yomitoku_results, load_yomitoku_results, reset_analyzer）
+- [x] T042 [P] [US3] src/yomitoku_layout.py を作成（paragraphs_to_layout, visualize_layout, detect_layout_yomitoku）
+- [x] T043 [P] [US3] src/ocr_yomitoku.py を更新（ヘルパー関数をimportに変更）
+- [x] T044 [P] [US3] src/book_converter/transformer_utils.py を作成（normalize_heading_*, is_duplicate_*, apply_emphasis）
+- [x] T045 [P] [US3] src/book_converter/transformer.py を更新（ヘルパー関数をimportに変更）
 
 ### Verification
 
-- [ ] T046 [US2] `pytest` で全テストパスを確認
-- [ ] T047 [US1] 分割後の各ファイルが500行以下であることを確認
-- [ ] T048 フェーズ出力を生成: specs/012-fix-pylint-errors/tasks/ph4-output.md
+- [x] T046 [US2] `pytest` で全テストパスを確認
+- [x] T047 [US1] 分割後の各ファイルが500行以下であることを確認
+- [x] T048 フェーズ出力を生成: specs/012-fix-pylint-errors/tasks/ph4-output.md
 
 **Checkpoint**: 全ファイルが500行以下、too-many-lines違反が0件
 

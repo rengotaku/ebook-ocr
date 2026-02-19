@@ -2908,42 +2908,42 @@ class TestNormalizeHeadingForComparison:
 
     def test_normalize_heading_chapter(self) -> None:
         """Chapter N Title → N Title に正規化"""
-        from src.book_converter.transformer import normalize_heading_for_comparison
+        from src.book_converter.transformer_utils import normalize_heading_for_comparison
 
         result = normalize_heading_for_comparison("Chapter 1 「企画」で失敗")
         assert result == "1 「企画」で失敗"
 
     def test_normalize_heading_chapter_case_insensitive(self) -> None:
         """CHAPTER, chapter 等も正規化"""
-        from src.book_converter.transformer import normalize_heading_for_comparison
+        from src.book_converter.transformer_utils import normalize_heading_for_comparison
 
         assert normalize_heading_for_comparison("CHAPTER 2 Title") == "2 Title"
         assert normalize_heading_for_comparison("chapter 3 Title") == "3 Title"
 
     def test_normalize_heading_section(self) -> None:
         """Section N.N Title → N.N Title に正規化"""
-        from src.book_converter.transformer import normalize_heading_for_comparison
+        from src.book_converter.transformer_utils import normalize_heading_for_comparison
 
         result = normalize_heading_for_comparison("Section 1.1 なんでもできる")
         assert result == "1.1 なんでもできる"
 
     def test_normalize_heading_section_case_insensitive(self) -> None:
         """SECTION, section 等も正規化"""
-        from src.book_converter.transformer import normalize_heading_for_comparison
+        from src.book_converter.transformer_utils import normalize_heading_for_comparison
 
         assert normalize_heading_for_comparison("SECTION 2.3 Title") == "2.3 Title"
         assert normalize_heading_for_comparison("section 4.5 Title") == "4.5 Title"
 
     def test_normalize_heading_no_keyword(self) -> None:
         """キーワードなしの場合はそのまま（空白正規化のみ）"""
-        from src.book_converter.transformer import normalize_heading_for_comparison
+        from src.book_converter.transformer_utils import normalize_heading_for_comparison
 
         result = normalize_heading_for_comparison("すべての要求に応えてしまう")
         assert result == "すべての要求に応えてしまう"
 
     def test_normalize_heading_whitespace_normalization(self) -> None:
         """連続空白を単一空白に正規化"""
-        from src.book_converter.transformer import normalize_heading_for_comparison
+        from src.book_converter.transformer_utils import normalize_heading_for_comparison
 
         result = normalize_heading_for_comparison("Chapter  1   Title")
         assert result == "1 Title"
@@ -2954,7 +2954,7 @@ class TestIsDuplicateHeading:
 
     def test_is_duplicate_heading_chapter_match(self) -> None:
         """chapter title と一致する heading は重複"""
-        from src.book_converter.transformer import is_duplicate_heading
+        from src.book_converter.transformer_utils import is_duplicate_heading
 
         result = is_duplicate_heading(
             heading_text="Chapter 1 「企画」で失敗",
@@ -2965,7 +2965,7 @@ class TestIsDuplicateHeading:
 
     def test_is_duplicate_heading_section_match(self) -> None:
         """section title と一致する heading は重複"""
-        from src.book_converter.transformer import is_duplicate_heading
+        from src.book_converter.transformer_utils import is_duplicate_heading
 
         result = is_duplicate_heading(
             heading_text="Section 1.1 なんでもできる「全部入りソフトウェア」",
@@ -2976,7 +2976,7 @@ class TestIsDuplicateHeading:
 
     def test_is_duplicate_heading_not_match(self) -> None:
         """chapter/section title と一致しない heading は重複ではない"""
-        from src.book_converter.transformer import is_duplicate_heading
+        from src.book_converter.transformer_utils import is_duplicate_heading
 
         result = is_duplicate_heading(
             heading_text="すべての要求に応えてしまう",
@@ -2987,7 +2987,7 @@ class TestIsDuplicateHeading:
 
     def test_is_duplicate_heading_no_number(self) -> None:
         """number が None の場合は title のみで比較"""
-        from src.book_converter.transformer import is_duplicate_heading
+        from src.book_converter.transformer_utils import is_duplicate_heading
 
         result = is_duplicate_heading(
             heading_text="はじめに",
@@ -2998,7 +2998,7 @@ class TestIsDuplicateHeading:
 
     def test_is_duplicate_heading_partial_match_is_false(self) -> None:
         """部分一致は重複ではない"""
-        from src.book_converter.transformer import is_duplicate_heading
+        from src.book_converter.transformer_utils import is_duplicate_heading
 
         result = is_duplicate_heading(
             heading_text="Chapter 1 「企画」で失敗する",  # extra text
@@ -3013,7 +3013,7 @@ class TestNonStructuralHeadingPreserved:
 
     def test_non_structural_heading_preserved(self) -> None:
         """構造と無関係な heading は保持される"""
-        from src.book_converter.transformer import is_duplicate_heading
+        from src.book_converter.transformer_utils import is_duplicate_heading
 
         # These should NOT be duplicates (preserved)
         non_structural_headings = [

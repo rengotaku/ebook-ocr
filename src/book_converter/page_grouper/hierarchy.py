@@ -13,7 +13,7 @@ from src.book_converter.models import (
     SectionElement,
     TocEntry,
 )
-from src.book_converter.transformer import is_duplicate_heading
+from src.book_converter.transformer_utils import is_duplicate_heading
 
 from .models import FlattenStats, TOCEntry
 from .section import is_chapter_title_page, normalize_for_matching, parse_section_number
