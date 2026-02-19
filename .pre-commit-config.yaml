@@ -1,14 +1,5 @@
-repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.6
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
-
-  - repo: https://github.com/pylint-dev/pylint
-    rev: v3.3.4
-    hooks:
-      - id: pylint
-        args: [--rcfile=pyproject.toml]
-        files: ^src/.*\.py$
+# All lint checks moved to GitHub Actions CI and Claude Code hooks
+# See:
+# - .github/workflows/lint.yml (CI for PR quality gates)
+# - .claude/hooks/ruff-lint.sh (Real-time feedback for Claude Code)
+repos: []
