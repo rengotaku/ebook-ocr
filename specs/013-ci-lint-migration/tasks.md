@@ -48,21 +48,21 @@
 
 ### Input
 
-- [ ] T006 前フェーズ出力を読む: specs/013-ci-lint-migration/tasks/ph1-output.md
+- [X] T006 前フェーズ出力を読む: specs/013-ci-lint-migration/tasks/ph1-output.md
 
 ### Implementation
 
-- [ ] T007 [US1] `.github/workflows/`ディレクトリを作成
-- [ ] T008 [US1] GitHub Actions lint workflowを作成: `.github/workflows/lint.yml`
+- [X] T007 [US1] `.github/workflows/`ディレクトリを作成
+- [X] T008 [US1] GitHub Actions lint workflowを作成: `.github/workflows/lint.yml`
   - トリガー: `pull_request` (branches: main)
   - paths: `src/**/*.py`, `tests/**/*.py`, `pyproject.toml`
   - jobs: checkout, setup-python 3.13, install deps, ruff check, ruff format --check, pylint
-- [ ] T009 [US1] ワークフローをpushしてCI実行を確認
+- [X] T009 [US1] ワークフローをpushしてCI実行を確認
 
 ### Verification
 
-- [ ] T010 [US1] テスト用PRを作成してCI動作を確認
-- [ ] T011 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph2-output.md
+- [X] T010 [US1] テスト用PRを作成してCI動作を確認
+- [X] T011 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph2-output.md
 
 **Checkpoint**: US1完了後、PRでCIが実行されることを確認
 
