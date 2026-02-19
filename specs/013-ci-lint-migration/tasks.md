@@ -32,11 +32,11 @@
 
 **Purpose**: 現在の設定を確認し、変更に備える
 
-- [ ] T001 現在の`.pre-commit-config.yaml`を確認
-- [ ] T002 [P] 現在の`.claude/settings.local.json`を確認
-- [ ] T003 [P] 現在の`pyproject.toml`のruff/pylint設定を確認
-- [ ] T004 [P] `.github/workflows/`ディレクトリの有無を確認
-- [ ] T005 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph1-output.md
+- [X] T001 現在の`.pre-commit-config.yaml`を確認
+- [X] T002 [P] 現在の`.claude/settings.local.json`を確認
+- [X] T003 [P] 現在の`pyproject.toml`のruff/pylint設定を確認
+- [X] T004 [P] `.github/workflows/`ディレクトリの有無を確認
+- [X] T005 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph1-output.md
 
 ---
 
