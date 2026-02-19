@@ -18,6 +18,9 @@ Auto-generated from all feature plans. Last updated: 2026-02-04
 - ファイルベース（画像、JSON、Markdown、XML） (010-pipeline-refactoring)
 - Python 3.13+ + ruff, pre-commit (011-code-refactoring)
 - N/A（設定ファイルのみ） (011-code-refactoring)
+- Python 3.13+ + pylint>=3.0.0, ruff, pytest (012-fix-pylint-errors)
+- N/A（ファイル構造変更のみ） (012-fix-pylint-errors)
+- YAML（GitHub Actions）, Bash（hooks） + ruff, pylint（既存）, GitHub Actions (013-ci-lint-migration)
 
 - Python 3.13+ + Pillow, imagehash, doclayout-yolo, requests (001-code-refactoring)
 
@@ -37,9 +40,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13+: Follow standard conventions
 
 ## Recent Changes
+- 013-ci-lint-migration: Added YAML（GitHub Actions）, Bash（hooks） + ruff, pylint（既存）, GitHub Actions
+- 012-fix-pylint-errors: Added Python 3.13+ + pylint>=3.0.0, ruff, pytest
 - 011-code-refactoring: Added Python 3.13+ + ruff, pre-commit
-- 010-pipeline-refactoring: Added Python 3.13+ + argparse (CLI), PyYAML (config), ruff (lint), pre-commit (hooks)
-- 009-converter-redesign: Added Python 3.13+ + xml.etree.ElementTree（標準ライブラリ）, re（正規表現）
 
 
 <!-- MANUAL ADDITIONS START -->
