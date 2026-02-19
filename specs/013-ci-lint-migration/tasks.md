@@ -76,27 +76,27 @@
 
 ### Input
 
-- [ ] T012 セットアップ分析を読む: specs/013-ci-lint-migration/tasks/ph1-output.md
-- [ ] T013 前フェーズ出力を読む: specs/013-ci-lint-migration/tasks/ph2-output.md
+- [X] T012 セットアップ分析を読む: specs/013-ci-lint-migration/tasks/ph1-output.md
+- [X] T013 前フェーズ出力を読む: specs/013-ci-lint-migration/tasks/ph2-output.md
 
 ### Implementation
 
-- [ ] T014 [P] [US2] `.claude/hooks/`ディレクトリを作成
-- [ ] T015 [US2] ruff lintフックスクリプトを作成: `.claude/hooks/ruff-lint.sh`
+- [X] T014 [P] [US2] `.claude/hooks/`ディレクトリを作成
+- [X] T015 [US2] ruff lintフックスクリプトを作成: `.claude/hooks/ruff-lint.sh`
   - stdin からJSON読み取り（jq使用）
   - `.py`ファイルのみ対象
   - ruff check --fix + ruff format 実行
   - exit 0（警告のみ、ブロックしない）
-- [ ] T016 [US2] 実行権限を付与: `chmod +x .claude/hooks/ruff-lint.sh`
-- [ ] T017 [US2] Claude Code設定を作成: `.claude/settings.json`
+- [X] T016 [US2] 実行権限を付与: `chmod +x .claude/hooks/ruff-lint.sh`
+- [X] T017 [US2] Claude Code設定を作成: `.claude/settings.json`
   - hooks.PostToolUse設定
   - matcher: "Edit|Write"
   - command: ruff-lint.shを参照
 
 ### Verification
 
-- [ ] T018 [US2] Claude Codeセッションを開始してフック動作を確認
-- [ ] T019 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph3-output.md
+- [X] T018 [US2] Claude Codeセッションを開始してフック動作を確認
+- [X] T019 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph3-output.md
 
 **Checkpoint**: US2完了後、ファイル編集時にruffが自動実行されることを確認
 
