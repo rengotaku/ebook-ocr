@@ -33,10 +33,10 @@
 
 **Purpose**: 現在のコードベースを確認し、リファクタリングの準備
 
-- [ ] T001 現在のpylint違反状況を確認: `pylint --rcfile=pyproject.toml src/`
-- [ ] T002 [P] 現在のテスト状況を確認: `pytest`
-- [ ] T003 [P] refactoring-map.md の分割計画を確認
-- [ ] T004 フェーズ出力を生成: specs/012-fix-pylint-errors/tasks/ph1-output.md
+- [X] T001 現在のpylint違反状況を確認: `pylint --rcfile=pyproject.toml src/`
+- [X] T002 [P] 現在のテスト状況を確認: `pytest`
+- [X] T003 [P] refactoring-map.md の分割計画を確認
+- [X] T004 フェーズ出力を生成: specs/012-fix-pylint-errors/tasks/ph1-output.md
 
 ---
 
