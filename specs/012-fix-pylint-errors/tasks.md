@@ -81,26 +81,26 @@
 
 ### Input
 
-- [ ] T019 セットアップ分析を読む: specs/012-fix-pylint-errors/tasks/ph1-output.md
-- [ ] T020 前フェーズ出力を読む: specs/012-fix-pylint-errors/tasks/ph2-output.md
+- [x] T019 セットアップ分析を読む: specs/012-fix-pylint-errors/tasks/ph1-output.md
+- [x] T020 前フェーズ出力を読む: specs/012-fix-pylint-errors/tasks/ph2-output.md
 
 ### Implementation
 
-- [ ] T021 [P] [US3] src/book_converter/page_grouper/ ディレクトリを作成
-- [ ] T022 [US3] src/book_converter/page_grouper/models.py を作成（FlattenStats, SectionNumber, TOCEntry）
-- [ ] T023 [US3] src/book_converter/page_grouper/section.py を作成（parse_section_*, extract_section_*, is_chapter_title_page）
-- [ ] T024 [US3] src/book_converter/page_grouper/toc.py を作成（parse_toc, validate_page_count）
-- [ ] T025 [US3] src/book_converter/page_grouper/assignment.py を作成（group_pages_by_toc, _assign_pages_*）
-- [ ] T026 [US3] src/book_converter/page_grouper/hierarchy.py を作成（_build_*, _add_sections_*, _pages_to_section）
-- [ ] T027 [US3] src/book_converter/page_grouper/xml.py を作成（_serialize_to_xml, convert_pages_to_book）
-- [ ] T028 [US3] src/book_converter/page_grouper/__init__.py を作成（公開API再エクスポート）
-- [ ] T029 [US3] 元の src/book_converter/page_grouper.py を削除
+- [x] T021 [P] [US3] src/book_converter/page_grouper/ ディレクトリを作成
+- [x] T022 [US3] src/book_converter/page_grouper/models.py を作成（FlattenStats, SectionNumber, TOCEntry）
+- [x] T023 [US3] src/book_converter/page_grouper/section.py を作成（parse_section_*, extract_section_*, is_chapter_title_page）
+- [x] T024 [US3] src/book_converter/page_grouper/toc.py を作成（parse_toc, validate_page_count）
+- [x] T025 [US3] src/book_converter/page_grouper/assignment.py を作成（group_pages_by_toc, _assign_pages_*）
+- [x] T026 [US3] src/book_converter/page_grouper/hierarchy.py を作成（_build_*, _add_sections_*, _pages_to_section）
+- [x] T027 [US3] src/book_converter/page_grouper/xml.py を作成（_serialize_to_xml, convert_pages_to_book）
+- [x] T028 [US3] src/book_converter/page_grouper/__init__.py を作成（公開API再エクスポート）
+- [x] T029 [US3] 元の src/book_converter/page_grouper.py を削除
 
 ### Verification
 
-- [ ] T030 [US2] `pytest tests/test_page_grouper.py` でテストパスを確認
-- [ ] T031 [US1] `pylint src/book_converter/page_grouper/` で違反確認
-- [ ] T032 フェーズ出力を生成: specs/012-fix-pylint-errors/tasks/ph3-output.md
+- [x] T030 [US2] `pytest tests/test_page_grouper.py` でテストパスを確認
+- [x] T031 [US1] `pylint src/book_converter/page_grouper/` で違反確認
+- [x] T032 フェーズ出力を生成: specs/012-fix-pylint-errors/tasks/ph3-output.md
 
 **Checkpoint**: page_grouper/ パッケージが500行以下のモジュールで構成されていること
 
