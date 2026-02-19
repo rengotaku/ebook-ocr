@@ -110,20 +110,20 @@
 
 ### Input
 
-- [ ] T020 セットアップ分析を読む: specs/013-ci-lint-migration/tasks/ph1-output.md
-- [ ] T021 前フェーズ出力を読む: specs/013-ci-lint-migration/tasks/ph3-output.md
+- [X] T020 セットアップ分析を読む: specs/013-ci-lint-migration/tasks/ph1-output.md
+- [X] T021 前フェーズ出力を読む: specs/013-ci-lint-migration/tasks/ph3-output.md
 
 ### Implementation
 
-- [ ] T022 [US3] `.pre-commit-config.yaml`からruff設定を削除
-- [ ] T023 [US3] `.pre-commit-config.yaml`からpylint設定を削除
-- [ ] T024 [US3] 設定が空になる場合、repos: [] に設定（または削除検討）
+- [X] T022 [US3] `.pre-commit-config.yaml`からruff設定を削除
+- [X] T023 [US3] `.pre-commit-config.yaml`からpylint設定を削除
+- [X] T024 [US3] 設定が空になる場合、repos: [] に設定（または削除検討）
 
 ### Verification
 
-- [ ] T025 [US3] `git commit`でブロックされないことを確認
-- [ ] T026 [US3] `pre-commit run --all-files`で残存フックを確認
-- [ ] T027 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph4-output.md
+- [X] T025 [US3] `git commit`でブロックされないことを確認
+- [X] T026 [US3] `pre-commit run --all-files`で残存フックを確認
+- [X] T027 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph4-output.md
 
 **Checkpoint**: US3完了後、コミットがスムーズに完了することを確認
 
