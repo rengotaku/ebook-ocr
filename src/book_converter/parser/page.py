@@ -5,6 +5,9 @@ from __future__ import annotations
 import os
 import re
 import sys
+
+# Import for dataclass extraction
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
@@ -200,6 +203,82 @@ def parse_pages(input_path: Path) -> Iterator[Page]:
     yield from pages
 
 
+@dataclass
+class PageAccumulator:
+    """Accumulator for parsing multiple pages."""
+
+    pages: list[Page]
+    errors: list[ConversionError]
+    all_toc_entries: list[TocEntry]
+    toc_begin_page: str
+    toc_end_page: str
+    marker_stack: list[str]
+
+    # Current page state
+    current_page_number: str
+    current_source_file: str
+    current_page_lines: list[str]
+    last_page_marker_line: int
+    page_start_line: int
+
+
+def _process_and_save_page(
+    accumulator: PageAccumulator,
+    check_missing_number: bool = False,
+) -> None:
+    """Process current page and save to accumulator.
+
+    Args:
+        accumulator: Page accumulator (mutated in place).
+        check_missing_number: If True, add error for missing page number.
+    """
+    if not accumulator.current_source_file:
+        return
+
+    # Parse the content of the page
+    page_obj, page_errors, toc_entries, had_toc = _parse_single_page_content(
+        accumulator.current_page_number,
+        accumulator.current_source_file,
+        accumulator.current_page_lines,
+        accumulator.page_start_line,
+        accumulator.marker_stack,
+    )
+    accumulator.pages.append(page_obj)
+    accumulator.errors.extend(page_errors)
+
+    # Track TOC page range
+    if had_toc and accumulator.current_page_number:
+        if not accumulator.toc_begin_page:
+            accumulator.toc_begin_page = accumulator.current_page_number
+        accumulator.toc_end_page = accumulator.current_page_number
+        accumulator.all_toc_entries.extend(toc_entries)
+
+    # Check for missing page number if requested
+    if check_missing_number and not accumulator.current_page_number:
+        accumulator.errors.append(
+            ConversionError(
+                error_type="PAGE_NUMBER_NOT_FOUND",
+                message="ページ番号が見つかりません",
+                page_number="",
+                line_number=accumulator.last_page_marker_line,
+            )
+        )
+
+
+def _print_debug_info(input_path: Path, lines: list[str]) -> None:
+    """Print debug information about the file being parsed.
+
+    Args:
+        input_path: Path to the file.
+        lines: All lines from the file.
+    """
+    print(f"[DEBUG] Parsing file: {input_path}", file=sys.stderr)
+    print(f"[DEBUG] Total lines: {len(lines)}", file=sys.stderr)
+    print("[DEBUG] First 5 lines:", file=sys.stderr)
+    for i, line_text in enumerate(lines[:5], start=1):
+        print(f"  {i}: {line_text!r}", file=sys.stderr)
+
+
 def parse_pages_with_errors(
     input_path: Path,
     verbose: bool = False,
@@ -220,30 +299,25 @@ def parse_pages_with_errors(
         content = f.read()
 
     lines = content.split("\n")
-    pages = []
-    errors = []
 
-    current_page_number = ""
-    current_source_file = ""
-    current_page_lines = []
-    last_page_marker_line = 0
-    page_start_line = 0
-
-    # Track TOC across all pages
-    all_toc_entries: list[TocEntry] = []
-    toc_begin_page = ""
-    toc_end_page = ""
-
-    # Track marker stack across all pages (content/skip markers)
-    marker_stack: list[str] = []
+    # Initialize accumulator
+    accumulator = PageAccumulator(
+        pages=[],
+        errors=[],
+        all_toc_entries=[],
+        toc_begin_page="",
+        toc_end_page="",
+        marker_stack=[],
+        current_page_number="",
+        current_source_file="",
+        current_page_lines=[],
+        last_page_marker_line=0,
+        page_start_line=0,
+    )
 
     # Debug: show first few lines to help diagnose format issues
     if verbose:
-        print(f"[DEBUG] Parsing file: {input_path}", file=sys.stderr)
-        print(f"[DEBUG] Total lines: {len(lines)}", file=sys.stderr)
-        print("[DEBUG] First 5 lines:", file=sys.stderr)
-        for i, line_text in enumerate(lines[:5], start=1):
-            print(f"  {i}: {line_text!r}", file=sys.stderr)
+        _print_debug_info(input_path, lines)
 
     for line_idx, line in enumerate(lines, start=1):
         # Check if this is a page marker (including those with missing numbers)
@@ -251,87 +325,228 @@ def parse_pages_with_errors(
         if page_num or source_file:
             # This is a page marker
             # Save previous page if any
-            if current_source_file:
-                # Parse the content of the previous page
-                page_obj, page_errors, toc_entries, had_toc = _parse_single_page_content(
-                    current_page_number,
-                    current_source_file,
-                    current_page_lines,
-                    page_start_line,
-                    marker_stack,
-                )
-                pages.append(page_obj)
-                errors.extend(page_errors)
-
-                # Track TOC page range
-                if had_toc and current_page_number:
-                    if not toc_begin_page:
-                        toc_begin_page = current_page_number
-                    toc_end_page = current_page_number
-                    all_toc_entries.extend(toc_entries)
-
-                # Check for missing page number on previous page
-                if not current_page_number:
-                    errors.append(
-                        ConversionError(
-                            error_type="PAGE_NUMBER_NOT_FOUND",
-                            message="ページ番号が見つかりません",
-                            page_number="",
-                            line_number=last_page_marker_line,
-                        )
-                    )
+            _process_and_save_page(accumulator, check_missing_number=True)
 
             # Start new page
-            current_page_number = page_num
-            current_source_file = source_file
-            current_page_lines = []
-            last_page_marker_line = line_idx
-            page_start_line = line_idx
+            accumulator.current_page_number = page_num
+            accumulator.current_source_file = source_file
+            accumulator.current_page_lines = []
+            accumulator.last_page_marker_line = line_idx
+            accumulator.page_start_line = line_idx
         else:
             # Add line to current page content
-            current_page_lines.append(line)
+            accumulator.current_page_lines.append(line)
 
     # Save final page
-    if current_source_file:
-        # Parse the content of the final page
-        page_obj, page_errors, toc_entries, had_toc = _parse_single_page_content(
-            current_page_number,
-            current_source_file,
-            current_page_lines,
-            page_start_line,
-            marker_stack,
-        )
-        pages.append(page_obj)
-        errors.extend(page_errors)
-
-        # Track TOC page range
-        if had_toc and current_page_number:
-            if not toc_begin_page:
-                toc_begin_page = current_page_number
-            toc_end_page = current_page_number
-            all_toc_entries.extend(toc_entries)
-
-        # Check for missing page number on final page
-        if not current_page_number:
-            errors.append(
-                ConversionError(
-                    error_type="PAGE_NUMBER_NOT_FOUND",
-                    message="ページ番号が見つかりません",
-                    page_number="",
-                    line_number=last_page_marker_line,
-                )
-            )
+    _process_and_save_page(accumulator, check_missing_number=True)
 
     # Build TableOfContents if any entries found
     toc = None
-    if all_toc_entries:
+    if accumulator.all_toc_entries:
         toc = TableOfContents(
-            entries=tuple(all_toc_entries),
-            begin_page=toc_begin_page,
-            end_page=toc_end_page,
+            entries=tuple(accumulator.all_toc_entries),
+            begin_page=accumulator.toc_begin_page,
+            end_page=accumulator.toc_end_page,
         )
 
-    return (pages, errors, toc)
+    return (accumulator.pages, accumulator.errors, toc)
+
+
+@dataclass
+class PageParseState:
+    """State for parsing a single page."""
+
+    content_elements: list
+    figures_list: list
+    metadata: PageMetadata | None
+    toc_entries: list[TocEntry]
+    errors: list[ConversionError]
+    in_toc: bool
+    had_toc_marker: bool
+    toc_lines: list[str]
+
+
+def _process_toc_lines_with_llm_fallback(toc_lines: list[str]) -> list[TocEntry]:
+    """Process TOC lines with LLM classification, fallback to rule-based.
+
+    Args:
+        toc_lines: Lines to process as TOC.
+
+    Returns:
+        List of parsed TOC entries.
+    """
+    if TOC_CLASSIFIER_AVAILABLE and is_llm_classification_enabled():
+        # For LLM, normalize each line but preserve structure with newlines
+        normalized_lines = [normalize_toc_line(line) for line in toc_lines]
+        # Filter out empty lines
+        normalized_lines = [line for line in normalized_lines if line.strip()]
+        raw_text = "\n".join(normalized_lines)
+        llm_entries = classify_toc_batch_with_llm(raw_text, preserve_newlines=True)
+        if llm_entries:
+            # LLM succeeded - use its results directly
+            return llm_entries
+        # LLM failed - fallback to rule-based
+        return parse_toc_lines(toc_lines)
+    # LLM not enabled - use rule-based
+    return parse_toc_lines(toc_lines)
+
+
+def _handle_toc_end(state: PageParseState) -> None:
+    """Handle TOC end marker.
+
+    Args:
+        state: Current page parse state (mutated in place).
+    """
+    if state.toc_lines:
+        state.toc_entries.extend(_process_toc_lines_with_llm_fallback(state.toc_lines))
+    state.in_toc = False
+    state.toc_lines = []
+
+
+def _handle_heading(
+    line: str,
+    line_num: int,
+    page_number: str,
+    read_aloud: bool,
+    state: PageParseState,
+) -> Heading | None:
+    """Parse and handle heading line.
+
+    Args:
+        line: Line to parse.
+        line_num: Line number for error reporting.
+        page_number: Page number for error reporting.
+        read_aloud: Current readAloud state.
+        state: Current page parse state (mutated for errors).
+
+    Returns:
+        Parsed Heading object if successful, None otherwise.
+    """
+    heading, warning = parse_heading_with_warning(line)
+    if warning is not None:
+        state.errors.append(
+            ConversionError(
+                error_type="DEEP_HEADING",
+                message=warning,
+                page_number=page_number,
+                line_number=line_num,
+            )
+        )
+    if heading is not None:
+        # Apply readAloud state
+        return Heading(level=heading.level, text=heading.text, read_aloud=read_aloud)
+    return None
+
+
+def _collect_figure_lines(lines: list[str], start_idx: int) -> list[str]:
+    """Collect lines for figure parsing.
+
+    Args:
+        lines: All lines.
+        start_idx: Index to start from.
+
+    Returns:
+        List of lines belonging to the figure.
+    """
+    fig_lines = []
+    fig_idx = start_idx
+    while fig_idx < len(lines) and fig_idx < start_idx + 10:  # Look ahead up to 10 lines
+        fig_line = lines[fig_idx]
+        if not fig_line.strip():
+            # Empty line ends figure block
+            break
+        fig_lines.append(fig_line)
+        fig_idx += 1
+    return fig_lines
+
+
+def _collect_list_lines(lines: list[str], start_idx: int) -> tuple[list[str], int]:
+    """Collect consecutive list items.
+
+    Args:
+        lines: All lines.
+        start_idx: Index to start from.
+
+    Returns:
+        Tuple of (list_lines, next_index).
+    """
+    list_lines = [lines[start_idx]]
+    list_idx = start_idx + 1
+    while list_idx < len(lines):
+        list_line = lines[list_idx]
+        if not list_line.strip():
+            # Empty line ends list
+            break
+        next_is_list, _, _ = is_list_line(list_line)
+        if next_is_list:
+            list_lines.append(list_line)
+            list_idx += 1
+        else:
+            # Non-list line ends list
+            break
+    return list_lines, list_idx
+
+
+def _should_stop_paragraph(para_line: str, lines: list[str], para_idx: int) -> bool:
+    """Check if paragraph collection should stop.
+
+    Args:
+        para_line: Current line being checked.
+        lines: All lines.
+        para_idx: Current index.
+
+    Returns:
+        True if should stop, False otherwise.
+    """
+    # Stop at empty line
+    if not para_line.strip():
+        return True
+    # Stop at heading
+    if parse_heading(para_line) is not None:
+        return True
+    # Stop at list item (check if 2+ consecutive items follow)
+    is_list_item, _, _ = is_list_line(para_line)
+    if is_list_item:
+        # Look ahead to see if there are 2+ consecutive list items
+        lookahead_idx = para_idx + 1
+        if lookahead_idx < len(lines):
+            next_is_list, _, _ = is_list_line(lines[lookahead_idx])
+            if next_is_list:
+                return True  # This starts a real list
+        # Single list marker: treat as part of paragraph
+    # Stop at figure comment
+    if parse_figure_comment(para_line) is not None:
+        return True
+    # Stop at page metadata
+    if parse_page_metadata(para_line.strip()) is not None:
+        return True
+    # Stop at markers (toc, content, skip)
+    if parse_toc_marker(para_line) is not None:
+        return True
+    if parse_content_marker(para_line) is not None:
+        return True
+    return False
+
+
+def _collect_paragraph_lines(lines: list[str], start_idx: int) -> tuple[list[str], int]:
+    """Collect consecutive non-empty lines for paragraph.
+
+    Args:
+        lines: All lines.
+        start_idx: Index to start from.
+
+    Returns:
+        Tuple of (para_lines, next_index).
+    """
+    para_lines = []
+    para_idx = start_idx
+    while para_idx < len(lines):
+        para_line = lines[para_idx]
+        if _should_stop_paragraph(para_line, lines, para_idx):
+            break
+        para_lines.append(para_line)
+        para_idx += 1
+    return para_lines, para_idx
 
 
 def _parse_single_page_content(
@@ -354,15 +569,17 @@ def _parse_single_page_content(
         Tuple of (Page, errors, toc_entries, had_toc_marker).
         had_toc_marker is True if this page contained any TOC markers.
     """
-    errors = []
-    content_elements = []
-    figures_list = []
-    metadata = None
-    toc_entries = []
-    in_toc = False
-    had_toc_marker = False  # Track if this page has any TOC markers
-    # marker_stack is passed as argument (persists across pages)
-    toc_lines: list[str] = []  # Collect TOC lines for merging
+    # Initialize parsing state
+    state = PageParseState(
+        content_elements=[],
+        figures_list=[],
+        metadata=None,
+        toc_entries=[],
+        errors=[],
+        in_toc=False,
+        had_toc_marker=False,
+        toc_lines=[],
+    )
 
     # Parse content line by line
     idx = 0
@@ -373,33 +590,13 @@ def _parse_single_page_content(
         # Check for TOC markers
         toc_marker = parse_toc_marker(line)
         if toc_marker == MarkerType.TOC_START:
-            in_toc = True
-            had_toc_marker = True
-            toc_lines = []  # Start collecting TOC lines
+            state.in_toc = True
+            state.had_toc_marker = True
+            state.toc_lines = []  # Start collecting TOC lines
             idx += 1
             continue
-        elif toc_marker == MarkerType.TOC_END:
-            # Process collected TOC lines
-            if toc_lines:
-                # Try LLM batch processing first if enabled
-                if TOC_CLASSIFIER_AVAILABLE and is_llm_classification_enabled():
-                    # For LLM, normalize each line but preserve structure with newlines
-                    normalized_lines = [normalize_toc_line(line) for line in toc_lines]
-                    # Filter out empty lines
-                    normalized_lines = [line for line in normalized_lines if line.strip()]
-                    raw_text = "\n".join(normalized_lines)
-                    llm_entries = classify_toc_batch_with_llm(raw_text, preserve_newlines=True)
-                    if llm_entries:
-                        # LLM succeeded - use its results directly
-                        toc_entries.extend(llm_entries)
-                    else:
-                        # LLM failed - fallback to rule-based
-                        toc_entries.extend(parse_toc_lines(toc_lines))
-                else:
-                    # LLM not enabled - use rule-based
-                    toc_entries.extend(parse_toc_lines(toc_lines))
-            in_toc = False
-            toc_lines = []
+        if toc_marker == MarkerType.TOC_END:
+            _handle_toc_end(state)
             idx += 1
             continue
 
@@ -409,146 +606,77 @@ def _parse_single_page_content(
             marker_stack.append("content")
             idx += 1
             continue
-        elif content_marker == MarkerType.CONTENT_END:
+        if content_marker == MarkerType.CONTENT_END:
             if marker_stack and marker_stack[-1] == "content":
                 marker_stack.pop()
             idx += 1
             continue
-        elif content_marker == MarkerType.SKIP_START:
+        if content_marker == MarkerType.SKIP_START:
             marker_stack.append("skip")
             idx += 1
             continue
-        elif content_marker == MarkerType.SKIP_END:
+        if content_marker == MarkerType.SKIP_END:
             if marker_stack and marker_stack[-1] == "skip":
                 marker_stack.pop()
             idx += 1
             continue
 
         # If inside TOC, collect lines for later merging and parsing
-        if in_toc:
-            toc_lines.append(line)
+        if state.in_toc:
+            state.toc_lines.append(line)
             idx += 1
             continue
 
         # Get current readAloud value from marker stack
         read_aloud = get_read_aloud_from_stack(marker_stack)
 
-        # Check for deep heading warning
-        heading, warning = parse_heading_with_warning(line)
-        if warning is not None:
-            errors.append(
-                ConversionError(
-                    error_type="DEEP_HEADING",
-                    message=warning,
-                    page_number=page_number,
-                    line_number=line_num,
-                )
-            )
-
         # Check for heading
+        heading = _handle_heading(line, line_num, page_number, read_aloud, state)
         if heading is not None:
-            # Apply readAloud state
-            heading = Heading(level=heading.level, text=heading.text, read_aloud=read_aloud)
-            content_elements.append(heading)
+            state.content_elements.append(heading)
             idx += 1
             continue
 
         # Check for figure comment
         fig_path = parse_figure_comment(line)
         if fig_path is not None:
-            # Collect lines for figure parsing
-            fig_lines = []
-            fig_idx = idx
-            while fig_idx < len(lines) and fig_idx < idx + 10:  # Look ahead up to 10 lines
-                fig_line = lines[fig_idx]
-                if not fig_line.strip():
-                    # Empty line ends figure block
-                    break
-                fig_lines.append(fig_line)
-                fig_idx += 1
-
+            fig_lines = _collect_figure_lines(lines, idx)
             fig = parse_figure(fig_lines)
             if fig is not None:
-                figures_list.append(fig)
-            idx = fig_idx
+                state.figures_list.append(fig)
+            idx += len(fig_lines)
             continue
 
         # Check for page metadata (N / M pattern)
         page_meta = parse_page_metadata(line.strip())
         if page_meta is not None:
-            metadata = page_meta
+            state.metadata = page_meta
             idx += 1
             continue
 
         # Check for list item (supports ●, •, -, *, ①, 1., etc.)
         is_list, _, _ = is_list_line(line)
         if is_list:
-            # Collect consecutive list items (minimum 2 for recognition)
-            list_lines = [line]
-            list_idx = idx + 1
-            while list_idx < len(lines):
-                list_line = lines[list_idx]
-                if not list_line.strip():
-                    # Empty line ends list
-                    break
-                next_is_list, _, _ = is_list_line(list_line)
-                if next_is_list:
-                    list_lines.append(list_line)
-                    list_idx += 1
-                else:
-                    # Non-list line ends list
-                    break
-
+            list_lines, list_idx = _collect_list_lines(lines, idx)
             # Only treat as list if 2+ consecutive items
             if len(list_lines) >= 2:
                 lst = parse_list(list_lines)
                 if lst is not None:
                     # Apply readAloud state
                     lst = List(items=lst.items, list_type=lst.list_type, read_aloud=read_aloud)
-                    content_elements.append(lst)
+                    state.content_elements.append(lst)
                 idx = list_idx
                 continue
             # Single item: fall through to paragraph handling
 
         # Check for paragraph (non-empty, non-special line)
         if line.strip():
-            # Collect consecutive non-empty lines for paragraph
-            para_lines = []
-            para_idx = idx
-            while para_idx < len(lines):
-                para_line = lines[para_idx]
-                # Stop at empty line, heading, list, or figure
-                if not para_line.strip():
-                    break
-                if parse_heading(para_line) is not None:
-                    break
-                # Stop at list item (check if 2+ consecutive items follow)
-                is_list_item, _, _ = is_list_line(para_line)
-                if is_list_item:
-                    # Look ahead to see if there are 2+ consecutive list items
-                    lookahead_idx = para_idx + 1
-                    if lookahead_idx < len(lines):
-                        next_is_list, _, _ = is_list_line(lines[lookahead_idx])
-                        if next_is_list:
-                            break  # This starts a real list
-                    # Single list marker: treat as part of paragraph
-                if parse_figure_comment(para_line) is not None:
-                    break
-                if parse_page_metadata(para_line.strip()) is not None:
-                    break
-                # Stop at markers (toc, content, skip)
-                if parse_toc_marker(para_line) is not None:
-                    break
-                if parse_content_marker(para_line) is not None:
-                    break
-                para_lines.append(para_line)
-                para_idx += 1
-
+            para_lines, para_idx = _collect_paragraph_lines(lines, idx)
             para = parse_paragraph(para_lines)
             if para is not None:
                 # Apply readAloud state
                 para = Paragraph(text=para.text, read_aloud=read_aloud)
-                content_elements.append(para)
+                state.content_elements.append(para)
             idx = para_idx
             continue
 
@@ -556,28 +684,13 @@ def _parse_single_page_content(
         idx += 1
 
     # If TOC is still open at end of page, process collected lines
-    if in_toc and toc_lines:
-        # Try LLM batch processing first if enabled
-        if TOC_CLASSIFIER_AVAILABLE and is_llm_classification_enabled():
-            # For LLM, normalize each line but preserve structure with newlines
-            normalized_lines = [normalize_toc_line(line) for line in toc_lines]
-            # Filter out empty lines
-            normalized_lines = [line for line in normalized_lines if line.strip()]
-            raw_text = "\n".join(normalized_lines)
-            llm_entries = classify_toc_batch_with_llm(raw_text, preserve_newlines=True)
-            if llm_entries:
-                toc_entries.extend(llm_entries)
-            else:
-                # LLM failed - fallback to rule-based
-                toc_entries.extend(parse_toc_lines(toc_lines))
-        else:
-            # LLM not enabled - use rule-based
-            toc_entries.extend(parse_toc_lines(toc_lines))
+    if state.in_toc and state.toc_lines:
+        state.toc_entries.extend(_process_toc_lines_with_llm_fallback(state.toc_lines))
 
     # Create Page object
     # Content readAloud is true if ANY child element has readAloud=true
-    content_read_aloud = any(elem.read_aloud for elem in content_elements) if content_elements else False
-    content = Content(elements=tuple(content_elements), read_aloud=content_read_aloud)
+    content_read_aloud = any(elem.read_aloud for elem in state.content_elements) if state.content_elements else False
+    content = Content(elements=tuple(state.content_elements), read_aloud=content_read_aloud)
     announcement = create_page_announcement(page_number)
 
     page = Page(
@@ -585,8 +698,8 @@ def _parse_single_page_content(
         source_file=source_file,
         content=content,
         announcement=announcement,
-        figures=tuple(figures_list),
-        metadata=metadata,
+        figures=tuple(state.figures_list),
+        metadata=state.metadata,
     )
 
-    return (page, errors, toc_entries, had_toc_marker)
+    return (page, state.errors, state.toc_entries, state.had_toc_marker)

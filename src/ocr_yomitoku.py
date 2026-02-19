@@ -104,6 +104,38 @@ def ocr_page_yomitoku(
     return "\n\n".join(paragraphs)
 
 
+def _generate_markdown_from_results(results, cv_img, fallback_text: str) -> str:
+    """Generate markdown from yomitoku results.
+
+    Args:
+        results: Yomitoku analysis results.
+        cv_img: OpenCV image.
+        fallback_text: Fallback text if markdown generation fails.
+
+    Returns:
+        Markdown string.
+    """
+    import shutil
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as f:
+        temp_path = f.name
+
+    try:
+        results.to_markdown(temp_path, img=cv_img)
+        markdown = Path(temp_path).read_text(encoding="utf-8")
+    except Exception:
+        markdown = fallback_text
+    finally:
+        Path(temp_path).unlink(missing_ok=True)
+        # Clean up figures directory if created
+        figures_dir = Path(temp_path).parent / f"{Path(temp_path).stem}_figures"
+        if figures_dir.exists():
+            shutil.rmtree(figures_dir, ignore_errors=True)
+
+    return markdown
+
+
 def ocr_page_yomitoku_full(
     page_path: str,
     device: str = "cpu",
@@ -152,25 +184,8 @@ def ocr_page_yomitoku_full(
 
     text = "\n\n".join(paragraphs)
 
-    # Generate markdown (write to temp file then read)
-    import tempfile
-
-    with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as f:
-        temp_path = f.name
-
-    try:
-        results.to_markdown(temp_path, img=cv_img)
-        markdown = Path(temp_path).read_text(encoding="utf-8")
-    except Exception:
-        markdown = text
-    finally:
-        Path(temp_path).unlink(missing_ok=True)
-        # Clean up figures directory if created
-        figures_dir = Path(temp_path).parent / f"{Path(temp_path).stem}_figures"
-        if figures_dir.exists():
-            import shutil
-
-            shutil.rmtree(figures_dir, ignore_errors=True)
+    # Generate markdown
+    markdown = _generate_markdown_from_results(results, cv_img, text)
 
     return YomitokuResult(
         text=text,

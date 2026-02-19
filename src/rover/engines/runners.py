@@ -276,6 +276,25 @@ def run_paddleocr_with_boxes(
         return EngineResult(engine="paddleocr", items=[], success=False, error=str(e))
 
 
+def _bbox_points_to_rect(bbox_points: list[list[float]]) -> tuple[int, int, int, int]:
+    """Convert EasyOCR bbox points to bounding rectangle.
+
+    Args:
+        bbox_points: [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+
+    Returns:
+        Tuple of (x_min, y_min, x_max, y_max).
+    """
+    x_coords = [p[0] for p in bbox_points]
+    y_coords = [p[1] for p in bbox_points]
+    return (
+        int(min(x_coords)),
+        int(min(y_coords)),
+        int(max(x_coords)),
+        int(max(y_coords)),
+    )
+
+
 def run_easyocr_with_boxes(
     image: Image.Image,
     lang_list: list[str] | None = None,
@@ -308,16 +327,7 @@ def run_easyocr_with_boxes(
 
         items: list[TextWithBox] = []
         for bbox_points, text, confidence in results:
-            # bbox_points: [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
-            x_coords = [p[0] for p in bbox_points]
-            y_coords = [p[1] for p in bbox_points]
-            bbox = (
-                int(min(x_coords)),
-                int(min(y_coords)),
-                int(max(x_coords)),
-                int(max(y_coords)),
-            )
-
+            bbox = _bbox_points_to_rect(bbox_points)
             items.append(
                 TextWithBox(
                     text=text,
