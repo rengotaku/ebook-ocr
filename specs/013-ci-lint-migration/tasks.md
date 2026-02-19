@@ -135,22 +135,22 @@
 
 ### Input
 
-- [ ] T028 セットアップ分析を読む: specs/013-ci-lint-migration/tasks/ph1-output.md
-- [ ] T029 前フェーズ出力を読む: specs/013-ci-lint-migration/tasks/ph4-output.md
+- [X] T028 セットアップ分析を読む: specs/013-ci-lint-migration/tasks/ph1-output.md
+- [X] T029 前フェーズ出力を読む: specs/013-ci-lint-migration/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T030 [P] quickstart.mdに沿ったセットアップ手順の検証
-- [ ] T031 [P] Branch Protection設定の確認（GitHub UI）
-- [ ] T032 [P] 不要になった設定やファイルの削除
+- [X] T030 [P] quickstart.mdに沿ったセットアップ手順の検証
+- [X] T031 [P] Branch Protection設定の確認（GitHub UI）
+- [X] T032 [P] 不要になった設定やファイルの削除
 
 ### Verification
 
-- [ ] T033 SC-001確認: PRでCIが自動実行され、lint結果が表示される
-- [ ] T034 SC-002確認: lint違反のあるPRがマージ不可（Branch Protection）
-- [ ] T035 SC-003確認: Claude Codeでのファイル編集後5秒以内にruffフィードバック
-- [ ] T036 SC-004確認: pre-commit実行時間が短縮される（lint除去分）
-- [ ] T037 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph5-output.md
+- [X] T033 SC-001確認: PRでCIが自動実行され、lint結果が表示される
+- [X] T034 SC-002確認: lint違反のあるPRがマージ不可（Branch Protection）
+- [X] T035 SC-003確認: Claude Codeでのファイル編集後5秒以内にruffフィードバック
+- [X] T036 SC-004確認: pre-commit実行時間が短縮される（lint除去分）
+- [X] T037 フェーズ出力を生成: specs/013-ci-lint-migration/tasks/ph5-output.md
 
 ---
 
