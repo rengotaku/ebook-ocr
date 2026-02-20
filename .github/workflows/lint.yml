@@ -35,4 +35,4 @@ jobs:
         run: ruff format --check src/ tests/
 
       - name: Run pylint
-        run: pylint --rcfile=pyproject.toml src/
+        run: pylint --rcfile=pyproject.toml --fail-under=9.9 src/
