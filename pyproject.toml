@@ -4,3 +4,21 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
+
+[tool.pylint.main]
+# ruffと重複しないよう、サイズ制限系のみ有効化
+disable = "all"
+enable = [
+    "too-many-lines",        # ファイル行数制限
+    "too-many-arguments",    # 関数の引数数制限
+    "too-many-locals",       # ローカル変数数制限
+    "too-many-statements",   # 関数内ステートメント数制限
+    "too-many-branches",     # 分岐数制限
+]
+
+[tool.pylint.design]
+max-module-lines = 500       # ファイルの最大行数
+max-args = 7                 # 関数の最大引数数
+max-locals = 15              # 最大ローカル変数数
+max-statements = 50          # 関数の最大ステートメント数
+max-branches = 12            # 最大分岐数

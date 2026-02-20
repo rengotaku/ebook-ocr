@@ -1193,7 +1193,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_single_line(self):
         """単一行のアイテムはそのまま"""
-        from src.rover.ensemble import split_multiline_items
+        from src.rover.line_processing import split_multiline_items
 
         items = [
             TextWithBox(text="単一行", bbox=(0, 100, 100, 120), confidence=0.9),
@@ -1207,7 +1207,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_two_lines(self):
         """2行に分割されるべきアイテム"""
-        from src.rover.ensemble import split_multiline_items
+        from src.rover.line_processing import split_multiline_items
 
         # y座標が離れている2つのアイテム
         items = [
@@ -1223,7 +1223,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_three_lines(self):
         """3行に分割 - 実際のyomitoku段落パターン"""
-        from src.rover.ensemble import split_multiline_items
+        from src.rover.line_processing import split_multiline_items
 
         # y_range=[169-277] の段落を3行に分割
         items = [
@@ -1242,7 +1242,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_same_line(self):
         """同一行の複数アイテムはマージされる"""
-        from src.rover.ensemble import split_multiline_items
+        from src.rover.line_processing import split_multiline_items
 
         # 同じy座標の2つのアイテム
         items = [
@@ -1257,7 +1257,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_empty(self):
         """空リストの処理"""
-        from src.rover.ensemble import split_multiline_items
+        from src.rover.line_processing import split_multiline_items
 
         result = split_multiline_items([], y_gap_threshold=15)
 
@@ -1265,7 +1265,7 @@ class TestSplitMultilineItems:
 
     def test_split_multiline_items_mixed_pattern(self):
         """混合パターン: 一部が同一行、一部が別行"""
-        from src.rover.ensemble import split_multiline_items
+        from src.rover.line_processing import split_multiline_items
 
         items = [
             TextWithBox(text="1行目左", bbox=(0, 100, 50, 120), confidence=0.9),

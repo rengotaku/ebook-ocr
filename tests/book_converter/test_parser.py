@@ -3287,65 +3287,64 @@ class TestLegacyPatternRemovalInParser:
     - book_converter/parser.py:597 - "Chapter pattern 2: ... - legacy"
     """
 
-    def test_parser_has_no_legacy_patterns_comment(self) -> None:
-        """parser.py should not have 'Legacy patterns' comment marker."""
+    @staticmethod
+    def _get_parser_package_source() -> str:
+        """Get combined source from all parser package modules."""
         import inspect
+        import pkgutil
 
         from src.book_converter import parser
 
-        # Get the parse_toc_line function source
-        # Note: We check the module source to find the legacy section
-        module_source = inspect.getsource(parser)
+        sources = []
+        # Get source from __init__.py
+        sources.append(inspect.getsource(parser))
+        # Get source from all submodules
+        for _importer, modname, _ispkg in pkgutil.iter_modules(parser.__path__):
+            submod = __import__(f"src.book_converter.parser.{modname}", fromlist=[modname])
+            sources.append(inspect.getsource(submod))
+        return "\n".join(sources)
+
+    def test_parser_has_no_legacy_patterns_comment(self) -> None:
+        """parser package should not have 'Legacy patterns' comment marker."""
+        module_source = self._get_parser_package_source()
 
         assert "Legacy patterns below for backward compatibility" not in module_source, (
-            "parser.py should not contain 'Legacy patterns below for backward compatibility'. "
+            "parser package should not contain 'Legacy patterns below for backward compatibility'. "
             "This comment and the associated legacy patterns should be removed."
         )
 
     def test_parser_has_no_legacy_annotation(self) -> None:
-        """parser.py should not have '- legacy' annotations in comments."""
-        import inspect
-
-        from src.book_converter import parser
-
-        module_source = inspect.getsource(parser)
+        """parser package should not have '- legacy' annotations in comments."""
+        module_source = self._get_parser_package_source()
 
         # Check for the specific legacy annotation pattern
         assert "- legacy" not in module_source, (
-            "parser.py should not contain '- legacy' annotations. Remove the redundant legacy Chapter pattern."
+            "parser package should not contain '- legacy' annotations. Remove the redundant legacy Chapter pattern."
         )
 
     def test_parser_no_character_class_case_insensitive_pattern(self) -> None:
-        """parser.py should not use [Cc][Hh]... style case insensitivity.
+        """parser package should not use [Cc][Hh]... style case insensitivity.
 
         The legacy Chapter pattern uses character-by-character case insensitivity:
         [Cc][Hh][Aa][Pp][Tt][Ee][Rr]
 
         This is redundant because the new pattern uses re.IGNORECASE flag.
         """
-        import inspect
-
-        from src.book_converter import parser
-
-        module_source = inspect.getsource(parser)
+        module_source = self._get_parser_package_source()
 
         # The character-class case-insensitive pattern is a signature of legacy code
         assert "[Cc][Hh][Aa][Pp][Tt][Ee][Rr]" not in module_source, (
-            "parser.py should not use character-class case insensitivity. "
+            "parser package should not use character-class case insensitivity. "
             "The new pattern with re.IGNORECASE handles case insensitivity."
         )
 
     def test_parser_uses_ignorecase_for_chapter(self) -> None:
-        """parser.py should use re.IGNORECASE for Chapter pattern."""
-        import inspect
-
-        from src.book_converter import parser
-
-        module_source = inspect.getsource(parser)
+        """parser package should use re.IGNORECASE for Chapter pattern."""
+        module_source = self._get_parser_package_source()
 
         # Verify the new pattern exists with IGNORECASE
         # The new format uses: re.match(..., line, re.IGNORECASE)
         assert "re.IGNORECASE" in module_source, (
-            "parser.py should use re.IGNORECASE flag for case-insensitive matching. "
+            "parser package should use re.IGNORECASE flag for case-insensitive matching. "
             "This is the modern approach instead of character classes."
         )
