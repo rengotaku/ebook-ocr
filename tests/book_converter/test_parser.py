@@ -3300,9 +3300,7 @@ class TestLegacyPatternRemovalInParser:
         sources.append(inspect.getsource(parser))
         # Get source from all submodules
         for _importer, modname, _ispkg in pkgutil.iter_modules(parser.__path__):
-            submod = __import__(
-                f"src.book_converter.parser.{modname}", fromlist=[modname]
-            )
+            submod = __import__(f"src.book_converter.parser.{modname}", fromlist=[modname])
             sources.append(inspect.getsource(submod))
         return "\n".join(sources)
 
