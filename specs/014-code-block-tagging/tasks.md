@@ -100,21 +100,21 @@
 
 ### Input
 
-- [ ] T021 setup分析を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
-- [ ] T022 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph2-output.md
+- [X] T021 setup分析を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
+- [X] T022 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T023 [P] [US1] Code dataclassのテストを実装: tests/unit/book_converter/test_models.py
+- [X] T023 [P] [US1] Code dataclassのテストを実装: tests/unit/book_converter/test_models.py
   - `test_code_creation` - Code生成
   - `test_code_default_read_aloud_false` - readAloudデフォルトFalse
   - `test_code_immutability` - frozen dataclassの不変性
   - `test_code_with_confidence` - confidence属性
-- [ ] T024 [P] [US1] SectionElement拡張のテストを実装: tests/unit/book_converter/test_models.py
+- [X] T024 [P] [US1] SectionElement拡張のテストを実装: tests/unit/book_converter/test_models.py
   - `test_section_element_includes_code` - Union型にCode含む
   - `test_section_with_code_element` - Section.elementsにCode
-- [ ] T025 `make test` がFAIL (RED) することを確認
-- [ ] T026 RED出力を生成: specs/014-code-block-tagging/red-tests/ph3-test.md
+- [X] T025 `make test` がFAIL (RED) することを確認
+- [X] T026 RED出力を生成: specs/014-code-block-tagging/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
