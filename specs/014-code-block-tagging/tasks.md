@@ -214,23 +214,23 @@
 
 ### Input
 
-- [ ] T056 setup分析を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
-- [ ] T057 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph5-output.md
+- [x] T056 setup分析を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
+- [x] T057 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph5-output.md
 
 ### Implementation
 
-- [ ] T058 [P] エッジケーステスト追加: tests/unit/layout/test_code_detector.py
+- [x] T058 [P] エッジケーステスト追加: tests/unit/layout/test_code_detector.py
   - 空のコードブロック
   - 閾値付近の判定
   - 長いコードブロック
-- [ ] T059 [P] パフォーマンス検証: SC-004（20%以内の性能低下）
-- [ ] T060 [P] quickstart.md検証を実行
-- [ ] T061 ドキュメント更新（必要に応じて）
+- [x] T059 [P] パフォーマンス検証: SC-004（20%以内の性能低下）
+- [x] T060 [P] quickstart.md検証を実行
+- [x] T061 ドキュメント更新（必要に応じて）
 
 ### Verification
 
-- [ ] T062 `make test` で全テスト通過を確認
-- [ ] T063 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph6-output.md
+- [x] T062 `make test` で全テスト通過を確認
+- [x] T063 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph6-output.md
 
 ---
 
