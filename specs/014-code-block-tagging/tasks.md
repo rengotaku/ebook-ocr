@@ -71,22 +71,22 @@
 
 ### Implementation (GREEN)
 
-- [ ] T013 REDテストを読み込み: specs/014-code-block-tagging/red-tests/ph2-test.md
-- [ ] T014 [P] [US1] CodeRegion dataclassを実装: src/layout/code_detector.py
-- [ ] T015 [P] [US1] CodeDetectionResult dataclassを実装: src/layout/code_detector.py
-- [ ] T016 [US1] is_code()関数を実装: src/layout/code_detector.py
-  - Guesslangを使用したコード判定
+- [X] T013 REDテストを読み込み: specs/014-code-block-tagging/red-tests/ph2-test.md
+- [X] T014 [P] [US1] CodeRegion dataclassを実装: src/layout/code_detector.py
+- [X] T015 [P] [US1] CodeDetectionResult dataclassを実装: src/layout/code_detector.py
+- [X] T016 [US1] is_code()関数を実装: src/layout/code_detector.py
+  - Guesslangを使用したコード判定（Python 3.13では heuristic fallback）
   - 閾値パラメータ対応
-- [ ] T017 [US1] detect_code_regions()関数を実装: src/layout/code_detector.py
+- [X] T017 [US1] detect_code_regions()関数を実装: src/layout/code_detector.py
   - layout.jsonのTEXT領域を走査
   - 各TEXT領域にGuesslang判定を適用
   - CODE判定の場合はtype変更
-- [ ] T018 `make test` がPASS (GREEN) することを確認
+- [X] T018 `make test` がPASS (GREEN) することを確認
 
 ### Verification
 
-- [ ] T019 `make test` で全テスト通過を確認（リグレッションなし）
-- [ ] T020 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph2-output.md
+- [X] T019 `make test` で全テスト通過を確認（リグレッションなし）
+- [X] T020 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph2-output.md
 
 **Checkpoint**: コード検出コア機能が単体で動作・テスト可能
 

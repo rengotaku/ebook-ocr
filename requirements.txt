@@ -11,3 +11,5 @@ paddlepaddle>=2.5.0
 paddleocr>=2.7.0
 yomitoku>=0.10.0
 pylint>=3.0.0
+# opencv-python>=4.8.0  # NOTE: Provided by opencv-contrib-python (transitive dependency)
+# guesslang>=2.2.1  # NOTE: Incompatible with Python 3.13 (requires TensorFlow 2.5.0)
