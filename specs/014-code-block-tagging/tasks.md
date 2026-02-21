@@ -118,15 +118,15 @@
 
 ### Implementation (GREEN)
 
-- [ ] T027 REDテストを読み込み: specs/014-code-block-tagging/red-tests/ph3-test.md
-- [ ] T028 [US1] Code dataclassを追加: src/book_converter/models.py
-- [ ] T029 [US1] SectionElement Union型を更新: src/book_converter/models.py
-- [ ] T030 `make test` がPASS (GREEN) することを確認
+- [x] T027 REDテストを読み込み: specs/014-code-block-tagging/red-tests/ph3-test.md
+- [x] T028 [US1] Code dataclassを追加: src/book_converter/models.py
+- [x] T029 [US1] SectionElement Union型を更新: src/book_converter/models.py
+- [x] T030 `make test` がPASS (GREEN) することを確認
 
 ### Verification
 
-- [ ] T031 `make test` で全テスト通過を確認（リグレッションなし）
-- [ ] T032 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph3-output.md
+- [x] T031 `make test` で全テスト通過を確認（リグレッションなし）
+- [x] T032 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph3-output.md
 
 **Checkpoint**: データモデルが拡張され、Code要素が使用可能
 

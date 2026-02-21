@@ -67,6 +67,15 @@ class Figure:
 
 
 @dataclass(frozen=True)
+class Code:
+    """コードブロック要素"""
+
+    text: str  # コード本体（改行・インデント保持）
+    confidence: float = 1.0  # Guesslang判定確率
+    read_aloud: bool = False  # TTS読み上げ（常にFalse）
+
+
+@dataclass(frozen=True)
 class TocEntry:
     """Table of Contents entry."""
 
@@ -86,7 +95,7 @@ class TableOfContents:
 
 
 # Section の子要素
-SectionElement = Union[Heading, Paragraph, List, Figure]
+SectionElement = Union[Heading, Paragraph, List, Figure, Code]
 
 
 @dataclass(frozen=True)
