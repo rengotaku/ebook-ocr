@@ -315,11 +315,11 @@ specs/014-code-block-tagging/
 ```
 
 **チェックリスト**:
-- [ ] Guesslang判定テスト
-- [ ] CODE領域再分類テスト
-- [ ] Code dataclass生成テスト
-- [ ] **XML出力テスト**（見落としがち）
-- [ ] E2Eテスト（layout.json → XML）
+- [X] Guesslang判定テスト
+- [X] CODE領域再分類テスト
+- [X] Code dataclass生成テスト
+- [X] **XML出力テスト**（見落としがち）
+- [X] E2Eテスト（layout.json → XML）
 
 ---
 
