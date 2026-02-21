@@ -50,24 +50,24 @@
 
 ### Input
 
-- [ ] T007 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
+- [X] T007 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T008 [P] [US1] Guesslangコード判定のテストを実装: tests/unit/layout/test_code_detector.py
+- [X] T008 [P] [US1] Guesslangコード判定のテストを実装: tests/unit/layout/test_code_detector.py
   - `test_is_code_with_python_code` - Pythonコードがコードと判定される
   - `test_is_code_with_java_code` - Javaコードがコードと判定される
   - `test_is_code_with_japanese_text` - 日本語テキストが非コードと判定される
   - `test_is_code_with_empty_string` - 空文字列が非コードと判定される
-- [ ] T009 [P] [US1] CodeRegion dataclassのテストを実装: tests/unit/layout/test_code_detector.py
+- [X] T009 [P] [US1] CodeRegion dataclassのテストを実装: tests/unit/layout/test_code_detector.py
   - `test_code_region_creation` - CodeRegionの生成
   - `test_code_region_immutability` - frozen dataclassの不変性
-- [ ] T010 [P] [US1] layout.json更新のテストを実装: tests/unit/layout/test_code_detector.py
+- [X] T010 [P] [US1] layout.json更新のテストを実装: tests/unit/layout/test_code_detector.py
   - `test_detect_code_in_layout` - TEXT→CODE再分類
   - `test_detect_code_preserves_non_text_regions` - FIGURE等は維持
   - `test_detect_code_with_threshold` - 閾値による判定
-- [ ] T011 `make test` がFAIL (RED) することを確認
-- [ ] T012 RED出力を生成: specs/014-code-block-tagging/red-tests/ph2-test.md
+- [X] T011 `make test` がFAIL (RED) することを確認
+- [X] T012 RED出力を生成: specs/014-code-block-tagging/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
