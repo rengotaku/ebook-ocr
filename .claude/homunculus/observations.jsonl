@@ -459,3 +459,5 @@
 {"timestamp": "2026-02-21T09:14:28Z", "event": "tool_complete", "tool": "Bash", "session": "d7903e96-ea98-4f9b-b5fa-be985a424e32"}
 {"timestamp": "2026-02-21T09:15:03Z", "event": "tool_complete", "tool": "Task", "session": "d7903e96-ea98-4f9b-b5fa-be985a424e32"}
 {"timestamp": "2026-02-21T09:15:12Z", "event": "tool_complete", "tool": "Bash", "session": "d7903e96-ea98-4f9b-b5fa-be985a424e32"}
+{"timestamp": "2026-02-21T09:15:12Z", "event": "tool_complete", "tool": "Bash", "session": "d7903e96-ea98-4f9b-b5fa-be985a424e32"}
+{"timestamp": "2026-02-21T09:15:18Z", "event": "tool_complete", "tool": "Bash", "session": "d7903e96-ea98-4f9b-b5fa-be985a424e32"}
