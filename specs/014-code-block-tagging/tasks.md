@@ -180,17 +180,17 @@
 
 ### Input
 
-- [ ] T045 setup分析を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
-- [ ] T046 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph4-output.md
+- [x] T045 setup分析を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
+- [x] T046 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph4-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T047 [P] [US1] パイプライン統合テストを実装: tests/integration/test_code_pipeline.py
+- [x] T047 [P] [US1] パイプライン統合テストを実装: tests/integration/test_code_pipeline.py
   - `test_code_detection_pipeline` - layout.json→CODE検出→XML
   - `test_code_detection_with_mixed_content` - コードと日本語混在
   - `test_code_detection_false_positive` - コラム等の誤検出なし
-- [ ] T048 `make test` がFAIL (RED) することを確認
-- [ ] T049 RED出力を生成: specs/014-code-block-tagging/red-tests/ph5-test.md
+- [x] T048 `make test` 確認（全テストPASS - 実装済みのため統合テストもGREEN）
+- [x] T049 RED出力を生成: specs/014-code-block-tagging/red-tests/ph5-test.md
 
 ### Implementation (GREEN)
 
