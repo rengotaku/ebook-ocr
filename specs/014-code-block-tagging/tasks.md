@@ -194,15 +194,15 @@
 
 ### Implementation (GREEN)
 
-- [ ] T050 REDテストを読み込み: specs/014-code-block-tagging/red-tests/ph5-test.md
-- [ ] T051 [US1] 統合処理を実装（必要に応じて）
-- [ ] T052 `make test` がPASS (GREEN) することを確認
+- [x] T050 REDテストを読み込み: specs/014-code-block-tagging/red-tests/ph5-test.md
+- [x] T051 [US1] 統合処理を実装（必要に応じて）
+- [x] T052 `make test` がPASS (GREEN) することを確認
 
 ### Verification
 
-- [ ] T053 `make test` で全テスト通過を確認（リグレッションなし）
-- [ ] T054 `make coverage` でカバレッジ≥80%を確認
-- [ ] T055 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph5-output.md
+- [x] T053 `make test` で全テスト通過を確認（リグレッションなし）
+- [x] T054 `make coverage` でカバレッジ≥80%を確認
+- [x] T055 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph5-output.md
 
 **Checkpoint**: User Story 1が完全に機能し、独立してテスト可能
 
