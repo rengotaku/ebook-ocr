@@ -11,6 +11,7 @@ from src.book_converter.models import (
     Book,
     BookMetadata,
     Chapter,
+    Code,
     Content,
     Figure,
     Heading,
@@ -124,6 +125,7 @@ def transform_section(section: Section) -> Element:
       <heading level="3">...</heading>
       <list>...</list>
       <figure .../>
+      <code readAloud="false">...</code>
     </section>
 
     Args:
@@ -150,6 +152,9 @@ def transform_section(section: Section) -> Element:
             elem.append(child_elem)
         elif isinstance(child, Figure):
             child_elem = transform_figure(child)
+            elem.append(child_elem)
+        elif isinstance(child, Code):
+            child_elem = transform_code(child)
             elem.append(child_elem)
 
     return elem
@@ -244,6 +249,33 @@ def transform_figure(figure: Figure) -> Element:
     if figure.marker:
         elem.set("marker", figure.marker)
 
+    return elem
+
+
+def transform_code(code: Code) -> Element:
+    """Transform Code to XML element.
+
+    <code readAloud="false">code text</code>
+
+    Code は常に読まないので readAloud="false" を設定する。
+
+    Args:
+        code: The Code object to transform.
+
+    Returns:
+        An XML Element representing the code block.
+
+    Example:
+        >>> code = Code(text='def hello():\\n    print("Hello")')
+        >>> elem = transform_code(code)
+        >>> elem.tag
+        'code'
+        >>> elem.get('readAloud')
+        'false'
+    """
+    elem = Element("code")
+    elem.set("readAloud", "false")
+    elem.text = code.text
     return elem
 
 

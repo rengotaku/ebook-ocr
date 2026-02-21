@@ -158,15 +158,15 @@
 
 ### Implementation (GREEN)
 
-- [ ] T039 REDテストを読み込み: specs/014-code-block-tagging/red-tests/ph4-test.md
-- [ ] T040 [P] [US1] コードパーサーモジュールを作成: src/book_converter/parser/code.py
-- [ ] T041 [US1] XMLビルダーにCode要素出力を追加: src/book_converter/xml_builder.py
-- [ ] T042 `make test` がPASS (GREEN) することを確認
+- [x] T039 REDテストを読み込み: specs/014-code-block-tagging/red-tests/ph4-test.md
+- [x] T040 [P] [US1] コードパーサーモジュールを作成: src/book_converter/parser/code.py
+- [x] T041 [US1] XMLビルダーにCode要素出力を追加: src/book_converter/xml_builder.py
+- [x] T042 `make test` がPASS (GREEN) することを確認
 
 ### Verification
 
-- [ ] T043 `make test` で全テスト通過を確認（リグレッションなし）
-- [ ] T044 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph4-output.md
+- [x] T043 `make test` で全テスト通過を確認（リグレッションなし）
+- [x] T044 フェーズ出力を生成: specs/014-code-block-tagging/tasks/ph4-output.md
 
 **Checkpoint**: パーサーとXMLビルダーが統合され、Code要素がXML出力可能
 
