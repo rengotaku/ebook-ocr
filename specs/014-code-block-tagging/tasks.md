@@ -140,21 +140,21 @@
 
 ### Input
 
-- [ ] T033 setup分析を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
-- [ ] T034 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph3-output.md
+- [x] T033 setup分析を読み込み: specs/014-code-block-tagging/tasks/ph1-output.md
+- [x] T034 前フェーズ出力を読み込み: specs/014-code-block-tagging/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T035 [P] [US1] コードパーサーのテストを実装: tests/unit/book_converter/parser/test_code.py
+- [x] T035 [P] [US1] コードパーサーのテストを実装: tests/unit/book_converter/parser/test_code.py
   - `test_parse_code_region` - CODE領域からCode要素生成
   - `test_parse_code_preserves_formatting` - 改行・インデント保持
   - `test_parse_code_with_special_chars` - 特殊文字処理
-- [ ] T036 [P] [US1] XMLビルダーのテストを実装: tests/unit/book_converter/test_xml_builder.py
+- [x] T036 [P] [US1] XMLビルダーのテストを実装: tests/unit/book_converter/test_xml_builder.py
   - `test_build_xml_with_code` - `<code>`要素出力
   - `test_code_element_has_read_aloud_false` - readAloud属性
   - `test_code_element_escapes_special_chars` - XMLエスケープ
-- [ ] T037 `make test` がFAIL (RED) することを確認
-- [ ] T038 RED出力を生成: specs/014-code-block-tagging/red-tests/ph4-test.md
+- [x] T037 `make test` がFAIL (RED) することを確認
+- [x] T038 RED出力を生成: specs/014-code-block-tagging/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
