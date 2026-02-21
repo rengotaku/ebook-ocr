@@ -12,8 +12,12 @@ output/
 # IDE / Tools
 .serena/
 .claude/settings.local.json
+.claude/homunculus/
 .vscode/
 .idea/
+
+# Samples / Test data
+samples/
 
 # OS
 .DS_Store
