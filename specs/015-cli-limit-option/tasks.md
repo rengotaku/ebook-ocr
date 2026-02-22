@@ -98,21 +98,21 @@
 
 ### Input
 
-- [ ] T026 セットアップ分析を読み込み: specs/015-cli-limit-option/tasks/ph1-output.md
-- [ ] T027 前フェーズ出力を読み込み: specs/015-cli-limit-option/tasks/ph2-output.md
+- [x] T026 セットアップ分析を読み込み: specs/015-cli-limit-option/tasks/ph1-output.md
+- [x] T027 前フェーズ出力を読み込み: specs/015-cli-limit-option/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T028 [P] [US2] 後方互換性テストを追加: tests/cli/test_limit_backward_compat.py
+- [x] T028 [P] [US2] 後方互換性テストを追加: tests/cli/test_limit_backward_compat.py
   - test_deduplicate_without_limit_processes_all
   - test_detect_layout_without_limit_processes_all
   - test_run_ocr_without_limit_processes_all
   - test_consolidate_without_limit_processes_all
-- [ ] T029 [P] [US2] limit > 画像数のエッジケーステストを追加: tests/cli/test_limit_edge_cases.py
+- [x] T029 [P] [US2] limit > 画像数のエッジケーステストを追加: tests/cli/test_limit_edge_cases.py
   - test_limit_greater_than_file_count
   - test_limit_one_file
-- [ ] T030 `make test` FAILを確認 (RED)
-- [ ] T031 REDテスト出力を生成: specs/015-cli-limit-option/red-tests/ph3-test.md
+- [x] T030 `make test` FAILを確認 (RED)
+- [x] T031 REDテスト出力を生成: specs/015-cli-limit-option/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
