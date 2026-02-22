@@ -116,14 +116,14 @@
 
 ### Implementation (GREEN)
 
-- [ ] T032 REDテストを読み込み: specs/015-cli-limit-option/red-tests/ph3-test.md
-- [ ] T033 [US2] エッジケース対応を確認・調整（必要に応じて）: src/cli/*.py
-- [ ] T034 `make test` PASSを確認 (GREEN)
+- [x] T032 REDテストを読み込み: specs/015-cli-limit-option/red-tests/ph3-test.md
+- [x] T033 [US2] エッジケース対応を確認・調整（必要に応じて）: src/cli/*.py
+- [x] T034 `make test` PASSを確認 (GREEN)
 
 ### Verification
 
-- [ ] T035 `make test` で全テストがパスすることを確認（US1含む）
-- [ ] T036 フェーズ出力を生成: specs/015-cli-limit-option/tasks/ph3-output.md
+- [x] T035 `make test` で全テストがパスすることを確認（US1含む）
+- [x] T036 フェーズ出力を生成: specs/015-cli-limit-option/tasks/ph3-output.md
 
 **Checkpoint**: User Story 1 AND 2 が両方独立して動作
 

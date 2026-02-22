@@ -61,6 +61,8 @@ class TestDetectLayoutBackwardCompat:
         Verifies FR-007: backward compatibility when --limit is omitted.
         Checks that no limiting message is printed and all pages are processed.
         """
+        import json
+
         pages_dir = tmp_path / "pages"
         pages_dir.mkdir()
         output_dir = tmp_path / "output"
@@ -87,9 +89,14 @@ class TestDetectLayoutBackwardCompat:
         # No limiting message should appear
         assert "Processing first" not in result.stderr
 
-        # All 5 pages should have layout results
-        output_files = sorted(output_dir.glob("*.json"))
-        assert len(output_files) == 5, f"Expected 5 layout results (all pages processed), got {len(output_files)}"
+        # detect_layout outputs a single layout.json with all pages
+        layout_json = output_dir / "layout.json"
+        assert layout_json.exists(), "layout.json should be created"
+
+        # Check that all 5 pages are in the layout data
+        with open(layout_json) as f:
+            layout_data = json.load(f)
+        assert len(layout_data) == 5, f"Expected 5 pages in layout.json, got {len(layout_data)}"
 
 
 class TestRunOcrBackwardCompat:
@@ -178,25 +185,26 @@ class TestConsolidateBackwardCompat:
 
 
 def _write_distinct_png(path: Path, *, color_r: int = 255) -> None:
-    """Write a minimal valid 1x1 PNG file with a distinct color."""
-    import struct
-    import zlib
+    """Write a distinct PNG file that won't be detected as duplicate by perceptual hash.
 
-    signature = b"\x89PNG\r\n\x1a\n"
-    ihdr_data = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
-    ihdr = _png_chunk(b"IHDR", ihdr_data)
-    # Use different R value to make each image distinct
-    raw_data = b"\x00" + bytes([color_r & 0xFF, 0x00, 0xFF])
-    compressed = zlib.compress(raw_data)
-    idat = _png_chunk(b"IDAT", compressed)
-    iend = _png_chunk(b"IEND", b"")
-    path.write_bytes(signature + ihdr + idat + iend)
+    Creates a larger image with unique patterns to ensure perceptual hash differences.
+    """
+    from PIL import Image
 
+    # Create a 16x16 image with a unique pattern based on color_r
+    # This ensures perceptual hash will detect them as different
+    img = Image.new("RGB", (16, 16))
+    pixels = img.load()
 
-def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
-    """Create a PNG chunk with CRC."""
-    import struct
-    import zlib
+    # Create a unique pattern for each image
+    for y in range(16):
+        for x in range(16):
+            # Different patterns based on color_r to ensure hash differences
+            if (x + y + color_r // 50) % 3 == 0:
+                pixels[x, y] = (color_r & 0xFF, 0, 0)
+            elif (x + y + color_r // 50) % 3 == 1:
+                pixels[x, y] = (0, color_r & 0xFF, 0)
+            else:
+                pixels[x, y] = (0, 0, color_r & 0xFF)
 
-    chunk = chunk_type + data
-    return struct.pack(">I", len(data)) + chunk + struct.pack(">I", zlib.crc32(chunk) & 0xFFFFFFFF)
+    img.save(path)
