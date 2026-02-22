@@ -47,25 +47,25 @@
 
 ### Input
 
-- [ ] T006 前フェーズ出力を読み込み: specs/015-cli-limit-option/tasks/ph1-output.md
+- [x] T006 前フェーズ出力を読み込み: specs/015-cli-limit-option/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T007 [P] [US1] deduplicateのlimitテストを実装: tests/cli/test_deduplicate_limit.py
+- [x] T007 [P] [US1] deduplicateのlimitテストを実装: tests/cli/test_deduplicate_limit.py
   - test_limit_processes_only_n_files
   - test_no_limit_processes_all_files
   - test_limit_stderr_message
-- [ ] T008 [P] [US1] detect_layoutのlimitテストを実装: tests/cli/test_detect_layout_limit.py
+- [x] T008 [P] [US1] detect_layoutのlimitテストを実装: tests/cli/test_detect_layout_limit.py
   - test_limit_processes_only_n_pages
   - test_no_limit_processes_all_pages
-- [ ] T009 [P] [US1] run_ocrのlimitテストを実装: tests/cli/test_run_ocr_limit.py
+- [x] T009 [P] [US1] run_ocrのlimitテストを実装: tests/cli/test_run_ocr_limit.py
   - test_limit_processes_only_n_pages
   - test_no_limit_processes_all_pages
-- [ ] T010 [P] [US1] consolidateのlimitテストを実装: tests/cli/test_consolidate_limit.py
+- [x] T010 [P] [US1] consolidateのlimitテストを実装: tests/cli/test_consolidate_limit.py
   - test_limit_processes_only_n_files
   - test_no_limit_processes_all_files
-- [ ] T011 `make test` FAILを確認 (RED)
-- [ ] T012 REDテスト出力を生成: specs/015-cli-limit-option/red-tests/ph2-test.md
+- [x] T011 `make test` FAILを確認 (RED)
+- [x] T012 REDテスト出力を生成: specs/015-cli-limit-option/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
