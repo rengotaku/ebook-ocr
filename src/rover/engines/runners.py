@@ -318,7 +318,7 @@ def run_easyocr_with_boxes(
 
         # Apply CLAHE preprocessing if enabled
         if apply_preprocessing:
-            from ocr_preprocess import apply_clahe
+            from src.ocr_preprocess import apply_clahe
 
             img_array = apply_clahe(img_array)
 
