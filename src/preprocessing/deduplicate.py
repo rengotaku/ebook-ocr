@@ -10,6 +10,8 @@ def deduplicate_frames(
     frame_dir: str,
     output_dir: str,
     hash_threshold: int = 8,
+    *,
+    limit: int | None = None,
 ) -> list[Path]:
     """Remove duplicate frames based on perceptual hash similarity.
 
@@ -21,15 +23,21 @@ def deduplicate_frames(
         output_dir: Directory to save deduplicated frames.
         hash_threshold: Max hamming distance to consider frames as duplicates.
             Lower = stricter (fewer kept). 8 is a good default.
+        limit: Process only first N files (for testing).
 
     Returns:
         Sorted list of unique frame paths.
     """
+    import sys
+
     src = Path(frame_dir)
     dst = Path(output_dir)
     dst.mkdir(parents=True, exist_ok=True)
 
     frames = sorted(src.glob("frame_*.png"))
+    if limit:
+        print(f"Processing first {limit} of {len(frames)} files", file=sys.stderr)
+        frames = frames[:limit]
     if not frames:
         print("No frames found")
         return []

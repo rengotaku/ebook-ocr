@@ -210,6 +210,8 @@ def detect_layout_yomitoku(
     output_dir: str,
     layouts_dir: str | None = None,
     device: str = "cpu",
+    *,
+    limit: int | None = None,
 ) -> dict:
     """Detect layout using yomitoku and generate layout.json + visualizations.
 
@@ -220,10 +222,12 @@ def detect_layout_yomitoku(
         output_dir: Directory to save layout.json
         layouts_dir: Directory to save layout visualizations (defaults to output_dir/layouts)
         device: Device for yomitoku ("cpu" or "cuda")
+        limit: Process only first N files (for testing)
 
     Returns:
         Layout dict mapping page filenames to regions
     """
+    import sys
 
     pages_path = Path(pages_dir)
     out_path = Path(output_dir)
@@ -231,6 +235,9 @@ def detect_layout_yomitoku(
     lay_dir.mkdir(parents=True, exist_ok=True)
 
     pages = sorted(pages_path.glob("*.png"))
+    if limit:
+        print(f"Processing first {limit} of {len(pages)} files", file=sys.stderr)
+        pages = pages[:limit]
     if not pages:
         print("No page images found")
         return {}

@@ -99,6 +99,23 @@ build-book: setup ## [LEGACY] Build book.txt from ROVER outputs (use consolidate
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make build-book HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)"
 
+# === Testing ===
+
+LIMIT ?=
+
+test-run: setup ## Quick test run with limited images (Usage: make test-run VIDEO=input.mov LIMIT=25)
+	@test -n "$(VIDEO)" || { echo "Error: VIDEO required. Usage: make test-run VIDEO=input.mov LIMIT=25"; exit 1; }
+	$(eval HASH := $(shell PYTHONPATH=$(CURDIR) $(PYTHON) -m src.preprocessing.hash "$(VIDEO)" --prefix-only))
+	$(eval HASHDIR := output/$(HASH)-test)
+	$(eval LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),))
+	@echo "=== Test Run (LIMIT=$(LIMIT)) ==="
+	@$(MAKE) extract-frames VIDEO="$(VIDEO)" HASHDIR="$(HASHDIR)"
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.deduplicate "$(HASHDIR)/frames" -o "$(HASHDIR)/pages" $(LIMIT_OPT)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.detect_layout "$(HASHDIR)/pages" -o "$(HASHDIR)/layout" $(LIMIT_OPT)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.run_ocr "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output" --layout-dir "$(HASHDIR)/layout" $(LIMIT_OPT)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)" $(LIMIT_OPT)
+	@echo "=== Test run complete: $(HASHDIR) ==="
+
 # === Book Converter ===
 
 converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml [THRESHOLD=0.5] [VERBOSE=1])

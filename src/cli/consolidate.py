@@ -14,6 +14,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Consolidate OCR results")
     parser.add_argument("ocr_dir", help="OCR directory")
     parser.add_argument("-o", "--output", required=True, help="Output directory")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Process only first N files (for testing)",
+    )
     args = parser.parse_args()
 
     # Validate input
@@ -30,7 +35,7 @@ def main() -> int:
 
     # Call existing function
     try:
-        consolidate_rover_output(args.ocr_dir)
+        consolidate_rover_output(args.ocr_dir, limit=args.limit)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

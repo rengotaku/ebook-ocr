@@ -69,22 +69,22 @@
 
 ### Implementation (GREEN)
 
-- [ ] T013 REDテストを読み込み: specs/015-cli-limit-option/red-tests/ph2-test.md
-- [ ] T014 [P] [US1] deduplicate CLIに--limitオプションを追加: src/cli/deduplicate.py
-- [ ] T015 [P] [US1] deduplicate基盤関数にlimitパラメータを追加: src/preprocessing/deduplicate.py
-- [ ] T016 [P] [US1] detect_layout CLIに--limitオプションを追加: src/cli/detect_layout.py
-- [ ] T017 [P] [US1] detect_layout基盤関数にlimitパラメータを追加: src/layout/detector.py
-- [ ] T018 [P] [US1] run_ocr CLIに--limitオプションを追加: src/cli/run_ocr.py
-- [ ] T019 [P] [US1] run_ocr基盤関数にlimitパラメータを追加: src/rover/ensemble.py
-- [ ] T020 [P] [US1] consolidate CLIに--limitオプションを追加: src/cli/consolidate.py
-- [ ] T021 [P] [US1] consolidate基盤関数にlimitパラメータを追加: src/consolidate.py
-- [ ] T022 [US1] Makefileにtest-runターゲットを追加: Makefile
-- [ ] T023 `make test` PASSを確認 (GREEN)
+- [x] T013 REDテストを読み込み: specs/015-cli-limit-option/red-tests/ph2-test.md
+- [x] T014 [P] [US1] deduplicate CLIに--limitオプションを追加: src/cli/deduplicate.py
+- [x] T015 [P] [US1] deduplicate基盤関数にlimitパラメータを追加: src/preprocessing/deduplicate.py
+- [x] T016 [P] [US1] detect_layout CLIに--limitオプションを追加: src/cli/detect_layout.py
+- [x] T017 [P] [US1] detect_layout基盤関数にlimitパラメータを追加: src/layout/detector.py
+- [x] T018 [P] [US1] run_ocr CLIに--limitオプションを追加: src/cli/run_ocr.py
+- [x] T019 [P] [US1] run_ocr基盤関数にlimitパラメータを追加: src/rover/ensemble.py
+- [x] T020 [P] [US1] consolidate CLIに--limitオプションを追加: src/cli/consolidate.py
+- [x] T021 [P] [US1] consolidate基盤関数にlimitパラメータを追加: src/consolidate.py
+- [x] T022 [US1] Makefileにtest-runターゲットを追加: Makefile
+- [x] T023 `make test` PASSを確認 (GREEN)
 
 ### Verification
 
-- [ ] T024 `make test` で全テストがパスすることを確認（リグレッションなし）
-- [ ] T025 フェーズ出力を生成: specs/015-cli-limit-option/tasks/ph2-output.md
+- [x] T024 `make test` で全テストがパスすることを確認（リグレッションなし）
+- [x] T025 フェーズ出力を生成: specs/015-cli-limit-option/tasks/ph2-output.md
 
 **Checkpoint**: User Story 1が完全に機能し、独立してテスト可能
 

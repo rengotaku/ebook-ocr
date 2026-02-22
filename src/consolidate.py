@@ -13,15 +13,18 @@ from pathlib import Path
 from src.rover.output import ROVEROutput
 
 
-def consolidate_rover_output(hashdir: str) -> tuple[str, str]:
+def consolidate_rover_output(hashdir: str, *, limit: int | None = None) -> tuple[str, str]:
     """Consolidate ROVER outputs into book.txt and book.md.
 
     Args:
         hashdir: Output directory (e.g., output/a3f8c2d1e5b7f9c0).
+        limit: Process only first N files (for testing).
 
     Returns:
         Tuple of (book_txt_path, book_md_path).
     """
+    import sys
+
     base_dir = Path(hashdir)
     ocr_output_dir = base_dir / "ocr_output"
     text_file = base_dir / "book.txt"
@@ -37,6 +40,9 @@ def consolidate_rover_output(hashdir: str) -> tuple[str, str]:
     # Consolidate ROVER results
     rover_dir = ocr_output_dir / "rover"
     rover_pages = sorted(rover_dir.glob("*.txt"))
+    if limit:
+        print(f"Processing first {limit} of {len(rover_pages)} files", file=sys.stderr)
+        rover_pages = rover_pages[:limit]
 
     if not rover_pages:
         raise FileNotFoundError(f"No ROVER output files found in: {rover_dir}")
