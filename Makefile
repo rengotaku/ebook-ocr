@@ -61,7 +61,7 @@ run-ocr: setup ## Step 4: Run ROVER multi-engine OCR (requires HASHDIR)
 
 consolidate: setup ## Step 5: Consolidate OCR results (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make consolidate HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)"
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)" -o "$(HASHDIR)"
 
 # === Full Pipeline (Convenience) ===
 
