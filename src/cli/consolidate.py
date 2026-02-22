@@ -23,7 +23,7 @@ def main() -> int:
         return 1
 
     # Check if directory has OCR results
-    ocr_output_dir = input_path / "ocr_output" / "rover"
+    ocr_output_dir = input_path / "rover"
     if not ocr_output_dir.exists() or not list(ocr_output_dir.glob("*.txt")):
         print(f"Error: No OCR results found in: {args.ocr_dir}", file=sys.stderr)
         return 1
