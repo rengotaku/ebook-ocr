@@ -31,6 +31,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # Validate --limit
+    if args.limit is not None and args.limit <= 0:
+        print("Error: --limit must be a positive integer", file=sys.stderr)
+        return 1
+
     # Validate input
     if not Path(args.pages_dir).exists():
         print(f"Error: Input not found: {args.pages_dir}", file=sys.stderr)

@@ -151,17 +151,17 @@
 
 ### Implementation (GREEN)
 
-- [ ] T042 REDテストを読み込み: specs/015-cli-limit-option/red-tests/ph4-test.md
-- [ ] T043 [P] [US3] deduplicate CLIにlimitバリデーションを追加: src/cli/deduplicate.py
-- [ ] T044 [P] [US3] detect_layout CLIにlimitバリデーションを追加: src/cli/detect_layout.py
-- [ ] T045 [P] [US3] run_ocr CLIにlimitバリデーションを追加: src/cli/run_ocr.py
-- [ ] T046 [P] [US3] consolidate CLIにlimitバリデーションを追加: src/cli/consolidate.py
-- [ ] T047 `make test` PASSを確認 (GREEN)
+- [x] T042 REDテストを読み込み: specs/015-cli-limit-option/red-tests/ph4-test.md
+- [x] T043 [P] [US3] deduplicate CLIにlimitバリデーションを追加: src/cli/deduplicate.py
+- [x] T044 [P] [US3] detect_layout CLIにlimitバリデーションを追加: src/cli/detect_layout.py
+- [x] T045 [P] [US3] run_ocr CLIにlimitバリデーションを追加: src/cli/run_ocr.py
+- [x] T046 [P] [US3] consolidate CLIにlimitバリデーションを追加: src/cli/consolidate.py
+- [x] T047 `make test` PASSを確認 (GREEN)
 
 ### Verification
 
-- [ ] T048 `make test` で全テストがパスすることを確認（US1, US2, US3含む）
-- [ ] T049 フェーズ出力を生成: specs/015-cli-limit-option/tasks/ph4-output.md
+- [x] T048 `make test` で全テストがパスすることを確認（US1, US2, US3含む）
+- [x] T049 フェーズ出力を生成: specs/015-cli-limit-option/tasks/ph4-output.md
 
 **Checkpoint**: 全User Storyが完全に機能
 

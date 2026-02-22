@@ -21,6 +21,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # Validate --limit
+    if args.limit is not None and args.limit <= 0:
+        print("Error: --limit must be a positive integer", file=sys.stderr)
+        return 1
+
     # Validate input
     input_path = Path(args.ocr_dir)
     if not input_path.exists():
