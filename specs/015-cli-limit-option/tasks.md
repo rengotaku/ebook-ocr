@@ -173,20 +173,20 @@
 
 ### Input
 
-- [ ] T050 セットアップ分析を読み込み: specs/015-cli-limit-option/tasks/ph1-output.md
-- [ ] T051 前フェーズ出力を読み込み: specs/015-cli-limit-option/tasks/ph4-output.md
+- [x] T050 セットアップ分析を読み込み: specs/015-cli-limit-option/tasks/ph1-output.md
+- [x] T051 前フェーズ出力を読み込み: specs/015-cli-limit-option/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T052 [P] 各CLIの--helpメッセージを確認・調整
-- [ ] T053 [P] quickstart.mdの手順で動作確認
-- [ ] T054 [P] コードスタイル確認: `ruff check src/cli/`
-- [ ] T055 カバレッジ確認: `make test-cov` ≥80%
+- [x] T052 [P] 各CLIの--helpメッセージを確認・調整
+- [x] T053 [P] quickstart.mdの手順で動作確認
+- [x] T054 [P] コードスタイル確認: `ruff check src/cli/`
+- [x] T055 カバレッジ確認: `make test-cov` ≥80%
 
 ### Verification
 
-- [ ] T056 `make test` で全テストがパスすることを確認
-- [ ] T057 フェーズ出力を生成: specs/015-cli-limit-option/tasks/ph5-output.md
+- [x] T056 `make test` で全テストがパスすることを確認
+- [x] T057 フェーズ出力を生成: specs/015-cli-limit-option/tasks/ph5-output.md
 
 ---
 
@@ -285,10 +285,10 @@ specs/015-cli-limit-option/
 ```
 
 **チェックリスト**:
-- [ ] ファイルリスト取得テスト
-- [ ] --limit適用テスト
-- [ ] 出力ファイル数確認テスト
-- [ ] 後方互換性テスト
+- [x] ファイルリスト取得テスト
+- [x] --limit適用テスト
+- [x] 出力ファイル数確認テスト
+- [x] 後方互換性テスト
 
 ---
 
