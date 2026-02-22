@@ -137,17 +137,17 @@
 
 ### Input
 
-- [ ] T037 セットアップ分析を読み込み: specs/015-cli-limit-option/tasks/ph1-output.md
-- [ ] T038 前フェーズ出力を読み込み: specs/015-cli-limit-option/tasks/ph3-output.md
+- [x] T037 セットアップ分析を読み込み: specs/015-cli-limit-option/tasks/ph1-output.md
+- [x] T038 前フェーズ出力を読み込み: specs/015-cli-limit-option/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T039 [P] [US3] バリデーションエラーテストを追加: tests/cli/test_limit_validation.py
+- [x] T039 [P] [US3] バリデーションエラーテストを追加: tests/cli/test_limit_validation.py
   - test_limit_zero_returns_error
   - test_limit_negative_returns_error
   - test_limit_non_integer_argparse_error
-- [ ] T040 `make test` FAILを確認 (RED)
-- [ ] T041 REDテスト出力を生成: specs/015-cli-limit-option/red-tests/ph4-test.md
+- [x] T040 `make test` FAILを確認 (RED)
+- [x] T041 REDテスト出力を生成: specs/015-cli-limit-option/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
