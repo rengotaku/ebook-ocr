@@ -16,6 +16,11 @@ OCR_TIMEOUT ?= $(shell $(call CFG,ocr_timeout))
 # Usage: make ocr HASHDIR=output/a3f8c2d1e5b7f9c0
 HASHDIR ?=
 
+# Limit option for quick testing (optional)
+# Usage: make run VIDEO=input.mp4 LIMIT=25
+LIMIT ?=
+LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),)
+
 # Book converter variables
 INPUT_MD ?=
 OUTPUT_XML ?=
@@ -41,7 +46,7 @@ extract-frames: setup ## Step 1: Extract frames from video (requires VIDEO, OUTP
 
 deduplicate: setup ## Step 2: Deduplicate frames (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make deduplicate HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.deduplicate "$(HASHDIR)/frames" -o "$(HASHDIR)/pages" -t $(THRESHOLD)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.deduplicate "$(HASHDIR)/frames" -o "$(HASHDIR)/pages" -t $(THRESHOLD) $(LIMIT_OPT)
 
 LEFT_TRIM ?= $(shell $(call CFG,spread_left_trim))
 RIGHT_TRIM ?= $(shell $(call CFG,spread_right_trim))
@@ -53,34 +58,34 @@ split-spreads: setup ## Step 2.5: Split spread images into pages (requires HASHD
 
 detect-layout: setup ## Step 3: Detect layout using yomitoku (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect-layout HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.detect_layout "$(HASHDIR)/pages" -o "$(HASHDIR)/layout" --device cpu
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.detect_layout "$(HASHDIR)/pages" -o "$(HASHDIR)/layout" --device cpu $(LIMIT_OPT)
 
 run-ocr: setup ## Step 4: Run ROVER multi-engine OCR (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make run-ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.run_ocr "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output" --layout-dir "$(HASHDIR)/layout" --device cpu
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.run_ocr "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output" --layout-dir "$(HASHDIR)/layout" --device cpu $(LIMIT_OPT)
 
 consolidate: setup ## Step 5: Consolidate OCR results (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make consolidate HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)"
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)" $(LIMIT_OPT)
 
 # === Full Pipeline (Convenience) ===
 
-run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT optional)
-	@test -n "$(VIDEO)" || { echo "Error: VIDEO required. Usage: make run VIDEO=input.mp4"; exit 1; }
+run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT optional)
+	@test -n "$(VIDEO)" || { echo "Error: VIDEO required. Usage: make run VIDEO=input.mp4 [LIMIT=25]"; exit 1; }
 	$(eval HASH := $(shell PYTHONPATH=$(CURDIR) $(PYTHON) -m src.preprocessing.hash "$(VIDEO)" --prefix-only 2>/dev/null))
 	@test -n "$(HASH)" || { echo "Error: Failed to compute hash for $(VIDEO)"; exit 1; }
 	$(eval HASHDIR := $(or $(OUTPUT),output)/$(HASH))
-	@echo "=== Output directory: $(HASHDIR) ==="
+	@echo "=== Output directory: $(HASHDIR) $(if $(LIMIT),(LIMIT=$(LIMIT)),)==="
 	@echo "=== Step 1: Extract Frames ==="
 	@$(MAKE) --no-print-directory extract-frames VIDEO="$(VIDEO)" HASHDIR="$(HASHDIR)"
 	@echo "=== Step 2: Deduplicate ==="
-	@$(MAKE) --no-print-directory deduplicate HASHDIR="$(HASHDIR)"
+	@$(MAKE) --no-print-directory deduplicate HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
 	@echo "=== Step 3: Detect Layout ==="
-	@$(MAKE) --no-print-directory detect-layout HASHDIR="$(HASHDIR)"
+	@$(MAKE) --no-print-directory detect-layout HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
 	@echo "=== Step 4: Run OCR ==="
-	@$(MAKE) --no-print-directory run-ocr HASHDIR="$(HASHDIR)"
+	@$(MAKE) --no-print-directory run-ocr HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
 	@echo "=== Step 5: Consolidate ==="
-	@$(MAKE) --no-print-directory consolidate HASHDIR="$(HASHDIR)"
+	@$(MAKE) --no-print-directory consolidate HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
 	@echo "=== Step 6: Convert to XML ==="
 	@$(MAKE) --no-print-directory converter INPUT_MD="$(HASHDIR)/book.md" OUTPUT_XML="$(HASHDIR)/book.xml"
 	@echo "=== Done: $(HASHDIR)/book.xml ==="
@@ -99,22 +104,11 @@ build-book: setup ## [LEGACY] Build book.txt from ROVER outputs (use consolidate
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make build-book HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)"
 
-# === Testing ===
+# === Quick Test (deprecated alias) ===
 
-LIMIT ?=
-
-test-run: setup ## Quick test run with limited images (Usage: make test-run VIDEO=input.mov LIMIT=25)
-	@test -n "$(VIDEO)" || { echo "Error: VIDEO required. Usage: make test-run VIDEO=input.mov LIMIT=25"; exit 1; }
-	$(eval HASH := $(shell PYTHONPATH=$(CURDIR) $(PYTHON) -m src.preprocessing.hash "$(VIDEO)" --prefix-only))
-	$(eval HASHDIR := output/$(HASH)-test)
-	$(eval LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),))
-	@echo "=== Test Run (LIMIT=$(LIMIT)) ==="
-	@$(MAKE) extract-frames VIDEO="$(VIDEO)" HASHDIR="$(HASHDIR)"
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.deduplicate "$(HASHDIR)/frames" -o "$(HASHDIR)/pages" $(LIMIT_OPT)
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.detect_layout "$(HASHDIR)/pages" -o "$(HASHDIR)/layout" $(LIMIT_OPT)
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.run_ocr "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output" --layout-dir "$(HASHDIR)/layout" $(LIMIT_OPT)
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)" $(LIMIT_OPT)
-	@echo "=== Test run complete: $(HASHDIR) ==="
+test-run: ## [DEPRECATED] Use 'make run VIDEO=x LIMIT=N' instead
+	@echo "DEPRECATED: Use 'make run VIDEO=$(VIDEO) LIMIT=$(LIMIT)' instead"
+	@$(MAKE) --no-print-directory run VIDEO="$(VIDEO)" LIMIT="$(LIMIT)"
 
 # === Book Converter ===
 
