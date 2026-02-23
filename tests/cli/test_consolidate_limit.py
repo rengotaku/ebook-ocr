@@ -30,7 +30,6 @@ class TestConsolidateLimitOption:
         ocr_output_dir = hashdir / "ocr_output"
         rover_dir = ocr_output_dir / "rover"
         rover_dir.mkdir(parents=True)
-        output_dir = tmp_path / "output"
 
         # Create 5 dummy OCR result text files
         for i in range(5):
@@ -64,7 +63,6 @@ class TestConsolidateLimitOption:
         ocr_output_dir = hashdir / "ocr_output"
         rover_dir = ocr_output_dir / "rover"
         rover_dir.mkdir(parents=True)
-        output_dir = tmp_path / "output"
 
         # Create 5 dummy OCR result text files
         for i in range(5):
