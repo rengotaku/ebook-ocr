@@ -115,23 +115,25 @@ class TestLimitGreaterThanFileCount:
 
     def test_consolidate_limit_greater_than_file_count(self, tmp_path: Path):
         """--limit 100 with only 3 files should process all 3 files without error."""
-        project_dir = tmp_path / "project"
-        ocr_output = project_dir / "ocr_output" / "rover"
-        ocr_output.mkdir(parents=True)
-        output_dir = tmp_path / "output"
+        # Structure: hashdir/ocr_output/rover/*.txt
+        hashdir = tmp_path / "project"
+        ocr_output_dir = hashdir / "ocr_output"
+        rover_dir = ocr_output_dir / "rover"
+        rover_dir.mkdir(parents=True)
 
         for i in range(3):
-            txt_file = ocr_output / f"page_{i:04d}.txt"
+            txt_file = rover_dir / f"page_{i:04d}.txt"
             txt_file.write_text(f"Page {i} content\n")
 
+        # CLI expects ocr_output_dir as first arg (like Makefile: $(HASHDIR)/ocr_output)
         result = subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "src.cli.consolidate",
-                str(project_dir),
+                str(ocr_output_dir),
                 "-o",
-                str(output_dir),
+                str(hashdir),
                 "--limit",
                 "100",
             ],
@@ -140,8 +142,8 @@ class TestLimitGreaterThanFileCount:
         )
         assert result.returncode == 0, f"Should not error when limit > file count. stderr: {result.stderr}"
 
-        # book.txt should contain all 3 pages
-        book_txt = project_dir / "book.txt"
+        # book.txt should contain all 3 pages (created in hashdir)
+        book_txt = hashdir / "book.txt"
         assert book_txt.exists(), "book.txt should be created"
         content = book_txt.read_text()
         for i in range(3):
@@ -187,23 +189,25 @@ class TestLimitOneFile:
 
     def test_consolidate_limit_one_file(self, tmp_path: Path):
         """--limit 1 should consolidate exactly the first OCR result file."""
-        project_dir = tmp_path / "project"
-        ocr_output = project_dir / "ocr_output" / "rover"
-        ocr_output.mkdir(parents=True)
-        output_dir = tmp_path / "output"
+        # Structure: hashdir/ocr_output/rover/*.txt
+        hashdir = tmp_path / "project"
+        ocr_output_dir = hashdir / "ocr_output"
+        rover_dir = ocr_output_dir / "rover"
+        rover_dir.mkdir(parents=True)
 
         for i in range(5):
-            txt_file = ocr_output / f"page_{i:04d}.txt"
+            txt_file = rover_dir / f"page_{i:04d}.txt"
             txt_file.write_text(f"Page {i} unique content\n")
 
+        # CLI expects ocr_output_dir as first arg (like Makefile: $(HASHDIR)/ocr_output)
         result = subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "src.cli.consolidate",
-                str(project_dir),
+                str(ocr_output_dir),
                 "-o",
-                str(output_dir),
+                str(hashdir),
                 "--limit",
                 "1",
             ],
@@ -212,8 +216,8 @@ class TestLimitOneFile:
         )
         assert result.returncode == 0
 
-        # book.txt should contain only page 0 content
-        book_txt = project_dir / "book.txt"
+        # book.txt should contain only page 0 content (created in hashdir)
+        book_txt = hashdir / "book.txt"
         assert book_txt.exists(), "book.txt should be created"
         content = book_txt.read_text()
         assert "Page 0 unique content" in content, "book.txt should contain page 0 content"

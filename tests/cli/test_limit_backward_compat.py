@@ -149,24 +149,26 @@ class TestConsolidateBackwardCompat:
         Verifies FR-007: backward compatibility when --limit is omitted.
         Checks that no limiting message is printed and all results are consolidated.
         """
-        project_dir = tmp_path / "project"
-        ocr_output = project_dir / "ocr_output" / "rover"
-        ocr_output.mkdir(parents=True)
-        output_dir = tmp_path / "output"
+        # Structure: hashdir/ocr_output/rover/*.txt
+        hashdir = tmp_path / "project"
+        ocr_output_dir = hashdir / "ocr_output"
+        rover_dir = ocr_output_dir / "rover"
+        rover_dir.mkdir(parents=True)
 
         # Create 5 OCR result text files
         for i in range(5):
-            txt_file = ocr_output / f"page_{i:04d}.txt"
+            txt_file = rover_dir / f"page_{i:04d}.txt"
             txt_file.write_text(f"Page {i} content line 1\nPage {i} content line 2\n")
 
+        # CLI expects ocr_output_dir as first arg, hashdir as -o
         result = subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "src.cli.consolidate",
-                str(project_dir),
+                str(ocr_output_dir),
                 "-o",
-                str(output_dir),
+                str(hashdir),
             ],
             capture_output=True,
             text=True,
@@ -176,8 +178,8 @@ class TestConsolidateBackwardCompat:
         # No limiting message should appear
         assert "Processing first" not in result.stderr
 
-        # book.txt should contain all 5 pages
-        book_txt = project_dir / "book.txt"
+        # book.txt should contain all 5 pages (created in hashdir)
+        book_txt = hashdir / "book.txt"
         assert book_txt.exists(), "book.txt should be created"
         content = book_txt.read_text()
         for i in range(5):

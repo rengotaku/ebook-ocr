@@ -25,24 +25,27 @@ class TestConsolidateLimitOption:
 
     def test_limit_processes_only_n_files(self, tmp_path: Path):
         """--limit 3 should process only the first 3 OCR result files."""
-        ocr_dir = tmp_path / "project"
-        ocr_output = ocr_dir / "ocr_output" / "rover"
-        ocr_output.mkdir(parents=True)
+        # Structure: hashdir/ocr_output/rover/*.txt
+        hashdir = tmp_path / "project"
+        ocr_output_dir = hashdir / "ocr_output"
+        rover_dir = ocr_output_dir / "rover"
+        rover_dir.mkdir(parents=True)
         output_dir = tmp_path / "output"
 
         # Create 5 dummy OCR result text files
         for i in range(5):
-            txt_file = ocr_output / f"page_{i:04d}.txt"
+            txt_file = rover_dir / f"page_{i:04d}.txt"
             txt_file.write_text(f"OCR result for page {i}")
 
+        # CLI expects ocr_output_dir as first arg (like Makefile: $(HASHDIR)/ocr_output)
         result = subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "src.cli.consolidate",
-                str(ocr_dir),
+                str(ocr_output_dir),
                 "-o",
-                str(output_dir),
+                str(hashdir),
                 "--limit",
                 "3",
             ],
@@ -56,24 +59,27 @@ class TestConsolidateLimitOption:
 
     def test_no_limit_processes_all_files(self, tmp_path: Path):
         """Without --limit, all OCR result files should be processed."""
-        ocr_dir = tmp_path / "project"
-        ocr_output = ocr_dir / "ocr_output" / "rover"
-        ocr_output.mkdir(parents=True)
+        # Structure: hashdir/ocr_output/rover/*.txt
+        hashdir = tmp_path / "project"
+        ocr_output_dir = hashdir / "ocr_output"
+        rover_dir = ocr_output_dir / "rover"
+        rover_dir.mkdir(parents=True)
         output_dir = tmp_path / "output"
 
         # Create 5 dummy OCR result text files
         for i in range(5):
-            txt_file = ocr_output / f"page_{i:04d}.txt"
+            txt_file = rover_dir / f"page_{i:04d}.txt"
             txt_file.write_text(f"OCR result for page {i}")
 
+        # CLI expects ocr_output_dir as first arg (like Makefile: $(HASHDIR)/ocr_output)
         result = subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "src.cli.consolidate",
-                str(ocr_dir),
+                str(ocr_output_dir),
                 "-o",
-                str(output_dir),
+                str(hashdir),
             ],
             capture_output=True,
             text=True,

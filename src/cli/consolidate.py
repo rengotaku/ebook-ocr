@@ -33,14 +33,16 @@ def main() -> int:
         return 1
 
     # Check if directory has OCR results
-    ocr_output_dir = input_path / "ocr_output" / "rover"
-    if not ocr_output_dir.exists() or not list(ocr_output_dir.glob("*.txt")):
+    # input_path is already the ocr_output directory, so check for rover subdir directly
+    rover_dir = input_path / "rover"
+    if not rover_dir.exists() or not list(rover_dir.glob("*.txt")):
         print(f"Error: No OCR results found in: {args.ocr_dir}", file=sys.stderr)
         return 1
 
     # Call existing function
+    # The function expects hashdir (parent directory), which is args.output
     try:
-        consolidate_rover_output(args.ocr_dir, limit=args.limit)
+        consolidate_rover_output(args.output, limit=args.limit)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
