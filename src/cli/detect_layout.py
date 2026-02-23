@@ -20,7 +20,17 @@ def main() -> int:
         default="cpu",
         help="Device to use (default: cpu)",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Process only first N files (for testing)",
+    )
     args = parser.parse_args()
+
+    # Validate --limit
+    if args.limit is not None and args.limit <= 0:
+        print("Error: --limit must be a positive integer", file=sys.stderr)
+        return 1
 
     # Validate input
     if not Path(args.pages_dir).exists():
@@ -29,7 +39,7 @@ def main() -> int:
 
     # Call existing function
     try:
-        detect_layout(args.pages_dir, args.output, device=args.device)
+        detect_layout(args.pages_dir, args.output, device=args.device, limit=args.limit)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

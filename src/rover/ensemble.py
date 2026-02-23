@@ -213,6 +213,8 @@ def run_rover_batch(
     primary_engine: str = "yomitoku",
     device: str = "cpu",
     min_agreement: int = 2,
+    *,
+    limit: int | None = None,
 ) -> list[tuple[str, ROVERResult]]:
     """Run ROVER OCR on all pages in a directory.
 
@@ -223,14 +225,20 @@ def run_rover_batch(
         primary_engine: Primary engine.
         device: Device for Yomitoku.
         min_agreement: Minimum engines that must agree.
+        limit: Process only first N files (for testing).
 
     Returns:
         List of (page_name, ROVERResult) tuples.
     """
+    import sys
+
     pages_path = Path(pages_dir)
     output = ROVEROutput(output_dir)
 
     pages = sorted(pages_path.glob("*.png"))
+    if limit:
+        print(f"Processing first {limit} of {len(pages)} files", file=sys.stderr)
+        pages = pages[:limit]
     all_results: list[tuple[str, ROVERResult]] = []
 
     print(f"Running ROVER OCR on {len(pages)} pages...")

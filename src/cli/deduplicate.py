@@ -21,7 +21,17 @@ def main() -> int:
         default=8,
         help="Hash distance threshold (default: 8)",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Process only first N files (for testing)",
+    )
     args = parser.parse_args()
+
+    # Validate --limit
+    if args.limit is not None and args.limit <= 0:
+        print("Error: --limit must be a positive integer", file=sys.stderr)
+        return 1
 
     # Validate input
     input_path = Path(args.input_dir)
@@ -40,7 +50,7 @@ def main() -> int:
 
     # Call existing function
     try:
-        deduplicate_frames(args.input_dir, args.output, args.threshold)
+        deduplicate_frames(args.input_dir, args.output, args.threshold, limit=args.limit)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
