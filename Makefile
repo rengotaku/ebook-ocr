@@ -106,9 +106,8 @@ build-book: setup ## [LEGACY] Build book.txt from ROVER outputs (use consolidate
 
 # === Quick Test (deprecated alias) ===
 
-test-run: ## [DEPRECATED] Use 'make run VIDEO=x LIMIT=N' instead
-	@echo "DEPRECATED: Use 'make run VIDEO=$(VIDEO) LIMIT=$(LIMIT)' instead"
-	@$(MAKE) --no-print-directory run VIDEO="$(VIDEO)" LIMIT="$(LIMIT)"
+test-run: ## Quick test with LIMIT=25 default (Usage: make test-run VIDEO=input.mov)
+	@$(MAKE) --no-print-directory run VIDEO="$(VIDEO)" LIMIT="$(or $(LIMIT),25)"
 
 # === Book Converter ===
 
