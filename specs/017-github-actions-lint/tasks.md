@@ -79,22 +79,22 @@
 
 ### Input
 
-- [ ] T013 Read setup analysis: `specs/017-github-actions-lint/tasks/ph1-output.md`
-- [ ] T014 Read previous phase output: `specs/017-github-actions-lint/tasks/ph2-output.md`
+- [x] T013 Read setup analysis: `specs/017-github-actions-lint/tasks/ph1-output.md`
+- [x] T014 Read previous phase output: `specs/017-github-actions-lint/tasks/ph2-output.md`
 
 ### Implementation
 
-- [ ] T015 [US1] lint.ymlをruffジョブとpylintジョブに分離: `.github/workflows/lint.yml`
-- [ ] T016 [US1] ruffジョブでMakefileターゲットを使用するよう変更: `.github/workflows/lint.yml`
-- [ ] T017 [US1] pylintジョブでMakefileターゲットを使用するよう変更: `.github/workflows/lint.yml`
-- [ ] T018 [US1] pathsフィルタを削除（常に実行）: `.github/workflows/lint.yml`
-- [ ] T019 [US1] fail-underオプションを削除: `.github/workflows/lint.yml`
+- [x] T015 [US1] lint.ymlをruffジョブとpylintジョブに分離: `.github/workflows/lint.yml`
+- [x] T016 [US1] ruffジョブでMakefileターゲットを使用するよう変更: `.github/workflows/lint.yml`
+- [x] T017 [US1] pylintジョブでMakefileターゲットを使用するよう変更: `.github/workflows/lint.yml`
+- [x] T018 [US1] pathsフィルタを削除（常に実行）: `.github/workflows/lint.yml`
+- [x] T019 [US1] fail-underオプションを削除: `.github/workflows/lint.yml`
 
 ### Verification
 
-- [ ] T020 `make lint` を実行してローカルで成功することを確認
-- [ ] T021 変更をコミット
-- [ ] T022 Edit and rename: `specs/017-github-actions-lint/tasks/ph3-output-template.md` → `ph3-output.md`
+- [x] T020 `make lint` を実行してローカルで成功することを確認
+- [ ] T021 変更をコミット - SKIP (親エージェントが実行)
+- [x] T022 Edit and rename: `specs/017-github-actions-lint/tasks/ph3-output-template.md` → `ph3-output.md`
 
 **Checkpoint**: PR作成時にCIが自動実行され、ruffとpylintの結果が個別に確認可能
 
