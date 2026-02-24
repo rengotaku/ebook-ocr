@@ -50,18 +50,18 @@
 
 ### Input
 
-- [ ] T007 前フェーズの出力を読む: specs/018-spread-mode-trim/tasks/ph1-output.md
+- [x] T007 前フェーズの出力を読む: specs/018-spread-mode-trim/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T008 [P] [US1] mode=single でコピーのみのテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T009 [P] [US1] mode=spread で常に分割のテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T010 [P] [US1] デフォルト mode=single のテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T011 [P] [US1] 環境変数 SPREAD_MODE 読み込みのテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T012 [P] [US1] CLI引数が環境変数より優先されるテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T013 [P] [US1] モード表示（stdout）のテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T014 `make test` で FAIL を確認 (RED)
-- [ ] T015 RED 出力を生成: specs/018-spread-mode-trim/red-tests/ph2-test.md
+- [x] T008 [P] [US1] mode=single でコピーのみのテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T009 [P] [US1] mode=spread で常に分割のテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T010 [P] [US1] デフォルト mode=single のテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T011 [P] [US1] 環境変数 SPREAD_MODE 読み込みのテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T012 [P] [US1] CLI引数が環境変数より優先されるテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T013 [P] [US1] モード表示（stdout）のテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T014 `make test` で FAIL を確認 (RED)
+- [x] T015 RED 出力を生成: specs/018-spread-mode-trim/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 

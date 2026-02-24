@@ -66,7 +66,7 @@ description: "Task list template for feature implementation (TDD workflow)"
 
 - [ ] T001 Read current implementation in src/[relevant files]
 - [ ] T002 [P] Read existing tests in src/tests/[relevant test files]
-- [ ] T003 Edit and rename: specs/[###-feature-name]/tasks/ph1-output-template.md → ph1-output.md
+- [ ] T003 Edit: specs/[###-feature-name]/tasks/ph1-output.md
 
 ---
 
@@ -99,7 +99,7 @@ description: "Task list template for feature implementation (TDD workflow)"
 ### Verification
 
 - [ ] T015 Verify `make test` passes all tests (no regressions)
-- [ ] T016 Edit and rename: specs/[###-feature-name]/tasks/ph2-output-template.md → ph2-output.md
+- [ ] T016 Edit: specs/[###-feature-name]/tasks/ph2-output.md
 
 **Checkpoint**: User Story 1 should be fully functional and testable independently
 
@@ -133,7 +133,7 @@ description: "Task list template for feature implementation (TDD workflow)"
 ### Verification
 
 - [ ] T027 Verify `make test` passes all tests (including regressions from US1)
-- [ ] T028 Edit and rename: specs/[###-feature-name]/tasks/ph3-output-template.md → ph3-output.md
+- [ ] T028 Edit: specs/[###-feature-name]/tasks/ph3-output.md
 
 **Checkpoint**: User Stories 1 AND 2 should both work independently
 
@@ -162,7 +162,7 @@ description: "Task list template for feature implementation (TDD workflow)"
 ### Verification
 
 - [ ] TXXX Run `make test` to verify all tests pass after cleanup
-- [ ] TXXX Edit and rename: specs/[###-feature-name]/tasks/phN-output-template.md → phN-output.md
+- [ ] TXXX Edit: specs/[###-feature-name]/tasks/phN-output.md
 
 ---
 
