@@ -136,17 +136,17 @@
 
 ### Input
 
-- [ ] T049 Setup 分析を読む: specs/018-spread-mode-trim/tasks/ph1-output.md
-- [ ] T050 前フェーズの出力を読む: specs/018-spread-mode-trim/tasks/ph3-output.md
+- [x] T049 Setup 分析を読む: specs/018-spread-mode-trim/tasks/ph1-output.md
+- [x] T050 前フェーズの出力を読む: specs/018-spread-mode-trim/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T051 [P] [US3] preview-extract ターゲットのテスト実装: tests/test_makefile_targets.py
-- [ ] T052 [P] [US3] preview-trim ターゲットのテスト実装: tests/test_makefile_targets.py
-- [ ] T053 [P] [US3] preview/ 空時のエラーハンドリングテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T054 [P] [US3] make run に split-spreads 統合のテスト実装: tests/test_makefile_targets.py
-- [ ] T055 `make test` で FAIL を確認 (RED)
-- [ ] T056 RED 出力を生成: specs/018-spread-mode-trim/red-tests/ph4-test.md
+- [x] T051 [P] [US3] preview-extract ターゲットのテスト実装: tests/test_makefile_targets.py
+- [x] T052 [P] [US3] preview-trim ターゲットのテスト実装: tests/test_makefile_targets.py
+- [x] T053 [P] [US3] preview/ 空時のエラーハンドリングテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T054 [P] [US3] make run に split-spreads 統合のテスト実装: tests/test_makefile_targets.py
+- [x] T055 `make test` で FAIL を確認 (RED)
+- [x] T056 RED 出力を生成: specs/018-spread-mode-trim/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 

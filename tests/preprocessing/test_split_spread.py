@@ -1,4 +1,4 @@
-"""Tests for SpreadMode and TrimConfig (US1 Phase 2 + US2 Phase 3).
+"""Tests for SpreadMode and TrimConfig (US1 Phase 2 + US2 Phase 3 + US3 Phase 4).
 
 Tests for:
 - T008: mode=single copies without splitting
@@ -12,6 +12,7 @@ Tests for:
 - T033: global-trim -> split-trim ordering
 - T034: single mode with global-trim
 - T035: trim value validation (out of range)
+- T053: preview/ empty directory error handling
 """
 
 from pathlib import Path
@@ -872,3 +873,269 @@ class TestTrimEdgeCases:
         first = Image.open(result[0])
         assert first.size[1] == 900
         first.close()
+
+
+# ===========================================================================
+# Phase 4: US3 - パイプライン統合とプレビュー
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def preview_hash_dir(tmp_path: Path) -> Path:
+    """Create a hash directory structure for preview testing."""
+    hash_dir = tmp_path / "preview_test"
+    hash_dir.mkdir(parents=True)
+    return hash_dir
+
+
+@pytest.fixture()
+def preview_frames_dir(preview_hash_dir: Path) -> Path:
+    """Create preview/frames/ directory with sample images."""
+    frames_dir = preview_hash_dir / "preview" / "frames"
+    frames_dir.mkdir(parents=True)
+    for i in range(3):
+        img = Image.new("RGB", (2000, 1000), color="white")
+        img.save(frames_dir / f"page_{i + 1:04d}.png")
+        img.close()
+    return frames_dir
+
+
+@pytest.fixture()
+def empty_preview_dir(preview_hash_dir: Path) -> Path:
+    """Create empty preview/ directory (no frames subdirectory)."""
+    preview_dir = preview_hash_dir / "preview"
+    preview_dir.mkdir(parents=True)
+    return preview_dir
+
+
+@pytest.fixture()
+def empty_preview_frames_dir(preview_hash_dir: Path) -> Path:
+    """Create preview/frames/ directory with no images."""
+    frames_dir = preview_hash_dir / "preview" / "frames"
+    frames_dir.mkdir(parents=True)
+    return frames_dir
+
+
+# ===========================================================================
+# T053: preview/ empty directory error handling
+# ===========================================================================
+
+
+class TestPreviewEmptyErrorHandling:
+    """preview/ が空のときの split_spreads のエラーハンドリング."""
+
+    def test_preview_dir_not_exists_raises_error(self, preview_hash_dir: Path) -> None:
+        """preview/ directory does not exist raises FileNotFoundError or appropriate error."""
+        non_existent = preview_hash_dir / "preview" / "frames"
+        # Attempting to process non-existent preview dir should raise error
+        with pytest.raises((FileNotFoundError, ValueError, OSError)):
+            split_spread_pages(
+                str(non_existent),
+                mode=SpreadMode.SPREAD,
+            )
+
+    def test_preview_frames_empty_returns_empty_list(self, empty_preview_frames_dir: Path) -> None:
+        """Empty preview/frames/ directory returns empty list with warning."""
+        result = split_spread_pages(
+            str(empty_preview_frames_dir),
+            mode=SpreadMode.SPREAD,
+        )
+        assert result == []
+
+    def test_preview_frames_empty_prints_warning(
+        self, empty_preview_frames_dir: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Empty preview/frames/ directory prints a warning message."""
+        split_spread_pages(
+            str(empty_preview_frames_dir),
+            mode=SpreadMode.SPREAD,
+        )
+        captured = capsys.readouterr()
+        assert "no page images" in captured.out.lower() or "found" in captured.out.lower()
+
+    def test_preview_trim_without_frames_error_message(
+        self, empty_preview_dir: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """When preview exists but frames/ is missing, provide guidance to run preview-extract first."""
+        # This tests the CLI-level error handling for preview-trim
+        # When frames directory doesn't exist, user should be told to run preview-extract first
+        from src.cli.split_spreads import preview_trim_check  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        with pytest.raises((FileNotFoundError, SystemExit, ValueError)):
+            preview_trim_check(str(empty_preview_dir))
+
+    def test_preview_trim_check_with_frames_present(self, preview_frames_dir: Path) -> None:
+        """preview_trim_check succeeds when frames exist."""
+        from src.cli.split_spreads import preview_trim_check  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        # Should not raise any error
+        result = preview_trim_check(str(preview_frames_dir.parent))
+        assert result is True or result is None  # Either returns True or None (no error)
+
+    def test_preview_trim_check_with_empty_frames_dir(self, empty_preview_frames_dir: Path) -> None:
+        """preview_trim_check fails when frames/ exists but is empty."""
+        from src.cli.split_spreads import preview_trim_check  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        with pytest.raises((FileNotFoundError, ValueError, SystemExit)):
+            preview_trim_check(str(empty_preview_frames_dir.parent))
+
+
+class TestPreviewTrimProcessing:
+    """preview-trim の処理テスト: フレームに trim を適用して trimmed/ に出力."""
+
+    def test_preview_trim_creates_trimmed_directory(self, preview_frames_dir: Path) -> None:
+        """preview-trim creates preview/trimmed/ directory."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        preview_dir = preview_frames_dir.parent
+        trim_cfg = TrimConfig(global_top=0.02)
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg)
+        trimmed_dir = preview_dir / "trimmed"
+        assert trimmed_dir.exists(), "trimmed/ directory should be created"
+
+    def test_preview_trim_outputs_to_trimmed_dir(self, preview_frames_dir: Path) -> None:
+        """preview-trim outputs trimmed images to preview/trimmed/."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        preview_dir = preview_frames_dir.parent
+        trim_cfg = TrimConfig(global_top=0.02)
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg)
+        trimmed_dir = preview_dir / "trimmed"
+        trimmed_files = list(trimmed_dir.glob("*.png"))
+        # 3 frames in spread mode -> 6 output files (L and R for each)
+        assert len(trimmed_files) == 6
+
+    def test_preview_trim_does_not_modify_original_frames(self, preview_frames_dir: Path) -> None:
+        """preview-trim does NOT modify or delete original frames."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        preview_dir = preview_frames_dir.parent
+        original_count = len(list(preview_frames_dir.glob("*.png")))
+        trim_cfg = TrimConfig(global_top=0.02)
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg)
+        # Original frames should still exist
+        assert len(list(preview_frames_dir.glob("*.png"))) == original_count
+
+    def test_preview_trim_applies_global_trim(self, preview_frames_dir: Path) -> None:
+        """preview-trim applies global trim to output images."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        preview_dir = preview_frames_dir.parent
+        trim_cfg = TrimConfig(global_top=0.1)  # 10% from top
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg)
+        trimmed_dir = preview_dir / "trimmed"
+        trimmed_files = sorted(trimmed_dir.glob("*.png"))
+        assert len(trimmed_files) > 0
+        first = Image.open(trimmed_files[0])
+        # Original: 2000x1000, top 10% = 100px removed, then split -> 1000x900
+        assert first.size[1] == 900
+        first.close()
+
+    def test_preview_trim_single_mode_no_split(self, preview_frames_dir: Path) -> None:
+        """preview-trim in single mode does not split images."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        preview_dir = preview_frames_dir.parent
+        trim_cfg = TrimConfig(global_top=0.1)
+        preview_trim(str(preview_dir), mode=SpreadMode.SINGLE, trim_config=trim_cfg)
+        trimmed_dir = preview_dir / "trimmed"
+        trimmed_files = list(trimmed_dir.glob("*.png"))
+        # 3 frames in single mode -> 3 output files (no splitting)
+        assert len(trimmed_files) == 3
+
+    def test_preview_trim_rerun_overwrites_previous(self, preview_frames_dir: Path) -> None:
+        """Re-running preview-trim with new parameters overwrites previous output."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        preview_dir = preview_frames_dir.parent
+
+        # First run
+        trim_cfg1 = TrimConfig(global_top=0.1)
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg1)
+        trimmed_dir = preview_dir / "trimmed"
+        first_files = sorted(trimmed_dir.glob("*.png"))
+        first_img = Image.open(first_files[0])
+        first_height = first_img.size[1]
+        first_img.close()
+
+        # Second run with different params
+        trim_cfg2 = TrimConfig(global_top=0.2)
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg2)
+        second_files = sorted(trimmed_dir.glob("*.png"))
+        second_img = Image.open(second_files[0])
+        second_height = second_img.size[1]
+        second_img.close()
+
+        # Heights should be different (different trim values)
+        assert first_height != second_height
+        # Second run: 1000 * 0.2 = 200px removed -> 800 height
+        assert second_height == 800
+
+
+class TestPreviewEdgeCases:
+    """プレビュー機能のエッジケーステスト."""
+
+    def test_preview_trim_with_none_trim_config(self, preview_frames_dir: Path) -> None:
+        """preview-trim with None trim_config still processes (no trim applied)."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        preview_dir = preview_frames_dir.parent
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=None)
+        trimmed_dir = preview_dir / "trimmed"
+        trimmed_files = list(trimmed_dir.glob("*.png"))
+        # Even without trim, should split and output
+        assert len(trimmed_files) == 6
+
+    def test_preview_trim_with_default_trim_config(self, preview_frames_dir: Path) -> None:
+        """preview-trim with default TrimConfig (all zeros) produces split without trim."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        preview_dir = preview_frames_dir.parent
+        trim_cfg = TrimConfig()
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg)
+        trimmed_dir = preview_dir / "trimmed"
+        trimmed_files = sorted(trimmed_dir.glob("*.png"))
+        first = Image.open(trimmed_files[0])
+        # No trim: 2000/2 = 1000x1000
+        assert first.size == (1000, 1000)
+        first.close()
+
+    def test_preview_trim_unicode_path(self, tmp_path: Path) -> None:
+        """preview-trim handles Unicode characters in path."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        hash_dir = tmp_path / "unicode_test"
+        frames_dir = hash_dir / "preview" / "frames"
+        frames_dir.mkdir(parents=True)
+        img = Image.new("RGB", (2000, 1000), color="white")
+        img.save(frames_dir / "page_0001.png")
+        img.close()
+        preview_dir = hash_dir / "preview"
+        trim_cfg = TrimConfig()
+        # Should not raise an error
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg)
+
+    def test_preview_trim_large_batch(self, tmp_path: Path) -> None:
+        """preview-trim processes large batch of frames."""
+        from src.cli.split_spreads import preview_trim  # noqa: F401 - Phase 4 RED: not yet implemented
+
+        hash_dir = tmp_path / "large_batch"
+        frames_dir = hash_dir / "preview" / "frames"
+        frames_dir.mkdir(parents=True)
+        # Create 20 frames
+        for i in range(20):
+            img = Image.new("RGB", (2000, 1000), color="white")
+            img.save(frames_dir / f"page_{i + 1:04d}.png")
+            img.close()
+        preview_dir = hash_dir / "preview"
+        trim_cfg = TrimConfig(global_top=0.05)
+        preview_trim(str(preview_dir), mode=SpreadMode.SPREAD, trim_config=trim_cfg)
+        trimmed_dir = preview_dir / "trimmed"
+        trimmed_files = list(trimmed_dir.glob("*.png"))
+        # 20 frames in spread mode -> 40 files
+        assert len(trimmed_files) == 40
