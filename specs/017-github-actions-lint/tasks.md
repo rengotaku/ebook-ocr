@@ -93,7 +93,7 @@
 ### Verification
 
 - [x] T020 `make lint` を実行してローカルで成功することを確認
-- [ ] T021 変更をコミット - SKIP (親エージェントが実行)
+- [x] T021 変更をコミット (661af46)
 - [x] T022 Edit and rename: `specs/017-github-actions-lint/tasks/ph3-output-template.md` → `ph3-output.md`
 
 **Checkpoint**: PR作成時にCIが自動実行され、ruffとpylintの結果が個別に確認可能
@@ -118,7 +118,7 @@
 ### Verification
 
 - [x] T026 YAMLの構文チェック（`python -c "import yaml; yaml.safe_load(open('.github/workflows/lint.yml'))"`)
-- [ ] T027 変更をコミット - SKIP (親エージェントが実行)
+- [x] T027 変更をコミット (bdb2826)
 - [x] T028 Edit and rename: `specs/017-github-actions-lint/tasks/ph4-output-template.md` → `ph4-output.md`
 
 **Checkpoint**: mainブランチへのpush時にCIがトリガーされる設定が完了
@@ -131,19 +131,19 @@
 
 ### Input
 
-- [ ] T029 Read setup analysis: `specs/017-github-actions-lint/tasks/ph1-output.md`
-- [ ] T030 Read previous phase output: `specs/017-github-actions-lint/tasks/ph4-output.md`
+- [x] T029 Read setup analysis: `specs/017-github-actions-lint/tasks/ph1-output.md`
+- [x] T030 Read previous phase output: `specs/017-github-actions-lint/tasks/ph4-output.md`
 
 ### Implementation
 
-- [ ] T031 [P] 既存のlintエラーがあれば修正
-- [ ] T032 [P] CLAUDE.mdの更新が必要か確認
+- [x] T031 [P] 既存のlintエラーがあれば修正
+- [x] T032 [P] CLAUDE.mdの更新が必要か確認
 
 ### Verification
 
-- [ ] T033 `make lint` で全体のlintチェックが通ることを確認
-- [ ] T034 PRを作成してCI動作確認
-- [ ] T035 Edit and rename: `specs/017-github-actions-lint/tasks/ph5-output-template.md` → `ph5-output.md`
+- [x] T033 `make lint` で全体のlintチェックが通ることを確認
+- [ ] T034 PRを作成してCI動作確認 - SKIP (ユーザーが後で実行)
+- [x] T035 Edit and rename: `specs/017-github-actions-lint/tasks/ph5-output-template.md` → `ph5-output.md`
 
 ---
 
