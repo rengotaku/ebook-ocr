@@ -52,20 +52,20 @@
 
 ### Input
 
-- [ ] T005 Read previous phase output: `specs/017-github-actions-lint/tasks/ph1-output.md`
+- [x] T005 Read previous phase output: `specs/017-github-actions-lint/tasks/ph1-output.md`
 
 ### Implementation
 
-- [ ] T006 [US3] Makefileに`ruff`ターゲットを追加: `Makefile`
-- [ ] T007 [US3] Makefileに`pylint`ターゲットを追加: `Makefile`
-- [ ] T008 [US3] Makefileに`lint`ターゲットを追加（ruff + pylint）: `Makefile`
+- [x] T006 [US3] Makefileに`ruff`ターゲットを追加: `Makefile`
+- [x] T007 [US3] Makefileに`pylint`ターゲットを追加: `Makefile`
+- [x] T008 [US3] Makefileに`lint`ターゲットを追加（ruff + pylint）: `Makefile`
 
 ### Verification
 
-- [ ] T009 `make ruff` を実行して動作確認
-- [ ] T010 `make pylint` を実行して動作確認
-- [ ] T011 `make lint` を実行して動作確認
-- [ ] T012 Edit and rename: `specs/017-github-actions-lint/tasks/ph2-output-template.md` → `ph2-output.md`
+- [x] T009 `make ruff` を実行して動作確認
+- [x] T010 `make pylint` を実行して動作確認
+- [x] T011 `make lint` を実行して動作確認
+- [x] T012 Edit and rename: `specs/017-github-actions-lint/tasks/ph2-output-template.md` → `ph2-output.md`
 
 **Checkpoint**: `make lint` がローカルで正常動作すること
 

@@ -25,7 +25,7 @@ LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),)
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate build-book test test-book-converter test-cov converter convert-sample clean clean-all
+.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate build-book test test-book-converter test-cov converter convert-sample ruff pylint lint clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -133,6 +133,17 @@ test-cov: setup ## Run tests with coverage
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
 
 coverage: test-cov ## Alias for test-cov
+
+# === Linting ===
+
+ruff: ## Run ruff linter
+	ruff check src/ tests/
+	ruff format --check src/ tests/
+
+pylint: ## Run pylint static analysis
+	pylint --rcfile=pyproject.toml src/
+
+lint: ruff pylint ## Run all linters (ruff + pylint)
 
 # === Cleanup ===
 
