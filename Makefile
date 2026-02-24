@@ -52,10 +52,22 @@ SPREAD_MODE ?= $(shell $(call CFG,spread_mode))
 LEFT_TRIM ?= $(shell $(call CFG,spread_left_trim))
 RIGHT_TRIM ?= $(shell $(call CFG,spread_right_trim))
 ASPECT_RATIO ?= $(shell $(call CFG,spread_aspect_ratio))
+GLOBAL_TRIM_TOP ?= $(shell $(call CFG,global_trim_top))
+GLOBAL_TRIM_BOTTOM ?= $(shell $(call CFG,global_trim_bottom))
+GLOBAL_TRIM_LEFT ?= $(shell $(call CFG,global_trim_left))
+GLOBAL_TRIM_RIGHT ?= $(shell $(call CFG,global_trim_right))
 
 split-spreads: setup ## Step 2.5: Split spread images into pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.split_spreads "$(HASHDIR)/pages" --mode $(SPREAD_MODE) --left-trim $(LEFT_TRIM) --right-trim $(RIGHT_TRIM) --aspect-ratio $(ASPECT_RATIO)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.split_spreads "$(HASHDIR)/pages" \
+		--mode $(SPREAD_MODE) \
+		--left-trim $(LEFT_TRIM) \
+		--right-trim $(RIGHT_TRIM) \
+		--aspect-ratio $(ASPECT_RATIO) \
+		--global-trim-top $(GLOBAL_TRIM_TOP) \
+		--global-trim-bottom $(GLOBAL_TRIM_BOTTOM) \
+		--global-trim-left $(GLOBAL_TRIM_LEFT) \
+		--global-trim-right $(GLOBAL_TRIM_RIGHT)
 
 detect-layout: setup ## Step 3: Detect layout using yomitoku (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect-layout HASHDIR=output/<hash>"; exit 1; }

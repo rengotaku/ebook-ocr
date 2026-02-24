@@ -109,20 +109,20 @@
 
 ### Implementation (GREEN)
 
-- [ ] T038 RED テストを読む: specs/018-spread-mode-trim/red-tests/ph3-test.md
-- [ ] T039 [P] [US2] TrimConfig dataclass を追加: src/preprocessing/split_spread.py
-- [ ] T040 [P] [US2] apply_global_trim() 関数を追加: src/preprocessing/split_spread.py
-- [ ] T041 [P] [US2] validate_trim_value() 関数を追加: src/preprocessing/split_spread.py
-- [ ] T042 [US2] split_spread_pages() に global-trim 統合: src/preprocessing/split_spread.py
-- [ ] T043 [P] [US2] CLI に --global-trim-* 引数を追加: src/cli/split_spreads.py
-- [ ] T044 [P] [US2] config.yaml に global_trim_* 設定を追加: config.yaml
-- [ ] T045 [P] [US2] Makefile に GLOBAL_TRIM_* 変数を追加: Makefile
-- [ ] T046 `make test` で PASS を確認 (GREEN)
+- [x] T038 RED テストを読む: specs/018-spread-mode-trim/red-tests/ph3-test.md
+- [x] T039 [P] [US2] TrimConfig dataclass を追加: src/preprocessing/split_spread.py
+- [x] T040 [P] [US2] apply_global_trim() 関数を追加: src/preprocessing/split_spread.py
+- [x] T041 [P] [US2] validate_trim_value() 関数を追加: src/preprocessing/split_spread.py
+- [x] T042 [US2] split_spread_pages() に global-trim 統合: src/preprocessing/split_spread.py
+- [x] T043 [P] [US2] CLI に --global-trim-* 引数を追加: src/cli/split_spreads.py
+- [x] T044 [P] [US2] config.yaml に global_trim_* 設定を追加: config.yaml
+- [x] T045 [P] [US2] Makefile に GLOBAL_TRIM_* 変数を追加: Makefile
+- [x] T046 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T047 `make test` で全テスト通過を確認（US1 含むリグレッションなし）
-- [ ] T048 Edit: specs/018-spread-mode-trim/tasks/ph3-output.md
+- [x] T047 `make test` で全テスト通過を確認（US1 含むリグレッションなし）
+- [x] T048 Edit: specs/018-spread-mode-trim/tasks/ph3-output.md
 
 **Checkpoint**: US1 および US2 が独立して機能すること
 

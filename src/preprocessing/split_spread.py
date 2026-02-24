@@ -5,6 +5,7 @@ It splits them into individual page images for proper OCR processing.
 """
 
 import os
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
@@ -16,6 +17,87 @@ class SpreadMode(Enum):
 
     SINGLE = "single"
     SPREAD = "spread"
+
+
+@dataclass
+class TrimConfig:
+    """Configuration for image trimming operations.
+
+    Supports two-stage trimming:
+    1. Global trim: Applied before splitting (all 4 sides)
+    2. Split trim: Applied after splitting (outer edges only, spread mode only)
+
+    All trim values are percentages (0.0-0.5) of the image dimension.
+    Values >= 0.5 are invalid (would remove half or more of the image).
+    """
+
+    # Global trim (applied before splitting)
+    global_top: float = 0.0
+    global_bottom: float = 0.0
+    global_left: float = 0.0
+    global_right: float = 0.0
+
+    # Split trim (applied after splitting, spread mode only)
+    left_page_outer: float = 0.0
+    right_page_outer: float = 0.0
+
+    def __post_init__(self) -> None:
+        """Validate all trim values are in valid range [0.0, 0.5)."""
+        validate_trim_value(self.global_top, "global_top")
+        validate_trim_value(self.global_bottom, "global_bottom")
+        validate_trim_value(self.global_left, "global_left")
+        validate_trim_value(self.global_right, "global_right")
+        validate_trim_value(self.left_page_outer, "left_page_outer")
+        validate_trim_value(self.right_page_outer, "right_page_outer")
+
+
+def validate_trim_value(value: float, field_name: str) -> None:
+    """Validate that a trim value is within acceptable range.
+
+    Args:
+        value: Trim percentage (0.0-0.5).
+        field_name: Name of the field being validated (for error messages).
+
+    Raises:
+        ValueError: If value is outside [0.0, 0.5) range.
+    """
+    if not (0.0 <= value < 0.5):
+        raise ValueError(
+            f"Invalid trim value for {field_name}: {value}. Must be between 0.0 (inclusive) and 0.5 (exclusive)."
+        )
+
+
+def apply_global_trim(img: Image.Image, trim_config: TrimConfig) -> Image.Image:
+    """Apply global trim to image before splitting.
+
+    Trims the specified percentage from each side of the image.
+    Returns a new image (does not modify the original).
+
+    Args:
+        img: PIL Image to trim.
+        trim_config: Trim configuration with global trim values.
+
+    Returns:
+        New PIL Image with global trim applied.
+    """
+    width, height = img.size
+
+    # Calculate trim pixels
+    top_px = int(height * trim_config.global_top)
+    bottom_px = int(height * trim_config.global_bottom)
+    left_px = int(width * trim_config.global_left)
+    right_px = int(width * trim_config.global_right)
+
+    # Calculate crop box (left, upper, right, lower)
+    crop_box = (
+        left_px,
+        top_px,
+        width - right_px,
+        height - bottom_px,
+    )
+
+    # Return cropped image
+    return img.crop(crop_box)
 
 
 def get_spread_mode(cli_mode: str | None = None) -> SpreadMode:
@@ -114,12 +196,17 @@ def split_spread_pages(
     left_trim_pct: float = 0.0,
     right_trim_pct: float = 0.0,
     mode: SpreadMode | None = None,
+    trim_config: TrimConfig | None = None,
 ) -> list[Path]:
     """Split all spread images in a directory into separate pages.
 
     Supports iterative adjustment:
     - First run: moves originals to originals/ subfolder, splits to pages/
     - Subsequent runs: re-splits from originals/ with new settings
+
+    Supports two-stage trimming:
+    1. Global trim (trim_config): Applied before splitting to all images
+    2. Split trim (left_trim_pct/right_trim_pct): Applied after splitting (spread mode only)
 
     Args:
         pages_dir: Directory containing page images.
@@ -129,6 +216,7 @@ def split_spread_pages(
         left_trim_pct: Percentage to trim from left edge of left page (0.0-1.0).
         right_trim_pct: Percentage to trim from right edge of right page (0.0-1.0).
         mode: Processing mode (SINGLE or SPREAD). If None, uses get_spread_mode().
+        trim_config: Global trim configuration. If None, no global trim is applied.
 
     Returns:
         List of output file paths (includes both split and non-split pages).
@@ -180,6 +268,10 @@ def split_spread_pages(
     for page_path in pages:
         img = Image.open(page_path)
 
+        # Apply global trim first (before splitting)
+        if trim_config is not None:
+            img = apply_global_trim(img, trim_config)
+
         # Determine whether to split based on mode
         should_split = False
         if mode == SpreadMode.SPREAD:
@@ -190,8 +282,15 @@ def split_spread_pages(
             should_split = False
 
         if should_split:
+            # Determine split-trim values (trim_config takes priority)
+            split_left_trim = left_trim_pct
+            split_right_trim = right_trim_pct
+            if trim_config is not None:
+                split_left_trim = trim_config.left_page_outer
+                split_right_trim = trim_config.right_page_outer
+
             # Split into left and right
-            left_page, right_page = split_spread(img, overlap_px, left_trim_pct, right_trim_pct)
+            left_page, right_page = split_spread(img, overlap_px, split_left_trim, split_right_trim)
 
             # Generate output names: page_0001.png → page_0001_L.png, page_0001_R.png
             stem = page_path.stem
