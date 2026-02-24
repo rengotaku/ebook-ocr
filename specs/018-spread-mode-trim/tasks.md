@@ -94,18 +94,18 @@
 
 ### Input
 
-- [ ] T029 Setup 分析を読む: specs/018-spread-mode-trim/tasks/ph1-output.md
-- [ ] T030 前フェーズの出力を読む: specs/018-spread-mode-trim/tasks/ph2-output.md
+- [x] T029 Setup 分析を読む: specs/018-spread-mode-trim/tasks/ph1-output.md
+- [x] T030 前フェーズの出力を読む: specs/018-spread-mode-trim/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T031 [P] [US2] global-trim-top/bottom 適用のテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T032 [P] [US2] global-trim-left/right 適用のテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T033 [P] [US2] global-trim → split-trim の順序テスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T034 [P] [US2] 単ページモードでの global-trim テスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T035 [P] [US2] trim 値範囲外（0.5以上）エラーテスト実装: tests/preprocessing/test_split_spread.py
-- [ ] T036 `make test` で FAIL を確認 (RED)
-- [ ] T037 RED 出力を生成: specs/018-spread-mode-trim/red-tests/ph3-test.md
+- [x] T031 [P] [US2] global-trim-top/bottom 適用のテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T032 [P] [US2] global-trim-left/right 適用のテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T033 [P] [US2] global-trim → split-trim の順序テスト実装: tests/preprocessing/test_split_spread.py
+- [x] T034 [P] [US2] 単ページモードでの global-trim テスト実装: tests/preprocessing/test_split_spread.py
+- [x] T035 [P] [US2] trim 値範囲外（0.5以上）エラーテスト実装: tests/preprocessing/test_split_spread.py
+- [x] T036 `make test` で FAIL を確認 (RED)
+- [x] T037 RED 出力を生成: specs/018-spread-mode-trim/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 

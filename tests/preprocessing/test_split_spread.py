@@ -1,4 +1,4 @@
-"""Tests for SpreadMode explicit mode specification (US1 - Phase 2).
+"""Tests for SpreadMode and TrimConfig (US1 Phase 2 + US2 Phase 3).
 
 Tests for:
 - T008: mode=single copies without splitting
@@ -7,6 +7,11 @@ Tests for:
 - T011: SPREAD_MODE environment variable
 - T012: CLI argument priority over env var
 - T013: mode display on stdout
+- T031: global-trim-top/bottom application
+- T032: global-trim-left/right application
+- T033: global-trim -> split-trim ordering
+- T034: single mode with global-trim
+- T035: trim value validation (out of range)
 """
 
 from pathlib import Path
@@ -17,8 +22,11 @@ from PIL import Image
 
 from src.preprocessing.split_spread import (
     SpreadMode,
+    TrimConfig,  # noqa: F401 - Phase 3 RED: not yet implemented
+    apply_global_trim,  # noqa: F401 - Phase 3 RED: not yet implemented
     get_spread_mode,
     split_spread_pages,
+    validate_trim_value,  # noqa: F401 - Phase 3 RED: not yet implemented
 )
 
 # ---------------------------------------------------------------------------
@@ -355,3 +363,512 @@ class TestSpreadModeEdgeCases:
         # Should have page_0001.png only (no _L/_R)
         non_lr_pages = [p for p in pages if "_L" not in p.stem and "_R" not in p.stem]
         assert len(non_lr_pages) == 1
+
+
+# ===========================================================================
+# Phase 3: US2 - 2段階 Trim 制御
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def trim_spread_image(tmp_path: Path) -> Path:
+    """Create a spread image (1000x500) with colored borders for trim verification.
+
+    Image layout (1000x500):
+    - Top 10px (2%): red border
+    - Bottom 10px (2%): blue border
+    - Left 10px (1%): green border
+    - Right 10px (1%): yellow border
+    - Center: white
+    """
+    hash_dir = tmp_path / "trim_test"
+    pages_dir = hash_dir / "pages"
+    pages_dir.mkdir(parents=True)
+    img = Image.new("RGB", (1000, 500), color="white")
+    # Draw colored borders for verification
+    pixels = img.load()
+    # Top border: red (2% of 500 = 10px)
+    for x in range(1000):
+        for y in range(10):
+            pixels[x, y] = (255, 0, 0)
+    # Bottom border: blue (2% of 500 = 10px)
+    for x in range(1000):
+        for y in range(490, 500):
+            pixels[x, y] = (255, 0, 255)
+    # Left border: green (1% of 1000 = 10px)
+    for x in range(10):
+        for y in range(10, 490):
+            pixels[x, y] = (0, 255, 0)
+    # Right border: yellow (1% of 1000 = 10px)
+    for x in range(990, 1000):
+        for y in range(10, 490):
+            pixels[x, y] = (255, 255, 0)
+    path = pages_dir / "page_0001.png"
+    img.save(path)
+    img.close()
+    return pages_dir
+
+
+@pytest.fixture()
+def large_spread_image(tmp_path: Path) -> Path:
+    """Create a large spread image (2000x1000) for trim tests."""
+    hash_dir = tmp_path / "large_trim"
+    pages_dir = hash_dir / "pages"
+    pages_dir.mkdir(parents=True)
+    img = Image.new("RGB", (2000, 1000), color="white")
+    path = pages_dir / "page_0001.png"
+    img.save(path)
+    img.close()
+    return pages_dir
+
+
+# ===========================================================================
+# T031: global-trim-top/bottom application
+# ===========================================================================
+
+
+class TestGlobalTrimTopBottom:
+    """global-trim-top/bottom が分割前の画像に正しく適用される."""
+
+    def test_global_trim_top_reduces_height(self, trim_spread_image: Path) -> None:
+        """global_top=0.02 removes 2% from top (10px from 500px height)."""
+        trim_cfg = TrimConfig(global_top=0.02)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Original: 1000x500, top 2% removed = 1000x490
+        assert trimmed.size == (1000, 490)
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_bottom_reduces_height(self, trim_spread_image: Path) -> None:
+        """global_bottom=0.02 removes 2% from bottom."""
+        trim_cfg = TrimConfig(global_bottom=0.02)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Original: 1000x500, bottom 2% removed = 1000x490
+        assert trimmed.size == (1000, 490)
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_top_and_bottom_combined(self, trim_spread_image: Path) -> None:
+        """global_top=0.02 + global_bottom=0.02 removes 4% total height."""
+        trim_cfg = TrimConfig(global_top=0.02, global_bottom=0.02)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Original: 1000x500, top+bottom 2% each = 1000x480
+        assert trimmed.size == (1000, 480)
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_top_removes_top_border(self, trim_spread_image: Path) -> None:
+        """After top trim, the red top border (10px) should be removed."""
+        trim_cfg = TrimConfig(global_top=0.02)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Top-left pixel should NOT be red anymore (border was removed)
+        top_pixel = trimmed.getpixel((500, 0))
+        assert top_pixel != (255, 0, 0), "Red top border should have been trimmed"
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_zero_top_bottom_no_change(self, trim_spread_image: Path) -> None:
+        """global_top=0.0, global_bottom=0.0 does not change image height."""
+        trim_cfg = TrimConfig(global_top=0.0, global_bottom=0.0)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        assert trimmed.size == (1000, 500)
+        img.close()
+        trimmed.close()
+
+
+# ===========================================================================
+# T032: global-trim-left/right application
+# ===========================================================================
+
+
+class TestGlobalTrimLeftRight:
+    """global-trim-left/right が分割前の画像に正しく適用される."""
+
+    def test_global_trim_left_reduces_width(self, trim_spread_image: Path) -> None:
+        """global_left=0.01 removes 1% from left (10px from 1000px width)."""
+        trim_cfg = TrimConfig(global_left=0.01)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Original: 1000x500, left 1% removed = 990x500
+        assert trimmed.size == (990, 500)
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_right_reduces_width(self, trim_spread_image: Path) -> None:
+        """global_right=0.01 removes 1% from right."""
+        trim_cfg = TrimConfig(global_right=0.01)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Original: 1000x500, right 1% removed = 990x500
+        assert trimmed.size == (990, 500)
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_left_and_right_combined(self, trim_spread_image: Path) -> None:
+        """global_left=0.01 + global_right=0.01 removes 2% total width."""
+        trim_cfg = TrimConfig(global_left=0.01, global_right=0.01)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Original: 1000x500, left+right 1% each = 980x500
+        assert trimmed.size == (980, 500)
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_all_sides(self, trim_spread_image: Path) -> None:
+        """All four global trim values applied simultaneously."""
+        trim_cfg = TrimConfig(global_top=0.02, global_bottom=0.02, global_left=0.01, global_right=0.01)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # 1000 - 10 - 10 = 980 width, 500 - 10 - 10 = 480 height
+        assert trimmed.size == (980, 480)
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_left_removes_left_border(self, trim_spread_image: Path) -> None:
+        """After left trim, the green left border should be removed."""
+        trim_cfg = TrimConfig(global_left=0.01)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Left edge pixel should NOT be green anymore
+        left_pixel = trimmed.getpixel((0, 250))
+        assert left_pixel != (0, 255, 0), "Green left border should have been trimmed"
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_zero_all_no_change(self, trim_spread_image: Path) -> None:
+        """All zeros produces identical image dimensions."""
+        trim_cfg = TrimConfig()
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        assert trimmed.size == (1000, 500)
+        img.close()
+        trimmed.close()
+
+
+# ===========================================================================
+# T033: global-trim -> split-trim ordering
+# ===========================================================================
+
+
+class TestTrimOrdering:
+    """global-trim が分割前に適用され、split-trim が分割後に適用される順序."""
+
+    def test_global_trim_then_split_produces_correct_width(self, large_spread_image: Path) -> None:
+        """global-trim reduces image first, then split divides the trimmed image."""
+        trim_cfg = TrimConfig(global_left=0.05, global_right=0.05)
+        # Original: 2000x1000
+        # After global trim: 2000 - 100 - 100 = 1800x1000
+        # After spread split: each half = 900x1000
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        right = Image.open(result[1])
+        # Each half of 1800px = 900px
+        assert left.size[0] == 900
+        assert right.size[0] == 900
+        left.close()
+        right.close()
+
+    def test_global_trim_then_split_trim_combined(self, large_spread_image: Path) -> None:
+        """Both global-trim and split-trim applied in correct order."""
+        trim_cfg = TrimConfig(
+            global_left=0.05,
+            global_right=0.05,
+            left_page_outer=0.1,
+            right_page_outer=0.1,
+        )
+        # Original: 2000x1000
+        # After global trim: 1800x1000
+        # After split: each 900x1000
+        # After split-trim: left outer 10% = 90px removed, right outer 10% = 90px removed
+        # Left page: 900 - 90 = 810px, Right page: 900 - 90 = 810px
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        right = Image.open(result[1])
+        assert left.size[0] == 810
+        assert right.size[0] == 810
+        left.close()
+        right.close()
+
+    def test_global_trim_top_bottom_then_split_preserves_height(self, large_spread_image: Path) -> None:
+        """global-trim top/bottom affects height, split does not."""
+        trim_cfg = TrimConfig(global_top=0.1, global_bottom=0.1)
+        # Original: 2000x1000
+        # After global trim: 2000x800 (100px top + 100px bottom removed)
+        # After split: each 1000x800
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        assert left.size == (1000, 800)
+        left.close()
+
+    def test_split_trim_not_applied_without_global_trim(self, large_spread_image: Path) -> None:
+        """split-trim works independently of global-trim."""
+        trim_cfg = TrimConfig(left_page_outer=0.1, right_page_outer=0.1)
+        # Original: 2000x1000
+        # No global trim -> split: each 1000x1000
+        # Split-trim: 10% of 1000 = 100px removed from outer edges
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        right = Image.open(result[1])
+        assert left.size[0] == 900
+        assert right.size[0] == 900
+        left.close()
+        right.close()
+
+    def test_default_trim_config_no_trimming(self, large_spread_image: Path) -> None:
+        """Default TrimConfig (all zeros) means no trimming at all."""
+        trim_cfg = TrimConfig()
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        # No trim: 2000/2 = 1000px each half
+        assert left.size == (1000, 1000)
+        left.close()
+
+
+# ===========================================================================
+# T034: single mode with global-trim
+# ===========================================================================
+
+
+class TestSingleModeGlobalTrim:
+    """単ページモードでも global-trim が適用される."""
+
+    def test_single_mode_applies_global_trim(self, trim_spread_image: Path) -> None:
+        """global-trim is applied even in single mode."""
+        trim_cfg = TrimConfig(global_top=0.02, global_bottom=0.02)
+        result = split_spread_pages(
+            str(trim_spread_image),
+            mode=SpreadMode.SINGLE,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 1
+        output = Image.open(result[0])
+        # Original: 1000x500, top+bottom 2% = 1000x480
+        assert output.size == (1000, 480)
+        output.close()
+
+    def test_single_mode_global_trim_all_sides(self, trim_spread_image: Path) -> None:
+        """All four global-trim values applied in single mode."""
+        trim_cfg = TrimConfig(global_top=0.02, global_bottom=0.02, global_left=0.01, global_right=0.01)
+        result = split_spread_pages(
+            str(trim_spread_image),
+            mode=SpreadMode.SINGLE,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 1
+        output = Image.open(result[0])
+        assert output.size == (980, 480)
+        output.close()
+
+    def test_single_mode_split_trim_ignored(self, trim_spread_image: Path) -> None:
+        """split-trim (left_page_outer/right_page_outer) is ignored in single mode."""
+        trim_cfg = TrimConfig(left_page_outer=0.1, right_page_outer=0.1)
+        result = split_spread_pages(
+            str(trim_spread_image),
+            mode=SpreadMode.SINGLE,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 1
+        output = Image.open(result[0])
+        # Split-trim should NOT be applied in single mode
+        assert output.size == (1000, 500)
+        output.close()
+
+    def test_single_mode_no_trim_config_preserves_original(self, trim_spread_image: Path) -> None:
+        """No trim_config in single mode preserves original dimensions."""
+        result = split_spread_pages(
+            str(trim_spread_image),
+            mode=SpreadMode.SINGLE,
+        )
+        assert len(result) == 1
+        output = Image.open(result[0])
+        assert output.size == (1000, 500)
+        output.close()
+
+
+# ===========================================================================
+# T035: trim value validation (0.5 or above is error)
+# ===========================================================================
+
+
+class TestTrimValidation:
+    """trim 値の範囲検証: 0.0 <= x < 0.5."""
+
+    def test_validate_trim_value_zero_valid(self) -> None:
+        """0.0 is a valid trim value."""
+        validate_trim_value(0.0, "test_field")
+
+    def test_validate_trim_value_small_valid(self) -> None:
+        """Small positive value (0.01) is valid."""
+        validate_trim_value(0.01, "test_field")
+
+    def test_validate_trim_value_just_below_half_valid(self) -> None:
+        """0.49 is valid (just below 0.5 threshold)."""
+        validate_trim_value(0.49, "test_field")
+
+    def test_validate_trim_value_half_invalid(self) -> None:
+        """0.5 is invalid (would trim half the image)."""
+        with pytest.raises(ValueError, match="0.5"):
+            validate_trim_value(0.5, "test_field")
+
+    def test_validate_trim_value_above_half_invalid(self) -> None:
+        """Values above 0.5 are invalid."""
+        with pytest.raises(ValueError, match="0.8"):
+            validate_trim_value(0.8, "test_field")
+
+    def test_validate_trim_value_one_invalid(self) -> None:
+        """1.0 is invalid (would remove entire dimension)."""
+        with pytest.raises(ValueError, match="1.0"):
+            validate_trim_value(1.0, "test_field")
+
+    def test_validate_trim_value_negative_invalid(self) -> None:
+        """Negative values are invalid."""
+        with pytest.raises(ValueError, match="-0.1"):
+            validate_trim_value(-0.1, "test_field")
+
+    def test_validate_trim_value_field_name_in_error(self) -> None:
+        """Error message includes the field name for debugging."""
+        with pytest.raises(ValueError, match="global_top"):
+            validate_trim_value(0.5, "global_top")
+
+    def test_trim_config_validates_on_creation(self) -> None:
+        """TrimConfig validates all values on construction."""
+        with pytest.raises(ValueError):
+            TrimConfig(global_top=0.6)
+
+    def test_trim_config_validates_negative_on_creation(self) -> None:
+        """TrimConfig rejects negative values on construction."""
+        with pytest.raises(ValueError):
+            TrimConfig(global_left=-0.01)
+
+    def test_trim_config_validates_all_fields(self) -> None:
+        """TrimConfig validates every field, not just the first."""
+        with pytest.raises(ValueError):
+            TrimConfig(global_top=0.0, global_bottom=0.0, global_left=0.0, right_page_outer=0.5)
+
+
+# ===========================================================================
+# Phase 3: Edge Cases
+# ===========================================================================
+
+
+class TestTrimEdgeCases:
+    """Trim 機能のエッジケーステスト."""
+
+    def test_trim_config_default_all_zeros(self) -> None:
+        """Default TrimConfig has all values set to 0.0."""
+        cfg = TrimConfig()
+        assert cfg.global_top == 0.0
+        assert cfg.global_bottom == 0.0
+        assert cfg.global_left == 0.0
+        assert cfg.global_right == 0.0
+        assert cfg.left_page_outer == 0.0
+        assert cfg.right_page_outer == 0.0
+
+    def test_apply_global_trim_returns_new_image(self, trim_spread_image: Path) -> None:
+        """apply_global_trim returns a new Image, not mutated original."""
+        trim_cfg = TrimConfig(global_top=0.02)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        # Original should remain unchanged
+        assert img.size == (1000, 500)
+        assert trimmed.size == (1000, 490)
+        assert trimmed is not img
+        img.close()
+        trimmed.close()
+
+    def test_apply_global_trim_with_none_raises(self) -> None:
+        """apply_global_trim with None image raises error."""
+        trim_cfg = TrimConfig(global_top=0.02)
+        with pytest.raises((TypeError, AttributeError)):
+            apply_global_trim(None, trim_cfg)
+
+    def test_apply_global_trim_very_small_image(self, tmp_path: Path) -> None:
+        """Global trim on a very small image (10x10) still works."""
+        img = Image.new("RGB", (10, 10), color="white")
+        trim_cfg = TrimConfig(global_top=0.1)
+        trimmed = apply_global_trim(img, trim_cfg)
+        # 10 * 0.1 = 1px removed from top
+        assert trimmed.size == (10, 9)
+        img.close()
+        trimmed.close()
+
+    def test_apply_global_trim_large_image(self, tmp_path: Path) -> None:
+        """Global trim on a large image (4000x3000)."""
+        img = Image.new("RGB", (4000, 3000), color="white")
+        trim_cfg = TrimConfig(global_top=0.05, global_bottom=0.05)
+        trimmed = apply_global_trim(img, trim_cfg)
+        # 3000 * 0.05 = 150px removed each side
+        assert trimmed.size == (4000, 2700)
+        img.close()
+        trimmed.close()
+
+    def test_trim_config_with_unicode_special_chars_in_error(self) -> None:
+        """Validation error with special field names works correctly."""
+        with pytest.raises(ValueError):
+            validate_trim_value(0.5, "global_top")
+
+    def test_global_trim_preserves_image_mode(self, trim_spread_image: Path) -> None:
+        """apply_global_trim preserves the image color mode (RGB)."""
+        trim_cfg = TrimConfig(global_top=0.02)
+        img = Image.open(trim_spread_image / "page_0001.png")
+        trimmed = apply_global_trim(img, trim_cfg)
+        assert trimmed.mode == img.mode
+        img.close()
+        trimmed.close()
+
+    def test_global_trim_with_spread_multiple_images(self, tmp_path: Path) -> None:
+        """Multiple images all receive global trim in spread mode."""
+        hash_dir = tmp_path / "multi"
+        pages_dir = hash_dir / "pages"
+        pages_dir.mkdir(parents=True)
+        for i in range(3):
+            img = Image.new("RGB", (2000, 1000), color="white")
+            img.save(pages_dir / f"page_{i + 1:04d}.png")
+            img.close()
+        trim_cfg = TrimConfig(global_top=0.1)
+        result = split_spread_pages(
+            str(pages_dir),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        # 3 images split into 6
+        assert len(result) == 6
+        # Check height of first output: 1000 - 100 = 900
+        first = Image.open(result[0])
+        assert first.size[1] == 900
+        first.close()
