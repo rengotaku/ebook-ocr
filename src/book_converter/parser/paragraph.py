@@ -170,13 +170,14 @@ def parse_paragraph(lines: list[str]) -> Paragraph | None:
 
     Example:
         >>> parse_paragraph(["Line 1", "Line 2"])
-        Paragraph(text="Line 1\\nLine 2", read_aloud=True)
+        Paragraph(text="Line 1Line 2", read_aloud=True)
     """
     if not lines:
         return None
 
-    # Join lines and strip whitespace
-    text = "\n".join(lines).strip()
+    # Join lines without delimiter (blank) and normalize whitespace
+    text = "".join(line.strip() for line in lines)
+    text = re.sub(r"\s+", " ", text).strip()
 
     if not text:
         return None
