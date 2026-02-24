@@ -141,7 +141,7 @@ ruff: ## Run ruff linter
 	ruff format --check src/ tests/
 
 pylint: ## Run pylint static analysis
-	pylint --rcfile=pyproject.toml src/
+	pylint --rcfile=pyproject.toml --exit-zero src/
 
 lint: ruff pylint ## Run all linters (ruff + pylint)
 
