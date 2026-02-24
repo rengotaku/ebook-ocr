@@ -35,10 +35,10 @@
 
 **Purpose**: 既存実装の確認と変更箇所の特定
 
-- [ ] T001 既存のワークフロー確認: `.github/workflows/lint.yml`
-- [ ] T002 [P] 既存のMakefile確認: `Makefile`
-- [ ] T003 [P] 既存のpyproject.toml設定確認: `pyproject.toml`
-- [ ] T004 Edit and rename: `specs/017-github-actions-lint/tasks/ph1-output-template.md` → `ph1-output.md`
+- [x] T001 既存のワークフロー確認: `.github/workflows/lint.yml`
+- [x] T002 [P] 既存のMakefile確認: `Makefile`
+- [x] T003 [P] 既存のpyproject.toml設定確認: `pyproject.toml`
+- [x] T004 Edit and rename: `specs/017-github-actions-lint/tasks/ph1-output-template.md` → `ph1-output.md`
 
 ---
 
