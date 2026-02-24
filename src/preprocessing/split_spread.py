@@ -4,9 +4,53 @@ This module handles book spread images where two pages appear side by side.
 It splits them into individual page images for proper OCR processing.
 """
 
+import os
+from enum import Enum
 from pathlib import Path
 
 from PIL import Image
+
+
+class SpreadMode(Enum):
+    """Processing mode for image splitting."""
+
+    SINGLE = "single"
+    SPREAD = "spread"
+
+
+def get_spread_mode(cli_mode: str | None = None) -> SpreadMode:
+    """Get spread mode from CLI argument, environment variable, or default.
+
+    Priority: CLI argument > Environment variable > Default (SINGLE)
+
+    Args:
+        cli_mode: Mode specified via CLI ('single' or 'spread').
+
+    Returns:
+        SpreadMode enum value.
+
+    Raises:
+        ValueError: If mode value is invalid.
+    """
+    # CLI argument takes priority
+    if cli_mode is not None:
+        mode_str = cli_mode.strip().lower()
+        try:
+            return SpreadMode(mode_str)
+        except ValueError as e:
+            raise ValueError(f"Invalid mode '{cli_mode}': must be 'single' or 'spread'") from e
+
+    # Check environment variable
+    env_mode = os.environ.get("SPREAD_MODE")
+    if env_mode is not None:
+        mode_str = env_mode.strip().lower()
+        try:
+            return SpreadMode(mode_str)
+        except ValueError as e:
+            raise ValueError(f"Invalid SPREAD_MODE '{env_mode}': must be 'single' or 'spread'") from e
+
+    # Default to SINGLE
+    return SpreadMode.SINGLE
 
 
 def is_spread_image(img: Image.Image, aspect_ratio_threshold: float = 1.2) -> bool:
@@ -69,6 +113,7 @@ def split_spread_pages(
     overlap_px: int = 0,
     left_trim_pct: float = 0.0,
     right_trim_pct: float = 0.0,
+    mode: SpreadMode | None = None,
 ) -> list[Path]:
     """Split all spread images in a directory into separate pages.
 
@@ -83,10 +128,18 @@ def split_spread_pages(
         overlap_px: Pixels of overlap from center.
         left_trim_pct: Percentage to trim from left edge of left page (0.0-1.0).
         right_trim_pct: Percentage to trim from right edge of right page (0.0-1.0).
+        mode: Processing mode (SINGLE or SPREAD). If None, uses get_spread_mode().
 
     Returns:
         List of output file paths (includes both split and non-split pages).
     """
+    # Resolve mode
+    if mode is None:
+        mode = get_spread_mode()
+
+    # Display mode
+    print(f"Mode: {mode.value}")
+
     pages_path = Path(pages_dir)
     out = Path(output_dir) if output_dir else pages_path
     originals_dir = pages_path.parent / "originals"
@@ -127,7 +180,16 @@ def split_spread_pages(
     for page_path in pages:
         img = Image.open(page_path)
 
-        if is_spread_image(img, aspect_ratio_threshold):
+        # Determine whether to split based on mode
+        should_split = False
+        if mode == SpreadMode.SPREAD:
+            # Always split in SPREAD mode
+            should_split = True
+        elif mode == SpreadMode.SINGLE:
+            # Never split in SINGLE mode
+            should_split = False
+
+        if should_split:
             # Split into left and right
             left_page, right_page = split_spread(img, overlap_px, left_trim_pct, right_trim_pct)
 

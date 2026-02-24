@@ -14,6 +14,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Split spread pages into separate images")
     parser.add_argument("pages_dir", help="Pages directory (in-place update)")
     parser.add_argument(
+        "--mode",
+        type=str,
+        default=None,
+        choices=["single", "spread"],
+        help="Processing mode: 'single' (no split) or 'spread' (always split). Default: 'single'",
+    )
+    parser.add_argument(
         "--aspect-ratio",
         type=float,
         default=1.2,
@@ -38,6 +45,13 @@ def main() -> int:
         print(f"Error: Input not found: {args.pages_dir}", file=sys.stderr)
         return 1
 
+    # Get mode (CLI argument > env var > default)
+    try:
+        mode = get_spread_mode(args.mode)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
     # Call existing functions
     try:
         split_spread_pages(
@@ -45,6 +59,7 @@ def main() -> int:
             aspect_ratio_threshold=args.aspect_ratio,
             left_trim_pct=args.left_trim,
             right_trim_pct=args.right_trim,
+            mode=mode,
         )
         renumber_pages(args.pages_dir)
         return 0

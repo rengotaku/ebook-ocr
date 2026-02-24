@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image
 
 from src.preprocessing.split_spread import (
+    SpreadMode,
     is_spread_image,
     renumber_pages,
     split_spread,
@@ -139,7 +140,7 @@ class TestSplitSpreadPages:
         spread = Image.new("RGB", (2000, 1000), color="white")
         spread.save(pages_dir / "page_0001.png")
 
-        split_spread_pages(str(pages_dir))
+        split_spread_pages(str(pages_dir), mode=SpreadMode.SPREAD)
 
         # Original should be moved to originals/, L/R created in pages/
         assert not (pages_dir / "page_0001.png").exists()
@@ -177,13 +178,14 @@ class TestSplitSpreadPages:
         single = Image.new("RGB", (800, 1200), color="white")
         single.save(pages_dir / "page_0002.png")
 
-        result = split_spread_pages(str(pages_dir))
+        result = split_spread_pages(str(pages_dir), mode=SpreadMode.SPREAD)
 
-        # Should have 3 files: 2 from spread + 1 single
-        assert len(result) == 3
+        # Should have 4 files: 2 from spread + 2 from single (both split in SPREAD mode)
+        assert len(result) == 4
         assert (pages_dir / "page_0001_L.png").exists()
         assert (pages_dir / "page_0001_R.png").exists()
-        assert (pages_dir / "page_0002.png").exists()
+        assert (pages_dir / "page_0002_L.png").exists()
+        assert (pages_dir / "page_0002_R.png").exists()
 
     def test_iterative_split_with_new_settings(self, tmp_path: Path) -> None:
         """Re-running split uses originals and applies new settings."""
@@ -196,13 +198,13 @@ class TestSplitSpreadPages:
         spread.save(pages_dir / "page_0001.png")
 
         # First run
-        split_spread_pages(str(pages_dir), left_trim_pct=0.0)
+        split_spread_pages(str(pages_dir), left_trim_pct=0.0, mode=SpreadMode.SPREAD)
         first_left = Image.open(pages_dir / "page_0001_L.png")
         first_width = first_left.size[0]
         first_left.close()
 
         # Second run with different settings
-        split_spread_pages(str(pages_dir), left_trim_pct=0.1)
+        split_spread_pages(str(pages_dir), left_trim_pct=0.1, mode=SpreadMode.SPREAD)
         second_left = Image.open(pages_dir / "page_0001_L.png")
         second_width = second_left.size[0]
         second_left.close()

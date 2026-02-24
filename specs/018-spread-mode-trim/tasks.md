@@ -65,22 +65,22 @@
 
 ### Implementation (GREEN)
 
-- [ ] T016 RED テストを読む: specs/018-spread-mode-trim/red-tests/ph2-test.md
-- [ ] T017 [P] [US1] SpreadMode enum を追加: src/preprocessing/split_spread.py
-- [ ] T018 [P] [US1] split_spread_pages() に mode 引数を追加: src/preprocessing/split_spread.py
-- [ ] T019 [P] [US1] get_spread_mode() 関数を追加（環境変数/デフォルト）: src/preprocessing/split_spread.py
-- [ ] T020 [US1] モード表示ロジックを追加: src/preprocessing/split_spread.py
-- [ ] T021 [P] [US1] CLI に --mode 引数を追加: src/cli/split_spreads.py
-- [ ] T022 [P] [US1] config.yaml に spread_mode 設定を追加: config.yaml
-- [ ] T023 [P] [US1] Makefile に SPREAD_MODE 変数を追加: Makefile
-- [ ] T024 `make test` で PASS を確認 (GREEN)
+- [x] T016 RED テストを読む: specs/018-spread-mode-trim/red-tests/ph2-test.md
+- [x] T017 [P] [US1] SpreadMode enum を追加: src/preprocessing/split_spread.py
+- [x] T018 [P] [US1] split_spread_pages() に mode 引数を追加: src/preprocessing/split_spread.py
+- [x] T019 [P] [US1] get_spread_mode() 関数を追加（環境変数/デフォルト）: src/preprocessing/split_spread.py
+- [x] T020 [US1] モード表示ロジックを追加: src/preprocessing/split_spread.py
+- [x] T021 [P] [US1] CLI に --mode 引数を追加: src/cli/split_spreads.py
+- [x] T022 [P] [US1] config.yaml に spread_mode 設定を追加: config.yaml
+- [x] T023 [P] [US1] Makefile に SPREAD_MODE 変数を追加: Makefile
+- [x] T024 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T025 `make test` で全テスト通過を確認（リグレッションなし）
-- [ ] T026 検証用動画でテスト: movies/n3-failers-in-developing-softwear.mov (spread)
-- [ ] T027 検証用動画でテスト: movies/n5-sre.mov (single)
-- [ ] T028 Edit: specs/018-spread-mode-trim/tasks/ph2-output.md
+- [x] T025 `make test` で全テスト通過を確認（リグレッションなし）
+- [x] T026 検証用動画でテスト: movies/n3-failers-in-developing-softwear.mov (spread)
+- [x] T027 検証用動画でテスト: movies/n5-sre.mov (single)
+- [x] T028 Edit: specs/018-spread-mode-trim/tasks/ph2-output.md
 
 **Checkpoint**: US1 は独立して機能し、テスト可能であること
 
