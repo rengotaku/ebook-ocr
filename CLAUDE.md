@@ -21,6 +21,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-04
 - Python 3.13+ + pylint>=3.0.0, ruff, pytest (012-fix-pylint-errors)
 - N/A（ファイル構造変更のみ） (012-fix-pylint-errors)
 - YAML（GitHub Actions）, Bash（hooks） + ruff, pylint（既存）, GitHub Actions (013-ci-lint-migration)
+- Python 3.13+ + argparse（標準ライブラリ） (015-cli-limit-option)
+- ファイルシステム（PNG画像、TXTファイル） (015-cli-limit-option)
 
 - Python 3.13+ + Pillow, imagehash, doclayout-yolo, requests (001-code-refactoring)
 
@@ -40,9 +42,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13+: Follow standard conventions
 
 ## Recent Changes
+- 015-cli-limit-option: Added Python 3.13+ + argparse（標準ライブラリ）
 - 013-ci-lint-migration: Added YAML（GitHub Actions）, Bash（hooks） + ruff, pylint（既存）, GitHub Actions
 - 012-fix-pylint-errors: Added Python 3.13+ + pylint>=3.0.0, ruff, pytest
-- 011-code-refactoring: Added Python 3.13+ + ruff, pre-commit
 
 
 <!-- MANUAL ADDITIONS START -->

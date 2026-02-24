@@ -66,7 +66,7 @@ description: "Task list template for feature implementation (TDD workflow)"
 
 - [ ] T001 Read current implementation in src/[relevant files]
 - [ ] T002 [P] Read existing tests in src/tests/[relevant test files]
-- [ ] T003 Generate phase output: specs/[###-feature-name]/tasks/ph1-output.md
+- [ ] T003 Edit and rename: specs/[###-feature-name]/tasks/ph1-output-template.md → ph1-output.md
 
 ---
 
@@ -99,7 +99,7 @@ description: "Task list template for feature implementation (TDD workflow)"
 ### Verification
 
 - [ ] T015 Verify `make test` passes all tests (no regressions)
-- [ ] T016 Generate phase output: specs/[###-feature-name]/tasks/ph2-output.md
+- [ ] T016 Edit and rename: specs/[###-feature-name]/tasks/ph2-output-template.md → ph2-output.md
 
 **Checkpoint**: User Story 1 should be fully functional and testable independently
 
@@ -133,7 +133,7 @@ description: "Task list template for feature implementation (TDD workflow)"
 ### Verification
 
 - [ ] T027 Verify `make test` passes all tests (including regressions from US1)
-- [ ] T028 Generate phase output: specs/[###-feature-name]/tasks/ph3-output.md
+- [ ] T028 Edit and rename: specs/[###-feature-name]/tasks/ph3-output-template.md → ph3-output.md
 
 **Checkpoint**: User Stories 1 AND 2 should both work independently
 
@@ -162,7 +162,7 @@ description: "Task list template for feature implementation (TDD workflow)"
 ### Verification
 
 - [ ] TXXX Run `make test` to verify all tests pass after cleanup
-- [ ] TXXX Generate phase output: specs/[###-feature-name]/tasks/phN-output.md
+- [ ] TXXX Edit and rename: specs/[###-feature-name]/tasks/phN-output-template.md → phN-output.md
 
 ---
 
@@ -171,9 +171,9 @@ description: "Task list template for feature implementation (TDD workflow)"
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: No dependencies - Main agent direct execution
-- **User Stories (Phase 2+)**: TDD flow (tdd-generator → phase-executor)
+- **User Stories (Phase 2+)**: TDD flow (speckit:tdd-generator → speckit:phase-executor)
   - User stories proceed sequentially in priority order (P1 → P2 → P3)
-- **Polish (Final Phase)**: Depends on all user stories - phase-executor only
+- **Polish (Final Phase)**: Depends on all user stories - speckit:phase-executor only
 
 ### Within Each User Story Phase (TDD Flow)
 
@@ -185,8 +185,8 @@ description: "Task list template for feature implementation (TDD workflow)"
 ### Agent Delegation
 
 - **Phase 1 (Setup)**: Main agent direct execution
-- **Phase 2+ (User Stories)**: tdd-generator (RED) → phase-executor (GREEN + Verification)
-- **Phase N (Polish)**: phase-executor only
+- **Phase 2+ (User Stories)**: speckit:tdd-generator (RED) → speckit:phase-executor (GREEN + Verification)
+- **Phase N (Polish)**: speckit:phase-executor only
 
 ### [P] Marker (No Dependencies)
 
@@ -216,20 +216,13 @@ specs/[###-feature-name]/
     └── ph3-test.md             # Phase 3 RED test results (FAIL confirmation)
 ```
 
-### Phase Output Content
+### Phase Output Format
 
-Each `phN-output.md` should contain:
-- Summary of what was done
-- Files created/modified
-- Test results (`make test` output)
-- Any decisions or deviations from the plan
-
-### RED Test Output Content
-
-Each `phN-test.md` should contain:
-- Test code written
-- `make test` output showing FAIL (RED confirmation)
-- Number of failing tests and their names
+| Output Type | Template File |
+|-------------|---------------|
+| `ph1-output.md` | `.specify/templates/ph1-output-template.md` |
+| `phN-output.md` | `.specify/templates/phN-output-template.md` |
+| `phN-test.md` | `.specify/templates/red-test-template.md` |
 
 ---
 

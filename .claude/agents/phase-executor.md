@@ -1,5 +1,5 @@
 ---
-name: phase-executor
+name: speckit:phase-executor
 description: SpecKit task execution subagent. Handles TDD GREEN phase (implementing to pass FAIL tests) and standard phases (Setup, Polish, etc.).
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
@@ -9,7 +9,7 @@ model: sonnet
 
 SpecKit task execution specialized subagent. Operates in two modes:
 
-1. **GREEN Phase**: Takes RED tests created by tdd-generator as input, implements to make FAIL tests PASS
+1. **GREEN Phase**: Takes RED tests created by speckit:tdd-generator as input, implements to make FAIL tests PASS
 2. **Standard Phase**: Executes all tasks in phases without TDD sections (Setup, Polish, Documentation, etc.)
 
 **Output Language**: All generated files (tasks/*.md, reports) MUST be written in **Japanese**.
@@ -27,7 +27,6 @@ Target Section: Implementation (GREEN) → Verification  # For TDD Phase
             or: All tasks                              # For Standard Phase
 
 Design documents (read first):
-- spec.md: User stories
 - plan.md: Tech stack
 - data-model.md: Entities (if exists)
 
@@ -45,7 +44,6 @@ Context:
 ### 1. Read Design Documents
 
 Read the following to understand implementation targets:
-- spec.md: What to achieve
 - plan.md: Technical constraints, architecture
 - data-model.md: Data structures (if exists)
 
@@ -103,18 +101,10 @@ Mark completed tasks as `[x]`.
 
 ### 10. Generate Phase Output
 
-Generate `{FEATURE_DIR}/tasks/ph{N}-output.md`.
-
-## Pre-Commit Compliance
-
-コードを書いた後、コミット前に以下を実行:
-
-```bash
-ruff check --fix src/
-ruff format src/
-```
-
-これによりpre-commitフックの失敗を防止する。
+1. Read format reference:
+   - Phase 1: `.specify/templates/ph1-output-template.md`
+   - Phase N: `.specify/templates/phN-output-template.md`
+2. Edit output file: `{FEATURE_DIR}/tasks/ph{N}-output.md`
 
 # Rules
 
@@ -134,12 +124,15 @@ ruff format src/
 
 ## Phase Output File Format
 
-`{FEATURE_DIR}/tasks/ph{N}-output.md` (written in Japanese):
+**Output**: `{FEATURE_DIR}/tasks/ph{N}-output.md`
 
-- Work summary section
-- Modified files list
-- Notes for subsequent phases
-- Implementation issues/problems found
+Format reference:
+- Phase 1: `.specify/templates/ph1-output-template.md`
+- Phase N: `.specify/templates/phN-output-template.md`
+
+**Workflow**:
+1. File is pre-created by `setup-implement.sh` with final name
+2. Edit file with actual content (in Japanese)
 
 # Expected Output
 

@@ -134,7 +134,7 @@ Every task MUST strictly follow this format:
 - **Phase 1**: Setup (project initialization) - Main agent execution (NO TDD)
 - **Phase 2+**: Foundational/User Stories - TDD flow (if test implementation section exists)
   - Each phase should be a complete, independently testable increment
-- **Final Phase**: Polish & Cross-Cutting Concerns - phase-executor only (NO TDD)
+- **Final Phase**: Polish & Cross-Cutting Concerns - speckit:phase-executor only (NO TDD)
 
 ### TDD Phase Structure (Foundational/User Story Phases)
 
@@ -163,8 +163,8 @@ TDD Phase structure:
 ```
 
 **TDD Subagent Roles**:
-- **tdd-generator**: Input → Test Implementation (RED) → `red-tests/ph{N}-test.md` output
-- **phase-executor**: `red-tests/ph{N}-test.md` input → Implementation (GREEN) → Verification → `tasks/ph{N}-output.md` output
+- **speckit:tdd-generator**: Input → Test Implementation (RED) → `red-tests/ph{N}-test.md` output
+- **speckit:phase-executor**: `red-tests/ph{N}-test.md` input → Implementation (GREEN) → Verification → `tasks/ph{N}-output.md` output
 - RED/GREEN verification tasks are mandatory (for state tracking on interruption)
 - For multiple features, repeat "Test Implementation → Implementation" per feature
 
@@ -186,19 +186,19 @@ This ensures incremental validation and prevents regression at each phase bounda
 
 **TDD Phase Output (2 stages)**:
 
-1. **RED Output** (tdd-generator): `{FEATURE_DIR}/red-tests/ph{N}-test.md`
-   - Content written in Japanese (see templates/tasks-template.md for format)
+1. **RED Output** (speckit:tdd-generator): `{FEATURE_DIR}/red-tests/ph{N}-test.md`
+   - Format: `.specify/templates/red-test-template.md`
 
-2. **Phase Output** (phase-executor): `{FEATURE_DIR}/tasks/ph{N}-output.md`
-   - Content written in Japanese (see templates/tasks-template.md for format)
+2. **Phase Output** (speckit:phase-executor): `{FEATURE_DIR}/tasks/ph{N}-output.md`
+   - Format: `.specify/templates/phN-output-template.md`
 
 **Directory Structure**:
 ```
 {FEATURE_DIR}/
-├── red-tests/           # tdd-generator output (FAIL test info)
+├── red-tests/           # speckit:tdd-generator output (FAIL test info)
 │   ├── ph2-test.md
 │   └── ph3-test.md
-└── tasks/               # phase-executor output (Phase completion info)
+└── tasks/               # speckit:phase-executor output (Phase completion info)
     ├── ph1-output.md
     └── ph2-output.md
 ```
