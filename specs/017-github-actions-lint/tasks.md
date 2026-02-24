@@ -108,18 +108,18 @@
 
 ### Input
 
-- [ ] T023 Read setup analysis: `specs/017-github-actions-lint/tasks/ph1-output.md`
-- [ ] T024 Read previous phase output: `specs/017-github-actions-lint/tasks/ph3-output.md`
+- [x] T023 Read setup analysis: `specs/017-github-actions-lint/tasks/ph1-output.md`
+- [x] T024 Read previous phase output: `specs/017-github-actions-lint/tasks/ph3-output.md`
 
 ### Implementation
 
-- [ ] T025 [US2] lint.ymlにpushトリガーを追加（branches: [main]）: `.github/workflows/lint.yml`
+- [x] T025 [US2] lint.ymlにpushトリガーを追加（branches: [main]）: `.github/workflows/lint.yml`
 
 ### Verification
 
-- [ ] T026 YAMLの構文チェック（`python -c "import yaml; yaml.safe_load(open('.github/workflows/lint.yml'))"`)
-- [ ] T027 変更をコミット
-- [ ] T028 Edit and rename: `specs/017-github-actions-lint/tasks/ph4-output-template.md` → `ph4-output.md`
+- [x] T026 YAMLの構文チェック（`python -c "import yaml; yaml.safe_load(open('.github/workflows/lint.yml'))"`)
+- [ ] T027 変更をコミット - SKIP (親エージェントが実行)
+- [x] T028 Edit and rename: `specs/017-github-actions-lint/tasks/ph4-output-template.md` → `ph4-output.md`
 
 **Checkpoint**: mainブランチへのpush時にCIがトリガーされる設定が完了
 
