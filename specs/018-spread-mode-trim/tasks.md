@@ -150,19 +150,19 @@
 
 ### Implementation (GREEN)
 
-- [ ] T057 RED テストを読む: specs/018-spread-mode-trim/red-tests/ph4-test.md
-- [ ] T058 [P] [US3] Makefile に preview-extract ターゲットを追加: Makefile
-- [ ] T059 [P] [US3] Makefile に preview-trim ターゲットを追加: Makefile
-- [ ] T060 [US3] split_spreads.py に preview/ ディレクトリ確認ロジックを追加: src/cli/split_spreads.py
-- [ ] T061 [US3] Makefile の run ターゲットに split-spreads ステップを追加: Makefile
-- [ ] T062 `make test` で PASS を確認 (GREEN)
+- [x] T057 RED テストを読む: specs/018-spread-mode-trim/red-tests/ph4-test.md
+- [x] T058 [P] [US3] Makefile に preview-extract ターゲットを追加: Makefile
+- [x] T059 [P] [US3] Makefile に preview-trim ターゲットを追加: Makefile
+- [x] T060 [US3] split_spreads.py に preview/ ディレクトリ確認ロジックを追加: src/cli/split_spreads.py
+- [x] T061 [US3] Makefile の run ターゲットに split-spreads ステップを追加: Makefile
+- [x] T062 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T063 `make test` で全テスト通過を確認（US1, US2 含むリグレッションなし）
-- [ ] T064 `make preview-extract VIDEO=movies/n3-failers-in-developing-softwear.mov LIMIT=3` で動作確認
-- [ ] T065 `make preview-trim` で trim プレビュー確認
-- [ ] T066 Edit: specs/018-spread-mode-trim/tasks/ph4-output.md
+- [x] T063 `make test` で全テスト通過を確認（US1, US2 含むリグレッションなし）
+- [x] T064 `make preview-extract VIDEO=movies/n3-failers-in-developing-softwear.mov LIMIT=3` で動作確認
+- [x] T065 `make preview-trim` で trim プレビュー確認
+- [x] T066 Edit: specs/018-spread-mode-trim/tasks/ph4-output.md
 
 **Checkpoint**: 全ユーザーストーリーが独立して機能すること
 

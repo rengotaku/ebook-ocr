@@ -229,6 +229,11 @@ def split_spread_pages(
     print(f"Mode: {mode.value}")
 
     pages_path = Path(pages_dir)
+
+    # Validate input directory exists
+    if not pages_path.exists():
+        raise FileNotFoundError(f"Directory not found: {pages_dir}")
+
     out = Path(output_dir) if output_dir else pages_path
     originals_dir = pages_path.parent / "originals"
 
