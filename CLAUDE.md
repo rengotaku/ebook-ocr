@@ -49,6 +49,35 @@ Python 3.13+: Follow standard conventions
 - 017-github-actions-lint: Added Python 3.13+ + ruff (既存), pylint (既存)
 - 015-cli-limit-option: Added Python 3.13+ + argparse（標準ライブラリ）
 
+## Configuration (config.yaml)
+
+### Spread Splitting Settings
+
+```yaml
+# Spread mode (見開き処理モード)
+spread_mode: single              # 'single' (分割なし) or 'spread' (常に左右分割)
+spread_aspect_ratio: 1.2         # [DEPRECATED] アスペクト比しきい値（spread_mode 使用を推奨）
+
+# Split trim (分割後のエッジトリミング、spread モードのみ)
+spread_left_trim: 0.15           # 左ページの左端トリム率 (0.0-0.5)
+spread_right_trim: 0.15          # 右ページの右端トリム率 (0.0-0.5)
+
+# Global trim (分割前の全体トリミング)
+global_trim_top: 0.0             # 上端トリム率 (0.0-0.5)
+global_trim_bottom: 0.0          # 下端トリム率 (0.0-0.5)
+global_trim_left: 0.0            # 左端トリム率 (0.0-0.5)
+global_trim_right: 0.0           # 右端トリム率 (0.0-0.5)
+```
+
+**優先順位**: CLI引数 > 環境変数 > config.yaml
+
+**Trim 処理順序**:
+1. Global trim: 分割前に全体画像に適用
+2. Split (spread モードのみ): 画像を左右に分割
+3. Split trim: 分割後の外側エッジに適用（左ページの左端、右ページの右端）
+
+**制約**:
+- すべての trim 値は 0.0 以上 0.5 未満 (0.5 以上は画像の半分以上を削除するため無効)
 
 <!-- MANUAL ADDITIONS START -->
 

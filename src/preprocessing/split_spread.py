@@ -5,6 +5,7 @@ It splits them into individual page images for proper OCR processing.
 """
 
 import os
+import warnings
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -138,6 +139,11 @@ def get_spread_mode(cli_mode: str | None = None) -> SpreadMode:
 def is_spread_image(img: Image.Image, aspect_ratio_threshold: float = 1.2) -> bool:
     """Check if image appears to be a spread (2 pages side by side).
 
+    .. deprecated:: 0.2.0
+        This function is deprecated. Use explicit `--mode` option instead.
+        Auto-detection based on aspect ratio is being phased out in favor
+        of explicit mode specification (single/spread).
+
     Args:
         img: PIL Image to check.
         aspect_ratio_threshold: Width/height ratio above which image is
@@ -146,6 +152,12 @@ def is_spread_image(img: Image.Image, aspect_ratio_threshold: float = 1.2) -> bo
     Returns:
         True if image appears to be a spread.
     """
+    warnings.warn(
+        "is_spread_image() is deprecated and will be removed in a future version. "
+        "Use explicit --mode option (single/spread) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     width, height = img.size
     aspect_ratio = width / height
     return aspect_ratio >= aspect_ratio_threshold

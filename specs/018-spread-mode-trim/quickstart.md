@@ -58,11 +58,13 @@ make split-spreads HASHDIR=output/<hash> \
 ### Step 1: サンプルフレーム抽出
 
 ```bash
-# 動画から5枚のサンプルを抽出
-make preview-extract VIDEO=input.mp4 LIMIT=5
+# 動画からサンプルフレームを抽出（INTERVAL で調整、大きい値=少ないフレーム）
+make preview-extract VIDEO=input.mp4 INTERVAL=3.0
 ```
 
 出力: `output/<hash>/preview/frames/`
+
+注: LIMIT パラメータは未サポート。フレーム数を減らすには INTERVAL を大きくしてください。
 
 ### Step 2: Trim プレビュー
 
@@ -139,7 +141,7 @@ make split-spreads HASHDIR=output/<hash> SPREAD_MODE=spread
 Error: Run preview-extract first
 
 # 解決: preview-extract を先に実行
-make preview-extract VIDEO=input.mp4 LIMIT=5
+make preview-extract VIDEO=input.mp4
 ```
 
 ### trim 値が大きすぎる

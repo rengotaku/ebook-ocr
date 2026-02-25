@@ -174,21 +174,21 @@
 
 ### Input
 
-- [ ] T067 Setup 分析を読む: specs/018-spread-mode-trim/tasks/ph1-output.md
-- [ ] T068 前フェーズの出力を読む: specs/018-spread-mode-trim/tasks/ph4-output.md
+- [x] T067 Setup 分析を読む: specs/018-spread-mode-trim/tasks/ph1-output.md
+- [x] T068 前フェーズの出力を読む: specs/018-spread-mode-trim/tasks/ph4-output.md
 
 ### Implementation
 
-- [ ] T069 [P] 廃止予定の is_spread_image() 関数に deprecation warning を追加（互換性のため残す）: src/preprocessing/split_spread.py
-- [ ] T070 [P] config.yaml の spread_aspect_ratio 設定を非推奨コメント追加: config.yaml
-- [ ] T071 [P] quickstart.md の検証: specs/018-spread-mode-trim/quickstart.md
-- [ ] T072 [P] CLAUDE.md に config.yaml 設定項目を追加: CLAUDE.md
+- [x] T069 [P] 廃止予定の is_spread_image() 関数に deprecation warning を追加（互換性のため残す）: src/preprocessing/split_spread.py
+- [x] T070 [P] config.yaml の spread_aspect_ratio 設定を非推奨コメント追加: config.yaml
+- [x] T071 [P] quickstart.md の検証: specs/018-spread-mode-trim/quickstart.md
+- [x] T072 [P] CLAUDE.md に config.yaml 設定項目を追加: CLAUDE.md
 
 ### Verification
 
-- [ ] T073 `make test` で全テスト通過を最終確認
-- [ ] T074 `make lint` で lint エラーなしを確認
-- [ ] T075 Edit: specs/018-spread-mode-trim/tasks/ph5-output.md
+- [x] T073 `make test` で全テスト通過を最終確認
+- [x] T074 `make lint` で lint エラーなしを確認
+- [x] T075 Edit: specs/018-spread-mode-trim/tasks/ph5-output.md
 
 ---
 
