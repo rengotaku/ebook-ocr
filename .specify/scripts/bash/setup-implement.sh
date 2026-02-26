@@ -16,8 +16,8 @@ for arg in "$@"; do
             echo "  --json    Output results in JSON format"
             echo "  --help    Show this help message"
             echo ""
-            echo "Analyzes tasks.md and creates phase output templates in FEATURE_DIR."
-            echo "Templates are copied from .specify/templates/ and renamed after completion."
+            echo "Analyzes tasks.md and creates phase output files in FEATURE_DIR."
+            echo "Output files are created from .specify/templates/ with final names."
             exit 0
             ;;
         *)
@@ -130,29 +130,29 @@ for i in "${!PHASES[@]}"; do
         phase_type="standard"
     fi
 
-    # Create output template
+    # Create output file (directly with final name)
     if [[ "$phase_num" == "1" ]]; then
         # Phase 1 uses specific template
         result=$(copy_template_if_needed \
             "$TEMPLATE_SRC/ph1-output-template.md" \
-            "$FEATURE_DIR/tasks/ph1-output-template.md" \
-            "tasks/ph1-output-template.md")
+            "$FEATURE_DIR/tasks/ph1-output.md" \
+            "tasks/ph1-output.md")
         TEMPLATES_CREATED+=("$result")
     else
         # Phase N uses generic template
         result=$(copy_template_if_needed \
             "$TEMPLATE_SRC/phN-output-template.md" \
-            "$FEATURE_DIR/tasks/ph${phase_num}-output-template.md" \
-            "tasks/ph${phase_num}-output-template.md")
+            "$FEATURE_DIR/tasks/ph${phase_num}-output.md" \
+            "tasks/ph${phase_num}-output.md")
         TEMPLATES_CREATED+=("$result")
     fi
 
-    # Create RED test template for TDD phases
+    # Create RED test file for TDD phases
     if [[ "$has_tdd" == "true" ]]; then
         result=$(copy_template_if_needed \
             "$TEMPLATE_SRC/red-test-template.md" \
-            "$FEATURE_DIR/red-tests/ph${phase_num}-test-template.md" \
-            "red-tests/ph${phase_num}-test-template.md")
+            "$FEATURE_DIR/red-tests/ph${phase_num}-test.md" \
+            "red-tests/ph${phase_num}-test.md")
         TEMPLATES_CREATED+=("$result")
     fi
 

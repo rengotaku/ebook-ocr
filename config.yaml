@@ -47,6 +47,13 @@ warmup_timeout: 300        # モデルウォームアップのタイムアウト
 
 # Spread splitting (見開き分割)
 split_spreads: true        # 見開き画像を左右に分割
-spread_aspect_ratio: 1.2   # 見開き判定の縦横比しきい値（幅/高さ >= 1.2 で見開き）
+spread_mode: single        # 処理モード: single (分割なし) or spread (常に分割)
+spread_aspect_ratio: 1.2   # [DEPRECATED] 見開き判定の縦横比しきい値 (spread_mode 使用を推奨)
 spread_left_trim: 0.15     # 左ページの左端をトリム（3% = 0.03）
 spread_right_trim: 0.15    # 右ページの右端をトリム（3% = 0.03）
+
+# Global trim (分割前に適用)
+global_trim_top: 0.0       # 上端トリム率（0.0-0.5）
+global_trim_bottom: 0.0    # 下端トリム率（0.0-0.5）
+global_trim_left: 0.0      # 左端トリム率（0.0-0.5）
+global_trim_right: 0.0     # 右端トリム率（0.0-0.5）

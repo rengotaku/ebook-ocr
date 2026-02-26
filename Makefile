@@ -4,7 +4,8 @@ PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 
 # Load defaults from config.yaml (overridable via: make run VIDEO="..." INTERVAL=3)
-CFG = grep '^$(1):' config.yaml | head -1 | sed 's/^[^:]*: *//' | sed 's/^"//;s/"$$//'
+# Read config values using Python (avoids Make's # comment interpretation issue)
+CFG = python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c.get('$(1)','') if c.get('$(1)') is not None else '')"
 
 VIDEO ?= $(shell $(call CFG,video))
 OUTPUT ?= $(shell $(call CFG,output))
@@ -25,7 +26,7 @@ LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),)
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate build-book test test-book-converter test-cov converter convert-sample ruff pylint lint clean clean-all
+.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate build-book preview-extract preview-trim test test-book-converter test-cov converter convert-sample ruff pylint lint clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -48,13 +49,55 @@ deduplicate: setup ## Step 2: Deduplicate frames (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make deduplicate HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.deduplicate "$(HASHDIR)/frames" -o "$(HASHDIR)/pages" -t $(THRESHOLD) $(LIMIT_OPT)
 
+SPREAD_MODE ?= $(shell $(call CFG,spread_mode))
 LEFT_TRIM ?= $(shell $(call CFG,spread_left_trim))
 RIGHT_TRIM ?= $(shell $(call CFG,spread_right_trim))
 ASPECT_RATIO ?= $(shell $(call CFG,spread_aspect_ratio))
+GLOBAL_TRIM_TOP ?= $(shell $(call CFG,global_trim_top))
+GLOBAL_TRIM_BOTTOM ?= $(shell $(call CFG,global_trim_bottom))
+GLOBAL_TRIM_LEFT ?= $(shell $(call CFG,global_trim_left))
+GLOBAL_TRIM_RIGHT ?= $(shell $(call CFG,global_trim_right))
 
 split-spreads: setup ## Step 2.5: Split spread images into pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.split_spreads "$(HASHDIR)/pages" --left-trim $(LEFT_TRIM) --right-trim $(RIGHT_TRIM) --aspect-ratio $(ASPECT_RATIO)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.split_spreads "$(HASHDIR)/pages" \
+		--mode $(SPREAD_MODE) \
+		--left-trim $(LEFT_TRIM) \
+		--right-trim $(RIGHT_TRIM) \
+		--aspect-ratio $(ASPECT_RATIO) \
+		--global-trim-top $(GLOBAL_TRIM_TOP) \
+		--global-trim-bottom $(GLOBAL_TRIM_BOTTOM) \
+		--global-trim-left $(GLOBAL_TRIM_LEFT) \
+		--global-trim-right $(GLOBAL_TRIM_RIGHT)
+
+preview-extract: setup ## Preview: Extract sample frames to preview/frames/ (requires VIDEO)
+	@test -n "$(VIDEO)" || { echo "Error: VIDEO parameter required. Usage: make preview-extract VIDEO=input.mp4"; exit 1; }
+	@test -f "$(VIDEO)" || { echo "Error: VIDEO file not found: $(VIDEO)"; exit 1; }
+	$(eval HASH := $(shell PYTHONPATH=$(CURDIR) $(PYTHON) -m src.preprocessing.hash "$(VIDEO)" --prefix-only 2>/dev/null))
+	@test -n "$(HASH)" || { echo "Error: Failed to compute hash for VIDEO $(VIDEO)"; exit 1; }
+	$(eval HASHDIR := $(or $(OUTPUT),output)/$(HASH))
+	$(eval PREVIEW_DIR := $(HASHDIR)/preview/frames)
+	@echo "=== Extracting preview frames to $(PREVIEW_DIR) ==="
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.extract_frames "$(VIDEO)" -o "$(PREVIEW_DIR)" -i $(INTERVAL)
+	@echo "=== Preview frames extracted: $(PREVIEW_DIR) ==="
+
+preview-trim: setup ## Preview: Apply trim to preview/frames/ -> preview/trimmed/ (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make preview-trim HASHDIR=output/<hash>"; exit 1; }
+	@test -d "$(HASHDIR)/preview/frames" || { echo "Error: $(HASHDIR)/preview/frames not found. Run 'make preview-extract' first."; exit 1; }
+	@echo "=== Applying trim to preview frames ==="
+	PYTHONPATH=$(CURDIR) $(PYTHON) -c \
+		"from src.cli.split_spreads import preview_trim; \
+		from src.preprocessing.split_spread import SpreadMode, TrimConfig; \
+		preview_trim('$(HASHDIR)/preview', \
+			mode=SpreadMode.$(shell echo $(SPREAD_MODE) | tr a-z A-Z), \
+			trim_config=TrimConfig( \
+				global_top=$(or $(GLOBAL_TRIM_TOP),0.0), \
+				global_bottom=$(or $(GLOBAL_TRIM_BOTTOM),0.0), \
+				global_left=$(or $(GLOBAL_TRIM_LEFT),0.0), \
+				global_right=$(or $(GLOBAL_TRIM_RIGHT),0.0), \
+				left_page_outer=$(or $(LEFT_TRIM),0.0), \
+				right_page_outer=$(or $(RIGHT_TRIM),0.0)))"
+	@echo "=== Preview trim complete: $(HASHDIR)/preview/trimmed ==="
 
 detect-layout: setup ## Step 3: Detect layout using yomitoku (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect-layout HASHDIR=output/<hash>"; exit 1; }
@@ -80,6 +123,8 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT option
 	@$(MAKE) --no-print-directory extract-frames VIDEO="$(VIDEO)" HASHDIR="$(HASHDIR)"
 	@echo "=== Step 2: Deduplicate ==="
 	@$(MAKE) --no-print-directory deduplicate HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
+	@echo "=== Step 2.5: Split Spreads ==="
+	@$(MAKE) --no-print-directory split-spreads HASHDIR="$(HASHDIR)"
 	@echo "=== Step 3: Detect Layout ==="
 	@$(MAKE) --no-print-directory detect-layout HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
 	@echo "=== Step 4: Run OCR ==="
