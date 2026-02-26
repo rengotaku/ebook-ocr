@@ -147,12 +147,12 @@ for i in "${!PHASES[@]}"; do
         TEMPLATES_CREATED+=("$result")
     fi
 
-    # Create RED test template for TDD phases
+    # Create RED test file for TDD phases
     if [[ "$has_tdd" == "true" ]]; then
         result=$(copy_template_if_needed \
             "$TEMPLATE_SRC/red-test-template.md" \
-            "$FEATURE_DIR/red-tests/ph${phase_num}-test-template.md" \
-            "red-tests/ph${phase_num}-test-template.md")
+            "$FEATURE_DIR/red-tests/ph${phase_num}-test.md" \
+            "red-tests/ph${phase_num}-test.md")
         TEMPLATES_CREATED+=("$result")
     fi
 
