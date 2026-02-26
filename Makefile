@@ -4,7 +4,8 @@ PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 
 # Load defaults from config.yaml (overridable via: make run VIDEO="..." INTERVAL=3)
-CFG = grep '^$(1):' config.yaml | head -1 | sed 's/^[^:]*: *//' | sed 's/[[:space:]]*#.*//' | sed 's/^"//;s/"$$//' | sed 's/[[:space:]]*$$//'
+# Read config values using Python (avoids Make's # comment interpretation issue)
+CFG = python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c.get('$(1)','') if c.get('$(1)') is not None else '')"
 
 VIDEO ?= $(shell $(call CFG,video))
 OUTPUT ?= $(shell $(call CFG,output))
