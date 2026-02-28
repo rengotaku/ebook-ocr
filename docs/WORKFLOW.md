@@ -1,11 +1,33 @@
 # Video-to-Book ワークフロー完全ガイド
 
-**最終更新**: 2026-02-18
+**最終更新**: 2026-02-26
 **対象バージョン**: v5 (010-pipeline-refactoring)
 
 ## 概要
 
-このドキュメントは、動画コンテンツから電子書籍形式への変換を行う完全なワークフローを説明します。各ステップは独立したCLIコマンドとして実行可能で、柔軟なパイプライン構築が可能です。
+このドキュメントは、動画コンテンツから電子書籍形式への変換を行う完全なワークフローを説明します。
+
+### ワークフロー全体像
+
+```
+動画 → フレーム抽出 → 重複除去 → レイアウト検出 → OCR → 統合
+                                                           ↓
+                                                        book.md (生OCR)
+                                                           ↓
+                                              【手動作業: マーカー追加】
+                                                           ↓
+                                                        book.md (構造化)
+                                                           ↓
+                                                        XML変換
+                                                           ↓
+                                                        book.xml (TTS対応)
+```
+
+### 処理の種類
+
+- **自動処理** (Step 1-5): CLI コマンドで実行
+- **手動処理**: book.md へのマーカー追加（ページ区切り、図、見出し）
+- **XML変換** (Step 6): 構造化された book.md から book.xml を生成
 
 ## 前提条件
 
@@ -324,82 +346,337 @@ output/
 ...
 ```
 
+**注意**: この段階の `book.md` は構造化されていない生のOCR結果です。次の「手動ステップ」でページマーカーや図マーカーを追加する必要があります。
+
 ---
 
 ## 手動ステップ
 
-### Markdownマーカーの追加
+### book.md フォーマット仕様
 
-OCR結果（`book.md`）を確認し、必要に応じて以下のマーカーを手動で追加します。
+OCR結果（`book.txt`）を `book.md` に変換する際、以下の仕様に従ってマーカーを追加します。
 
-#### 1. 章・セクションマーカー
+#### book.md の完全な例
 
-**目的**: 見出しレベルを適切に設定し、構造を明確化
-
-**修正前**:
 ```markdown
-第1章 イントロダクション
-1.1 背景
-1.2 目的
+--- Page 1 (page_0001.png) ---
+
+<!-- FIGURE: figures/page_0001_figure1.png -->
+図の説明文がここに入る...
+
+# 書籍タイトル
+
+1 / 1
+
+--- Page 2 (page_0002.png) ---
+
+<!-- toc -->
+第1章 概要 ............... 3
+1.1 背景 ............... 3
+1.2 目的 ............... 5
+第2章 詳細 ............... 10
+<!-- /toc -->
+
+--- Page 3 (page_0003.png) ---
+
+<!-- content -->
+## 第1章 概要
+
+本文...
+
+- リスト項目1
+- リスト項目2
+
+はじめに 1 / 3
+<!-- /content -->
+
+--- Page 4 (page_0004.png) ---
+
+<!-- content -->
+### 1.1 背景
+
+詳細な説明...
+<!-- /content -->
 ```
 
-**修正後**:
+---
+
+### マーカー追加手順
+
+#### 1. ページマーカーの追加（必須）
+
+**目的**: 各ページの境界とファイル名を明示
+
+**フォーマット**:
 ```markdown
+--- Page N (page_XXXX.png) ---
+```
+
+**追加方法**:
+```markdown
+# 修正前（OCR結果のまま）
+書籍タイトル
+
+第1章 概要
+
+# 修正後（ページマーカー追加）
+--- Page 1 (page_0001.png) ---
+
+書籍タイトル
+
+--- Page 2 (page_0002.png) ---
+
+第1章 概要
+```
+
+**注意**:
+- `N` はページ番号（1から開始）
+- `page_XXXX.png` は実際のファイル名と一致させる
+- ページマーカーの前後に空行を入れる
+
+---
+
+#### 2. 図マーカーの追加（図がある場合）
+
+**目的**: 図の位置と説明文を構造化
+
+**フォーマット**:
+```markdown
+<!-- FIGURE: パス/to/画像.png -->
+図の説明文
+```
+
+**追加方法**:
+```markdown
+# 修正前
+図1: システムアーキテクチャ
+本システムは3層構造になっています。
+
+# 修正後
+<!-- FIGURE: figures/page_0005_figure1.png -->
+図1: システムアーキテクチャ
+本システムは3層構造になっています。
+```
+
+**注意**:
+- パスは `figures/` ディレクトリからの相対パス
+- 図の説明文はマーカーの次の行に記述
+- 複数行の説明も可能
+
+---
+
+#### 3. 見出しマーカーの追加
+
+**目的**: 章・節・小節の階層構造を明確化
+
+**フォーマット**:
+- `#` : レベル1（章）
+- `##` : レベル2（節）
+- `###` : レベル3（小節）
+
+**追加方法**:
+```markdown
+# 修正前
+第1章 イントロダクション
+1.1 背景
+1.1.1 問題の所在
+
+# 修正後
 # 第1章 イントロダクション
 
 ## 1.1 背景
 
-## 1.2 目的
+### 1.1.1 問題の所在
 ```
 
-#### 2. 図表参照の修正
-
-**目的**: 図表への参照を適切なMarkdown構文に修正
-
-**修正前**:
-```markdown
-図1を参照してください。
-```
-
-**修正後**:
-```markdown
-![図1: システムアーキテクチャ](figures/fig_1.png)
-
-図1を参照してください。
-```
-
-#### 3. ページ区切りの挿入
-
-**目的**: 章の境目などで明示的な区切りを追加
-
-**修正前**:
-```markdown
-## まとめ
-...
-
-第2章 詳細設計
-```
-
-**修正後**:
-```markdown
-## まとめ
-...
+**注意**:
+- 見出しの前後に空行を入れる
+- 最大3階層まで（Constitution準拠）
+- `####` 以上は使用しない
 
 ---
 
-# 第2章 詳細設計
+#### 4. 読み上げ制御マーカーの追加（オプション）
+
+**目的**: 目次、索引、コラムなどの読み上げ制御
+
+**マーカー一覧**:
+| マーカー | 用途 | readAloud |
+|---------|------|-----------|
+| `<!-- toc -->` ... `<!-- /toc -->` | 目次範囲 | false |
+| `<!-- content -->` ... `<!-- /content -->` | 読み上げ対象範囲 | true |
+| `<!-- skip -->` ... `<!-- /skip -->` | 読み上げ非対象範囲 | false |
+
+**追加方法**:
+
+**目次ページ**:
+```markdown
+--- Page 2 (page_0002.png) ---
+
+<!-- toc -->
+第1章 SREとは ............... 15
+1.1 SREの定義 ............... 16
+1.1.1 歴史 ............... 17
+第2章 信頼性の定義 ............... 25
+おわりに ............... 100
+<!-- /toc -->
 ```
 
-#### 4. OCR誤認識の修正
+**索引ページ**:
+```markdown
+--- Page 100 (page_0100.png) ---
 
-OCRエラーの典型例:
+<!-- skip -->
+索引
+あ行: 15, 23, 45
+い行: 12, 34, 56
+<!-- /skip -->
+```
+
+**本文ページ（明示的に読み上げ対象にする場合）**:
+```markdown
+--- Page 3 (page_0003.png) ---
+
+<!-- content -->
+# 第1章 SREとは
+
+SREはGoogleが提唱したプラクティスです。
+<!-- /content -->
+```
+
+**注意**:
+- マーカーなしのページはデフォルトで `readAloud="false"`
+- 目次は自動的に `<tableOfContents>` 要素に変換される
+- 索引などの付録は `<!-- skip -->` で読み上げをスキップ
+
+---
+
+#### 5. ページメタデータの保持
+
+**目的**: 章内ページ番号などのメタ情報を保存
+
+**対象**:
+- `1 / 1` 形式の章内ページ番号
+- `はじめに 1 / 3` のような章名付きページ番号
+
+**処理**:
+```markdown
+# そのまま残す（削除しない）
+--- Page 2 (page_0002.png) ---
+
+## 第1章 概要
+
+本文...
+
+はじめに 1 / 3
+```
+
+**注意**:
+- これらのメタデータは XML 変換時に `<pageMetadata>` 要素になる
+- 削除せずそのまま残す
+
+---
+
+#### 6. OCR誤認識の修正
+
+**典型的なOCRエラー**:
 - **0/O混同**: `O(log n)` → `0(log n)`
 - **1/l混同**: `lst` → `1st`
 - **句読点**: `。` → `．` (全角ピリオド)
+- **空白**: `第 1章` → `第1章`
 
 **推奨ツール**:
 - テキストエディタのFind & Replace機能
 - 正規表現での一括置換
+- `sed` コマンド（一括処理）
+
+**一括置換例**:
+```bash
+# 0/O混同修正（アルゴリズム記法）
+sed -i 's/0(log n)/O(log n)/g' book.md
+
+# 不要な空白削除
+sed -i 's/第 \([0-9]\)章/第\1章/g' book.md
+```
+
+---
+
+### Step 6: XML変換（book.md → book.xml）
+
+**目的**: 構造化された book.md を TTS対応の XML 形式に変換
+
+**前提条件**: book.md に以下のマーカーが追加済みであること
+- ページマーカー（`--- Page N (file.png) ---`）
+- 図マーカー（`<!-- FIGURE: path -->`）
+- 見出しマーカー（`#`, `##`, `###`）
+
+**コマンド**:
+```bash
+python -m src.book_converter.cli <INPUT.md> <OUTPUT.xml> [OPTIONS]
+```
+
+**実行例**:
+```bash
+# 基本実行
+python -m src.book_converter.cli output/book.md output/book.xml
+
+# 詳細ログ出力
+python -m src.book_converter.cli output/book.md output/book.xml --verbose
+
+# 柱検出閾値調整
+python -m src.book_converter.cli output/book.md output/book.xml --running-head-threshold 0.3
+```
+
+**オプション**:
+| オプション | 型 | デフォルト | 説明 |
+|-----------|-----|-----------|------|
+| `--verbose` | flag | false | 詳細ログ出力 |
+| `--quiet` | flag | false | 警告を抑制 |
+| `--running-head-threshold` | float | 0.2 | 柱検出閾値 (0.0-1.0) |
+
+**出力**:
+```
+output/
+└── book.xml    # TTS対応XML形式
+```
+
+**book.xml の例**:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<book>
+  <metadata>
+    <title>書籍タイトル</title>
+    <conversionDate>2026-02-26</conversionDate>
+  </metadata>
+
+  <page number="1" sourceFile="page_0001.png">
+    <pageAnnouncement format="simple">1ページ</pageAnnouncement>
+
+    <figure readAloud="optional">
+      <file>figures/page_0001_figure1.png</file>
+      <description>図の説明文...</description>
+    </figure>
+
+    <content readAloud="true">
+      <heading level="1">書籍タイトル</heading>
+    </content>
+
+    <pageMetadata type="chapter-page">1 / 1</pageMetadata>
+  </page>
+
+  <!-- ... more pages ... -->
+</book>
+```
+
+**エラーハンドリング**:
+- 変換エラーが発生しても処理は継続
+- エラー箇所は XML コメントでマーク
+- 最後にエラーサマリーを表示
+
+**変換後の用途**:
+- TTS（Text-to-Speech）での読み上げ
+- SSML形式への二次変換
+- EPUB形式への変換
 
 ---
 
@@ -436,10 +713,13 @@ code output/book.md
 ```
 
 **チェックポイント**:
-- [ ] 章・セクション構造が正しく認識されているか
-- [ ] 図表参照が適切に配置されているか
-- [ ] OCR誤認識が許容範囲内か
-- [ ] ページ順序が正しいか
+- [ ] **ページマーカー**: すべてのページに `--- Page N (page_XXXX.png) ---` があるか
+- [ ] **図マーカー**: 図がある場合 `<!-- FIGURE: path -->` が追加されているか
+- [ ] **見出し階層**: `#`, `##`, `###` で正しく階層化されているか（最大3階層）
+- [ ] **読み上げ制御マーカー**: 目次に `<!-- toc -->`, 索引に `<!-- skip -->`, 本文に `<!-- content -->` が適切に配置されているか
+- [ ] **ページメタデータ**: `1 / 1` 形式のメタデータが保持されているか
+- [ ] **OCR誤認識**: 数式、アルゴリズム記法、句読点が正しいか
+- [ ] **ページ順序**: ページ番号が連番になっているか
 
 ---
 
@@ -671,7 +951,8 @@ project_root/
     │   ├── ocr_001.json
     │   └── ...
     ├── book.txt             # Step 5: 統合結果 (プレーンテキスト)
-    └── book.md              # Step 5: 統合結果 (Markdown)
+    ├── book.md              # Step 5: 統合結果 (Markdown、生OCR)
+    └── book.xml             # Step 6: XML変換結果 (手動マーキング後)
 ```
 
 ---
@@ -680,7 +961,7 @@ project_root/
 
 全ステップを連続実行する簡易スクリプトです。
 
-### 基本版
+### 基本版（自動処理のみ）
 
 ```bash
 #!/bin/bash
@@ -708,11 +989,16 @@ python -m src.cli.run_ocr "$OUTPUT/pages" -o "$OUTPUT/ocr" --layout-dir "$OUTPUT
 echo "=== Step 5: 統合 ==="
 python -m src.cli.consolidate "$OUTPUT/ocr" -o "$OUTPUT"
 
-echo "=== 完了 ==="
+echo "=== 自動処理完了 ==="
 echo "出力: $OUTPUT/book.md"
+echo ""
+echo "次のステップ（手動作業）:"
+echo "1. book.md にページマーカー、図マーカー、見出しマーカーを追加"
+echo "   詳細: docs/WORKFLOW.md の「手動ステップ」セクション参照"
+echo "2. XML変換: python -m src.book_converter.cli $OUTPUT/book.md $OUTPUT/book.xml"
 ```
 
-### GPU対応版
+### GPU対応版（自動処理のみ）
 
 ```bash
 #!/bin/bash
@@ -737,8 +1023,13 @@ python -m src.cli.run_ocr "$OUTPUT/pages" -o "$OUTPUT/ocr" --layout-dir "$OUTPUT
 echo "=== Step 5: 統合 ==="
 python -m src.cli.consolidate "$OUTPUT/ocr" -o "$OUTPUT"
 
-echo "=== 完了 ==="
+echo "=== 自動処理完了 ==="
 echo "出力: $OUTPUT/book.md"
+echo ""
+echo "次のステップ（手動作業）:"
+echo "1. book.md にページマーカー、図マーカー、見出しマーカーを追加"
+echo "   詳細: docs/WORKFLOW.md の「手動ステップ」セクション参照"
+echo "2. XML変換: python -m src.book_converter.cli $OUTPUT/book.md $OUTPUT/book.xml"
 ```
 
 ### 実行方法
