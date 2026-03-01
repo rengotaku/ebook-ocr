@@ -16,8 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-from PIL import Image, ImageDraw
+from PIL import Image
 
 
 class TestPreviewTrimGridCLI:
