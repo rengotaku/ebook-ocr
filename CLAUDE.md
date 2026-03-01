@@ -79,6 +79,35 @@ global_trim_right: 0.0           # 右端トリム率 (0.0-0.5)
 **制約**:
 - すべての trim 値は 0.0 以上 0.5 未満 (0.5 以上は画像の半分以上を削除するため無効)
 
+### Trim Grid Visualization (Issue #33)
+
+トリム値を視覚的に決定するためのグリッドガイド機能:
+
+```bash
+# 1. プレビューフレーム抽出
+make preview-extract VIDEO=input.mp4
+
+# 2. トリムグリッド生成
+make preview-trim-grid HASHDIR=output/<hash>
+
+# 3. 画像を確認してライン数でトリム値を特定
+open output/<hash>/preview/trim-grid/page_001.png
+# 例: 赤いライン3本目 = T:0.15 → GLOBAL_TRIM_TOP=0.15
+
+# 4. 確認したトリム値を適用
+make preview-trim HASHDIR=output/<hash> GLOBAL_TRIM_TOP=0.15
+```
+
+**色分け**:
+- 🔴 赤 (Top): `T:0.05`, `T:0.10`, ... (上端から下向き)
+- 🔵 青 (Bottom): `B:0.05`, `B:0.10`, ... (下端から上向き)
+- 🟢 緑 (Left): `L:0.05`, `L:0.10`, ... (左端から右向き)
+- 🟠 橙 (Right): `R:0.05`, `R:0.10`, ... (右端から左向き)
+
+**パラメータ**:
+- `--step 0.05`: グリッド間隔（デフォルト: 0.05）
+- `--max 0.30`: 最大トリム率（デフォルト: 0.30）
+
 <!-- MANUAL ADDITIONS START -->
 
 ## Speckit Framework
