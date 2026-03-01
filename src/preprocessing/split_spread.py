@@ -26,7 +26,11 @@ class TrimConfig:
 
     Supports two-stage trimming:
     1. Global trim: Applied before splitting (all 4 sides)
-    2. Split trim: Applied after splitting (outer edges only, spread mode only)
+    2. Split trim: Applied after splitting (all 4 edges, spread mode only)
+       - left_page_outer: Left page's left edge (outer edge)
+       - left_page_inner: Left page's right edge (binding/inner edge)
+       - right_page_inner: Right page's left edge (binding/inner edge)
+       - right_page_outer: Right page's right edge (outer edge)
 
     All trim values are percentages (0.0-0.5) of the image dimension.
     Values >= 0.5 are invalid (would remove half or more of the image).
@@ -40,6 +44,8 @@ class TrimConfig:
 
     # Split trim (applied after splitting, spread mode only)
     left_page_outer: float = 0.0
+    left_page_inner: float = 0.0
+    right_page_inner: float = 0.0
     right_page_outer: float = 0.0
 
     def __post_init__(self) -> None:
@@ -49,6 +55,8 @@ class TrimConfig:
         validate_trim_value(self.global_left, "global_left")
         validate_trim_value(self.global_right, "global_right")
         validate_trim_value(self.left_page_outer, "left_page_outer")
+        validate_trim_value(self.left_page_inner, "left_page_inner")
+        validate_trim_value(self.right_page_inner, "right_page_inner")
         validate_trim_value(self.right_page_outer, "right_page_outer")
 
 
@@ -168,6 +176,8 @@ def split_spread(
     overlap_px: int = 0,
     left_trim_pct: float = 0.0,
     right_trim_pct: float = 0.0,
+    left_inner_trim_pct: float = 0.0,
+    right_inner_trim_pct: float = 0.0,
 ) -> tuple[Image.Image, Image.Image]:
     """Split a spread image into left and right pages.
 
@@ -175,10 +185,12 @@ def split_spread(
         img: PIL Image of the spread.
         overlap_px: Pixels of overlap to include from center (for gutter text).
             Default 0 (exact split at center).
-        left_trim_pct: Percentage to trim from left edge of left page (0.0-1.0).
+        left_trim_pct: Percentage to trim from left edge of left page (outer edge) (0.0-1.0).
             E.g., 0.03 = 3% trimmed from outer edge.
-        right_trim_pct: Percentage to trim from right edge of right page (0.0-1.0).
+        right_trim_pct: Percentage to trim from right edge of right page (outer edge) (0.0-1.0).
             E.g., 0.03 = 3% trimmed from outer edge.
+        left_inner_trim_pct: Percentage to trim from right edge of left page (inner edge) (0.0-1.0).
+        right_inner_trim_pct: Percentage to trim from left edge of right page (inner edge) (0.0-1.0).
 
     Returns:
         Tuple of (left_page, right_page) as PIL Images.
@@ -187,15 +199,19 @@ def split_spread(
     mid_x = width // 2
     half_width = mid_x
 
-    # Calculate trim pixels
-    left_trim_px = int(half_width * left_trim_pct)
-    right_trim_px = int(half_width * right_trim_pct)
+    # Calculate trim pixels for outer edges
+    left_outer_trim_px = int(half_width * left_trim_pct)
+    right_outer_trim_px = int(half_width * right_trim_pct)
 
-    # Left page: from left_trim to mid_x + overlap
-    left_page = img.crop((left_trim_px, 0, mid_x + overlap_px, height))
+    # Calculate trim pixels for inner edges
+    left_inner_trim_px = int(half_width * left_inner_trim_pct)
+    right_inner_trim_px = int(half_width * right_inner_trim_pct)
 
-    # Right page: from mid_x - overlap to width - right_trim
-    right_page = img.crop((mid_x - overlap_px, 0, width - right_trim_px, height))
+    # Left page: from left_outer_trim to mid_x - left_inner_trim + overlap
+    left_page = img.crop((left_outer_trim_px, 0, mid_x + overlap_px - left_inner_trim_px, height))
+
+    # Right page: from mid_x + right_inner_trim - overlap to width - right_outer_trim
+    right_page = img.crop((mid_x - overlap_px + right_inner_trim_px, 0, width - right_outer_trim_px, height))
 
     return left_page, right_page
 
@@ -300,14 +316,20 @@ def split_spread_pages(
 
         if should_split:
             # Determine split-trim values (trim_config takes priority)
-            split_left_trim = left_trim_pct
-            split_right_trim = right_trim_pct
+            split_left_outer = left_trim_pct
+            split_right_outer = right_trim_pct
+            split_left_inner = 0.0
+            split_right_inner = 0.0
             if trim_config is not None:
-                split_left_trim = trim_config.left_page_outer
-                split_right_trim = trim_config.right_page_outer
+                split_left_outer = trim_config.left_page_outer
+                split_right_outer = trim_config.right_page_outer
+                split_left_inner = trim_config.left_page_inner
+                split_right_inner = trim_config.right_page_inner
 
             # Split into left and right
-            left_page, right_page = split_spread(img, overlap_px, split_left_trim, split_right_trim)
+            left_page, right_page = split_spread(
+                img, overlap_px, split_left_outer, split_right_outer, split_left_inner, split_right_inner
+            )
 
             # Generate output names: page_0001.png → page_0001_L.png, page_0001_R.png
             stem = page_path.stem

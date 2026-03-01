@@ -58,9 +58,13 @@ Python 3.13+: Follow standard conventions
 spread_mode: single              # 'single' (分割なし) or 'spread' (常に左右分割)
 spread_aspect_ratio: 1.2         # [DEPRECATED] アスペクト比しきい値（spread_mode 使用を推奨）
 
-# Split trim (分割後のエッジトリミング、spread モードのみ)
-spread_left_trim: 0.15           # 左ページの左端トリム率 (0.0-0.5)
-spread_right_trim: 0.15          # 右ページの右端トリム率 (0.0-0.5)
+# Split trim - 4エッジ独立制御 (分割後のトリミング、spread モードのみ)
+spread_left_trim: 0.15           # [DEPRECATED] spread_left_page_outer のエイリアス
+spread_right_trim: 0.15          # [DEPRECATED] spread_right_page_outer のエイリアス
+spread_left_page_outer: 0.15     # 左ページの外側エッジ（左端）トリム率 (0.0-0.5)
+spread_left_page_inner: 0.0      # 左ページの内側エッジ（右端/綴じ側）トリム率 (0.0-0.5)
+spread_right_page_inner: 0.0     # 右ページの内側エッジ（左端/綴じ側）トリム率 (0.0-0.5)
+spread_right_page_outer: 0.15    # 右ページの外側エッジ（右端）トリム率 (0.0-0.5)
 
 # Global trim (分割前の全体トリミング)
 global_trim_top: 0.0             # 上端トリム率 (0.0-0.5)
@@ -74,10 +78,38 @@ global_trim_right: 0.0           # 右端トリム率 (0.0-0.5)
 **Trim 処理順序**:
 1. Global trim: 分割前に全体画像に適用
 2. Split (spread モードのみ): 画像を左右に分割
-3. Split trim: 分割後の外側エッジに適用（左ページの左端、右ページの右端）
+3. Split trim: 分割後の4エッジに独立適用
+   - 左ページ: 外側（左端）+ 内側（右端/綴じ側）
+   - 右ページ: 内側（左端/綴じ側）+ 外側（右端）
 
 **制約**:
 - すべての trim 値は 0.0 以上 0.5 未満 (0.5 以上は画像の半分以上を削除するため無効)
+
+**CLI引数**:
+```bash
+# 新規引数（推奨）
+--left-page-outer 0.15      # 左ページ外側（左端）
+--left-page-inner 0.05      # 左ページ内側（右端/綴じ側）
+--right-page-inner 0.05     # 右ページ内側（左端/綴じ側）
+--right-page-outer 0.15     # 右ページ外側（右端）
+
+# 旧引数（後方互換性、非推奨）
+--left-trim 0.15            # left-page-outer のエイリアス
+--right-trim 0.15           # right-page-outer のエイリアス
+```
+
+**Makefile変数**:
+```bash
+# 新規変数（推奨）
+SPREAD_LEFT_PAGE_OUTER=0.15
+SPREAD_LEFT_PAGE_INNER=0.05
+SPREAD_RIGHT_PAGE_INNER=0.05
+SPREAD_RIGHT_PAGE_OUTER=0.15
+
+# 旧変数（後方互換性、非推奨）
+LEFT_TRIM=0.15              # SPREAD_LEFT_PAGE_OUTER のエイリアス
+RIGHT_TRIM=0.15             # SPREAD_RIGHT_PAGE_OUTER のエイリアス
+```
 
 ### Trim Grid Visualization (Issue #33)
 

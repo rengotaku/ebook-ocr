@@ -50,8 +50,14 @@ deduplicate: setup ## Step 2: Deduplicate frames (requires HASHDIR)
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.deduplicate "$(HASHDIR)/frames" -o "$(HASHDIR)/pages" -t $(THRESHOLD) $(LIMIT_OPT)
 
 SPREAD_MODE ?= $(shell $(call CFG,spread_mode))
-LEFT_TRIM ?= $(shell $(call CFG,spread_left_trim))
-RIGHT_TRIM ?= $(shell $(call CFG,spread_right_trim))
+
+# Split trim (新命名規則)
+SPREAD_LEFT_PAGE_OUTER ?= $(shell $(call CFG,spread_left_trim))
+SPREAD_LEFT_PAGE_INNER ?= $(shell $(call CFG,spread_left_page_inner))
+SPREAD_RIGHT_PAGE_INNER ?= $(shell $(call CFG,spread_right_page_inner))
+SPREAD_RIGHT_PAGE_OUTER ?= $(shell $(call CFG,spread_right_trim))
+
+# Global trim
 ASPECT_RATIO ?= $(shell $(call CFG,spread_aspect_ratio))
 GLOBAL_TRIM_TOP ?= $(shell $(call CFG,global_trim_top))
 GLOBAL_TRIM_BOTTOM ?= $(shell $(call CFG,global_trim_bottom))
@@ -62,8 +68,10 @@ split-spreads: setup ## Step 2.5: Split spread images into pages (requires HASHD
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.split_spreads "$(HASHDIR)/pages" \
 		--mode $(SPREAD_MODE) \
-		--left-trim $(LEFT_TRIM) \
-		--right-trim $(RIGHT_TRIM) \
+		--left-page-outer $(SPREAD_LEFT_PAGE_OUTER) \
+		--left-page-inner $(SPREAD_LEFT_PAGE_INNER) \
+		--right-page-inner $(SPREAD_RIGHT_PAGE_INNER) \
+		--right-page-outer $(SPREAD_RIGHT_PAGE_OUTER) \
 		--aspect-ratio $(ASPECT_RATIO) \
 		--global-trim-top $(GLOBAL_TRIM_TOP) \
 		--global-trim-bottom $(GLOBAL_TRIM_BOTTOM) \
@@ -95,8 +103,10 @@ preview-trim: setup ## Preview: Apply trim to preview/frames/ -> preview/trimmed
 				global_bottom=$(or $(GLOBAL_TRIM_BOTTOM),0.0), \
 				global_left=$(or $(GLOBAL_TRIM_LEFT),0.0), \
 				global_right=$(or $(GLOBAL_TRIM_RIGHT),0.0), \
-				left_page_outer=$(or $(LEFT_TRIM),0.0), \
-				right_page_outer=$(or $(RIGHT_TRIM),0.0)))"
+				left_page_outer=$(or $(SPREAD_LEFT_PAGE_OUTER),0.0), \
+				left_page_inner=$(or $(SPREAD_LEFT_PAGE_INNER),0.0), \
+				right_page_inner=$(or $(SPREAD_RIGHT_PAGE_INNER),0.0), \
+				right_page_outer=$(or $(SPREAD_RIGHT_PAGE_OUTER),0.0)))"
 	@echo "=== Preview trim complete: $(HASHDIR)/preview/trimmed ==="
 
 preview-trim-grid: setup ## Preview: Show trim grid guides (requires HASHDIR)
