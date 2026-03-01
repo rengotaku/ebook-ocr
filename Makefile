@@ -26,7 +26,7 @@ LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),)
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate build-book preview-extract preview-trim test test-book-converter test-cov converter convert-sample ruff pylint lint clean clean-all
+.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate build-book preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample ruff pylint lint clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -98,6 +98,16 @@ preview-trim: setup ## Preview: Apply trim to preview/frames/ -> preview/trimmed
 				left_page_outer=$(or $(LEFT_TRIM),0.0), \
 				right_page_outer=$(or $(RIGHT_TRIM),0.0)))"
 	@echo "=== Preview trim complete: $(HASHDIR)/preview/trimmed ==="
+
+preview-trim-grid: setup ## Preview: Show trim grid guides (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required"; exit 1; }
+	@test -d "$(HASHDIR)/preview/frames" || { echo "Error: Run 'make preview-extract' first."; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.preview_trim_grid \
+		"$(HASHDIR)/preview/frames" \
+		-o "$(HASHDIR)/preview/trim-grid" \
+		--step 0.05 \
+		--max 0.30 \
+		--spread-mode $(SPREAD_MODE)
 
 detect-layout: setup ## Step 3: Detect layout using yomitoku (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect-layout HASHDIR=output/<hash>"; exit 1; }
