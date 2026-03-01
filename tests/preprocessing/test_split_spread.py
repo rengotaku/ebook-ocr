@@ -1077,6 +1077,119 @@ class TestPreviewTrimProcessing:
         assert second_height == 800
 
 
+class TestInnerEdgeTrim:
+    """内側エッジ（binding側）のトリムテスト."""
+
+    def test_left_page_inner_trim_reduces_width(self, large_spread_image: Path) -> None:
+        """left_page_inner trims the right edge (inner/binding edge) of left page."""
+        trim_cfg = TrimConfig(left_page_inner=0.1)
+        # Original: 2000x1000, split: each 1000x1000
+        # Left page inner trim: 10% of 1000 = 100px removed from right edge
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        # Left page: 1000 - 100 (inner) = 900px
+        assert left.size[0] == 900
+        left.close()
+
+    def test_right_page_inner_trim_reduces_width(self, large_spread_image: Path) -> None:
+        """right_page_inner trims the left edge (inner/binding edge) of right page."""
+        trim_cfg = TrimConfig(right_page_inner=0.1)
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        right = Image.open(result[1])
+        # Right page: 1000 - 100 (inner) = 900px
+        assert right.size[0] == 900
+        right.close()
+
+    def test_all_four_edges_independent_trim(self, large_spread_image: Path) -> None:
+        """All 4 edges can be trimmed independently."""
+        trim_cfg = TrimConfig(
+            left_page_outer=0.05,
+            left_page_inner=0.10,
+            right_page_inner=0.15,
+            right_page_outer=0.20,
+        )
+        # Original: 2000x1000, split: each 1000x1000
+        # Left page: 1000 - 50 (outer) - 100 (inner) = 850px
+        # Right page: 1000 - 150 (inner) - 200 (outer) = 650px
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        right = Image.open(result[1])
+        assert left.size[0] == 850
+        assert right.size[0] == 650
+        left.close()
+        right.close()
+
+    def test_inner_trim_with_global_trim(self, large_spread_image: Path) -> None:
+        """Inner trim works correctly after global trim."""
+        trim_cfg = TrimConfig(
+            global_left=0.10,
+            global_right=0.10,
+            left_page_inner=0.10,
+            right_page_inner=0.10,
+        )
+        # Original: 2000x1000
+        # After global: 1600x1000 (200px each side)
+        # After split: each 800x1000
+        # After inner trim: each 800 - 80 = 720px
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        right = Image.open(result[1])
+        assert left.size[0] == 720
+        assert right.size[0] == 720
+        left.close()
+        right.close()
+
+    def test_inner_and_outer_trim_combined(self, large_spread_image: Path) -> None:
+        """Both inner and outer trim can be applied to same page."""
+        trim_cfg = TrimConfig(
+            left_page_outer=0.10,
+            left_page_inner=0.10,
+        )
+        # Left page: 1000 - 100 (outer) - 100 (inner) = 800px
+        result = split_spread_pages(
+            str(large_spread_image),
+            mode=SpreadMode.SPREAD,
+            trim_config=trim_cfg,
+        )
+        assert len(result) == 2
+        left = Image.open(result[0])
+        assert left.size[0] == 800
+        left.close()
+
+    def test_inner_trim_validation(self) -> None:
+        """Inner trim values are validated like other trim values."""
+        with pytest.raises(ValueError):
+            TrimConfig(left_page_inner=0.5)
+        with pytest.raises(ValueError):
+            TrimConfig(right_page_inner=0.6)
+
+    def test_default_inner_trim_zero(self) -> None:
+        """Default TrimConfig has inner trim values set to 0.0."""
+        cfg = TrimConfig()
+        assert cfg.left_page_inner == 0.0
+        assert cfg.right_page_inner == 0.0
+
+
 class TestPreviewEdgeCases:
     """プレビュー機能のエッジケーステスト."""
 

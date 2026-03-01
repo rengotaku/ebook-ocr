@@ -51,8 +51,10 @@ class TestSplitSpreadsCLI:
             text=True,
         )
         assert result.returncode == 0
-        assert "--left-trim" in result.stdout
-        assert "--right-trim" in result.stdout
+        assert "--left-page-outer" in result.stdout
+        assert "--left-page-inner" in result.stdout
+        assert "--right-page-inner" in result.stdout
+        assert "--right-page-outer" in result.stdout
 
     def test_missing_input_shows_error(self):
         """Verify error message for missing input directory."""
