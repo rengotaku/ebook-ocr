@@ -11,7 +11,6 @@ VIDEO ?= $(shell $(call CFG,video))
 OUTPUT ?= $(shell $(call CFG,output))
 INTERVAL ?= $(shell $(call CFG,interval))
 THRESHOLD ?= $(shell $(call CFG,threshold))
-OCR_TIMEOUT ?= $(shell $(call CFG,ocr_timeout))
 
 # Hash directory (set manually for individual targets)
 # Usage: make ocr HASHDIR=output/a3f8c2d1e5b7f9c0
@@ -25,8 +24,9 @@ LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),)
 # Book converter variables
 INPUT_MD ?=
 OUTPUT_XML ?=
+USE_LLM ?= $(shell $(call CFG,use_llm_toc_classifier))
 
-.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate build-book preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample ruff pylint lint clean clean-all
+.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample ruff pylint lint clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -58,7 +58,6 @@ SPREAD_RIGHT_PAGE_INNER ?= $(shell $(call CFG,spread_right_page_inner))
 SPREAD_RIGHT_PAGE_OUTER ?= $(shell $(call CFG,spread_right_trim))
 
 # Global trim
-ASPECT_RATIO ?= $(shell $(call CFG,spread_aspect_ratio))
 GLOBAL_TRIM_TOP ?= $(shell $(call CFG,global_trim_top))
 GLOBAL_TRIM_BOTTOM ?= $(shell $(call CFG,global_trim_bottom))
 GLOBAL_TRIM_LEFT ?= $(shell $(call CFG,global_trim_left))
@@ -72,7 +71,6 @@ split-spreads: setup ## Step 2.5: Split spread images into pages (requires HASHD
 		--left-page-inner $(SPREAD_LEFT_PAGE_INNER) \
 		--right-page-inner $(SPREAD_RIGHT_PAGE_INNER) \
 		--right-page-outer $(SPREAD_RIGHT_PAGE_OUTER) \
-		--aspect-ratio $(ASPECT_RATIO) \
 		--global-trim-top $(GLOBAL_TRIM_TOP) \
 		--global-trim-bottom $(GLOBAL_TRIM_BOTTOM) \
 		--global-trim-left $(GLOBAL_TRIM_LEFT) \
@@ -155,31 +153,12 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT option
 	@$(MAKE) --no-print-directory converter INPUT_MD="$(HASHDIR)/book.md" OUTPUT_XML="$(HASHDIR)/book.xml"
 	@echo "=== Done: $(HASHDIR)/book.xml ==="
 
-# === Legacy Targets (for backward compatibility) ===
-
-yomitoku-detect: setup ## [LEGACY] Run yomitoku layout detection (use detect-layout instead)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make yomitoku-detect HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.detect_layout "$(HASHDIR)/pages" -o "$(HASHDIR)/layout" --device cpu
-
-rover-ocr: setup ## [LEGACY] Run ROVER OCR (use run-ocr instead)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make rover-ocr HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.run_ocr "$(HASHDIR)/pages" -o "$(HASHDIR)/ocr_output" --device cpu
-
-build-book: setup ## [LEGACY] Build book.txt from ROVER outputs (use consolidate instead)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make build-book HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)"
-
-# === Quick Test (deprecated alias) ===
-
-test-run: ## Quick test with LIMIT=25 default (Usage: make test-run VIDEO=input.mov)
-	@$(MAKE) --no-print-directory run VIDEO="$(VIDEO)" LIMIT="$(or $(LIMIT),25)"
-
 # === Book Converter ===
 
 converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml [THRESHOLD=0.5] [VERBOSE=1])
 	@test -n "$(INPUT_MD)" || { echo "Error: INPUT_MD required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
 	@test -n "$(OUTPUT_XML)" || { echo "Error: OUTPUT_XML required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
-	PYTHONPATH=$(CURDIR) USE_LLM_TOC_CLASSIFIER=true $(PYTHON) -m src.book_converter.cli "$(INPUT_MD)" "$(OUTPUT_XML)" --group-pages \
+	PYTHONPATH=$(CURDIR) $(if $(USE_LLM),USE_LLM_TOC_CLASSIFIER=$(USE_LLM)) $(PYTHON) -m src.book_converter.cli "$(INPUT_MD)" "$(OUTPUT_XML)" --group-pages \
 		$(if $(THRESHOLD),--running-head-threshold $(THRESHOLD)) \
 		$(if $(VERBOSE),--verbose)
 
