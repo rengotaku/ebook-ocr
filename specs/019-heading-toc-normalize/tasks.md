@@ -240,22 +240,22 @@
 
 ### Input
 
-- [ ] T072 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
-- [ ] T073 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph5-output.md
+- [x] T072 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
+- [x] T073 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph5-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T074 [P] CLI report サブコマンドテストを実装: tests/cli/test_normalize_headings.py
+- [x] T074 [P] CLI report サブコマンドテストを実装: tests/cli/test_normalize_headings.py
   - test_report_command_success
   - test_report_command_file_not_found
-- [ ] T075 [P] CLI normalize サブコマンドテストを実装: tests/cli/test_normalize_headings.py
+- [x] T075 [P] CLI normalize サブコマンドテストを実装: tests/cli/test_normalize_headings.py
   - test_normalize_command_dryrun
   - test_normalize_command_apply
-- [ ] T076 [P] CLI validate サブコマンドテストを実装: tests/cli/test_normalize_headings.py
+- [x] T076 [P] CLI validate サブコマンドテストを実装: tests/cli/test_normalize_headings.py
   - test_validate_command_success
   - test_validate_command_warn_exit_code
-- [ ] T077 `make test` で FAIL を確認 (RED)
-- [ ] T078 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph6-test.md
+- [x] T077 `make test` で FAIL を確認 (RED)
+- [x] T078 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph6-test.md
 
 ### Implementation (GREEN)
 

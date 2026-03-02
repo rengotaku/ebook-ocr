@@ -7,6 +7,9 @@ import pytest
 
 from src.book_converter.cli import convert_book
 
+# Mark entire file as E2E tests
+pytestmark = pytest.mark.e2e
+
 
 class TestE2ETocFeature:
     """End-to-end tests for TOC marker feature."""

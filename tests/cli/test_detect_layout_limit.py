@@ -9,6 +9,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+# Mark entire file as slow tests
+pytestmark = pytest.mark.slow
+
 
 class TestDetectLayoutLimitOption:
     """Test --limit option for detect_layout CLI."""

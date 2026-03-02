@@ -13,6 +13,11 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
+import pytest
+
+# Mark entire file as slow and OCR tests
+pytestmark = [pytest.mark.slow, pytest.mark.ocr]
+
 import numpy as np
 import pytest
 from PIL import Image

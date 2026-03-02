@@ -9,6 +9,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+# Mark entire file as slow and OCR tests
+pytestmark = [pytest.mark.slow, pytest.mark.ocr]
+
 
 class TestRunOcrLimitOption:
     """Test --limit option for run_ocr CLI."""

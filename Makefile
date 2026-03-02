@@ -167,13 +167,22 @@ convert-sample: setup ## Convert sample book.md to XML
 
 # === Testing ===
 
-test: setup ## Run tests
+test: setup ## Run fast tests only (excludes slow/e2e/ocr tests)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v -m "not slow and not e2e and not ocr"
+
+test-all: setup ## Run all tests (including slow/e2e/ocr tests)
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v
 
-test-book-converter: setup ## Run book_converter tests
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/book_converter/ -v
+test-slow: setup ## Run only slow tests
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v -m "slow or e2e or ocr"
 
-test-cov: setup ## Run tests with coverage
+test-book-converter: setup ## Run book_converter tests (fast only)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/book_converter/ -v -m "not slow and not e2e and not ocr"
+
+test-cov: setup ## Run tests with coverage (fast only)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing -m "not slow and not e2e and not ocr"
+
+test-cov-all: setup ## Run all tests with coverage (including slow)
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
 
 coverage: test-cov ## Alias for test-cov
