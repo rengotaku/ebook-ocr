@@ -81,7 +81,7 @@ def match_toc_to_body(
                     body_heading=heading,
                     match_type=MatchType.EXACT,
                     similarity=1.0,
-                    line_number=idx + 1,
+                    line_number=heading.line_number if heading.line_number > 0 else idx + 1,
                 )
                 best_similarity = 1.0
                 used_headings.add(idx)
@@ -97,7 +97,7 @@ def match_toc_to_body(
                     body_heading=heading,
                     match_type=MatchType.EXACT,
                     similarity=1.0,
-                    line_number=idx + 1,
+                    line_number=heading.line_number if heading.line_number > 0 else idx + 1,
                 )
                 best_similarity = 1.0
                 used_headings.add(idx)
@@ -114,7 +114,7 @@ def match_toc_to_body(
                     body_heading=heading,
                     match_type=MatchType.FUZZY,
                     similarity=similarity,
-                    line_number=idx + 1,
+                    line_number=heading.line_number if heading.line_number > 0 else idx + 1,
                 )
 
         # If fuzzy match found, mark as used

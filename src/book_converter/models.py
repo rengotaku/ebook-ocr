@@ -89,6 +89,7 @@ class Heading:
     level: int  # 1, 2, 3（0=エラー）
     text: str
     read_aloud: bool = True  # skip区間ではFalse
+    line_number: int = 0  # book.md内の行番号 (1-indexed, 0=未設定)
 
 
 @dataclass(frozen=True)

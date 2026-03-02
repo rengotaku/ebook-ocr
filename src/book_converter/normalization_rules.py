@@ -116,8 +116,18 @@ def generate_rules(matches: list[MatchResult]) -> list[NormalizationRule]:
                     # Should not reach here, but use NONE as fallback
                     action = NormalizationAction.NONE
 
+        # Build original text - body_text may already contain markdown prefix
+        # Check if body_text starts with # to avoid duplication
+        if body_level > 0:
+            if body_text.startswith("#"):
+                original_text = body_text  # Already has prefix
+            else:
+                original_text = f"{'#' * body_level} {body_text}"
+        else:
+            original_text = body_text
+
         rule = NormalizationRule(
-            original=f"{'#' * body_level} {body_text}" if body_level > 0 else body_text,
+            original=original_text,
             normalized=normalized_text,
             line_number=match.line_number,
             action=action,

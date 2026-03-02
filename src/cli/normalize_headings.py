@@ -120,7 +120,7 @@ def cmd_normalize(args: argparse.Namespace) -> int:
     from src.book_converter.models import Heading
 
     body_headings = [
-        Heading(level=h.level, text=h.raw_text, read_aloud="")
+        Heading(level=h.level, text=h.raw_text, read_aloud=True, line_number=h.line_number)
         for h in headings
     ]
 
@@ -148,8 +148,26 @@ def cmd_normalize(args: argparse.Namespace) -> int:
             return 1
     else:
         # Preview changes
-        preview = preview_diff(content, rules)
-        print(preview)
+        if not rules:
+            print("Normalization Preview")
+            print("=====================")
+            print("No changes needed.")
+            print()
+            print(f"TOC Entries: {len(toc_entries)}")
+            print(f"Body Headings: {len(body_headings)}")
+            print(f"Matches: {sum(1 for m in matches if m.match_type.value != 'missing')}")
+            print()
+            print("All matched headings are already in the correct format.")
+            print("Run 'make validate-toc' for detailed match information.")
+        else:
+            preview = preview_diff(content, rules)
+            print("Normalization Preview")
+            print("=====================")
+            print(f"Changes: {len(rules)}")
+            print()
+            print(preview)
+            print()
+            print("Run with APPLY=1 to apply changes.")
 
     return 0
 
@@ -213,7 +231,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     from src.book_converter.models import Heading
 
     body_headings = [
-        Heading(level=h.level, text=h.raw_text, read_aloud="")
+        Heading(level=h.level, text=h.raw_text, read_aloud=True, line_number=h.line_number)
         for h in headings
     ]
 
