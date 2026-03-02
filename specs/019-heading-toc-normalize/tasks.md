@@ -34,11 +34,11 @@
 
 **目的**: 既存コードの確認、ディレクトリ構造の準備
 
-- [ ] T001 既存の TOC パース実装を確認: src/book_converter/parser/toc.py
-- [ ] T002 [P] 既存の見出しパース実装を確認: src/book_converter/parser/heading.py
-- [ ] T003 [P] 既存のモデル定義を確認: src/book_converter/models.py
-- [ ] T004 [P] 新規テストディレクトリを作成: tests/book_converter/parser/ (存在確認)
-- [ ] T005 セットアップ結果を出力: specs/019-heading-toc-normalize/tasks/ph1-output.md
+- [x] T001 既存の TOC パース実装を確認: src/book_converter/parser/toc.py
+- [x] T002 [P] 既存の見出しパース実装を確認: src/book_converter/parser/heading.py
+- [x] T003 [P] 既存のモデル定義を確認: src/book_converter/models.py
+- [x] T004 [P] 新規テストディレクトリを作成: tests/book_converter/parser/ (存在確認)
+- [x] T005 セットアップ結果を出力: specs/019-heading-toc-normalize/tasks/ph1-output.md
 
 ---
 
