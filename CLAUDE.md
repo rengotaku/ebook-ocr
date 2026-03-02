@@ -26,6 +26,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-04
 - Python 3.13+ + ruff (既存), pylint (既存) (017-github-actions-lint)
 - Python 3.13+ + Pillow (画像処理), PyYAML (設定読み込み) (018-spread-mode-trim)
 - ファイルシステム（PNG画像、YAML設定） (018-spread-mode-trim)
+- Python 3.13+ (Constitution 準拠) + re (標準ライブラリ), difflib (ファジーマッチ用、標準ライブラリ) (019-heading-toc-normalize)
+- ファイルベース (book.md 入力/出力) (019-heading-toc-normalize)
 
 - Python 3.13+ + Pillow, imagehash, doclayout-yolo, requests (001-code-refactoring)
 
@@ -45,9 +47,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13+: Follow standard conventions
 
 ## Recent Changes
+- 019-heading-toc-normalize: Added Python 3.13+ (Constitution 準拠) + re (標準ライブラリ), difflib (ファジーマッチ用、標準ライブラリ)
 - 018-spread-mode-trim: Added Python 3.13+ + Pillow (画像処理), PyYAML (設定読み込み)
 - 017-github-actions-lint: Added Python 3.13+ + ruff (既存), pylint (既存)
-- 015-cli-limit-option: Added Python 3.13+ + argparse（標準ライブラリ）
 
 ## Configuration (config.yaml)
 
