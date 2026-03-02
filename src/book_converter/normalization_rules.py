@@ -139,7 +139,36 @@ def generate_sed_script(rules: list[NormalizationRule]) -> str:
     Returns:
         String containing sed commands (one per line)
     """
-    raise NotImplementedError("generate_sed_script() is not yet implemented")
+    import re
+
+    from src.book_converter.models import NormalizationAction
+
+    if not rules:
+        return ""
+
+    commands: list[str] = []
+    for rule in rules:
+        # Skip NONE action rules (no change needed)
+        if rule.action == NormalizationAction.NONE:
+            continue
+
+        # Escape special sed characters in original and normalized
+        # Escape order matters: \ first, then /, then &
+        original_escaped = rule.original
+        original_escaped = original_escaped.replace("\\", "\\\\")
+        original_escaped = original_escaped.replace("/", "\\/")
+        original_escaped = original_escaped.replace("&", "\\&")
+
+        normalized_escaped = rule.normalized
+        normalized_escaped = normalized_escaped.replace("\\", "\\\\")
+        normalized_escaped = normalized_escaped.replace("/", "\\/")
+        normalized_escaped = normalized_escaped.replace("&", "\\&")
+
+        # Generate sed command with line anchors (^ and $) to match entire line
+        sed_cmd = f"sed -i 's/^{original_escaped}$/{normalized_escaped}/' book.md"
+        commands.append(sed_cmd)
+
+    return "\n".join(commands)
 
 
 def preview_diff(content: str, rules: list[NormalizationRule]) -> str:
@@ -155,7 +184,25 @@ def preview_diff(content: str, rules: list[NormalizationRule]) -> str:
     Returns:
         String containing diff preview lines
     """
-    raise NotImplementedError("preview_diff() is not yet implemented")
+    if not rules:
+        return ""
+
+    lines = content.split("\n")
+    diff_lines: list[str] = []
+
+    for rule in rules:
+        # Check if line exists and matches
+        line_idx = rule.line_number - 1  # 1-indexed to 0-indexed
+        if 0 <= line_idx < len(lines):
+            current_line = lines[line_idx]
+            if current_line == rule.original:
+                diff_line = (
+                    f"- Line {rule.line_number}: "
+                    f'"{rule.original}" -> "{rule.normalized}"'
+                )
+                diff_lines.append(diff_line)
+
+    return "\n".join(diff_lines)
 
 
 def apply_rules(content: str, rules: list[NormalizationRule]) -> str:
@@ -170,4 +217,17 @@ def apply_rules(content: str, rules: list[NormalizationRule]) -> str:
     Returns:
         Modified content with rules applied
     """
-    raise NotImplementedError("apply_rules() is not yet implemented")
+    if not rules:
+        return content
+
+    lines = content.split("\n")
+
+    # Apply each rule
+    for rule in rules:
+        line_idx = rule.line_number - 1  # 1-indexed to 0-indexed
+        if 0 <= line_idx < len(lines):
+            # Only replace if current line matches original
+            if lines[line_idx] == rule.original:
+                lines[line_idx] = rule.normalized
+
+    return "\n".join(lines)

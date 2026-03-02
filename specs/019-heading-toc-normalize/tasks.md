@@ -171,17 +171,17 @@
 
 ### Implementation (GREEN)
 
-- [ ] T048 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph4-test.md
-- [ ] T049 [US3] generate_sed_script() を実装: src/book_converter/normalization_rules.py
-- [ ] T050 [US3] preview_diff() を実装: src/book_converter/normalization_rules.py
-- [ ] T051 [US3] apply_rules() を実装: src/book_converter/normalization_rules.py
-- [ ] T052 `make test` で PASS を確認 (GREEN)
+- [x] T048 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph4-test.md
+- [x] T049 [US3] generate_sed_script() を実装: src/book_converter/normalization_rules.py
+- [x] T050 [US3] preview_diff() を実装: src/book_converter/normalization_rules.py
+- [x] T051 [US3] apply_rules() を実装: src/book_converter/normalization_rules.py
+- [x] T052 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T053 `make test` で全テスト PASS を確認（US1, US2 含む）
-- [ ] T054 `make coverage` でカバレッジ ≥80% を確認
-- [ ] T055 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph4-output.md
+- [x] T053 `make test` で全テスト PASS を確認（US1, US2 含む）
+- [x] T054 `make coverage` でカバレッジ ≥80% を確認
+- [x] T055 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph4-output.md
 
 **チェックポイント**: sed スクリプト生成が独立してテスト可能
 
