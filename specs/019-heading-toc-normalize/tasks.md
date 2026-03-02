@@ -50,26 +50,26 @@
 
 ### Input
 
-- [ ] T006 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
+- [x] T006 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T007 [P] [US1] 番号フォーマット正規化テストを実装: tests/book_converter/parser/test_heading_normalizer.py
+- [x] T007 [P] [US1] 番号フォーマット正規化テストを実装: tests/book_converter/parser/test_heading_normalizer.py
   - test_normalize_hyphen_to_dot: `1-1-1` → `1.1.1`
   - test_normalize_fullwidth_to_halfwidth: `１．１` → `1.1`
   - test_normalize_nakaguro_to_dot: `1・1` → `1.1`
-- [ ] T008 [P] [US1] スペース正規化テストを実装: tests/book_converter/parser/test_heading_normalizer.py
+- [x] T008 [P] [US1] スペース正規化テストを実装: tests/book_converter/parser/test_heading_normalizer.py
   - test_normalize_chapter_spaces: `第 1 章` → `第1章`
   - test_normalize_number_spaces: `1. 1` → `1.1`
-- [ ] T009 [P] [US1] 特殊マーカー検出テストを実装: tests/book_converter/parser/test_heading_normalizer.py
+- [x] T009 [P] [US1] 特殊マーカー検出テストを実装: tests/book_converter/parser/test_heading_normalizer.py
   - test_is_special_marker_square: `■コードベース` → True
   - test_is_special_marker_diamond: `◆注意事項` → True
   - test_is_special_marker_normal: `SREの概要` → False
-- [ ] T010 [P] [US1] 見出し抽出テストを実装: tests/book_converter/parser/test_heading_normalizer.py
+- [x] T010 [P] [US1] 見出し抽出テストを実装: tests/book_converter/parser/test_heading_normalizer.py
   - test_extract_headings: `## ` で始まる行を抽出
   - test_classify_heading_patterns: 番号あり/なし/マーカーなしの3分類
-- [ ] T011 `make test` で FAIL を確認 (RED)
-- [ ] T012 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph2-test.md
+- [x] T011 `make test` で FAIL を確認 (RED)
+- [x] T012 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph2-test.md
 
 ### Implementation (GREEN)
 
