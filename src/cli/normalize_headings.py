@@ -10,7 +10,45 @@ from __future__ import annotations
 
 import argparse
 import sys
+import unicodedata
 from pathlib import Path
+
+
+def _display_width(text: str) -> int:
+    """Calculate display width of text (handles CJK characters)."""
+    width = 0
+    for char in text:
+        ea = unicodedata.east_asian_width(char)
+        if ea in ('F', 'W', 'A'):  # Fullwidth, Wide, Ambiguous
+            width += 2
+        else:
+            width += 1
+    return width
+
+
+def _truncate_to_width(text: str, max_width: int) -> str:
+    """Truncate text to fit within max display width."""
+    if _display_width(text) <= max_width:
+        return text
+
+    result = ""
+    current_width = 0
+    for char in text:
+        ea = unicodedata.east_asian_width(char)
+        char_width = 2 if ea in ('F', 'W', 'A') else 1
+        if current_width + char_width + 2 > max_width:  # +2 for ".."
+            return result + ".."
+        result += char
+        current_width += char_width
+    return result
+
+
+def _pad_to_width(text: str, target_width: int) -> str:
+    """Pad text with spaces to reach target display width."""
+    current_width = _display_width(text)
+    if current_width >= target_width:
+        return text
+    return text + " " * (target_width - current_width)
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -182,12 +220,70 @@ def cmd_normalize(args: argparse.Namespace) -> int:
             print()
             print("Run 'make validate-toc' for detailed match information.")
         else:
+            from src.book_converter.models import NormalizationAction
+
             print(f"Changes to apply: {len(rules)}")
             print()
-            preview = preview_diff(content, rules)
-            print(preview)
+
+            # Build table data from matches and rules
+            # Create a mapping from line_number to rule
+            rule_by_line = {r.line_number: r for r in rules}
+
+            # Column widths
+            w_line = 5
+            w_toc = 24
+            w_act = 4
+            w_before = 28
+            w_after = 28
+
+            # Header
+            header = (
+                f"{_pad_to_width('Line', w_line)} "
+                f"{_pad_to_width('TOC Entry', w_toc)} "
+                f"{_pad_to_width('Act', w_act)} "
+                f"{_pad_to_width('Before', w_before)} "
+                f"After"
+            )
+            separator = "-" * (w_line + w_toc + w_act + w_before + w_after + 4)
+            print(header)
+            print(separator)
+
+            # Action labels
+            action_labels = {
+                NormalizationAction.ADD_NUMBER: "+NUM",
+                NormalizationAction.ADD_MARKER: "+MRK",
+                NormalizationAction.FORMAT_ONLY: "FMT",
+                NormalizationAction.NONE: "NONE",
+            }
+
+            # Rows - iterate matches to get TOC entry info
+            for match in matches:
+                if match.body_heading is None:
+                    continue
+                line_num = match.body_heading.line_number
+                if line_num not in rule_by_line:
+                    continue
+
+                rule = rule_by_line[line_num]
+                if rule.action == NormalizationAction.NONE:
+                    continue  # Skip no-change rules
+
+                # Build TOC entry text
+                toc_text = f"{match.toc_entry.number} {match.toc_entry.text}".strip()
+
+                # Format row
+                row = (
+                    f"{_pad_to_width(str(line_num), w_line)} "
+                    f"{_pad_to_width(_truncate_to_width(toc_text, w_toc), w_toc)} "
+                    f"{_pad_to_width(action_labels.get(rule.action, '?'), w_act)} "
+                    f"{_pad_to_width(_truncate_to_width(rule.original, w_before), w_before)} "
+                    f"{_truncate_to_width(rule.normalized, w_after)}"
+                )
+                print(row)
+
             print()
-            print("Run with APPLY=1 to apply changes.")
+            print("Act: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正")
+            print()
             print("Run with APPLY=1 to apply changes.")
 
     return 0
