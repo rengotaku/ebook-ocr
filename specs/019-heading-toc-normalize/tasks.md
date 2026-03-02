@@ -279,23 +279,23 @@
 
 ### Input
 
-- [ ] T085 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
-- [ ] T086 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph6-output.md
+- [x] T085 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
+- [x] T086 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph6-output.md
 
 ### Implementation
 
-- [ ] T087 [P] Makefile に heading-report ターゲットを追加: Makefile
-- [ ] T088 [P] Makefile に normalize-headings ターゲットを追加: Makefile
-- [ ] T089 [P] Makefile に validate-toc ターゲットを追加: Makefile
-- [ ] T090 quickstart.md の手順を検証
+- [x] T087 [P] Makefile に heading-report ターゲットを追加: Makefile
+- [x] T088 [P] Makefile に normalize-headings ターゲットを追加: Makefile
+- [x] T089 [P] Makefile に validate-toc ターゲットを追加: Makefile
+- [x] T090 quickstart.md の手順を検証
 
 ### Verification
 
-- [ ] T091 `make test` で全テスト PASS を確認
-- [ ] T092 `make heading-report` の動作確認（サンプル book.md で）
-- [ ] T093 `make normalize-headings` の動作確認
-- [ ] T094 `make validate-toc` の動作確認
-- [ ] T095 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph7-output.md
+- [x] T091 `make test` で全テスト PASS を確認
+- [x] T092 `make heading-report` の動作確認（サンプル book.md で）
+- [x] T093 `make normalize-headings` の動作確認
+- [x] T094 `make validate-toc` の動作確認
+- [x] T095 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph7-output.md
 
 ---
 
