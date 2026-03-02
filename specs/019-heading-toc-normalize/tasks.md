@@ -127,20 +127,20 @@
 
 ### Implementation (GREEN)
 
-- [ ] T033 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph3-test.md
-- [ ] T034 [P] [US2] MatchResult データクラスを追加: src/book_converter/models.py
-- [ ] T035 [P] [US2] NormalizationRule データクラスを追加: src/book_converter/models.py
-- [ ] T036 [US2] match_toc_to_body() を実装: src/book_converter/heading_matcher.py
+- [x] T033 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph3-test.md
+- [x] T034 [P] [US2] MatchResult データクラスを追加: src/book_converter/models.py
+- [x] T035 [P] [US2] NormalizationRule データクラスを追加: src/book_converter/models.py
+- [x] T036 [US2] match_toc_to_body() を実装: src/book_converter/heading_matcher.py
   - 完全一致 → 番号除去一致 → ファジーマッチの優先順位
   - difflib.SequenceMatcher を使用
-- [ ] T037 [US2] generate_rules() を実装: src/book_converter/normalization_rules.py
-- [ ] T038 `make test` で PASS を確認 (GREEN)
+- [x] T037 [US2] generate_rules() を実装: src/book_converter/normalization_rules.py
+- [x] T038 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T039 `make test` で全テスト PASS を確認（US1 含む）
-- [ ] T040 `make coverage` でカバレッジ ≥80% を確認
-- [ ] T041 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph3-output.md
+- [x] T039 `make test` で全テスト PASS を確認（US1 含む）
+- [x] T040 `make coverage` でカバレッジ ≥80% を確認
+- [x] T041 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph3-output.md
 
 **チェックポイント**: マッチングエンジンが独立してテスト可能
 
