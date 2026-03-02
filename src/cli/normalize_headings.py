@@ -134,6 +134,22 @@ def cmd_normalize(args: argparse.Namespace) -> int:
     # Generate rules
     rules = generate_rules(matches)
 
+    # Calculate match statistics
+    matched_count = sum(1 for m in matches if m.match_type.value not in ('missing', 'excluded'))
+    missing_count = sum(1 for m in matches if m.match_type.value == 'missing')
+
+    # Check if TOC was found
+    if not toc_entries:
+        print("Normalization Preview")
+        print("=====================")
+        print("Warning: No TOC found in file.")
+        print()
+        print("Expected: <!-- toc --> ... <!-- /toc --> markers")
+        print(f"Body Headings found: {len(body_headings)}")
+        print()
+        print("Add TOC markers to the file first, then run this command again.")
+        return 0
+
     # Apply or preview
     if apply_changes:
         # Apply rules to content
@@ -143,30 +159,35 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         try:
             file_path.write_text(modified_content, encoding="utf-8")
             print(f"Applied {len(rules)} normalization rules to {file_path}")
+            print()
+            print(f"TOC Entries: {len(toc_entries)}")
+            print(f"Matched: {matched_count}, Missing: {missing_count}")
         except Exception as e:
             print(f"Error: Failed to write file: {e}", file=sys.stderr)
             return 1
     else:
         # Preview changes
+        print("Normalization Preview")
+        print("=====================")
+        print()
+        print(f"TOC Entries:    {len(toc_entries)}")
+        print(f"Body Headings:  {len(body_headings)}")
+        print(f"Matched:        {matched_count} ({matched_count * 100 // len(toc_entries) if toc_entries else 0}%)")
+        print(f"Missing:        {missing_count}")
+        print()
+
         if not rules:
-            print("Normalization Preview")
-            print("=====================")
             print("No changes needed.")
-            print()
-            print(f"TOC Entries: {len(toc_entries)}")
-            print(f"Body Headings: {len(body_headings)}")
-            print(f"Matches: {sum(1 for m in matches if m.match_type.value != 'missing')}")
-            print()
             print("All matched headings are already in the correct format.")
+            print()
             print("Run 'make validate-toc' for detailed match information.")
         else:
-            preview = preview_diff(content, rules)
-            print("Normalization Preview")
-            print("=====================")
-            print(f"Changes: {len(rules)}")
+            print(f"Changes to apply: {len(rules)}")
             print()
+            preview = preview_diff(content, rules)
             print(preview)
             print()
+            print("Run with APPLY=1 to apply changes.")
             print("Run with APPLY=1 to apply changes.")
 
     return 0
