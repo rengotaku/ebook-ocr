@@ -61,6 +61,18 @@ class NormalizationRule:
 
 
 @dataclass(frozen=True)
+class ValidationReport:
+    """TOC検証レポート"""
+
+    toc_entry_count: int  # TOCエントリ総数
+    body_heading_count: int  # 本文見出し総数
+    matched_count: int  # マッチ数
+    match_rate: float  # マッチ率（0.0-1.0）
+    missing_entries: tuple["TocEntry", ...]  # 本文に存在しないTOCエントリ
+    excluded_headings: tuple["Heading", ...]  # マッチング対象外の見出し
+
+
+@dataclass(frozen=True)
 class BookMetadata:
     """書籍メタデータ"""
 

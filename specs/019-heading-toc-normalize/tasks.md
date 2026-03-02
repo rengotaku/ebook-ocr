@@ -195,24 +195,24 @@
 
 ### Input
 
-- [ ] T056 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
-- [ ] T057 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph4-output.md
+- [x] T056 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
+- [x] T057 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph4-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T058 [P] [US4] ValidationReport モデルテストを実装: tests/book_converter/test_heading_matcher.py
+- [x] T058 [P] [US4] ValidationReport モデルテストを実装: tests/book_converter/test_heading_matcher.py
   - test_validation_report_match_rate
   - test_validation_report_missing_entries
   - test_validation_report_excluded_headings
-- [ ] T059 [P] [US4] 類似候補表示テストを実装: tests/book_converter/test_heading_matcher.py
+- [x] T059 [P] [US4] 類似候補表示テストを実装: tests/book_converter/test_heading_matcher.py
   - test_find_similar_candidate_above_threshold
   - test_find_similar_candidate_none
-- [ ] T060 [P] [US4] レポート出力テストを実装: tests/book_converter/test_heading_matcher.py
+- [x] T060 [P] [US4] レポート出力テストを実装: tests/book_converter/test_heading_matcher.py
   - test_format_validation_report_table
   - test_format_validation_report_summary
   - test_validation_report_exit_code
-- [ ] T061 `make test` で FAIL を確認 (RED)
-- [ ] T062 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph5-test.md
+- [x] T061 `make test` で FAIL を確認 (RED)
+- [x] T062 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph5-test.md
 
 ### Implementation (GREEN)
 

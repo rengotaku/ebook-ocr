@@ -11,6 +11,7 @@ from src.book_converter.models import (
     MatchResult,
     MatchType,
     TocEntry,
+    ValidationReport,
 )
 
 
@@ -137,3 +138,56 @@ def match_toc_to_body(
         results.append(best_match)
 
     return results
+
+
+def find_similar_candidate(
+    toc_entry: TocEntry,
+    headings: list[Heading],
+    *,
+    threshold: float = 0.8,
+) -> tuple[Heading, float] | None:
+    """MISSING TOCエントリに対する類似候補を検索する.
+
+    Args:
+        toc_entry: 未マッチのTOCエントリ
+        headings: 本文見出しリスト
+        threshold: 類似度閾値 (default 0.8)
+
+    Returns:
+        (類似見出し, 類似度) or None
+    """
+    raise NotImplementedError("find_similar_candidate is not yet implemented")
+
+
+def generate_validation_report(
+    matches: list[MatchResult],
+    headings: list[Heading],
+) -> ValidationReport:
+    """マッチング結果から検証レポートを生成する.
+
+    Args:
+        matches: MatchResult のリスト
+        headings: 本文見出しリスト
+
+    Returns:
+        ValidationReport
+    """
+    raise NotImplementedError("generate_validation_report is not yet implemented")
+
+
+def format_validation_report(
+    report: ValidationReport,
+    matches: list[MatchResult],
+    similar_candidates: dict[TocEntry, tuple[Heading, float]],
+) -> str:
+    """検証レポートをテーブル形式でフォーマットする.
+
+    Args:
+        report: ValidationReport
+        matches: MatchResult のリスト
+        similar_candidates: MISSINGエントリの類似候補 dict
+
+    Returns:
+        フォーマット済みレポート文字列
+    """
+    raise NotImplementedError("format_validation_report is not yet implemented")
