@@ -73,20 +73,20 @@
 
 ### Implementation (GREEN)
 
-- [ ] T013 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph2-test.md
-- [ ] T014 [P] [US1] MatchType, NormalizationAction 列挙型を追加: src/book_converter/models.py
-- [ ] T015 [P] [US1] normalize_number_format() を実装: src/book_converter/parser/heading_normalizer.py
-- [ ] T016 [P] [US1] normalize_spaces() を実装: src/book_converter/parser/heading_normalizer.py
-- [ ] T017 [P] [US1] is_special_marker() を実装: src/book_converter/parser/heading_normalizer.py
-- [ ] T018 [P] [US1] extract_headings() を実装: src/book_converter/parser/heading_normalizer.py
-- [ ] T019 [P] [US1] classify_heading_patterns() を実装: src/book_converter/parser/heading_normalizer.py
-- [ ] T020 `make test` で PASS を確認 (GREEN)
+- [x] T013 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph2-test.md
+- [x] T014 [P] [US1] MatchType, NormalizationAction 列挙型を追加: src/book_converter/models.py
+- [x] T015 [P] [US1] normalize_number_format() を実装: src/book_converter/parser/heading_normalizer.py
+- [x] T016 [P] [US1] normalize_spaces() を実装: src/book_converter/parser/heading_normalizer.py
+- [x] T017 [P] [US1] is_special_marker() を実装: src/book_converter/parser/heading_normalizer.py
+- [x] T018 [P] [US1] extract_headings() を実装: src/book_converter/parser/heading_normalizer.py
+- [x] T019 [P] [US1] classify_heading_patterns() を実装: src/book_converter/parser/heading_normalizer.py
+- [x] T020 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T021 `make test` で全テスト PASS を確認（リグレッションなし）
-- [ ] T022 `make coverage` でカバレッジ ≥80% を確認
-- [ ] T023 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph2-output.md
+- [x] T021 `make test` で全テスト PASS を確認（リグレッションなし）
+- [x] T022 `make coverage` でカバレッジ ≥80% を確認
+- [x] T023 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph2-output.md
 
 **チェックポイント**: heading_normalizer.py の純粋関数群が独立してテスト可能
 

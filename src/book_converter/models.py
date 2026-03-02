@@ -21,6 +21,24 @@ class MarkerType(Enum):
     SKIP_END = "skip_end"
 
 
+class MatchType(Enum):
+    """マッチング結果の種類"""
+
+    EXACT = "exact"  # 完全一致
+    FUZZY = "fuzzy"  # ファジーマッチ（類似度80%以上）
+    MISSING = "missing"  # TOCエントリに対応する本文見出しなし
+    EXCLUDED = "excluded"  # 特殊マーカー付き（マッチング対象外）
+
+
+class NormalizationAction(Enum):
+    """正規化アクションの種類"""
+
+    ADD_NUMBER = "add_number"  # 番号付与（## タイトル → ## 1.1 タイトル）
+    ADD_MARKER = "add_marker"  # Markdownマーカー付与（タイトル → ## 1.1 タイトル）
+    FORMAT_ONLY = "format_only"  # フォーマット正規化のみ（1-1 → 1.1）
+    NONE = "none"  # 変更なし
+
+
 @dataclass(frozen=True)
 class BookMetadata:
     """書籍メタデータ"""
