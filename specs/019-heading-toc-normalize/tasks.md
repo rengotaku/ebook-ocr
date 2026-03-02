@@ -259,17 +259,17 @@
 
 ### Implementation (GREEN)
 
-- [ ] T079 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph6-test.md
-- [ ] T080 CLI エントリポイントを実装: src/cli/normalize_headings.py
+- [x] T079 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph6-test.md
+- [x] T080 CLI エントリポイントを実装: src/cli/normalize_headings.py
   - argparse による report/normalize/validate サブコマンド
   - --apply, --threshold オプション
-- [ ] T081 `make test` で PASS を確認 (GREEN)
+- [x] T081 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T082 `make test` で全テスト PASS を確認
-- [ ] T083 `make coverage` でカバレッジ ≥80% を確認
-- [ ] T084 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph6-output.md
+- [x] T082 `make test` で全テスト PASS を確認
+- [x] T083 `make coverage` でカバレッジ ≥80% を確認
+- [x] T084 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph6-output.md
 
 ---
 

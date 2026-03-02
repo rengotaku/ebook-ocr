@@ -10,11 +10,317 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    """Execute report subcommand."""
+    from src.book_converter.parser.heading_normalizer import (
+        classify_heading_patterns,
+        extract_headings,
+    )
+
+    file_path = Path(args.file)
+
+    # File existence check
+    if not file_path.exists():
+        print(f"Error: File not found: {file_path}", file=sys.stderr)
+        return 1
+
+    # Read file
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"Error: Failed to read file: {e}", file=sys.stderr)
+        return 1
+
+    # Extract headings
+    lines = content.splitlines()
+    headings = extract_headings(lines)
+
+    # Classify patterns
+    report = classify_heading_patterns(headings)
+
+    # Print report
+    print("Heading Pattern Report")
+    print("======================")
+    print(f"Total headings: {report.total}")
+    print()
+    print("Pattern Distribution:")
+    if report.total > 0:
+        numbered_pct = (report.numbered_count / report.total) * 100
+        unnumbered_pct = (report.unnumbered_count / report.total) * 100
+        special_pct = (report.special_marker_count / report.total) * 100
+        print(f"  Numbered (##N.N):       {report.numbered_count} ({numbered_pct:.1f}%)")
+        print(f"  Unnumbered:             {report.unnumbered_count} ({unnumbered_pct:.1f}%)")
+        print(f"  Special markers:        {report.special_marker_count} ({special_pct:.1f}%)")
+    else:
+        print("  No headings found.")
+
+    return 0
+
+
+def cmd_normalize(args: argparse.Namespace) -> int:
+    """Execute normalize subcommand."""
+    from src.book_converter.heading_matcher import match_toc_to_body
+    from src.book_converter.models import MarkerType
+    from src.book_converter.normalization_rules import (
+        apply_rules,
+        generate_rules,
+        preview_diff,
+    )
+    from src.book_converter.parser.heading_normalizer import extract_headings
+    from src.book_converter.parser.toc import parse_toc_entry, parse_toc_marker
+
+    file_path = Path(args.file)
+    apply_changes = args.apply
+    threshold = args.threshold
+
+    # File existence check
+    if not file_path.exists():
+        print(f"Error: File not found: {file_path}", file=sys.stderr)
+        return 1
+
+    # Read file
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"Error: Failed to read file: {e}", file=sys.stderr)
+        return 1
+
+    lines = content.splitlines()
+
+    # Extract TOC entries
+    toc_entries = []
+    in_toc = False
+    toc_lines = []
+
+    for line in lines:
+        marker = parse_toc_marker(line)
+        if marker == MarkerType.TOC_START:
+            in_toc = True
+            continue
+        elif marker == MarkerType.TOC_END:
+            in_toc = False
+            continue
+
+        if in_toc:
+            toc_lines.append(line)
+
+    # Parse TOC lines
+    for line in toc_lines:
+        entry = parse_toc_entry(line.strip())
+        if entry:
+            toc_entries.append(entry)
+
+    # Extract body headings
+    headings = extract_headings(lines)
+
+    # Convert HeadingInfo to Heading for matcher
+    from src.book_converter.models import Heading
+
+    body_headings = [
+        Heading(level=h.level, text=h.raw_text, read_aloud="")
+        for h in headings
+    ]
+
+    # Match TOC to body
+    matches = match_toc_to_body(
+        toc_entries,
+        body_headings,
+        similarity_threshold=threshold,
+    )
+
+    # Generate rules
+    rules = generate_rules(matches)
+
+    # Apply or preview
+    if apply_changes:
+        # Apply rules to content
+        modified_content = apply_rules(content, rules)
+
+        # Write back
+        try:
+            file_path.write_text(modified_content, encoding="utf-8")
+            print(f"Applied {len(rules)} normalization rules to {file_path}")
+        except Exception as e:
+            print(f"Error: Failed to write file: {e}", file=sys.stderr)
+            return 1
+    else:
+        # Preview changes
+        preview = preview_diff(content, rules)
+        print(preview)
+
+    return 0
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    """Execute validate subcommand."""
+    from src.book_converter.heading_matcher import (
+        find_similar_candidate,
+        format_validation_report,
+        generate_validation_report,
+        match_toc_to_body,
+    )
+    from src.book_converter.models import MarkerType
+    from src.book_converter.parser.heading_normalizer import extract_headings
+    from src.book_converter.parser.toc import parse_toc_entry, parse_toc_marker
+
+    file_path = Path(args.file)
+    threshold = args.threshold
+
+    # File existence check
+    if not file_path.exists():
+        print(f"Error: File not found: {file_path}", file=sys.stderr)
+        return 1
+
+    # Read file
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"Error: Failed to read file: {e}", file=sys.stderr)
+        return 1
+
+    lines = content.splitlines()
+
+    # Extract TOC entries
+    toc_entries = []
+    in_toc = False
+    toc_lines = []
+
+    for line in lines:
+        marker = parse_toc_marker(line)
+        if marker == MarkerType.TOC_START:
+            in_toc = True
+            continue
+        elif marker == MarkerType.TOC_END:
+            in_toc = False
+            continue
+
+        if in_toc:
+            toc_lines.append(line)
+
+    # Parse TOC lines
+    for line in toc_lines:
+        entry = parse_toc_entry(line.strip())
+        if entry:
+            toc_entries.append(entry)
+
+    # Extract body headings
+    headings = extract_headings(lines)
+
+    # Convert HeadingInfo to Heading for matcher
+    from src.book_converter.models import Heading
+
+    body_headings = [
+        Heading(level=h.level, text=h.raw_text, read_aloud="")
+        for h in headings
+    ]
+
+    # Match TOC to body
+    matches = match_toc_to_body(
+        toc_entries,
+        body_headings,
+        similarity_threshold=threshold,
+    )
+
+    # Find similar candidates for MISSING entries
+    similar_candidates = {}
+    from src.book_converter.models import MatchType
+
+    for match in matches:
+        if match.match_type == MatchType.MISSING:
+            candidate = find_similar_candidate(
+                match.toc_entry,
+                body_headings,
+                threshold=threshold,
+            )
+            if candidate:
+                similar_candidates[match.toc_entry] = candidate
+
+    # Generate report
+    report = generate_validation_report(matches, body_headings)
+
+    # Format and print
+    formatted = format_validation_report(
+        report,
+        matches,
+        similar_candidates,
+    )
+    print(formatted)
+
+    # Always exit 0 (even with MISSING)
+    return 0
 
 
 def main() -> int:
     """CLI entry point."""
-    raise NotImplementedError("CLI normalize_headings is not yet implemented")
+    parser = argparse.ArgumentParser(
+        description="Normalize book.md headings to match TOC format",
+    )
+
+    # Subcommands
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # report subcommand
+    parser_report = subparsers.add_parser(
+        "report",
+        help="Generate heading pattern analysis report",
+    )
+    parser_report.add_argument(
+        "file",
+        help="Path to book.md file",
+    )
+
+    # normalize subcommand
+    parser_normalize = subparsers.add_parser(
+        "normalize",
+        help="Normalize headings (dry-run or apply)",
+    )
+    parser_normalize.add_argument(
+        "file",
+        help="Path to book.md file",
+    )
+    parser_normalize.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply changes to file (default: dry-run preview)",
+    )
+    parser_normalize.add_argument(
+        "--threshold",
+        type=float,
+        default=0.8,
+        help="Fuzzy matching similarity threshold (default: 0.8)",
+    )
+
+    # validate subcommand
+    parser_validate = subparsers.add_parser(
+        "validate",
+        help="Validate TOC-body heading matching",
+    )
+    parser_validate.add_argument(
+        "file",
+        help="Path to book.md file",
+    )
+    parser_validate.add_argument(
+        "--threshold",
+        type=float,
+        default=0.8,
+        help="Fuzzy matching similarity threshold (default: 0.8)",
+    )
+
+    args = parser.parse_args()
+
+    # Dispatch to subcommand
+    if args.command == "report":
+        return cmd_report(args)
+    elif args.command == "normalize":
+        return cmd_normalize(args)
+    elif args.command == "validate":
+        return cmd_validate(args)
+    else:
+        parser.print_help()
+        return 1
 
 
 if __name__ == "__main__":
