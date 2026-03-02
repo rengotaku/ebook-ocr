@@ -40,6 +40,27 @@ class NormalizationAction(Enum):
 
 
 @dataclass(frozen=True)
+class MatchResult:
+    """TOCエントリと本文見出しのマッチング結果"""
+
+    toc_entry: "TocEntry"
+    body_heading: "Heading | None"  # None = MISSING
+    match_type: MatchType
+    similarity: float  # 0.0-1.0
+    line_number: int  # book.md 内の行番号（1-indexed）
+
+
+@dataclass(frozen=True)
+class NormalizationRule:
+    """正規化ルール"""
+
+    original: str  # 元の見出しテキスト（行全体）
+    normalized: str  # 正規化後のテキスト
+    line_number: int  # book.md 内の行番号（1-indexed）
+    action: NormalizationAction
+
+
+@dataclass(frozen=True)
 class BookMetadata:
     """書籍メタデータ"""
 

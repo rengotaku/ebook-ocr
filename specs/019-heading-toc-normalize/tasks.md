@@ -100,30 +100,30 @@
 
 ### Input
 
-- [ ] T024 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
-- [ ] T025 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph2-output.md
+- [x] T024 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
+- [x] T025 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph2-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T026 [P] [US2] MatchResult モデルテストを実装: tests/book_converter/test_heading_matcher.py
+- [x] T026 [P] [US2] MatchResult モデルテストを実装: tests/book_converter/test_heading_matcher.py
   - test_match_result_exact: similarity == 1.0
   - test_match_result_fuzzy: 0.8 <= similarity < 1.0
   - test_match_result_missing: body_heading is None
-- [ ] T027 [P] [US2] 完全一致マッチングテストを実装: tests/book_converter/test_heading_matcher.py
+- [x] T027 [P] [US2] 完全一致マッチングテストを実装: tests/book_converter/test_heading_matcher.py
   - test_match_exact_title
   - test_match_exact_with_number
-- [ ] T028 [P] [US2] 番号除去マッチングテストを実装: tests/book_converter/test_heading_matcher.py
+- [x] T028 [P] [US2] 番号除去マッチングテストを実装: tests/book_converter/test_heading_matcher.py
   - test_match_after_number_removal
-- [ ] T029 [P] [US2] ファジーマッチングテストを実装: tests/book_converter/test_heading_matcher.py
+- [x] T029 [P] [US2] ファジーマッチングテストを実装: tests/book_converter/test_heading_matcher.py
   - test_fuzzy_match_above_threshold: 類似度 80% 以上
   - test_fuzzy_match_below_threshold: 類似度 80% 未満 → MISSING
-- [ ] T030 [P] [US2] NormalizationRule 生成テストを実装: tests/book_converter/test_normalization_rules.py
+- [x] T030 [P] [US2] NormalizationRule 生成テストを実装: tests/book_converter/test_normalization_rules.py
   - test_generate_rule_add_number
   - test_generate_rule_add_marker
   - test_generate_rule_format_only
   - test_generate_rule_none
-- [ ] T031 `make test` で FAIL を確認 (RED)
-- [ ] T032 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph3-test.md
+- [x] T031 `make test` で FAIL を確認 (RED)
+- [x] T032 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph3-test.md
 
 ### Implementation (GREEN)
 
