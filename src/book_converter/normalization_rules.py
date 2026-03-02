@@ -125,3 +125,49 @@ def generate_rules(matches: list[MatchResult]) -> list[NormalizationRule]:
         rules.append(rule)
 
     return rules
+
+
+def generate_sed_script(rules: list[NormalizationRule]) -> str:
+    """Generate POSIX-compatible sed script from normalization rules.
+
+    Each rule becomes one sed substitution command.
+    Special characters (/, &, \\) are properly escaped.
+
+    Args:
+        rules: list of NormalizationRule to convert
+
+    Returns:
+        String containing sed commands (one per line)
+    """
+    raise NotImplementedError("generate_sed_script() is not yet implemented")
+
+
+def preview_diff(content: str, rules: list[NormalizationRule]) -> str:
+    """Generate a human-readable diff preview of rule application.
+
+    Shows before/after for each rule that would change a line.
+    Format: - Line N: "original" -> "normalized"
+
+    Args:
+        content: Original file content (multiline string)
+        rules: list of NormalizationRule to preview
+
+    Returns:
+        String containing diff preview lines
+    """
+    raise NotImplementedError("preview_diff() is not yet implemented")
+
+
+def apply_rules(content: str, rules: list[NormalizationRule]) -> str:
+    """Apply normalization rules to content and return modified content.
+
+    Each rule replaces one specific line (identified by line_number).
+
+    Args:
+        content: Original file content (multiline string)
+        rules: list of NormalizationRule to apply
+
+    Returns:
+        Modified content with rules applied
+    """
+    raise NotImplementedError("apply_rules() is not yet implemented")

@@ -15,6 +15,11 @@ from src.book_converter.models import (
     NormalizationRule,
     TocEntry,
 )
+from src.book_converter.normalization_rules import (
+    apply_rules,
+    generate_sed_script,
+    preview_diff,
+)
 
 
 # ============================================================
@@ -297,3 +302,366 @@ class TestGenerateRulesEdgeCases:
             NormalizationAction.ADD_MARKER,
         )
         assert "1.1.2" in rule.normalized
+
+
+# ============================================================
+# Phase 4: T044 - sed スクリプト生成テスト (US3)
+# ============================================================
+
+
+class TestGenerateSedScript:
+    """generate_sed_script() のテスト"""
+
+    def test_generate_sed_script_single_rule(self) -> None:
+        """単一ルールから sed コマンドが1行生成される"""
+        rule = NormalizationRule(
+            original="## SREの概要",
+            normalized="## 1.1 SREの概要",
+            line_number=52,
+            action=NormalizationAction.ADD_NUMBER,
+        )
+        result = generate_sed_script([rule])
+
+        assert isinstance(result, str)
+        assert len(result.strip()) > 0
+        # sed 's/.../.../': s コマンド形式を含むこと
+        assert "s/" in result or "s|" in result
+        # 元テキストと変換後テキストが含まれること
+        assert "SREの概要" in result
+        assert "1.1" in result
+
+    def test_generate_sed_script_multiple_rules(self) -> None:
+        """複数ルールから複数行の sed コマンドが生成される"""
+        rules = [
+            NormalizationRule(
+                original="## SREの概要",
+                normalized="## 1.1 SREの概要",
+                line_number=52,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+            NormalizationRule(
+                original="サイトとは何か",
+                normalized="### 1.1.1 サイトとは何か",
+                line_number=68,
+                action=NormalizationAction.ADD_MARKER,
+            ),
+        ]
+        result = generate_sed_script(rules)
+
+        lines = [line for line in result.strip().split("\n") if line.strip()]
+        # 各ルールに対して1行のコマンド
+        assert len(lines) >= 2
+        # 両方のルールの内容が含まれること
+        assert "SREの概要" in result
+        assert "サイトとは何か" in result
+
+    def test_generate_sed_script_escape_special_chars(self) -> None:
+        """sed の特殊文字（/, &, \\）が正しくエスケープされる"""
+        rule = NormalizationRule(
+            original="## C++/Rustの比較 & 解説",
+            normalized="## 3.1 C++/Rustの比較 & 解説",
+            line_number=100,
+            action=NormalizationAction.ADD_NUMBER,
+        )
+        result = generate_sed_script([rule])
+
+        assert isinstance(result, str)
+        # スラッシュがエスケープされているか、別のデリミタが使われていること
+        # 生成されたスクリプトが構文的に正しいこと（未エスケープの / や & がない）
+        # エスケープ済み: \/ or \& or 別デリミタ使用
+        if "s/" in result:
+            # / デリミタの場合、original/normalized 内の / はエスケープ必須
+            # 's/^...$/.../' 形式で、パターン内の / が \/ になっていること
+            inner = result.split("s/", 1)[1]
+            # 正しくエスケープされていれば C++\/Rust のように \/ がある
+            assert "\\/" in inner or "|" in result
+        # & も sed ではバックリファレンスなのでエスケープが必要
+        assert "\\&" in result or "&" not in rule.original
+
+    def test_generate_sed_script_empty_rules(self) -> None:
+        """空のルールリストからは空文字列が返される"""
+        result = generate_sed_script([])
+        assert result == "" or result.strip() == ""
+
+    def test_generate_sed_script_posix_compatible(self) -> None:
+        """POSIX 互換の sed コマンドが生成される（GNU 拡張なし）"""
+        rule = NormalizationRule(
+            original="## テスト見出し",
+            normalized="## 1.1 テスト見出し",
+            line_number=10,
+            action=NormalizationAction.ADD_NUMBER,
+        )
+        result = generate_sed_script([rule])
+
+        # GNU 拡張の -r や -E オプションが含まれないこと
+        assert "-r " not in result
+        assert "-E " not in result
+        # \d (Perl拡張) ではなく [0-9] を使うこと（パターン内に数字参照がある場合）
+        assert "\\d" not in result
+
+    def test_generate_sed_script_anchored_pattern(self) -> None:
+        """sed パターンは行頭アンカー (^) を使用する"""
+        rule = NormalizationRule(
+            original="## SREの概要",
+            normalized="## 1.1 SREの概要",
+            line_number=52,
+            action=NormalizationAction.ADD_NUMBER,
+        )
+        result = generate_sed_script([rule])
+
+        # 行頭アンカーが使用されていること（部分一致を防ぐため）
+        assert "^" in result
+
+    def test_generate_sed_script_format_only_rule(self) -> None:
+        """FORMAT_ONLY ルールからも sed コマンドが生成される"""
+        rule = NormalizationRule(
+            original="## 1-1 SREの概要",
+            normalized="## 1.1 SREの概要",
+            line_number=52,
+            action=NormalizationAction.FORMAT_ONLY,
+        )
+        result = generate_sed_script([rule])
+
+        assert isinstance(result, str)
+        assert len(result.strip()) > 0
+        assert "1-1" in result or "1\\-1" in result  # 元パターン
+        assert "1.1" in result  # 変換後
+
+    def test_generate_sed_script_unicode_heading(self) -> None:
+        """Unicode（日本語、絵文字）を含む見出しの sed スクリプト生成"""
+        rule = NormalizationRule(
+            original="## データベースの設計",
+            normalized="## 2.1 データベースの設計",
+            line_number=200,
+            action=NormalizationAction.ADD_NUMBER,
+        )
+        result = generate_sed_script([rule])
+
+        assert "データベースの設計" in result
+        assert "2.1" in result
+
+
+# ============================================================
+# Phase 4: T045 - 差分プレビューテスト (US3)
+# ============================================================
+
+
+class TestPreviewDiff:
+    """preview_diff() のテスト"""
+
+    def test_preview_diff_changes(self) -> None:
+        """変更がある場合、差分プレビューが表示される"""
+        content = "# タイトル\n\n## SREの概要\n\nテキスト\n"
+        rules = [
+            NormalizationRule(
+                original="## SREの概要",
+                normalized="## 1.1 SREの概要",
+                line_number=3,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+        ]
+        result = preview_diff(content, rules)
+
+        assert isinstance(result, str)
+        assert len(result.strip()) > 0
+        # 行番号が含まれること
+        assert "3" in result
+        # 元テキストと変換後テキストの両方が含まれること
+        assert "SREの概要" in result
+        assert "1.1" in result
+
+    def test_preview_diff_no_changes(self) -> None:
+        """変更がない場合、空の差分プレビューが返される"""
+        content = "# タイトル\n\n## 1.1 SREの概要\n"
+        rules: list[NormalizationRule] = []
+        result = preview_diff(content, rules)
+
+        assert isinstance(result, str)
+        # ルールがないので変更なし
+        assert result.strip() == "" or "変更なし" in result or "No changes" in result
+
+    def test_preview_diff_multiple_changes(self) -> None:
+        """複数変更の差分プレビュー"""
+        content = (
+            "# タイトル\n"
+            "\n"
+            "## SREの概要\n"
+            "\n"
+            "テキスト\n"
+            "\n"
+            "サイトとは何か\n"
+            "\n"
+        )
+        rules = [
+            NormalizationRule(
+                original="## SREの概要",
+                normalized="## 1.1 SREの概要",
+                line_number=3,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+            NormalizationRule(
+                original="サイトとは何か",
+                normalized="### 1.1.1 サイトとは何か",
+                line_number=7,
+                action=NormalizationAction.ADD_MARKER,
+            ),
+        ]
+        result = preview_diff(content, rules)
+
+        # 両方の変更が含まれること
+        assert "SREの概要" in result
+        assert "サイトとは何か" in result
+        assert "3" in result
+        assert "7" in result
+
+    def test_preview_diff_shows_arrow_or_separator(self) -> None:
+        """差分表示に変換を示す記号（-> や =>）が含まれる"""
+        content = "## SREの概要\n"
+        rules = [
+            NormalizationRule(
+                original="## SREの概要",
+                normalized="## 1.1 SREの概要",
+                line_number=1,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+        ]
+        result = preview_diff(content, rules)
+
+        # 変換を示す記号が含まれること
+        has_arrow = "->" in result or "=>" in result or "\u2192" in result
+        assert has_arrow, f"Expected arrow/separator in diff output, got: {result}"
+
+
+# ============================================================
+# Phase 4: apply_rules テスト (US3)
+# ============================================================
+
+
+class TestApplyRules:
+    """apply_rules() のテスト"""
+
+    def test_apply_rules_single_change(self) -> None:
+        """単一ルールの適用で対象行のみが変更される"""
+        content = "# タイトル\n\n## SREの概要\n\nテキスト\n"
+        rules = [
+            NormalizationRule(
+                original="## SREの概要",
+                normalized="## 1.1 SREの概要",
+                line_number=3,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+        ]
+        result = apply_rules(content, rules)
+
+        assert isinstance(result, str)
+        lines = result.split("\n")
+        # 3行目が変更されていること (0-indexed: index 2)
+        assert lines[2] == "## 1.1 SREの概要"
+        # 他の行は変更なし
+        assert lines[0] == "# タイトル"
+        assert lines[4] == "テキスト"
+
+    def test_apply_rules_multiple_changes(self) -> None:
+        """複数ルールの適用"""
+        content = (
+            "# タイトル\n"
+            "\n"
+            "## SREの概要\n"
+            "\n"
+            "テキスト\n"
+            "\n"
+            "サイトとは何か\n"
+        )
+        rules = [
+            NormalizationRule(
+                original="## SREの概要",
+                normalized="## 1.1 SREの概要",
+                line_number=3,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+            NormalizationRule(
+                original="サイトとは何か",
+                normalized="### 1.1.1 サイトとは何か",
+                line_number=7,
+                action=NormalizationAction.ADD_MARKER,
+            ),
+        ]
+        result = apply_rules(content, rules)
+
+        lines = result.split("\n")
+        assert lines[2] == "## 1.1 SREの概要"
+        assert lines[6] == "### 1.1.1 サイトとは何か"
+
+    def test_apply_rules_no_rules(self) -> None:
+        """ルールがない場合はコンテンツがそのまま返される"""
+        content = "# タイトル\n\n## SREの概要\n"
+        result = apply_rules(content, [])
+
+        assert result == content
+
+    def test_apply_rules_preserves_newlines(self) -> None:
+        """ルール適用後も改行構造が保持される"""
+        content = "行1\n行2\n行3\n"
+        rules = [
+            NormalizationRule(
+                original="行2",
+                normalized="## 1.1 行2",
+                line_number=2,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+        ]
+        result = apply_rules(content, rules)
+
+        # 改行の数は変わらないこと
+        assert result.count("\n") == content.count("\n")
+
+    def test_apply_rules_returns_new_string(self) -> None:
+        """apply_rules は元のコンテンツを変更せず新しい文字列を返す（不変性）"""
+        content = "## SREの概要\n"
+        original_content = content
+        rules = [
+            NormalizationRule(
+                original="## SREの概要",
+                normalized="## 1.1 SREの概要",
+                line_number=1,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+        ]
+        result = apply_rules(content, rules)
+
+        # 元の文字列は変更されていないこと
+        assert content == original_content
+        # 結果は異なること
+        assert result != content
+
+    def test_apply_rules_special_chars(self) -> None:
+        """特殊文字を含む行のルール適用"""
+        content = "## C++/Rustの比較 & 解説\n"
+        rules = [
+            NormalizationRule(
+                original="## C++/Rustの比較 & 解説",
+                normalized="## 3.1 C++/Rustの比較 & 解説",
+                line_number=1,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+        ]
+        result = apply_rules(content, rules)
+
+        lines = result.split("\n")
+        assert lines[0] == "## 3.1 C++/Rustの比較 & 解説"
+
+    def test_apply_rules_empty_content(self) -> None:
+        """空コンテンツにルールを適用"""
+        content = ""
+        rules = [
+            NormalizationRule(
+                original="## テスト",
+                normalized="## 1.1 テスト",
+                line_number=1,
+                action=NormalizationAction.ADD_NUMBER,
+            ),
+        ]
+        result = apply_rules(content, rules)
+
+        # 空コンテンツは空のまま（対象行が存在しないのでルールは適用されない）
+        assert isinstance(result, str)

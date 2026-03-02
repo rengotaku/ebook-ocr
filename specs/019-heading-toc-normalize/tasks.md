@@ -154,20 +154,20 @@
 
 ### Input
 
-- [ ] T042 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
-- [ ] T043 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph3-output.md
+- [x] T042 セットアップ分析を読む: specs/019-heading-toc-normalize/tasks/ph1-output.md
+- [x] T043 前フェーズ出力を読む: specs/019-heading-toc-normalize/tasks/ph3-output.md
 
 ### Test Implementation (RED)
 
-- [ ] T044 [P] [US3] sed スクリプト生成テストを実装: tests/book_converter/test_normalization_rules.py
+- [x] T044 [P] [US3] sed スクリプト生成テストを実装: tests/book_converter/test_normalization_rules.py
   - test_generate_sed_script_single_rule
   - test_generate_sed_script_multiple_rules
   - test_generate_sed_script_escape_special_chars
-- [ ] T045 [P] [US3] 差分プレビューテストを実装: tests/book_converter/test_normalization_rules.py
+- [x] T045 [P] [US3] 差分プレビューテストを実装: tests/book_converter/test_normalization_rules.py
   - test_preview_diff_changes
   - test_preview_diff_no_changes
-- [ ] T046 `make test` で FAIL を確認 (RED)
-- [ ] T047 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph4-test.md
+- [x] T046 `make test` で FAIL を確認 (RED)
+- [x] T047 RED テスト結果を出力: specs/019-heading-toc-normalize/red-tests/ph4-test.md
 
 ### Implementation (GREEN)
 
