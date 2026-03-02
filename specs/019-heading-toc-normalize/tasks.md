@@ -216,19 +216,19 @@
 
 ### Implementation (GREEN)
 
-- [ ] T063 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph5-test.md
-- [ ] T064 [P] [US4] ValidationReport データクラスを追加: src/book_converter/models.py
-- [ ] T065 [US4] find_similar_candidate() を実装: src/book_converter/heading_matcher.py
-- [ ] T066 [US4] generate_validation_report() を実装: src/book_converter/heading_matcher.py
-- [ ] T067 [US4] format_validation_report() を実装: src/book_converter/heading_matcher.py
+- [x] T063 RED テストを読む: specs/019-heading-toc-normalize/red-tests/ph5-test.md
+- [x] T064 [P] [US4] ValidationReport データクラスを追加: src/book_converter/models.py (Already done in RED)
+- [x] T065 [US4] find_similar_candidate() を実装: src/book_converter/heading_matcher.py
+- [x] T066 [US4] generate_validation_report() を実装: src/book_converter/heading_matcher.py
+- [x] T067 [US4] format_validation_report() を実装: src/book_converter/heading_matcher.py
   - テーブル形式（#, TOC Entry, Body Heading, Type, Sim%, Line#, Page）
-- [ ] T068 `make test` で PASS を確認 (GREEN)
+- [x] T068 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T069 `make test` で全テスト PASS を確認（US1-US3 含む）
-- [ ] T070 `make coverage` でカバレッジ ≥80% を確認
-- [ ] T071 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph5-output.md
+- [x] T069 `make test` で全テスト PASS を確認（US1-US3 含む）
+- [x] T070 `make coverage` でカバレッジ ≥80% を確認
+- [x] T071 フェーズ結果を出力: specs/019-heading-toc-normalize/tasks/ph5-output.md
 
 **チェックポイント**: 検証レポート生成が独立してテスト可能
 
