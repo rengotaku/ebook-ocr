@@ -235,9 +235,19 @@ def cmd_normalize(args: argparse.Namespace) -> int:
             NormalizationAction.NONE: "-",
         }
 
+        # Helper to extract number from heading text
+        import re
+
+        def extract_num_and_title(text: str) -> tuple[str, str]:
+            """Extract number and title from heading text."""
+            match = re.match(r'^(\d+(?:\.\d+)*)\s+(.+)$', text)
+            if match:
+                return match.group(1), match.group(2)
+            return "-", text
+
         # Build table data first to calculate column widths
-        table_rows: list[tuple[str, str, str, str, str, str, str, str]] = []
-        # (page, line, num, toc_title, status, body_text, sim_pct, action)
+        table_rows: list[tuple[str, str, str, str, str, str, str, str, str]] = []
+        # (page, line, toc_num, toc_title, status, body_num, body_title, sim_pct, action)
 
         for match in matches:
             toc_num = match.toc_entry.number if match.toc_entry.number else "-"
@@ -256,23 +266,17 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                 if candidate:
                     similar_heading, similarity = candidate
                     sim_pct = str(int(similarity * 100))
-                    body_text = f"→ {similar_heading.text}"
+                    body_num, body_title = extract_num_and_title(similar_heading.text)
+                    body_title = f"→ {body_title}"  # Add arrow prefix for candidates
                     # Check if number mismatch caused the MISSING
-                    # Extract number from similar heading
-                    import re
-                    heading_num_match = re.match(r'^(\d+(?:\.\d+)*)\s+', similar_heading.text)
-                    if heading_num_match:
-                        heading_num = heading_num_match.group(1)
-                        toc_number = match.toc_entry.number
-                        if toc_number and heading_num != toc_number:
-                            status = "MISSING(NUM)"  # Number mismatch
-                        else:
-                            status = "MISSING"
+                    if body_num != "-" and toc_num != "-" and body_num != toc_num:
+                        status = "MISSING(NUM)"  # Number mismatch
                     else:
-                        status = "MISSING"  # No number in heading
+                        status = "MISSING"
                 else:
                     sim_pct = "-"
-                    body_text = "(none)"
+                    body_num = "-"
+                    body_title = "(none)"
                     status = "MISSING"
                 action_str = "-"
             else:
@@ -280,7 +284,7 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                 heading = match.body_heading
                 page_str = heading.page if heading.page else "-"
                 line_str = str(heading.line_number) if heading.line_number > 0 else "-"
-                body_text = heading.text
+                body_num, body_title = extract_num_and_title(heading.text)
 
                 # Similarity percentage
                 if match.match_type == MatchType.FUZZY:
@@ -301,10 +305,10 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                     status = "OK"
                     action_str = "-"
 
-            table_rows.append((page_str, line_str, toc_num, toc_title, status, body_text, sim_pct, action_str))
+            table_rows.append((page_str, line_str, toc_num, toc_title, status, body_num, body_title, sim_pct, action_str))
 
         # Calculate column widths based on content (no truncation)
-        headers = ("Page", "Line", "Num", "TOC Title", "Status", "Body Heading", "Sim%", "Action")
+        headers = ("Page", "Line", "Num", "TOC Title", "Status", "BodyNum", "Body Title", "Sim%", "Action")
         col_widths = [_display_width(h) for h in headers]
 
         for row in table_rows:
