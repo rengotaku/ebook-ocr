@@ -247,7 +247,6 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                 # MISSING: no body heading found
                 page_str = "-"
                 line_str = "-"
-                status = "MISSING"
                 # Find similar candidate for display
                 candidate = find_similar_candidate(
                     match.toc_entry,
@@ -258,9 +257,23 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                     similar_heading, similarity = candidate
                     sim_pct = str(int(similarity * 100))
                     body_text = f"→ {similar_heading.text}"
+                    # Check if number mismatch caused the MISSING
+                    # Extract number from similar heading
+                    import re
+                    heading_num_match = re.match(r'^(\d+(?:\.\d+)*)\s+', similar_heading.text)
+                    if heading_num_match:
+                        heading_num = heading_num_match.group(1)
+                        toc_number = match.toc_entry.number
+                        if toc_number and heading_num != toc_number:
+                            status = "MISSING(NUM)"  # Number mismatch
+                        else:
+                            status = "MISSING"
+                    else:
+                        status = "MISSING"  # No number in heading
                 else:
                     sim_pct = "-"
                     body_text = "(none)"
+                    status = "MISSING"
                 action_str = "-"
             else:
                 # Matched (EXACT or FUZZY)
@@ -314,7 +327,7 @@ def cmd_normalize(args: argparse.Namespace) -> int:
 
         print("-" * (sum(col_widths) + 2 * (len(headers) - 1)))
         print()
-        print("Status: OK=変更不要, MATCH=変更必要, MISSING=本文に見出しなし")
+        print("Status: OK=変更不要, MATCH=変更必要, MISSING=候補なし, MISSING(NUM)=番号不一致")
         print("Action: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正")
 
         if rules:
