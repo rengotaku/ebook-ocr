@@ -227,30 +227,6 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         # Build rule lookup
         rule_by_line = {r.line_number: r for r in rules}
 
-        # Column widths
-        w_page = 4
-        w_line = 5
-        w_num = 6
-        w_toc_title = 20
-        w_status = 7
-        w_body = 24
-        w_action = 5
-
-        # Header
-        header = (
-            f"{_pad_to_width('Page', w_page)} "
-            f"{_pad_to_width('Line', w_line)} "
-            f"{_pad_to_width('Num', w_num)} "
-            f"{_pad_to_width('TOC Title', w_toc_title)} "
-            f"{_pad_to_width('Status', w_status)} "
-            f"{_pad_to_width('Body Heading', w_body)} "
-            f"Action"
-        )
-        total_width = w_page + w_line + w_num + w_toc_title + w_status + w_body + w_action + 6
-        separator = "-" * total_width
-        print(header)
-        print(separator)
-
         # Action labels
         action_labels = {
             NormalizationAction.ADD_NUMBER: "+NUM",
@@ -259,7 +235,10 @@ def cmd_normalize(args: argparse.Namespace) -> int:
             NormalizationAction.NONE: "-",
         }
 
-        # Show ALL TOC entries with their status
+        # Build table data first to calculate column widths
+        table_rows: list[tuple[str, str, str, str, str, str, str, str]] = []
+        # (page, line, num, toc_title, status, body_text, sim_pct, action)
+
         for match in matches:
             toc_num = match.toc_entry.number if match.toc_entry.number else "-"
             toc_title = match.toc_entry.text
@@ -277,9 +256,10 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                 )
                 if candidate:
                     similar_heading, similarity = candidate
-                    sim_pct = int(similarity * 100)
-                    body_text = f"→ {similar_heading.text} ({sim_pct}%)"
+                    sim_pct = str(int(similarity * 100))
+                    body_text = f"→ {similar_heading.text}"
                 else:
+                    sim_pct = "-"
                     body_text = "(none)"
                 action_str = "-"
             else:
@@ -288,6 +268,12 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                 page_str = heading.page if heading.page else "-"
                 line_str = str(heading.line_number) if heading.line_number > 0 else "-"
                 body_text = heading.text
+
+                # Similarity percentage
+                if match.match_type == MatchType.FUZZY:
+                    sim_pct = str(int(match.similarity * 100))
+                else:
+                    sim_pct = "100"
 
                 # Check if rule exists for this match
                 if heading.line_number in rule_by_line:
@@ -302,19 +288,31 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                     status = "OK"
                     action_str = "-"
 
-            # Format row
-            row = (
-                f"{_pad_to_width(page_str, w_page)} "
-                f"{_pad_to_width(line_str, w_line)} "
-                f"{_pad_to_width(_truncate_to_width(toc_num, w_num), w_num)} "
-                f"{_pad_to_width(_truncate_to_width(toc_title, w_toc_title), w_toc_title)} "
-                f"{_pad_to_width(status, w_status)} "
-                f"{_pad_to_width(_truncate_to_width(body_text, w_body), w_body)} "
-                f"{action_str}"
-            )
-            print(row)
+            table_rows.append((page_str, line_str, toc_num, toc_title, status, body_text, sim_pct, action_str))
 
-        print(separator)
+        # Calculate column widths based on content (no truncation)
+        headers = ("Page", "Line", "Num", "TOC Title", "Status", "Body Heading", "Sim%", "Action")
+        col_widths = [_display_width(h) for h in headers]
+
+        for row in table_rows:
+            for i, cell in enumerate(row):
+                col_widths[i] = max(col_widths[i], _display_width(cell))
+
+        # Print header
+        header_parts = []
+        for i, h in enumerate(headers):
+            header_parts.append(_pad_to_width(h, col_widths[i]))
+        print("  ".join(header_parts))
+        print("-" * (sum(col_widths) + 2 * (len(headers) - 1)))
+
+        # Print rows
+        for row in table_rows:
+            row_parts = []
+            for i, cell in enumerate(row):
+                row_parts.append(_pad_to_width(cell, col_widths[i]))
+            print("  ".join(row_parts))
+
+        print("-" * (sum(col_widths) + 2 * (len(headers) - 1)))
         print()
         print("Status: OK=変更不要, MATCH=変更必要, MISSING=本文に見出しなし")
         print("Action: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正")
