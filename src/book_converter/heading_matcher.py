@@ -15,6 +15,43 @@ from src.book_converter.models import (
 )
 
 
+def _extract_heading_number(text: str) -> str | None:
+    """見出しテキストから先頭の番号を抽出する.
+
+    Args:
+        text: 正規化済み見出しテキスト
+
+    Returns:
+        番号文字列 (例: "1.1", "4.4.2") or None
+    """
+    import re
+
+    match = re.match(r'^(\d+(?:\.\d+)*)\s+', text)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _numbers_compatible(toc_number: str, heading_number: str | None) -> bool:
+    """TOC番号と見出し番号が互換かどうか判定する.
+
+    Rules:
+    - 見出しに番号がない → 互換 (番号を付与する想定)
+    - 見出しに番号がある → TOC番号と一致する必要あり
+
+    Args:
+        toc_number: TOCエントリの番号 (例: "4.4.2")
+        heading_number: 見出しの番号 or None
+
+    Returns:
+        True if compatible
+    """
+    if heading_number is None:
+        return True  # No number in heading = compatible
+    # Both have numbers - must match
+    return toc_number == heading_number
+
+
 def match_toc_to_body(
     toc_entries: list[TocEntry],
     body_headings: list[Heading],
@@ -23,15 +60,17 @@ def match_toc_to_body(
 ) -> list[MatchResult]:
     """TOC entries and body headings matching.
 
-    Strategy (priority order):
-    1. Exact match: title strings match exactly
-    2. Number-removal match: match after removing numbers from both sides
-    3. Fuzzy match: similarity >= threshold
-    4. Missing: no match found
+    2-pass strategy with number verification:
 
-    Sequential constraint: TOC entries are in order (1.1 → 1.2 → 1.3),
-    so body headings must also be matched in order. Each subsequent TOC
-    entry only searches headings after the previous match position.
+    Pass 1 (Exact match, no order constraint):
+    - Exact match: number+title or title-only matches
+    - Number verification: if heading has number, must match TOC number
+    - Can match in any order
+
+    Pass 2 (Fuzzy match for remaining):
+    - Fuzzy match: similarity >= threshold
+    - Number verification: if heading has number, must match TOC number
+    - Can match in any order
 
     Args:
         toc_entries: list of TOC entries
@@ -53,66 +92,88 @@ def match_toc_to_body(
     if not toc_entries:
         return []
 
-    results: list[MatchResult] = []
-    # Sequential search: start from this index for each TOC entry
-    # After a match at index N, next search starts from N+1
-    search_start_idx: int = 0
+    # Track which headings have been used
+    used_heading_indices: set[int] = set()
 
-    for toc_entry in toc_entries:
-        # Build full TOC title with number
-        toc_full = f"{toc_entry.number} {toc_entry.text}".strip() if toc_entry.number else toc_entry.text
+    # Pre-process headings: normalize and extract numbers
+    heading_info: list[tuple[str, str, str | None]] = []  # (normalized, no_number, number)
+    for heading in body_headings:
+        normalized = normalize_spaces(normalize_number_format(heading.text))
+        no_number = re.sub(r'^\d+(?:\.\d+)*\s+', '', normalized)
+        number = _extract_heading_number(normalized)
+        heading_info.append((normalized, no_number, number))
+
+    # Results: initially None for each TOC entry
+    results: list[MatchResult | None] = [None] * len(toc_entries)
+
+    # === Pass 1: Exact matches ===
+    for toc_idx, toc_entry in enumerate(toc_entries):
+        toc_number = toc_entry.number
         toc_title = toc_entry.text
+        toc_full = f"{toc_number} {toc_title}".strip() if toc_number else toc_title
 
-        # Normalize TOC strings
         toc_full_normalized = normalize_spaces(normalize_number_format(toc_full))
+        toc_title_normalized = normalize_spaces(normalize_number_format(toc_title))
+
+        for h_idx, heading in enumerate(body_headings):
+            if h_idx in used_heading_indices:
+                continue
+            if is_special_marker(heading.text):
+                continue
+
+            h_normalized, h_no_number, h_number = heading_info[h_idx]
+
+            # Number verification: if heading has number, must match TOC
+            if not _numbers_compatible(toc_number, h_number):
+                continue
+
+            # Exact match check
+            is_exact = (
+                h_normalized == toc_full_normalized
+                or h_normalized == toc_title_normalized
+                or h_no_number == toc_title_normalized
+            )
+
+            if is_exact:
+                results[toc_idx] = MatchResult(
+                    toc_entry=toc_entry,
+                    body_heading=heading,
+                    match_type=MatchType.EXACT,
+                    similarity=1.0,
+                    line_number=heading.line_number if heading.line_number > 0 else h_idx + 1,
+                )
+                used_heading_indices.add(h_idx)
+                break
+
+    # === Pass 2: Fuzzy matches for remaining ===
+    for toc_idx, toc_entry in enumerate(toc_entries):
+        if results[toc_idx] is not None:
+            continue  # Already matched in pass 1
+
+        toc_number = toc_entry.number
+        toc_title = toc_entry.text
         toc_title_normalized = normalize_spaces(normalize_number_format(toc_title))
 
         best_match: MatchResult | None = None
         best_similarity: float = 0.0
-        best_match_idx: int = -1
+        best_h_idx: int = -1
 
-        # Only search headings from search_start_idx onwards (sequential constraint)
-        for idx in range(search_start_idx, len(body_headings)):
-            heading = body_headings[idx]
-
-            # Skip special markers
+        for h_idx, heading in enumerate(body_headings):
+            if h_idx in used_heading_indices:
+                continue
             if is_special_marker(heading.text):
                 continue
 
-            heading_normalized = normalize_spaces(normalize_number_format(heading.text))
+            h_normalized, h_no_number, h_number = heading_info[h_idx]
 
-            # 1. Exact match (with or without number)
-            if heading_normalized == toc_full_normalized or heading_normalized == toc_title_normalized:
-                best_match = MatchResult(
-                    toc_entry=toc_entry,
-                    body_heading=heading,
-                    match_type=MatchType.EXACT,
-                    similarity=1.0,
-                    line_number=heading.line_number if heading.line_number > 0 else idx + 1,
-                )
-                best_similarity = 1.0
-                best_match_idx = idx
-                break
+            # Number verification: if heading has number, must match TOC
+            if not _numbers_compatible(toc_number, h_number):
+                continue
 
-            # 2. Number-removal match
-            # Remove leading number pattern from heading
-            heading_no_number = re.sub(r'^\d+(?:\.\d+)*\s+', '', heading_normalized)
-
-            if heading_no_number == toc_title_normalized:
-                best_match = MatchResult(
-                    toc_entry=toc_entry,
-                    body_heading=heading,
-                    match_type=MatchType.EXACT,
-                    similarity=1.0,
-                    line_number=heading.line_number if heading.line_number > 0 else idx + 1,
-                )
-                best_similarity = 1.0
-                best_match_idx = idx
-                break
-
-            # 3. Fuzzy match
-            # Compare against title (without number)
-            similarity = difflib.SequenceMatcher(None, toc_title_normalized, heading_no_number).ratio()
+            # Fuzzy match
+            similarity = difflib.SequenceMatcher(
+                None, toc_title_normalized, h_no_number
+            ).ratio()
 
             if similarity >= similarity_threshold and similarity > best_similarity:
                 best_similarity = similarity
@@ -121,17 +182,18 @@ def match_toc_to_body(
                     body_heading=heading,
                     match_type=MatchType.FUZZY,
                     similarity=similarity,
-                    line_number=heading.line_number if heading.line_number > 0 else idx + 1,
+                    line_number=heading.line_number if heading.line_number > 0 else h_idx + 1,
                 )
-                best_match_idx = idx
+                best_h_idx = h_idx
 
-        # Update search start position for next TOC entry
-        if best_match_idx >= 0:
-            search_start_idx = best_match_idx + 1
+        if best_match is not None:
+            results[toc_idx] = best_match
+            used_heading_indices.add(best_h_idx)
 
-        # If no match found, mark as MISSING
-        if best_match is None:
-            best_match = MatchResult(
+    # === Fill MISSING for unmatched ===
+    for toc_idx, toc_entry in enumerate(toc_entries):
+        if results[toc_idx] is None:
+            results[toc_idx] = MatchResult(
                 toc_entry=toc_entry,
                 body_heading=None,
                 match_type=MatchType.MISSING,
@@ -139,9 +201,7 @@ def match_toc_to_body(
                 line_number=0,
             )
 
-        results.append(best_match)
-
-    return results
+    return results  # type: ignore[return-value]
 
 
 def find_similar_candidate(

@@ -269,7 +269,7 @@ class TestNumberRemovalMatching:
         assert results[0].similarity == 1.0
 
     def test_match_number_removal_with_body_having_different_number(self) -> None:
-        """本文見出しが異なる番号を持つ場合でも、タイトル部分で一致"""
+        """本文見出しが異なる番号を持つ場合、番号不一致でMISSING"""
         from src.book_converter.heading_matcher import match_toc_to_body
 
         toc_entries = [
@@ -281,9 +281,9 @@ class TestNumberRemovalMatching:
         results = match_toc_to_body(toc_entries, body_headings)
 
         assert len(results) == 1
-        # 番号除去後にタイトルが一致するのでマッチする
-        assert results[0].match_type == MatchType.EXACT
-        assert results[0].body_heading is not None
+        # 番号検証: TOC番号(1.1)と本文番号(2.1)が不一致なのでMISSING
+        assert results[0].match_type == MatchType.MISSING
+        assert results[0].body_heading is None
 
 
 # ============================================================
