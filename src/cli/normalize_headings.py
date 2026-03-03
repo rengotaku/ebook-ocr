@@ -100,8 +100,8 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 def cmd_normalize(args: argparse.Namespace) -> int:
     """Execute normalize subcommand."""
-    from src.book_converter.heading_matcher import match_toc_to_body
-    from src.book_converter.models import MarkerType
+    from src.book_converter.heading_matcher import find_similar_candidate, match_toc_to_body
+    from src.book_converter.models import MarkerType, MatchType
     from src.book_converter.normalization_rules import (
         apply_rules,
         generate_rules,
@@ -155,10 +155,17 @@ def cmd_normalize(args: argparse.Namespace) -> int:
     headings = extract_headings(lines)
 
     # Convert HeadingInfo to Heading for matcher
+    # Strip markdown prefix (## ) from raw_text to get clean text
+    import re
+
     from src.book_converter.models import Heading
 
+    def strip_markdown_prefix(raw: str) -> str:
+        """Remove leading markdown heading prefix (e.g., '## ')."""
+        return re.sub(r'^#+\s*', '', raw)
+
     body_headings = [
-        Heading(level=h.level, text=h.raw_text, read_aloud=True, line_number=h.line_number)
+        Heading(level=h.level, text=strip_markdown_prefix(h.raw_text), read_aloud=True, line_number=h.line_number)
         for h in headings
     ]
 
@@ -283,6 +290,57 @@ def cmd_normalize(args: argparse.Namespace) -> int:
 
             print()
             print("Act: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正")
+
+        # Show MISSING entries section (always, if any)
+        missing_matches = [m for m in matches if m.match_type == MatchType.MISSING]
+        if missing_matches:
+            print()
+            print(f"⚠️  Missing TOC Entries ({len(missing_matches)} items, manual review required):")
+            separator_missing = "-" * 70
+            print(separator_missing)
+
+            # Column widths for missing table
+            w_toc_m = 30
+            w_page = 6
+            w_similar = 30
+
+            # Header
+            header_missing = (
+                f"{_pad_to_width('TOC Entry', w_toc_m)} "
+                f"{_pad_to_width('Page', w_page)} "
+                f"Similar Candidate"
+            )
+            print(header_missing)
+            print(separator_missing)
+
+            for match in missing_matches:
+                toc_text = f"{match.toc_entry.number} {match.toc_entry.text}".strip()
+                page_str = match.toc_entry.page if match.toc_entry.page else "-"
+
+                # Find similar candidate
+                candidate = find_similar_candidate(
+                    match.toc_entry,
+                    body_headings,
+                    threshold=threshold * 0.5,  # Lower threshold for suggestions
+                )
+
+                if candidate:
+                    similar_heading, similarity = candidate
+                    sim_pct = int(similarity * 100)
+                    similar_text = f"{similar_heading.text} ({sim_pct}%)"
+                else:
+                    similar_text = "(none)"
+
+                row = (
+                    f"{_pad_to_width(_truncate_to_width(toc_text, w_toc_m), w_toc_m)} "
+                    f"{_pad_to_width(page_str, w_page)} "
+                    f"{_truncate_to_width(similar_text, w_similar)}"
+                )
+                print(row)
+
+            print(separator_missing)
+
+        if rules:
             print()
             print("Run with APPLY=1 to apply changes.")
 
@@ -345,10 +403,17 @@ def cmd_validate(args: argparse.Namespace) -> int:
     headings = extract_headings(lines)
 
     # Convert HeadingInfo to Heading for matcher
+    # Strip markdown prefix (## ) from raw_text to get clean text
+    import re
+
     from src.book_converter.models import Heading
 
+    def strip_markdown_prefix(raw: str) -> str:
+        """Remove leading markdown heading prefix (e.g., '## ')."""
+        return re.sub(r'^#+\s*', '', raw)
+
     body_headings = [
-        Heading(level=h.level, text=h.raw_text, read_aloud=True, line_number=h.line_number)
+        Heading(level=h.level, text=strip_markdown_prefix(h.raw_text), read_aloud=True, line_number=h.line_number)
         for h in headings
     ]
 
