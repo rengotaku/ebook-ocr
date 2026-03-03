@@ -245,18 +245,19 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                 return match.group(1), match.group(2)
             return "-", text
 
-        # Build table data first to calculate column widths
-        table_rows: list[tuple[str, str, str, str, str, str, str, str, str]] = []
-        # (page, line, toc_num, toc_title, status, body_num, body_title, sim_pct, action)
+        # Track matched body heading indices
+        matched_body_indices: set[int] = set()
 
-        for match in matches:
+        # Build table data first to calculate column widths
+        # (no, status, page, line, toc_num, toc_title, body_num, body_title, sim_pct, action)
+        table_rows: list[tuple[str, str, str, str, str, str, str, str, str, str]] = []
+
+        for row_no, match in enumerate(matches, start=1):
             toc_num = match.toc_entry.number if match.toc_entry.number else "-"
             toc_title = match.toc_entry.text
 
             if match.match_type == MatchType.MISSING:
                 # MISSING: no body heading found
-                page_str = "-"
-                line_str = "-"
                 # Find similar candidate for display
                 candidate = find_similar_candidate(
                     match.toc_entry,
@@ -267,16 +268,20 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                     similar_heading, similarity = candidate
                     sim_pct = str(int(similarity * 100))
                     body_num, body_title = extract_num_and_title(similar_heading.text)
-                    # No prefix needed - Status column indicates MISSING
+                    # Show Page/Line of the similar candidate
+                    page_str = similar_heading.page if similar_heading.page else "-"
+                    line_str = str(similar_heading.line_number) if similar_heading.line_number > 0 else "-"
                     # Check if number mismatch caused the MISSING
                     if body_num != "-" and toc_num != "-" and body_num != toc_num:
-                        status = "MISSING(NUM)"  # Number mismatch
+                        status = "MISSING(NUM)"
                     else:
                         status = "MISSING"
                 else:
+                    page_str = "-"
+                    line_str = "-"
                     sim_pct = "-"
                     body_num = "-"
-                    body_title = "(none)"
+                    body_title = "-"
                     status = "MISSING"
                 action_str = "-"
             else:
@@ -284,31 +289,37 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                 heading = match.body_heading
                 page_str = heading.page if heading.page else "-"
                 line_str = str(heading.line_number) if heading.line_number > 0 else "-"
-                body_num, body_title = extract_num_and_title(heading.text)
 
-                # Similarity percentage
-                if match.match_type == MatchType.FUZZY:
-                    sim_pct = str(int(match.similarity * 100))
-                else:
-                    sim_pct = "100"
+                # Track matched body heading
+                for idx, bh in enumerate(body_headings):
+                    if bh.line_number == heading.line_number:
+                        matched_body_indices.add(idx)
+                        break
 
                 # Check if rule exists for this match
                 if heading.line_number in rule_by_line:
                     rule = rule_by_line[heading.line_number]
                     if rule.action == NormalizationAction.NONE:
                         status = "OK"
+                        # For OK: Body Title, Sim%, Action = "-"
+                        body_num, body_title = "-", "-"
+                        sim_pct = "-"
                         action_str = "-"
                     else:
                         status = "MATCH"
+                        body_num, body_title = extract_num_and_title(heading.text)
+                        sim_pct = str(int(match.similarity * 100)) if match.match_type == MatchType.FUZZY else "100"
                         action_str = action_labels.get(rule.action, "?")
                 else:
                     status = "OK"
+                    body_num, body_title = "-", "-"
+                    sim_pct = "-"
                     action_str = "-"
 
-            table_rows.append((page_str, line_str, toc_num, toc_title, status, body_num, body_title, sim_pct, action_str))
+            table_rows.append((str(row_no), status, page_str, line_str, toc_num, toc_title, body_num, body_title, sim_pct, action_str))
 
         # Calculate column widths based on content (no truncation)
-        headers = ("Page", "Line", "Num", "TOC Title", "Status", "BodyNum", "Body Title", "Sim%", "Action")
+        headers = ("No", "Status", "Page", "Line", "Num", "TOC Title", "BodyNum", "Body Title", "Sim%", "Action")
         col_widths = [_display_width(h) for h in headers]
 
         for row in table_rows:
@@ -333,6 +344,25 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         print()
         print("Status: OK=変更不要, MATCH=変更必要, MISSING=候補なし, MISSING(NUM)=番号不一致")
         print("Action: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正")
+
+        # Show unmatched body headings (not matched to any TOC entry)
+        unmatched_bodies = []
+        for idx, heading in enumerate(body_headings):
+            if idx not in matched_body_indices:
+                unmatched_bodies.append(heading)
+
+        if unmatched_bodies:
+            print()
+            print(f"⚠️  Unmatched Body Headings ({len(unmatched_bodies)} items):")
+            print("-" * 60)
+            print(f"{'Page':<6}  {'Line':<6}  {'Num':<8}  Title")
+            print("-" * 60)
+            for heading in unmatched_bodies:
+                page_str = heading.page if heading.page else "-"
+                line_str = str(heading.line_number) if heading.line_number > 0 else "-"
+                body_num, body_title = extract_num_and_title(heading.text)
+                print(f"{page_str:<6}  {line_str:<6}  {body_num:<8}  {body_title}")
+            print("-" * 60)
 
         if rules:
             print()
