@@ -28,6 +28,7 @@ class HeadingInfo:
     title: str  # タイトル部分 (例: "SREの概要")
     number: str  # 番号部分 (例: "1.1"), なければ ""
     category: HeadingCategory
+    page: str = ""  # ページ番号 (例: "163"), ページマーカーがなければ ""
 
 
 @dataclass(frozen=True)
@@ -156,6 +157,7 @@ def extract_headings(lines: list[str]) -> list[HeadingInfo]:
     """book.md の行リストから見出し行を抽出する.
 
     ## または ### で始まる行を HeadingInfo として抽出する。
+    ページマーカー (--- Page N (filename) ---) から現在のページ番号を追跡する。
 
     Args:
         lines: book.md の全行リスト
@@ -163,12 +165,21 @@ def extract_headings(lines: list[str]) -> list[HeadingInfo]:
     Returns:
         HeadingInfo のリスト
     """
+    from src.book_converter.parser.page import parse_page_marker
+
     result: list[HeadingInfo] = []
+    current_page: str = ""
 
     # h2, h3 パターン (h1, h4以上は除外)
     heading_pattern = re.compile(r'^(#{2,3})\s+(.+)$')
 
     for line_idx, line in enumerate(lines):
+        # ページマーカーをチェック
+        page_info = parse_page_marker(line)
+        if page_info:
+            current_page = page_info[0]  # (page_number, source_file)
+            continue
+
         match = heading_pattern.match(line)
         if not match:
             continue
@@ -189,6 +200,7 @@ def extract_headings(lines: list[str]) -> list[HeadingInfo]:
             title=title,
             number=number,
             category=category,
+            page=current_page,
         )
         result.append(heading_info)
 

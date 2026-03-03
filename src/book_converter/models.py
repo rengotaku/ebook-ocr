@@ -90,6 +90,7 @@ class Heading:
     text: str
     read_aloud: bool = True  # skip区間ではFalse
     line_number: int = 0  # book.md内の行番号 (1-indexed, 0=未設定)
+    page: str = ""  # ページ番号 (例: "163"), 未設定時は ""
 
 
 @dataclass(frozen=True)

@@ -165,7 +165,7 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         return re.sub(r'^#+\s*', '', raw)
 
     body_headings = [
-        Heading(level=h.level, text=strip_markdown_prefix(h.raw_text), read_aloud=True, line_number=h.line_number)
+        Heading(level=h.level, text=strip_markdown_prefix(h.raw_text), read_aloud=True, line_number=h.line_number, page=h.page)
         for h in headings
     ]
 
@@ -212,6 +212,8 @@ def cmd_normalize(args: argparse.Namespace) -> int:
             return 1
     else:
         # Preview changes
+        from src.book_converter.models import NormalizationAction
+
         print("Normalization Preview")
         print("=====================")
         print()
@@ -219,126 +221,103 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         print(f"Body Headings:  {len(body_headings)}")
         print(f"Matched:        {matched_count} ({matched_count * 100 // len(toc_entries) if toc_entries else 0}%)")
         print(f"Missing:        {missing_count}")
+        print(f"Changes:        {len(rules)}")
         print()
 
-        if not rules:
-            print("No changes needed.")
-            print("All matched headings are already in the correct format.")
-            print()
-            print("Run 'make validate-toc' for detailed match information.")
-        else:
-            from src.book_converter.models import NormalizationAction
+        # Build rule lookup
+        rule_by_line = {r.line_number: r for r in rules}
 
-            print(f"Changes to apply: {len(rules)}")
-            print()
+        # Column widths
+        w_page = 4
+        w_line = 5
+        w_num = 6
+        w_toc_title = 20
+        w_status = 7
+        w_body = 24
+        w_action = 5
 
-            # Build table data from matches and rules
-            # Create a mapping from line_number to rule
-            rule_by_line = {r.line_number: r for r in rules}
+        # Header
+        header = (
+            f"{_pad_to_width('Page', w_page)} "
+            f"{_pad_to_width('Line', w_line)} "
+            f"{_pad_to_width('Num', w_num)} "
+            f"{_pad_to_width('TOC Title', w_toc_title)} "
+            f"{_pad_to_width('Status', w_status)} "
+            f"{_pad_to_width('Body Heading', w_body)} "
+            f"Action"
+        )
+        total_width = w_page + w_line + w_num + w_toc_title + w_status + w_body + w_action + 6
+        separator = "-" * total_width
+        print(header)
+        print(separator)
 
-            # Column widths
-            w_line = 5
-            w_toc = 24
-            w_act = 4
-            w_before = 28
-            w_after = 28
+        # Action labels
+        action_labels = {
+            NormalizationAction.ADD_NUMBER: "+NUM",
+            NormalizationAction.ADD_MARKER: "+MRK",
+            NormalizationAction.FORMAT_ONLY: "FMT",
+            NormalizationAction.NONE: "-",
+        }
 
-            # Header
-            header = (
-                f"{_pad_to_width('Line', w_line)} "
-                f"{_pad_to_width('TOC Entry', w_toc)} "
-                f"{_pad_to_width('Act', w_act)} "
-                f"{_pad_to_width('Before', w_before)} "
-                f"After"
-            )
-            separator = "-" * (w_line + w_toc + w_act + w_before + w_after + 4)
-            print(header)
-            print(separator)
+        # Show ALL TOC entries with their status
+        for match in matches:
+            toc_num = match.toc_entry.number if match.toc_entry.number else "-"
+            toc_title = match.toc_entry.text
 
-            # Action labels
-            action_labels = {
-                NormalizationAction.ADD_NUMBER: "+NUM",
-                NormalizationAction.ADD_MARKER: "+MRK",
-                NormalizationAction.FORMAT_ONLY: "FMT",
-                NormalizationAction.NONE: "NONE",
-            }
-
-            # Rows - iterate matches to get TOC entry info
-            for match in matches:
-                if match.body_heading is None:
-                    continue
-                line_num = match.body_heading.line_number
-                if line_num not in rule_by_line:
-                    continue
-
-                rule = rule_by_line[line_num]
-                if rule.action == NormalizationAction.NONE:
-                    continue  # Skip no-change rules
-
-                # Build TOC entry text
-                toc_text = f"{match.toc_entry.number} {match.toc_entry.text}".strip()
-
-                # Format row
-                row = (
-                    f"{_pad_to_width(str(line_num), w_line)} "
-                    f"{_pad_to_width(_truncate_to_width(toc_text, w_toc), w_toc)} "
-                    f"{_pad_to_width(action_labels.get(rule.action, '?'), w_act)} "
-                    f"{_pad_to_width(_truncate_to_width(rule.original, w_before), w_before)} "
-                    f"{_truncate_to_width(rule.normalized, w_after)}"
-                )
-                print(row)
-
-            print()
-            print("Act: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正")
-
-        # Show MISSING entries section (always, if any)
-        missing_matches = [m for m in matches if m.match_type == MatchType.MISSING]
-        if missing_matches:
-            print()
-            print(f"⚠️  Missing TOC Entries ({len(missing_matches)} items, manual review required):")
-            separator_missing = "-" * 70
-            print(separator_missing)
-
-            # Column widths for missing table
-            w_toc_m = 30
-            w_page = 6
-            w_similar = 30
-
-            # Header
-            header_missing = (
-                f"{_pad_to_width('TOC Entry', w_toc_m)} "
-                f"{_pad_to_width('Page', w_page)} "
-                f"Similar Candidate"
-            )
-            print(header_missing)
-            print(separator_missing)
-
-            for match in missing_matches:
-                toc_text = f"{match.toc_entry.number} {match.toc_entry.text}".strip()
-                page_str = match.toc_entry.page if match.toc_entry.page else "-"
-
-                # Find similar candidate
+            if match.match_type == MatchType.MISSING:
+                # MISSING: no body heading found
+                page_str = "-"
+                line_str = "-"
+                status = "MISSING"
+                # Find similar candidate for display
                 candidate = find_similar_candidate(
                     match.toc_entry,
                     body_headings,
-                    threshold=threshold * 0.5,  # Lower threshold for suggestions
+                    threshold=threshold * 0.5,
                 )
-
                 if candidate:
                     similar_heading, similarity = candidate
                     sim_pct = int(similarity * 100)
-                    similar_text = f"{similar_heading.text} ({sim_pct}%)"
+                    body_text = f"→ {similar_heading.text} ({sim_pct}%)"
                 else:
-                    similar_text = "(none)"
+                    body_text = "(none)"
+                action_str = "-"
+            else:
+                # Matched (EXACT or FUZZY)
+                heading = match.body_heading
+                page_str = heading.page if heading.page else "-"
+                line_str = str(heading.line_number) if heading.line_number > 0 else "-"
+                body_text = heading.text
 
-                row = (
-                    f"{_pad_to_width(_truncate_to_width(toc_text, w_toc_m), w_toc_m)} "
-                    f"{_pad_to_width(page_str, w_page)} "
-                    f"{_truncate_to_width(similar_text, w_similar)}"
-                )
-                print(row)
+                # Check if rule exists for this match
+                if heading.line_number in rule_by_line:
+                    rule = rule_by_line[heading.line_number]
+                    if rule.action == NormalizationAction.NONE:
+                        status = "OK"
+                        action_str = "-"
+                    else:
+                        status = "MATCH"
+                        action_str = action_labels.get(rule.action, "?")
+                else:
+                    status = "OK"
+                    action_str = "-"
 
-            print(separator_missing)
+            # Format row
+            row = (
+                f"{_pad_to_width(page_str, w_page)} "
+                f"{_pad_to_width(line_str, w_line)} "
+                f"{_pad_to_width(_truncate_to_width(toc_num, w_num), w_num)} "
+                f"{_pad_to_width(_truncate_to_width(toc_title, w_toc_title), w_toc_title)} "
+                f"{_pad_to_width(status, w_status)} "
+                f"{_pad_to_width(_truncate_to_width(body_text, w_body), w_body)} "
+                f"{action_str}"
+            )
+            print(row)
+
+        print(separator)
+        print()
+        print("Status: OK=変更不要, MATCH=変更必要, MISSING=本文に見出しなし")
+        print("Action: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正")
 
         if rules:
             print()
@@ -413,7 +392,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
         return re.sub(r'^#+\s*', '', raw)
 
     body_headings = [
-        Heading(level=h.level, text=strip_markdown_prefix(h.raw_text), read_aloud=True, line_number=h.line_number)
+        Heading(level=h.level, text=strip_markdown_prefix(h.raw_text), read_aloud=True, line_number=h.line_number, page=h.page)
         for h in headings
     ]
 

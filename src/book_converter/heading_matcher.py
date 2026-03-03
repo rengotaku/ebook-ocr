@@ -29,6 +29,10 @@ def match_toc_to_body(
     3. Fuzzy match: similarity >= threshold
     4. Missing: no match found
 
+    Sequential constraint: TOC entries are in order (1.1 → 1.2 → 1.3),
+    so body headings must also be matched in order. Each subsequent TOC
+    entry only searches headings after the previous match position.
+
     Args:
         toc_entries: list of TOC entries
         body_headings: list of body headings
@@ -50,7 +54,9 @@ def match_toc_to_body(
         return []
 
     results: list[MatchResult] = []
-    used_headings: set[int] = set()  # Track used heading indices
+    # Sequential search: start from this index for each TOC entry
+    # After a match at index N, next search starts from N+1
+    search_start_idx: int = 0
 
     for toc_entry in toc_entries:
         # Build full TOC title with number
@@ -63,10 +69,11 @@ def match_toc_to_body(
 
         best_match: MatchResult | None = None
         best_similarity: float = 0.0
+        best_match_idx: int = -1
 
-        for idx, heading in enumerate(body_headings):
-            if idx in used_headings:
-                continue
+        # Only search headings from search_start_idx onwards (sequential constraint)
+        for idx in range(search_start_idx, len(body_headings)):
+            heading = body_headings[idx]
 
             # Skip special markers
             if is_special_marker(heading.text):
@@ -84,7 +91,7 @@ def match_toc_to_body(
                     line_number=heading.line_number if heading.line_number > 0 else idx + 1,
                 )
                 best_similarity = 1.0
-                used_headings.add(idx)
+                best_match_idx = idx
                 break
 
             # 2. Number-removal match
@@ -100,7 +107,7 @@ def match_toc_to_body(
                     line_number=heading.line_number if heading.line_number > 0 else idx + 1,
                 )
                 best_similarity = 1.0
-                used_headings.add(idx)
+                best_match_idx = idx
                 break
 
             # 3. Fuzzy match
@@ -116,14 +123,11 @@ def match_toc_to_body(
                     similarity=similarity,
                     line_number=heading.line_number if heading.line_number > 0 else idx + 1,
                 )
+                best_match_idx = idx
 
-        # If fuzzy match found, mark as used
-        if best_match and best_match.match_type == MatchType.FUZZY:
-            # Find the index of the matched heading
-            for idx, heading in enumerate(body_headings):
-                if idx not in used_headings and heading == best_match.body_heading:
-                    used_headings.add(idx)
-                    break
+        # Update search start position for next TOC entry
+        if best_match_idx >= 0:
+            search_start_idx = best_match_idx + 1
 
         # If no match found, mark as MISSING
         if best_match is None:
