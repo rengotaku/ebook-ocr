@@ -267,7 +267,7 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                     similar_heading, similarity = candidate
                     sim_pct = str(int(similarity * 100))
                     body_num, body_title = extract_num_and_title(similar_heading.text)
-                    body_title = f"→ {body_title}"  # Add arrow prefix for candidates
+                    # No prefix needed - Status column indicates MISSING
                     # Check if number mismatch caused the MISSING
                     if body_num != "-" and toc_num != "-" and body_num != toc_num:
                         status = "MISSING(NUM)"  # Number mismatch
