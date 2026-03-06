@@ -26,7 +26,7 @@ INPUT_MD ?=
 OUTPUT_XML ?=
 USE_LLM ?= $(shell $(call CFG,use_llm_toc_classifier))
 
-.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample heading-report normalize-headings validate-toc ruff pylint lint clean clean-all
+.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample heading-report normalize-headings ruff pylint lint clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -175,9 +175,7 @@ normalize-headings: setup ## Normalize headings to match TOC (requires HASHDIR, 
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make normalize-headings HASHDIR=output/<hash> [APPLY=1]"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_headings normalize "$(HASHDIR)/book.md" $(if $(APPLY),--apply)
 
-validate-toc: setup ## Validate TOC-body heading matching (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make validate-toc HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_headings validate "$(HASHDIR)/book.md"
+# validate-toc は normalize-headings の機能のサブセットであったため削除
 
 # === Testing ===
 

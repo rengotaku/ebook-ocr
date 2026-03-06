@@ -13,6 +13,21 @@ from src.book_converter.models import (
 )
 
 
+def _heading_level_from_number(number: str) -> int:
+    """TOC番号からMarkdown見出しレベルを決定する.
+
+    N.0.0 → 1 (h1), N.N.0 → 2 (h2), それ以外 → 3 (h3)
+    """
+    if not number:
+        return 2
+    parts = number.split(".")
+    if len(parts) == 3 and parts[1] == "0" and parts[2] == "0":
+        return 1
+    if len(parts) >= 2 and parts[-1] == "0":
+        return 2
+    return 3
+
+
 def generate_rules(matches: list[MatchResult]) -> list[NormalizationRule]:
     """Generate normalization rules from match results.
 
@@ -72,35 +87,26 @@ def generate_rules(matches: list[MatchResult]) -> list[NormalizationRule]:
         action: NormalizationAction
         normalized_text: str
 
+        # Always use number-based level for normalized output
+        # N.0.0 → # (h1), N.N.0 → ## (h2), else → ### (h3)
+        expected_level = _heading_level_from_number(toc_number)
+        expected_marker = "#" * expected_level
+        expected_full = f"{expected_marker} {expected_text}"
+
         if body_level == 0:
             # No markdown marker (level=0 means plain text) -> ADD_MARKER
-            # Determine marker based on TOC level
-            if toc_level == 1:
-                marker = "#"
-            elif toc_level == 2:
-                marker = "##"
-            elif toc_level == 3:
-                marker = "###"
-            else:
-                marker = "##"  # Default to h2
-
-            normalized_text = f"{marker} {expected_text}"
+            normalized_text = expected_full
             action = NormalizationAction.ADD_MARKER
 
         elif not has_number and toc_number:
             # Has marker but no number -> ADD_NUMBER
-            # Build markdown marker based on body_level
-            marker = "#" * body_level
-            normalized_text = f"{marker} {expected_text}"
+            normalized_text = expected_full
             action = NormalizationAction.ADD_NUMBER
 
         else:
-            # Has marker and number (or no number needed), check if format needs normalization
-            marker = "#" * body_level
-            expected_full = f"{marker} {expected_text}"
-
-            # Build current full text (with marker)
-            current_full = f"{marker} {body_text}"
+            # Has marker and number, check if format/level needs normalization
+            current_marker = "#" * body_level
+            current_full = f"{current_marker} {body_text}"
 
             if current_full == expected_full:
                 # Already correct

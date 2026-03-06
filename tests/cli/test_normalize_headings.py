@@ -24,6 +24,8 @@ SAMPLE_BOOK_MD = """\
 1.2 信頼性とは何か ... 021
 <!-- /toc -->
 
+<!-- content -->
+
 ## 1.1 SREの概要
 
 SREの説明文...
@@ -39,6 +41,8 @@ SREの説明文...
 ## ■コードベース
 
 特殊マーカーの見出し...
+
+<!-- /content -->
 """
 
 
@@ -85,15 +89,15 @@ class TestReportCommand:
         assert "not found" in combined.lower() or "no such file" in combined.lower() or "error" in combined.lower()
 
     def test_report_command_empty_file(self, tmp_path: Path) -> None:
-        """空ファイルを指定した場合に正常終了し、見出し数 0 を返す."""
+        """マーカーなしファイルを指定した場合にエラーを返す."""
         book_md = tmp_path / "empty.md"
         book_md.write_text("", encoding="utf-8")
 
         result = _run_cli("report", str(book_md))
 
-        assert result.returncode == 0, f"stderr: {result.stderr}"
-        # 見出し数 0 が含まれる
-        assert "0" in result.stdout
+        # マーカーがないのでエラー
+        assert result.returncode != 0
+        assert "content" in result.stderr.lower()
 
     def test_report_command_shows_numbered_pattern(self, tmp_path: Path) -> None:
         """番号付き見出しパターンがレポートに表示される."""
@@ -140,6 +144,12 @@ class TestNormalizeCommand:
         # "## サイトとは何か" が "## 1.1.1 サイトとは何か" に変換されるはず
         assert "1.1.1" in modified_content or modified_content != SAMPLE_BOOK_MD
 
+        # バックアップファイルが作成される
+        backup_path = tmp_path / "book.md.bk"
+        assert backup_path.exists(), "Backup file should be created"
+        backup_content = backup_path.read_text(encoding="utf-8")
+        assert backup_content == SAMPLE_BOOK_MD, "Backup should contain original content"
+
     def test_normalize_command_with_threshold(self, tmp_path: Path) -> None:
         """--threshold オプションが受け付けられる."""
         book_md = tmp_path / "book.md"
@@ -159,6 +169,48 @@ class TestNormalizeCommand:
         combined = result.stderr + result.stdout
         assert "NotImplementedError" not in combined, "Should show user-friendly error, not NotImplementedError"
         assert "not found" in combined.lower() or "no such file" in combined.lower() or "error" in combined.lower()
+
+    def test_normalize_duplicate_heading_shows_missing_not_fix_num(self, tmp_path: Path) -> None:
+        """重複する見出し名がある場合、OCR欠落はMISSINGとなりFIX_NUMにならない."""
+        # TOCに1.5.4と1.5.5がある。本文には1.5.4の見出しはあるが、
+        # 1.5.5の見出しはOCR欠落で存在しない。
+        # 1.5.4と1.5.5は同じタイトル「テスト項目」を持つ。
+        # 期待: 1.5.5はMISSING (FIX_NUMではない)
+        content = """\
+<!-- toc -->
+1.5.4 テスト項目 ... 216
+1.5.5 テスト項目 ... 217
+1.5.6 次の項目 ... 218
+<!-- /toc -->
+
+<!-- content -->
+
+## 1.5.4 テスト項目
+
+テスト本文...
+
+## 1.5.6 次の項目
+
+次の本文...
+
+<!-- /content -->
+"""
+        book_md = tmp_path / "book.md"
+        book_md.write_text(content, encoding="utf-8")
+
+        result = _run_cli("normalize", str(book_md))
+
+        assert result.returncode == 0, f"stderr: {result.stderr}"
+        # 1.5.5 should be MISSING, not MISSING(NUM) / FIX_NUM
+        lines = result.stdout.splitlines()
+        for line in lines:
+            if "1.5.5" in line:
+                assert "FIX_NUM" not in line, (
+                    f"Duplicate heading '1.5.5 テスト項目' should be MISSING, not FIX_NUM: {line}"
+                )
+                assert "MISSING(NUM)" not in line, (
+                    f"Duplicate heading '1.5.5 テスト項目' should be MISSING, not MISSING(NUM): {line}"
+                )
 
     def test_normalize_command_dryrun_shows_preview(self, tmp_path: Path) -> None:
         """dry-run で変更プレビューが表示される."""
@@ -202,9 +254,13 @@ class TestValidateCommand:
 1.2 もう一つの存在しない見出し ... 002
 <!-- /toc -->
 
+<!-- content -->
+
 ## 全く関係ない見出し
 
 テスト本文...
+
+<!-- /content -->
 """
         book_md = tmp_path / "book.md"
         book_md.write_text(content, encoding="utf-8")

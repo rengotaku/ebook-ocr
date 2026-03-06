@@ -23,6 +23,11 @@ from src.book_converter.parser.heading_normalizer import (
 )
 
 
+def _wrap_content(lines: list[str]) -> list[str]:
+    """Wrap lines with content markers for testing."""
+    return ["<!-- content -->", *lines, "<!-- /content -->"]
+
+
 # ============================================================
 # T007: 番号フォーマット正規化テスト
 # ============================================================
@@ -262,28 +267,30 @@ class TestExtractHeadings:
     """book.md から見出し行を抽出するテスト"""
 
     def test_extract_headings_basic(self) -> None:
-        """## で始まる行を抽出"""
-        lines = [
+        """Markdown見出し行 (h1-h6) を抽出"""
+        lines = _wrap_content([
             "# タイトル",
             "本文テキスト",
             "## 1.1 SREの概要",
             "段落テキスト",
             "## 1.2 信頼性とは",
             "別の段落",
-        ]
+        ])
         result = extract_headings(lines)
 
-        assert len(result) == 2
-        assert result[0].raw_text == "## 1.1 SREの概要"
-        assert result[1].raw_text == "## 1.2 信頼性とは"
+        assert len(result) == 3
+        assert result[0].raw_text == "# タイトル"
+        assert result[0].level == 1
+        assert result[1].raw_text == "## 1.1 SREの概要"
+        assert result[2].raw_text == "## 1.2 信頼性とは"
 
     def test_extract_headings_with_h3(self) -> None:
         """### も抽出する"""
-        lines = [
+        lines = _wrap_content([
             "## 1.1 SREの概要",
             "テキスト",
             "### 1.1.1 サイトとは何か",
-        ]
+        ])
         result = extract_headings(lines)
 
         assert len(result) == 2
@@ -291,23 +298,24 @@ class TestExtractHeadings:
         assert result[1].level == 3
 
     def test_extract_headings_line_numbers(self) -> None:
-        """行番号が正しく記録される (1-indexed)"""
-        lines = [
+        """行番号が正しく記録される (1-indexed, content marker offset +1)"""
+        lines = _wrap_content([
             "本文",
             "## 最初の見出し",
             "本文",
             "本文",
             "## 2番目の見出し",
-        ]
+        ])
         result = extract_headings(lines)
 
         assert len(result) == 2
-        assert result[0].line_number == 2
-        assert result[1].line_number == 5
+        # +1 offset for <!-- content --> marker
+        assert result[0].line_number == 3
+        assert result[1].line_number == 6
 
     def test_extract_headings_numbered_category(self) -> None:
         """番号付き見出しが NUMBERED に分類される"""
-        lines = ["## 1.1 SREの概要"]
+        lines = _wrap_content(["## 1.1 SREの概要"])
         result = extract_headings(lines)
 
         assert len(result) == 1
@@ -317,7 +325,7 @@ class TestExtractHeadings:
 
     def test_extract_headings_unnumbered_category(self) -> None:
         """番号なし見出しが UNNUMBERED に分類される"""
-        lines = ["## SREの概要"]
+        lines = _wrap_content(["## SREの概要"])
         result = extract_headings(lines)
 
         assert len(result) == 1
@@ -327,51 +335,56 @@ class TestExtractHeadings:
 
     def test_extract_headings_special_marker_category(self) -> None:
         """特殊マーカー付き見出しが SPECIAL_MARKER に分類される"""
-        lines = ["## ■コードベース"]
+        lines = _wrap_content(["## ■コードベース"])
         result = extract_headings(lines)
 
         assert len(result) == 1
         assert result[0].category == HeadingCategory.SPECIAL_MARKER
 
     def test_extract_headings_empty_lines(self) -> None:
-        """空行リストの場合は空リストを返す"""
-        result = extract_headings([])
+        """マーカーのみで見出しがない場合は空リストを返す"""
+        lines = _wrap_content([])
+        result = extract_headings(lines)
         assert result == []
 
     def test_extract_headings_no_headings(self) -> None:
         """見出しがない場合は空リストを返す"""
-        lines = ["本文テキスト", "別の本文", "--- Page 1 ---"]
+        lines = _wrap_content(["本文テキスト", "別の本文", "--- Page 1 ---"])
         result = extract_headings(lines)
         assert result == []
 
-    def test_extract_headings_h1_excluded(self) -> None:
-        """# (h1) は抽出対象外"""
-        lines = [
+    def test_extract_headings_h1_included(self) -> None:
+        """# (h1) も抽出対象"""
+        lines = _wrap_content([
             "# 書籍タイトル",
             "## 1.1 SREの概要",
-        ]
+        ])
         result = extract_headings(lines)
 
-        assert len(result) == 1
-        assert result[0].raw_text == "## 1.1 SREの概要"
+        assert len(result) == 2
+        assert result[0].raw_text == "# 書籍タイトル"
+        assert result[0].level == 1
+        assert result[1].raw_text == "## 1.1 SREの概要"
 
-    def test_extract_headings_h4_excluded(self) -> None:
-        """#### (h4) は抽出対象外"""
-        lines = [
+    def test_extract_headings_h4_included(self) -> None:
+        """#### (h4) も抽出対象"""
+        lines = _wrap_content([
             "## 1.1 SREの概要",
             "#### サブサブセクション",
-        ]
+        ])
         result = extract_headings(lines)
 
-        assert len(result) == 1
+        assert len(result) == 2
+        assert result[1].raw_text == "#### サブサブセクション"
+        assert result[1].level == 4
 
     def test_extract_headings_preserves_order(self) -> None:
         """抽出結果は元の出現順序を保持"""
-        lines = [
+        lines = _wrap_content([
             "## C見出し",
             "## A見出し",
             "## B見出し",
-        ]
+        ])
         result = extract_headings(lines)
 
         assert len(result) == 3
@@ -381,7 +394,7 @@ class TestExtractHeadings:
 
     def test_extract_headings_with_special_chars(self) -> None:
         """Unicode/特殊文字を含む見出し"""
-        lines = ["## 1.1 SRE (サイト信頼性エンジニアリング)"]
+        lines = _wrap_content(["## 1.1 SRE (サイト信頼性エンジニアリング)"])
         result = extract_headings(lines)
 
         assert len(result) == 1

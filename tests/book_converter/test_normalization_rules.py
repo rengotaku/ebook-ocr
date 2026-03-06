@@ -31,8 +31,8 @@ from src.book_converter.normalization_rules import (
 def match_exact_with_number() -> MatchResult:
     """既に番号付きで完全一致のマッチ結果 (変更不要)"""
     return MatchResult(
-        toc_entry=TocEntry(text="SREの概要", level=2, number="1.1", page="015"),
-        body_heading=Heading(level=2, text="1.1 SREの概要"),
+        toc_entry=TocEntry(text="SREの概要", level=2, number="1.1.0", page="015"),
+        body_heading=Heading(level=2, text="1.1.0 SREの概要"),
         match_type=MatchType.EXACT,
         similarity=1.0,
         line_number=52,
@@ -43,7 +43,7 @@ def match_exact_with_number() -> MatchResult:
 def match_exact_without_number() -> MatchResult:
     """番号なし完全一致のマッチ結果 (番号付与が必要)"""
     return MatchResult(
-        toc_entry=TocEntry(text="SREの概要", level=2, number="1.1", page="015"),
+        toc_entry=TocEntry(text="SREの概要", level=2, number="1.1.0", page="015"),
         body_heading=Heading(level=2, text="SREの概要"),
         match_type=MatchType.EXACT,
         similarity=1.0,

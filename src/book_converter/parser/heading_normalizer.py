@@ -153,10 +153,15 @@ def is_special_marker(text: str) -> bool:
     return stripped[0] in special_markers
 
 
+class MissingMarkerError(Exception):
+    """Required marker not found in file."""
+
+
 def extract_headings(lines: list[str]) -> list[HeadingInfo]:
     """book.md の行リストから見出し行を抽出する.
 
     ## または ### で始まる行を HeadingInfo として抽出する。
+    <!-- content --> ～ <!-- /content --> マーカーの範囲内のみを対象とする。
     ページマーカー (--- Page N (filename) ---) から現在のページ番号を追跡する。
 
     Args:
@@ -164,45 +169,118 @@ def extract_headings(lines: list[str]) -> list[HeadingInfo]:
 
     Returns:
         HeadingInfo のリスト
+
+    Raises:
+        MissingMarkerError: <!-- content --> マーカーが見つからない場合
     """
     from src.book_converter.parser.page import parse_page_marker
 
     result: list[HeadingInfo] = []
     current_page: str = ""
 
-    # h2, h3 パターン (h1, h4以上は除外)
-    heading_pattern = re.compile(r'^(#{2,3})\s+(.+)$')
+    # content マーカーの存在確認（必須）
+    has_content_start = any(line.strip() == "<!-- content -->" for line in lines)
+    has_content_end = any(line.strip() == "<!-- /content -->" for line in lines)
+
+    if not has_content_start or not has_content_end:
+        raise MissingMarkerError(
+            "Required markers <!-- content --> and <!-- /content --> not found"
+        )
+
+    in_content_section = False
+
+    # Markdown見出しパターン (h1-h6)
+    heading_pattern = re.compile(r'^(#{1,6})\s+(.+)$')
+    # 番号パターン（## なしで番号から始まる行）: 1.0.0 タイトル, 1.1 タイトル 等
+    number_only_pattern = re.compile(r'^(\d+(?:\.\d+)+)\s+(.+)$')
 
     for line_idx, line in enumerate(lines):
-        # ページマーカーをチェック
+        stripped = line.strip()
+
+        # ページマーカーをチェック（content セクション外でも追跡）
         page_info = parse_page_marker(line)
         if page_info:
             current_page = page_info[0]  # (page_number, source_file)
             continue
 
-        match = heading_pattern.match(line)
-        if not match:
+        # content セクションの開始/終了をチェック
+        if stripped == "<!-- content -->":
+            in_content_section = True
+            continue
+        if stripped == "<!-- /content -->":
+            in_content_section = False
             continue
 
-        marker = match.group(1)
-        text_part = match.group(2)
+        # content セクション外はスキップ
+        if not in_content_section:
+            continue
 
-        # レベル決定
-        level = len(marker)
+        # ## または ### で始まる見出し
+        match = heading_pattern.match(line)
+        if match:
+            marker = match.group(1)
+            text_part = match.group(2)
+            level = len(marker)
+            number, title, category = _parse_heading_text(text_part)
 
-        # 番号・タイトル・カテゴリを解析
-        number, title, category = _parse_heading_text(text_part)
+            heading_info = HeadingInfo(
+                line_number=line_idx + 1,  # 1-indexed
+                raw_text=line,
+                level=level,
+                title=title,
+                number=number,
+                category=category,
+                page=current_page,
+            )
+            result.append(heading_info)
+            continue
 
-        heading_info = HeadingInfo(
-            line_number=line_idx + 1,  # 1-indexed
-            raw_text=line,
-            level=level,
-            title=title,
-            number=number,
-            category=category,
-            page=current_page,
-        )
-        result.append(heading_info)
+        # 番号パターンのみで始まる行（## なし）
+        num_match = number_only_pattern.match(stripped)
+        if num_match:
+            number = num_match.group(1)
+            title = num_match.group(2)
+
+            heading_info = HeadingInfo(
+                line_number=line_idx + 1,  # 1-indexed
+                raw_text=line,
+                level=0,  # Markdownマーカーなし
+                title=title,
+                number=number,
+                category=HeadingCategory.NUMBERED,
+                page=current_page,
+            )
+            result.append(heading_info)
+            continue
+
+        # 短い単独行（## なし、番号なし）- 見出し候補として認識
+        # 条件:
+        # - 50文字以下
+        # - 文末句読点なし
+        # - 空行でない
+        # - コメント/リスト/マーカーで始まらない
+        # - プレースホルダーテキストでない（テキスト、本文、内容、段落等を含まない）
+        if (
+            stripped
+            and len(stripped) <= 50
+            and not stripped.endswith(('。', '、', '.', ',', ':', '：'))
+            and not stripped.startswith(('<!--', '---', '-', '*', '·', '#'))
+            and not is_special_marker(stripped)
+            and not any(w in stripped for w in ('テキスト', '本文', '内容', '段落'))
+        ):
+            # 番号とタイトルを解析
+            number, title, category = _parse_heading_text(stripped)
+
+            heading_info = HeadingInfo(
+                line_number=line_idx + 1,  # 1-indexed
+                raw_text=line,
+                level=0,  # Markdownマーカーなし
+                title=title,
+                number=number,
+                category=category,
+                page=current_page,
+            )
+            result.append(heading_info)
 
     return result
 

@@ -60,17 +60,17 @@ def match_toc_to_body(
 ) -> list[MatchResult]:
     """TOC entries and body headings matching.
 
-    2-pass strategy with number verification:
+    2-pass strategy with number verification and sequential constraint:
 
-    Pass 1 (Exact match, no order constraint):
+    Pass 1 (Exact match, sequential order):
     - Exact match: number+title or title-only matches
     - Number verification: if heading has number, must match TOC number
-    - Can match in any order
+    - Sequential constraint: only search after last matched line
 
-    Pass 2 (Fuzzy match for remaining):
+    Pass 2 (Fuzzy match for remaining, sequential order):
     - Fuzzy match: similarity >= threshold
     - Number verification: if heading has number, must match TOC number
-    - Can match in any order
+    - Sequential constraint: only search after last matched line
 
     Args:
         toc_entries: list of TOC entries
@@ -95,6 +95,9 @@ def match_toc_to_body(
     # Track which headings have been used
     used_heading_indices: set[int] = set()
 
+    # Track last matched line number for sequential constraint
+    last_matched_line: int = 0
+
     # Pre-process headings: normalize and extract numbers
     heading_info: list[tuple[str, str, str | None]] = []  # (normalized, no_number, number)
     for heading in body_headings:
@@ -106,7 +109,7 @@ def match_toc_to_body(
     # Results: initially None for each TOC entry
     results: list[MatchResult | None] = [None] * len(toc_entries)
 
-    # === Pass 1: Exact matches ===
+    # === Pass 1: Exact matches (sequential order) ===
     for toc_idx, toc_entry in enumerate(toc_entries):
         toc_number = toc_entry.number
         toc_title = toc_entry.text
@@ -119,6 +122,11 @@ def match_toc_to_body(
             if h_idx in used_heading_indices:
                 continue
             if is_special_marker(heading.text):
+                continue
+
+            # Sequential constraint: only search after last matched line
+            h_line = heading.line_number if heading.line_number > 0 else h_idx + 1
+            if h_line <= last_matched_line:
                 continue
 
             h_normalized, h_no_number, h_number = heading_info[h_idx]
@@ -140,15 +148,31 @@ def match_toc_to_body(
                     body_heading=heading,
                     match_type=MatchType.EXACT,
                     similarity=1.0,
-                    line_number=heading.line_number if heading.line_number > 0 else h_idx + 1,
+                    line_number=h_line,
                 )
                 used_heading_indices.add(h_idx)
+                last_matched_line = h_line  # Update for next TOC entry
                 break
 
-    # === Pass 2: Fuzzy matches for remaining ===
+    # === Pass 2: Fuzzy matches for remaining (sequential order) ===
     for toc_idx, toc_entry in enumerate(toc_entries):
         if results[toc_idx] is not None:
             continue  # Already matched in pass 1
+
+        # Get last matched line from previous TOC entries (lower bound)
+        prev_matched_line = 0
+        for prev_idx in range(toc_idx - 1, -1, -1):
+            if results[prev_idx] is not None and results[prev_idx].line_number > 0:
+                prev_matched_line = results[prev_idx].line_number
+                break
+
+        # Get next matched line from subsequent TOC entries (upper bound)
+        # This prevents matching a heading that's too far ahead
+        next_matched_line = float('inf')
+        for next_idx in range(toc_idx + 1, len(toc_entries)):
+            if results[next_idx] is not None and results[next_idx].line_number > 0:
+                next_matched_line = results[next_idx].line_number
+                break
 
         toc_number = toc_entry.number
         toc_title = toc_entry.text
@@ -157,11 +181,19 @@ def match_toc_to_body(
         best_match: MatchResult | None = None
         best_similarity: float = 0.0
         best_h_idx: int = -1
+        best_h_line: int = 0
 
         for h_idx, heading in enumerate(body_headings):
             if h_idx in used_heading_indices:
                 continue
             if is_special_marker(heading.text):
+                continue
+
+            # Sequential constraint: search between prev and next matched lines
+            h_line = heading.line_number if heading.line_number > 0 else h_idx + 1
+            if h_line <= prev_matched_line:
+                continue
+            if h_line >= next_matched_line:
                 continue
 
             h_normalized, h_no_number, h_number = heading_info[h_idx]
@@ -182,13 +214,15 @@ def match_toc_to_body(
                     body_heading=heading,
                     match_type=MatchType.FUZZY,
                     similarity=similarity,
-                    line_number=heading.line_number if heading.line_number > 0 else h_idx + 1,
+                    line_number=h_line,
                 )
                 best_h_idx = h_idx
+                best_h_line = h_line
 
         if best_match is not None:
             results[toc_idx] = best_match
             used_heading_indices.add(best_h_idx)
+            last_matched_line = best_h_line  # Update for next TOC entry
 
     # === Fill MISSING for unmatched ===
     for toc_idx, toc_entry in enumerate(toc_entries):
@@ -221,6 +255,7 @@ def find_similar_candidate(
         (類似見出し, 類似度) or None
     """
     import difflib
+    import re
 
     from src.book_converter.parser.heading_normalizer import (
         normalize_number_format,
@@ -230,18 +265,19 @@ def find_similar_candidate(
     if not headings:
         return None
 
-    # Normalize TOC entry text
+    # Normalize TOC entry text (title only, no number)
     toc_text = normalize_spaces(normalize_number_format(toc_entry.text))
 
     best_heading: Heading | None = None
     best_similarity: float = 0.0
 
     for heading in headings:
-        # Normalize heading text
+        # Normalize heading text and strip leading number for comparison
         heading_text = normalize_spaces(normalize_number_format(heading.text))
+        heading_title = re.sub(r'^\d+(?:\.\d+)*\s+', '', heading_text)
 
-        # Calculate similarity
-        similarity = difflib.SequenceMatcher(None, toc_text, heading_text).ratio()
+        # Calculate similarity using title-only comparison
+        similarity = difflib.SequenceMatcher(None, toc_text, heading_title).ratio()
 
         if similarity >= threshold and similarity > best_similarity:
             best_similarity = similarity

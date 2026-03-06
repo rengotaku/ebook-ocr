@@ -35,6 +35,7 @@ class NormalizationAction(Enum):
 
     ADD_NUMBER = "add_number"  # 番号付与（## タイトル → ## 1.1 タイトル）
     ADD_MARKER = "add_marker"  # Markdownマーカー付与（タイトル → ## 1.1 タイトル）
+    FIX_NUMBER = "fix_number"  # 番号修正（## 12.2 タイトル → ## 1.2.2 タイトル）
     FORMAT_ONLY = "format_only"  # フォーマット正規化のみ（1-1 → 1.1）
     NONE = "none"  # 変更なし
 

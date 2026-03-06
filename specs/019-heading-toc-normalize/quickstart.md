@@ -70,31 +70,10 @@ Run with APPLY=1 to apply changes.
 make normalize-headings HASHDIR=output/<hash> APPLY=1
 ```
 
-### 4. TOC 検証
-
-```bash
-# 正規化後のマッチング率を検証
-make validate-toc HASHDIR=output/<hash>
-```
-
-**出力例**:
-```
-TOC Validation Report
-=====================
-TOC Entries:     42
-Body Headings:   40
-Matched:         38 (95.0%)
-
-Missing in Body (2):
-  - 第1章 SREとは
-  - 第2章 信頼性を定義...
-
-Excluded (special markers):
-  - ## ■コードベース
-  - ## ■コードの送信
-```
-
 ## 正規化ルール
+
+> **Note**: `make validate-toc` は `make normalize-headings` の機能のサブセットであったため削除しました。
+> TOC検証は `make normalize-headings` で確認できます。
 
 ### 番号フォーマット
 
@@ -121,7 +100,7 @@ Excluded (special markers):
 ### MISSING 警告が多い
 
 TOC にあるが本文にない見出しがある場合:
-1. `make validate-toc` で欠落一覧を確認
+1. `make normalize-headings` で欠落一覧を確認
 2. book.md を手動で確認し、欠落見出しを追加
 
 ### マッチング率が低い
