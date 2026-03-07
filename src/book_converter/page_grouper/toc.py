@@ -7,6 +7,24 @@ from xml.etree import ElementTree as ET
 from src.book_converter.errors import PageValidationError
 
 from .models import TOCEntry
+from .section import parse_section_number
+
+
+def _infer_level_from_number(number: str) -> int | None:
+    """Infer hierarchy level from section number pattern.
+
+    Uses trailing-zero convention: 1.0.0=chapter, 1.1.0=section, 1.1.1=subsection.
+
+    Args:
+        number: Section number string
+
+    Returns:
+        Inferred level (1-3) or None if cannot infer
+    """
+    sn = parse_section_number(number)
+    if not sn:
+        return None
+    return min(len(sn.effective_parts), 3)
 
 
 def _normalize_level(level: str) -> int:
@@ -45,9 +63,13 @@ def parse_toc(toc_element: ET.Element) -> list[TOCEntry]:
     entries = []
     for entry in toc_element.findall("entry"):
         level_raw = entry.get("level", "")
-        level = _normalize_level(level_raw)
         number = entry.get("number", "")
         title = entry.get("title", "")
+
+        # Prefer level inferred from number pattern (handles trailing-zero convention)
+        inferred = _infer_level_from_number(number)
+        level = inferred if inferred is not None else _normalize_level(level_raw)
+
         entries.append(TOCEntry(level=level, number=number, title=title))
     return entries
 

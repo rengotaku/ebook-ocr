@@ -19,6 +19,31 @@ from .models import FlattenStats, TOCEntry
 from .section import is_chapter_title_page, normalize_for_matching, parse_section_number
 
 
+def _find_toc_key(number: str, toc_lookup: dict) -> str | None:
+    """Find the actual TOC key for a section number.
+
+    Handles both standard (1, 1.1) and zero-padded (1.0.0, 1.1.0) formats.
+
+    Args:
+        number: Section number to look up (e.g., "1", "1.1")
+        toc_lookup: Dict mapping section number to any TOC entry type
+
+    Returns:
+        The actual key in toc_lookup, or None
+    """
+    if number in toc_lookup:
+        return number
+
+    # Try appending .0 suffixes: "1" -> "1.0" -> "1.0.0"
+    padded = number
+    for _ in range(3):
+        padded = f"{padded}.0"
+        if padded in toc_lookup:
+            return padded
+
+    return None
+
+
 def _find_first_chapter(toc_lookup: dict[str, TOCEntry]) -> str | None:
     """Find the first chapter in TOC.
 
@@ -28,22 +53,30 @@ def _find_first_chapter(toc_lookup: dict[str, TOCEntry]) -> str | None:
     Returns:
         First chapter number or None if no chapters exist
     """
-    # Find all chapter entries (level=1) with valid numeric section numbers
-    chapter_numbers = [num for num, entry in toc_lookup.items() if entry.level == 1 and num and num.isdigit()]
+    # Find all chapter entries using SectionNumber-based detection
+    chapter_entries = []
+    for num in toc_lookup:
+        sn = parse_section_number(num)
+        if sn and sn.is_chapter:
+            chapter_entries.append((sn.chapter_num, num))
 
-    if not chapter_numbers:
+    if not chapter_entries:
         return None
 
     # Return the numerically smallest chapter number
-    return min(chapter_numbers, key=lambda x: int(x))
+    return min(chapter_entries, key=lambda x: x[0])[1]
 
 
 def _find_first_chapter_entry(toc_lookup: dict[str, TocEntry]) -> str | None:
     """Find the first chapter number in TOC."""
-    chapter_numbers = [num for num, entry in toc_lookup.items() if entry.level == 1 and num and num.isdigit()]
-    if not chapter_numbers:
+    chapter_entries = []
+    for num in toc_lookup:
+        sn = parse_section_number(num)
+        if sn and sn.is_chapter:
+            chapter_entries.append((sn.chapter_num, num))
+    if not chapter_entries:
         return None
-    return min(chapter_numbers, key=lambda x: int(x))
+    return min(chapter_entries, key=lambda x: x[0])[1]
 
 
 def _build_hierarchical_structure(
@@ -58,33 +91,35 @@ def _build_hierarchical_structure(
         page_assignments: Dict mapping section number to pages
         toc_lookup: Dict mapping section number to TOCEntry
     """
-    # Group sections by chapter
-    chapters: dict[str, dict[str, list[ET.Element]]] = {}
+    # Group sections by chapter number (int)
+    chapters: dict[int, dict[str, list[ET.Element]]] = {}
 
     for section_num, pages in page_assignments.items():
         section_parts = parse_section_number(section_num)
         if not section_parts:
             continue
 
-        chapter_num = str(section_parts.chapter_num)
+        ch_num = section_parts.chapter_num
 
-        if chapter_num not in chapters:
-            chapters[chapter_num] = {}
+        if ch_num not in chapters:
+            chapters[ch_num] = {}
 
-        chapters[chapter_num][section_num] = pages
+        chapters[ch_num][section_num] = pages
 
     # Build chapter elements
-    for chapter_num in sorted(chapters.keys(), key=lambda x: int(x)):
-        chapter_entry = toc_lookup.get(chapter_num)
+    for ch_num in sorted(chapters.keys()):
+        # Find chapter TOC entry (handles both "1" and "1.0.0" keys)
+        chapter_key = _find_toc_key(str(ch_num), toc_lookup)
+        chapter_entry = toc_lookup.get(chapter_key) if chapter_key else None
         if not chapter_entry:
             continue
 
         chapter_elem = ET.Element("chapter")
-        chapter_elem.set("number", chapter_num)
+        chapter_elem.set("number", chapter_key)
         chapter_elem.set("title", chapter_entry.title)
 
         # Get sections in this chapter
-        chapter_sections = chapters[chapter_num]
+        chapter_sections = chapters[ch_num]
 
         # Add pages to chapter
         _add_sections_to_chapter(chapter_elem, chapter_sections, toc_lookup)
@@ -92,15 +127,14 @@ def _build_hierarchical_structure(
         book_elem.append(chapter_elem)
 
     # Handle chapters from TOC that don't have pages yet
-    for entry in toc_lookup.values():
-        if entry.level == 1:  # chapter level
-            chapter_num = entry.number
-            if chapter_num not in chapters:
-                # Create empty chapter
-                chapter_elem = ET.Element("chapter")
-                chapter_elem.set("number", chapter_num)
-                chapter_elem.set("title", entry.title)
-                book_elem.append(chapter_elem)
+    existing_ch_nums = set(chapters.keys())
+    for num, entry in toc_lookup.items():
+        sn = parse_section_number(num)
+        if sn and sn.is_chapter and sn.chapter_num not in existing_ch_nums:
+            chapter_elem = ET.Element("chapter")
+            chapter_elem.set("number", num)
+            chapter_elem.set("title", entry.title)
+            book_elem.append(chapter_elem)
 
 
 def _add_sections_to_chapter(
@@ -131,20 +165,24 @@ def _add_sections_to_chapter(
                     page.set("type", "chapter-title")
                 chapter_elem.append(page)
         elif section_parts.is_section:
-            # Section level
+            # Section level - use the actual key from page_assignments
             if section_num not in section_map:
                 section_map[section_num] = {}
             section_map[section_num]["_pages"] = pages
         elif section_parts.is_subsection:
-            # Subsection - find parent section
-            parent_section = ".".join(section_num.split(".")[:2])
-            if parent_section not in section_map:
-                section_map[parent_section] = {}
-            section_map[parent_section][section_num] = pages
+            # Subsection - find parent section key
+            # For "1.1.1" -> try "1.1", then "1.1.0" etc.
+            effective = section_parts.effective_parts
+            parent_effective = ".".join(str(p) for p in effective[:2])
+            parent_key = _find_toc_key(parent_effective, toc_lookup) or parent_effective
+            if parent_key not in section_map:
+                section_map[parent_key] = {}
+            section_map[parent_key][section_num] = pages
 
     # Build section elements
     for section_num in sorted(section_map.keys(), key=_section_sort_key):
-        section_entry = toc_lookup.get(section_num)
+        section_key = _find_toc_key(section_num, toc_lookup)
+        section_entry = toc_lookup.get(section_key) if section_key else None
         if not section_entry:
             continue
 
@@ -162,7 +200,8 @@ def _add_sections_to_chapter(
             if subsection_num == "_pages":
                 continue
 
-            subsection_entry = toc_lookup.get(subsection_num)
+            sub_key = _find_toc_key(subsection_num, toc_lookup)
+            subsection_entry = toc_lookup.get(sub_key) if sub_key else None
             if not subsection_entry:
                 continue
 
@@ -280,29 +319,30 @@ def _build_chapters(
     """
     from src.book_converter.models import Chapter
 
-    # Group by chapter number
-    chapters_data: dict[str, dict[str, list[Page]]] = {}
+    # Group by chapter number (int)
+    chapters_data: dict[int, dict[str, list[Page]]] = {}
 
     for section_num, pages in page_assignments.items():
         section_parts = parse_section_number(section_num)
         if not section_parts:
             continue
 
-        chapter_num = str(section_parts.chapter_num)
-        if chapter_num not in chapters_data:
-            chapters_data[chapter_num] = {}
-        chapters_data[chapter_num][section_num] = pages
+        ch_num = section_parts.chapter_num
+        if ch_num not in chapters_data:
+            chapters_data[ch_num] = {}
+        chapters_data[ch_num][section_num] = pages
 
     # Build Chapter objects
     chapters = []
-    for chapter_num in sorted(chapters_data.keys(), key=lambda x: int(x) if x.isdigit() else 0):
-        chapter_entry = toc_lookup.get(chapter_num)
+    for ch_num in sorted(chapters_data.keys()):
+        chapter_key = _find_toc_key(str(ch_num), toc_lookup)
+        chapter_entry = toc_lookup.get(chapter_key) if chapter_key else None
         if not chapter_entry:
             continue
 
-        sections = _build_sections(chapters_data[chapter_num], toc_lookup, chapter_entry)
+        sections = _build_sections(chapters_data[ch_num], toc_lookup, chapter_entry)
         chapter = Chapter(
-            number=chapter_num,
+            number=chapter_key,
             title=chapter_entry.text,
             sections=sections,
         )

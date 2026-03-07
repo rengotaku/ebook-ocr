@@ -33,19 +33,30 @@ class SectionNumber:
         return self.parts[0]
 
     @property
+    def effective_parts(self) -> tuple[int, ...]:
+        """Strip trailing zeros to get effective hierarchy parts.
+
+        Handles numbering like 1.0.0 (chapter), 1.1.0 (section), 1.1.1 (subsection).
+        """
+        parts_list = list(self.parts)
+        while len(parts_list) > 1 and parts_list[-1] == 0:
+            parts_list.pop()
+        return tuple(parts_list)
+
+    @property
     def is_chapter(self) -> bool:
         """Return True if this is a chapter number."""
-        return len(self.parts) == 1
+        return len(self.effective_parts) == 1
 
     @property
     def is_section(self) -> bool:
         """Return True if this is a section number."""
-        return len(self.parts) == 2
+        return len(self.effective_parts) == 2
 
     @property
     def is_subsection(self) -> bool:
         """Return True if this is a subsection number."""
-        return len(self.parts) >= 3
+        return len(self.effective_parts) >= 3
 
 
 @dataclass(frozen=True)

@@ -18,6 +18,8 @@ from src.book_converter.page_grouper import (
     parse_section_number,
     parse_toc,
 )
+from src.book_converter.page_grouper.hierarchy import _find_toc_key
+from src.book_converter.page_grouper.toc import _infer_level_from_number
 
 # =============================================================================
 # Helper Functions for Phase 7 (page comments instead of page tags)
@@ -373,6 +375,81 @@ class TestParseSectionNumber:
         assert result.is_chapter is False
         assert result.is_section is False
         assert result.is_subsection is True
+
+    def test_trailing_zero_chapter(self) -> None:
+        """Test 1.0.0 format is recognized as chapter."""
+        result = parse_section_number("1.0.0")
+        assert result is not None
+        assert result.effective_parts == (1,)
+        assert result.is_chapter is True
+        assert result.is_section is False
+        assert result.is_subsection is False
+        assert result.chapter_num == 1
+
+    def test_trailing_zero_section(self) -> None:
+        """Test 1.1.0 format is recognized as section."""
+        result = parse_section_number("1.1.0")
+        assert result is not None
+        assert result.effective_parts == (1, 1)
+        assert result.is_chapter is False
+        assert result.is_section is True
+        assert result.is_subsection is False
+
+    def test_trailing_zero_subsection(self) -> None:
+        """Test 1.1.1 is still subsection (no trailing zeros)."""
+        result = parse_section_number("1.1.1")
+        assert result is not None
+        assert result.effective_parts == (1, 1, 1)
+        assert result.is_subsection is True
+
+    def test_single_trailing_zero(self) -> None:
+        """Test 2.0 format is recognized as chapter."""
+        result = parse_section_number("2.0")
+        assert result is not None
+        assert result.effective_parts == (2,)
+        assert result.is_chapter is True
+
+
+class TestFindTocKey:
+    """Tests for _find_toc_key helper."""
+
+    def test_direct_match(self) -> None:
+        lookup = {"1": "ch1", "1.1": "sec1.1"}
+        assert _find_toc_key("1", lookup) == "1"
+        assert _find_toc_key("1.1", lookup) == "1.1"
+
+    def test_zero_padded_chapter(self) -> None:
+        lookup = {"1.0.0": "ch1", "2.0.0": "ch2"}
+        assert _find_toc_key("1", lookup) == "1.0.0"
+        assert _find_toc_key("2", lookup) == "2.0.0"
+
+    def test_zero_padded_section(self) -> None:
+        lookup = {"1.1.0": "sec1.1"}
+        assert _find_toc_key("1.1", lookup) == "1.1.0"
+
+    def test_not_found(self) -> None:
+        lookup = {"1.0.0": "ch1"}
+        assert _find_toc_key("99", lookup) is None
+
+
+class TestInferLevelFromNumber:
+    """Tests for _infer_level_from_number."""
+
+    def test_chapter_formats(self) -> None:
+        assert _infer_level_from_number("1") == 1
+        assert _infer_level_from_number("1.0.0") == 1
+        assert _infer_level_from_number("2.0") == 1
+
+    def test_section_formats(self) -> None:
+        assert _infer_level_from_number("1.1") == 2
+        assert _infer_level_from_number("1.1.0") == 2
+
+    def test_subsection_formats(self) -> None:
+        assert _infer_level_from_number("1.1.1") == 3
+        assert _infer_level_from_number("1.2.3.4") == 3
+
+    def test_invalid(self) -> None:
+        assert _infer_level_from_number("abc") is None
 
 
 # =============================================================================
