@@ -25,7 +25,7 @@ LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),)
 INPUT_MD ?=
 OUTPUT_XML ?=
 
-.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample heading-report normalize-headings ruff pylint lint clean clean-all
+.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample heading-report normalize-toc normalize-headings ruff pylint lint clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -170,11 +170,13 @@ heading-report: setup ## Generate heading pattern report (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make heading-report HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_headings report "$(HASHDIR)/book.md"
 
+normalize-toc: setup ## Normalize OCR errors in TOC entries (requires HASHDIR, optional APPLY=1)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make normalize-toc HASHDIR=output/<hash> [APPLY=1]"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_toc "$(HASHDIR)/book.md" $(if $(APPLY),--apply)
+
 normalize-headings: setup ## Normalize headings to match TOC (requires HASHDIR, optional APPLY=1)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make normalize-headings HASHDIR=output/<hash> [APPLY=1]"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_headings normalize "$(HASHDIR)/book.md" $(if $(APPLY),--apply)
-
-# validate-toc は normalize-headings の機能のサブセットであったため削除
 
 # === Testing ===
 

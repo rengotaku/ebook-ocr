@@ -4,6 +4,11 @@ Provides subcommands:
 - report: heading pattern analysis report
 - normalize: normalize headings (dry-run or apply)
 - validate: TOC-body heading validation report
+
+NOTE: このスクリプトは normalize_toc.py と相互に影響します。
+  - TOC正規化でエントリのテキストが変わると、見出し正規化のマッチング結果が変わる
+  - 見出し正規化で本文見出しが変わると、TOC正規化の必要性が変わることがある
+  推奨実行順序: normalize_toc → normalize_headings → normalize_toc (再確認)
 """
 
 from __future__ import annotations

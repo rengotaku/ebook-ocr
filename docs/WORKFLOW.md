@@ -18,6 +18,10 @@
                                                            ↓
                                                         book.md (構造化)
                                                            ↓
+                                                   TOC正規化 (OCRエラー修正)
+                                                           ↓
+                                                   見出し正規化 (TOC→本文)
+                                                           ↓
                                                         XML変換
                                                            ↓
                                                         book.xml (TTS対応)
@@ -597,6 +601,74 @@ sed -i 's/0(log n)/O(log n)/g' book.md
 
 # 不要な空白削除
 sed -i 's/第 \([0-9]\)章/第\1章/g' book.md
+```
+
+---
+
+### Step 5.5: TOC正規化（book.md のTOCエントリのOCRエラー修正）
+
+**目的**: TOCセクション内のOCRエラーを検出・修正し、後続の見出し正規化の精度を向上
+
+**前提条件**: book.md に `<!-- toc -->` / `<!-- /toc -->` マーカーが追加済みであること
+
+**コマンド**:
+```bash
+# プレビュー（dry-run、デフォルト）
+make normalize-toc HASHDIR=output/<hash>
+
+# 適用
+make normalize-toc HASHDIR=output/<hash> APPLY=1
+```
+
+**検出・修正するOCRエラーパターン**:
+
+| パターン | 変換前 | 変換後 |
+|---------|--------|--------|
+| 全角スラッシュ | `CI／CD` | `CI/CD` |
+| 全角コロン | `現在：SREの統合` | `現在:SREの統合` |
+| 全角括弧 | `（テスト）` | `(テスト)` |
+| 全角数字 | `１.２.３` | `1.2.3` |
+| 全角英字 | `ＡＢＣ` | `ABC` |
+| 不要スペース | `SLI / SLO` | `SLI/SLO` |
+| 全角スペース | `テスト　項目` | `テスト 項目` |
+| 中黒バリアント | `•（BULLET）` | `·（MIDDLE DOT）` |
+
+**出力例（dry-run）**:
+```
+Found 1 fix(es):
+
+  L425: fullwidth '：' -> ':' (FULLWIDTH COLON)
+    - 9.1.3 現在：SREの統合と役割の定義
+    + 9.1.3 現在:SREの統合と役割の定義
+
+Dry-run: 1 fix(es) found. Use --apply to apply.
+```
+
+**注意: TOC正規化と見出し正規化の依存関係**:
+
+> TOC正規化と見出し正規化は同じ book.md を対象に、互いに関連するテキストを修正します。
+> 片方を適用した後にもう片方を再実行すると、結果が変わる可能性があります。
+>
+> - **TOC正規化** → TOCエントリのテキストが変わる → **見出し正規化のマッチング結果が変わる**
+> - **見出し正規化** → 本文見出しのテキストが変わる → **TOC正規化の必要性が変わることがある**
+>
+> 必ず以下の順序で実行し、片方を修正したらもう片方を再確認してください。
+
+**推奨フロー**:
+```bash
+# 1. TOC正規化（プレビュー → 確認 → 適用）
+make normalize-toc HASHDIR=output/<hash>
+make normalize-toc HASHDIR=output/<hash> APPLY=1
+
+# 2. 見出し正規化（TOC正規化の後に実行）
+make normalize-headings HASHDIR=output/<hash>
+make normalize-headings HASHDIR=output/<hash> APPLY=1
+
+# 3. 再確認: TOC正規化を再実行して残りがないか確認
+make normalize-toc HASHDIR=output/<hash>
+
+# 4. XML変換
+make converter INPUT_MD=output/<hash>/book.md OUTPUT_XML=output/<hash>/book.xml
 ```
 
 ---
