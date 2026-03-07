@@ -6,17 +6,6 @@ import re
 
 from src.book_converter.models import MarkerType, TocEntry
 
-# Optional LLM-based TOC classifier
-try:
-    from src.book_converter.toc_classifier import (
-        classify_toc_entry_with_llm,
-        is_llm_classification_enabled,
-    )
-
-    TOC_CLASSIFIER_AVAILABLE = True
-except ImportError:
-    TOC_CLASSIFIER_AVAILABLE = False
-
 
 def parse_toc_marker(line: str) -> MarkerType | None:
     """Parse a TOC marker line.
@@ -337,9 +326,6 @@ def parse_toc_lines(lines: list[str]) -> list[TocEntry]:
 def parse_toc_entry(line: str) -> TocEntry | None:
     """Parse a TOC entry line.
 
-    Attempts LLM-based classification if enabled (via USE_LLM_TOC_CLASSIFIER env var),
-    then falls back to rule-based patterns.
-
     Patterns:
     - 第N章 タイトル ... ページ番号
     - N.N タイトル ... ページ番号
@@ -360,43 +346,6 @@ def parse_toc_entry(line: str) -> TocEntry | None:
     """
     if not line.strip():
         return None
-
-    # Try LLM classification first if enabled
-    if TOC_CLASSIFIER_AVAILABLE and is_llm_classification_enabled():
-        # Extract page number before LLM classification
-        page_number = ""
-        line_without_page = line
-
-        # Extract page number using existing patterns
-        dot_match = re.search(r"\.{2,}\s*(\d+)\s*$", line)
-        if dot_match:
-            page_number = dot_match.group(1)
-            line_without_page = line[: dot_match.start()]
-        else:
-            dash_match = re.search(r"[─\-]{2,}\s*(\d+)\s*$", line)
-            if dash_match:
-                page_number = dash_match.group(1)
-                line_without_page = line[: dash_match.start()]
-            else:
-                space_match = re.search(r"\s{3,}(\d+)\s*$", line)
-                if space_match:
-                    page_number = space_match.group(1)
-                    line_without_page = line[: space_match.start()]
-
-        # Normalize before LLM
-        line_normalized = normalize_toc_line(line_without_page)
-
-        llm_result = classify_toc_entry_with_llm(line_normalized)
-        if llm_result:
-            # Use LLM classification with extracted page number
-            return TocEntry(
-                text=llm_result.text,
-                level=llm_result.level,
-                number=llm_result.number,
-                page=page_number,
-            )
-
-    # Fallback to rule-based classification
 
     # Extract page number first (before removing it from title)
     page_number = ""
