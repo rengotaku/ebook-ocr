@@ -28,23 +28,11 @@ from src.book_converter.parser.figure import parse_figure, parse_figure_comment,
 from src.book_converter.parser.heading import parse_heading, parse_heading_with_warning
 from src.book_converter.parser.paragraph import parse_paragraph
 from src.book_converter.parser.toc import (
-    normalize_toc_line,
     parse_content_marker,
     parse_toc_lines,
     parse_toc_marker,
 )
 from src.book_converter.parser.utils import get_read_aloud_from_stack, is_list_line
-
-# Optional LLM-based TOC classifier
-try:
-    from src.book_converter.toc_classifier import (
-        classify_toc_batch_with_llm,
-        is_llm_classification_enabled,
-    )
-
-    TOC_CLASSIFIER_AVAILABLE = True
-except ImportError:
-    TOC_CLASSIFIER_AVAILABLE = False
 
 
 def parse_page_marker(line: str) -> tuple[str, str] | None:
@@ -366,31 +354,6 @@ class PageParseState:
     toc_lines: list[str]
 
 
-def _process_toc_lines_with_llm_fallback(toc_lines: list[str]) -> list[TocEntry]:
-    """Process TOC lines with LLM classification, fallback to rule-based.
-
-    Args:
-        toc_lines: Lines to process as TOC.
-
-    Returns:
-        List of parsed TOC entries.
-    """
-    if TOC_CLASSIFIER_AVAILABLE and is_llm_classification_enabled():
-        # For LLM, normalize each line but preserve structure with newlines
-        normalized_lines = [normalize_toc_line(line) for line in toc_lines]
-        # Filter out empty lines
-        normalized_lines = [line for line in normalized_lines if line.strip()]
-        raw_text = "\n".join(normalized_lines)
-        llm_entries = classify_toc_batch_with_llm(raw_text, preserve_newlines=True)
-        if llm_entries:
-            # LLM succeeded - use its results directly
-            return llm_entries
-        # LLM failed - fallback to rule-based
-        return parse_toc_lines(toc_lines)
-    # LLM not enabled - use rule-based
-    return parse_toc_lines(toc_lines)
-
-
 def _handle_toc_end(state: PageParseState) -> None:
     """Handle TOC end marker.
 
@@ -398,7 +361,7 @@ def _handle_toc_end(state: PageParseState) -> None:
         state: Current page parse state (mutated in place).
     """
     if state.toc_lines:
-        state.toc_entries.extend(_process_toc_lines_with_llm_fallback(state.toc_lines))
+        state.toc_entries.extend(parse_toc_lines(state.toc_lines))
     state.in_toc = False
     state.toc_lines = []
 
@@ -685,7 +648,7 @@ def _parse_single_page_content(
 
     # If TOC is still open at end of page, process collected lines
     if state.in_toc and state.toc_lines:
-        state.toc_entries.extend(_process_toc_lines_with_llm_fallback(state.toc_lines))
+        state.toc_entries.extend(parse_toc_lines(state.toc_lines))
 
     # Create Page object
     # Content readAloud is true if ANY child element has readAloud=true
