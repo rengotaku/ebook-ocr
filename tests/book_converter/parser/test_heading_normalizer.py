@@ -14,7 +14,6 @@ import pytest
 from src.book_converter.parser.heading_normalizer import (
     HeadingCategory,
     HeadingInfo,
-    PatternReport,
     classify_heading_patterns,
     extract_headings,
     is_special_marker,
@@ -268,14 +267,16 @@ class TestExtractHeadings:
 
     def test_extract_headings_basic(self) -> None:
         """Markdown見出し行 (h1-h6) を抽出"""
-        lines = _wrap_content([
-            "# タイトル",
-            "本文テキスト",
-            "## 1.1 SREの概要",
-            "段落テキスト",
-            "## 1.2 信頼性とは",
-            "別の段落",
-        ])
+        lines = _wrap_content(
+            [
+                "# タイトル",
+                "本文テキスト",
+                "## 1.1 SREの概要",
+                "段落テキスト",
+                "## 1.2 信頼性とは",
+                "別の段落",
+            ]
+        )
         result = extract_headings(lines)
 
         assert len(result) == 3
@@ -286,11 +287,13 @@ class TestExtractHeadings:
 
     def test_extract_headings_with_h3(self) -> None:
         """### も抽出する"""
-        lines = _wrap_content([
-            "## 1.1 SREの概要",
-            "テキスト",
-            "### 1.1.1 サイトとは何か",
-        ])
+        lines = _wrap_content(
+            [
+                "## 1.1 SREの概要",
+                "テキスト",
+                "### 1.1.1 サイトとは何か",
+            ]
+        )
         result = extract_headings(lines)
 
         assert len(result) == 2
@@ -299,13 +302,15 @@ class TestExtractHeadings:
 
     def test_extract_headings_line_numbers(self) -> None:
         """行番号が正しく記録される (1-indexed, content marker offset +1)"""
-        lines = _wrap_content([
-            "本文",
-            "## 最初の見出し",
-            "本文",
-            "本文",
-            "## 2番目の見出し",
-        ])
+        lines = _wrap_content(
+            [
+                "本文",
+                "## 最初の見出し",
+                "本文",
+                "本文",
+                "## 2番目の見出し",
+            ]
+        )
         result = extract_headings(lines)
 
         assert len(result) == 2
@@ -355,10 +360,12 @@ class TestExtractHeadings:
 
     def test_extract_headings_h1_included(self) -> None:
         """# (h1) も抽出対象"""
-        lines = _wrap_content([
-            "# 書籍タイトル",
-            "## 1.1 SREの概要",
-        ])
+        lines = _wrap_content(
+            [
+                "# 書籍タイトル",
+                "## 1.1 SREの概要",
+            ]
+        )
         result = extract_headings(lines)
 
         assert len(result) == 2
@@ -368,10 +375,12 @@ class TestExtractHeadings:
 
     def test_extract_headings_h4_included(self) -> None:
         """#### (h4) も抽出対象"""
-        lines = _wrap_content([
-            "## 1.1 SREの概要",
-            "#### サブサブセクション",
-        ])
+        lines = _wrap_content(
+            [
+                "## 1.1 SREの概要",
+                "#### サブサブセクション",
+            ]
+        )
         result = extract_headings(lines)
 
         assert len(result) == 2
@@ -380,11 +389,13 @@ class TestExtractHeadings:
 
     def test_extract_headings_preserves_order(self) -> None:
         """抽出結果は元の出現順序を保持"""
-        lines = _wrap_content([
-            "## C見出し",
-            "## A見出し",
-            "## B見出し",
-        ])
+        lines = _wrap_content(
+            [
+                "## C見出し",
+                "## A見出し",
+                "## B見出し",
+            ]
+        )
         result = extract_headings(lines)
 
         assert len(result) == 3

@@ -19,7 +19,7 @@ def _display_width(text: str) -> int:
     width = 0
     for char in text:
         ea = unicodedata.east_asian_width(char)
-        if ea in ('F', 'W', 'A'):  # Fullwidth, Wide, Ambiguous
+        if ea in ("F", "W", "A"):  # Fullwidth, Wide, Ambiguous
             width += 2
         else:
             width += 1
@@ -35,7 +35,7 @@ def _truncate_to_width(text: str, max_width: int) -> str:
     current_width = 0
     for char in text:
         ea = unicodedata.east_asian_width(char)
-        char_width = 2 if ea in ('F', 'W', 'A') else 1
+        char_width = 2 if ea in ("F", "W", "A") else 1
         if current_width + char_width + 2 > max_width:  # +2 for ".."
             return result + ".."
         result += char
@@ -110,7 +110,6 @@ def cmd_normalize(args: argparse.Namespace) -> int:
     from src.book_converter.normalization_rules import (
         apply_rules,
         generate_rules,
-        preview_diff,
     )
     from src.book_converter.parser.heading_normalizer import (
         MissingMarkerError,
@@ -121,7 +120,8 @@ def cmd_normalize(args: argparse.Namespace) -> int:
     def extract_num_and_title(text: str) -> tuple[str, str]:
         """Extract number and title from heading text."""
         import re as _re
-        _match = _re.match(r'^(\d+(?:\.\d+)*)\s+(.+)$', text)
+
+        _match = _re.match(r"^(\d+(?:\.\d+)*)\s+(.+)$", text)
         if _match:
             return _match.group(1), _match.group(2)
         return "-", text
@@ -190,10 +190,16 @@ def cmd_normalize(args: argparse.Namespace) -> int:
 
     def strip_markdown_prefix(raw: str) -> str:
         """Remove leading markdown heading prefix (e.g., '## ')."""
-        return re.sub(r'^#+\s*', '', raw)
+        return re.sub(r"^#+\s*", "", raw)
 
     body_headings = [
-        Heading(level=h.level, text=strip_markdown_prefix(h.raw_text), read_aloud=True, line_number=h.line_number, page=h.page)
+        Heading(
+            level=h.level,
+            text=strip_markdown_prefix(h.raw_text),
+            read_aloud=True,
+            line_number=h.line_number,
+            page=h.page,
+        )
         for h in headings
     ]
 
@@ -209,13 +215,9 @@ def cmd_normalize(args: argparse.Namespace) -> int:
 
     # Build set of matched heading line numbers to exclude from candidate search
     matched_lines = {
-        m.body_heading.line_number
-        for m in matches
-        if m.body_heading is not None and m.body_heading.line_number > 0
+        m.body_heading.line_number for m in matches if m.body_heading is not None and m.body_heading.line_number > 0
     }
-    unmatched_headings = [
-        h for h in body_headings if h.line_number not in matched_lines
-    ]
+    unmatched_headings = [h for h in body_headings if h.line_number not in matched_lines]
 
     # Generate FIX_NUMBER rules for MISSING(NUM) entries
     # Only generate rules for unmatched headings (don't overwrite matched ones)
@@ -248,12 +250,14 @@ def cmd_normalize(args: argparse.Namespace) -> int:
             marker = "#" * _heading_level_from_number(toc_num)
             original_text = similar_heading.text
         normalized_text = f"{marker} {toc_num} {body_title}"
-        rules.append(NormalizationRule(
-            original=original_text,
-            normalized=normalized_text,
-            line_number=similar_heading.line_number,
-            action=NormalizationAction.FIX_NUMBER,
-        ))
+        rules.append(
+            NormalizationRule(
+                original=original_text,
+                normalized=normalized_text,
+                line_number=similar_heading.line_number,
+                action=NormalizationAction.FIX_NUMBER,
+            )
+        )
 
     # Generate level fix rules for unmatched headings
     # Headings not matched to TOC: if level != 3 and not h1/h2 number pattern → fix to h3
@@ -273,16 +277,18 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         new_marker = "#" * expected_level
         original_text = f"{old_marker} {h.text}"
         normalized_text = f"{new_marker} {h.text}"
-        rules.append(NormalizationRule(
-            original=original_text,
-            normalized=normalized_text,
-            line_number=h.line_number,
-            action=NormalizationAction.FORMAT_ONLY,
-        ))
+        rules.append(
+            NormalizationRule(
+                original=original_text,
+                normalized=normalized_text,
+                line_number=h.line_number,
+                action=NormalizationAction.FORMAT_ONLY,
+            )
+        )
 
     # Calculate match statistics
-    matched_count = sum(1 for m in matches if m.match_type.value not in ('missing', 'excluded'))
-    missing_count = sum(1 for m in matches if m.match_type.value == 'missing')
+    matched_count = sum(1 for m in matches if m.match_type.value not in ("missing", "excluded"))
+    missing_count = sum(1 for m in matches if m.match_type.value == "missing")
 
     # Apply or preview
     if apply_changes:
@@ -408,20 +414,30 @@ def cmd_normalize(args: argparse.Namespace) -> int:
                     match_pct = "-"
                     action_str = "-"
 
-            table_rows.append((str(row_no), status, page_str, line_str, toc_num, toc_title, body_num, body_title, match_pct, cand_pct, action_str))
+            table_rows.append(
+                (
+                    str(row_no),
+                    status,
+                    page_str,
+                    line_str,
+                    toc_num,
+                    toc_title,
+                    body_num,
+                    body_title,
+                    match_pct,
+                    cand_pct,
+                    action_str,
+                )
+            )
 
         # Calculate action counts from all rows (before filtering)
         from collections import Counter
 
         # Matched actions: actions for OK/MATCH rows
-        matched_actions = Counter(
-            row[10] for row in table_rows
-            if row[1] in ("OK", "MATCH") and row[10] != "-"
-        )
+        matched_actions = Counter(row[10] for row in table_rows if row[1] in ("OK", "MATCH") and row[10] != "-")
         # Missing actions: actions for MISSING/MISSING(NUM) rows
         missing_actions = Counter(
-            row[10] for row in table_rows
-            if row[1] in ("MISSING", "MISSING(NUM)") and row[10] != "-"
+            row[10] for row in table_rows if row[1] in ("MISSING", "MISSING(NUM)") and row[10] != "-"
         )
 
         # Print summary
@@ -444,13 +460,25 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         print()
 
         # Filter rows if --hide-ok is set
-        hide_ok = getattr(args, 'hide_ok', False)
+        hide_ok = getattr(args, "hide_ok", False)
         if hide_ok:
             table_rows = [row for row in table_rows if row[1] != "OK"]
 
         # Calculate column widths based on content (no truncation)
         # Note: BodyPage/BodyLine = position of matched body heading in content section
-        headers = ("No", "Status", "BodyPage", "BodyLine", "Num", "TOC Title", "BodyNum", "Body Title", "Match%", "Cand%", "Action")
+        headers = (
+            "No",
+            "Status",
+            "BodyPage",
+            "BodyLine",
+            "Num",
+            "TOC Title",
+            "BodyNum",
+            "Body Title",
+            "Match%",
+            "Cand%",
+            "Action",
+        )
         col_widths = [_display_width(h) for h in headers]
 
         for row in table_rows:
@@ -562,10 +590,16 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     def strip_markdown_prefix(raw: str) -> str:
         """Remove leading markdown heading prefix (e.g., '## ')."""
-        return re.sub(r'^#+\s*', '', raw)
+        return re.sub(r"^#+\s*", "", raw)
 
     body_headings = [
-        Heading(level=h.level, text=strip_markdown_prefix(h.raw_text), read_aloud=True, line_number=h.line_number, page=h.page)
+        Heading(
+            level=h.level,
+            text=strip_markdown_prefix(h.raw_text),
+            read_aloud=True,
+            line_number=h.line_number,
+            page=h.page,
+        )
         for h in headings
     ]
 
@@ -579,13 +613,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
     # Find similar candidates for MISSING entries
     # Exclude already-matched headings to avoid false positives from duplicates
     matched_lines = {
-        m.body_heading.line_number
-        for m in matches
-        if m.body_heading is not None and m.body_heading.line_number > 0
+        m.body_heading.line_number for m in matches if m.body_heading is not None and m.body_heading.line_number > 0
     }
-    unmatched_headings = [
-        h for h in body_headings if h.line_number not in matched_lines
-    ]
+    unmatched_headings = [h for h in body_headings if h.line_number not in matched_lines]
 
     similar_candidates = {}
     from src.book_converter.models import MatchType

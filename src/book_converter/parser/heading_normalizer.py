@@ -62,12 +62,7 @@ def normalize_number_format(text: str) -> str:
         return text
 
     # 全角数字を半角に変換
-    result = text.translate(
-        str.maketrans(
-            "０１２３４５６７８９",
-            "0123456789"
-        )
-    )
+    result = text.translate(str.maketrans("０１２３４５６７８９", "0123456789"))
 
     # 全角ドットを半角に変換
     result = result.replace("．", ".")
@@ -83,7 +78,7 @@ def normalize_number_format(text: str) -> str:
     # ([-・\.]) で区切り文字をキャプチャ
     # (\d+) で次の数字をキャプチャ
     # (?:[-・\.](\d+))* で追加の区切り+数字を繰り返し
-    pattern = r'(\d+)([-・\.])\d+(?:[-・\.]\d+)*'
+    pattern = r"(\d+)([-・\.])\d+(?:[-・\.]\d+)*"
 
     def replace_separator(match: re.Match[str]) -> str:
         """区切り文字をドットに置換"""
@@ -116,13 +111,13 @@ def normalize_spaces(text: str) -> str:
 
     # パターン1: 第 N 章 → 第N章, 第 N 節 → 第N節
     # \s+ で1つ以上のスペースを検出
-    result = re.sub(r'第\s+(\d+)\s+(章|節)', r'第\1\2', result)
+    result = re.sub(r"第\s+(\d+)\s+(章|節)", r"第\1\2", result)
 
     # パターン2: 番号内のスペース除去 (N. N → N.N, N.  N → N.N)
     # 複数のスペースにも対応
     # 複数回適用して全ての N. N パターンを置換
     while True:
-        new_result = re.sub(r'(\d+)\.\s+(\d+)', r'\1.\2', result)
+        new_result = re.sub(r"(\d+)\.\s+(\d+)", r"\1.\2", result)
         if new_result == result:
             break
         result = new_result
@@ -183,16 +178,14 @@ def extract_headings(lines: list[str]) -> list[HeadingInfo]:
     has_content_end = any(line.strip() == "<!-- /content -->" for line in lines)
 
     if not has_content_start or not has_content_end:
-        raise MissingMarkerError(
-            "Required markers <!-- content --> and <!-- /content --> not found"
-        )
+        raise MissingMarkerError("Required markers <!-- content --> and <!-- /content --> not found")
 
     in_content_section = False
 
     # Markdown見出しパターン (h1-h6)
-    heading_pattern = re.compile(r'^(#{1,6})\s+(.+)$')
+    heading_pattern = re.compile(r"^(#{1,6})\s+(.+)$")
     # 番号パターン（## なしで番号から始まる行）: 1.0.0 タイトル, 1.1 タイトル 等
-    number_only_pattern = re.compile(r'^(\d+(?:\.\d+)+)\s+(.+)$')
+    number_only_pattern = re.compile(r"^(\d+(?:\.\d+)+)\s+(.+)$")
 
     for line_idx, line in enumerate(lines):
         stripped = line.strip()
@@ -263,10 +256,10 @@ def extract_headings(lines: list[str]) -> list[HeadingInfo]:
         if (
             stripped
             and len(stripped) <= 50
-            and not stripped.endswith(('。', '、', '.', ',', ':', '：'))
-            and not stripped.startswith(('<!--', '---', '-', '*', '·', '#'))
+            and not stripped.endswith(("。", "、", ".", ",", ":", "："))
+            and not stripped.startswith(("<!--", "---", "-", "*", "·", "#"))
             and not is_special_marker(stripped)
-            and not any(w in stripped for w in ('テキスト', '本文', '内容', '段落'))
+            and not any(w in stripped for w in ("テキスト", "本文", "内容", "段落"))
         ):
             # 番号とタイトルを解析
             number, title, category = _parse_heading_text(stripped)
@@ -300,7 +293,7 @@ def _parse_heading_text(text: str) -> tuple[str, str, HeadingCategory]:
 
     # 番号パターン: N, N.N, N.N.N 形式
     # 先頭から番号パターンを検出
-    number_pattern = re.compile(r'^(\d+(?:\.\d+)*)\s+(.+)$')
+    number_pattern = re.compile(r"^(\d+(?:\.\d+)*)\s+(.+)$")
     match = number_pattern.match(text)
 
     if match:

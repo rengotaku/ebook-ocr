@@ -26,7 +26,7 @@ def _extract_heading_number(text: str) -> str | None:
     """
     import re
 
-    match = re.match(r'^(\d+(?:\.\d+)*)\s+', text)
+    match = re.match(r"^(\d+(?:\.\d+)*)\s+", text)
     if match:
         return match.group(1)
     return None
@@ -102,7 +102,7 @@ def match_toc_to_body(
     heading_info: list[tuple[str, str, str | None]] = []  # (normalized, no_number, number)
     for heading in body_headings:
         normalized = normalize_spaces(normalize_number_format(heading.text))
-        no_number = re.sub(r'^\d+(?:\.\d+)*\s+', '', normalized)
+        no_number = re.sub(r"^\d+(?:\.\d+)*\s+", "", normalized)
         number = _extract_heading_number(normalized)
         heading_info.append((normalized, no_number, number))
 
@@ -168,7 +168,7 @@ def match_toc_to_body(
 
         # Get next matched line from subsequent TOC entries (upper bound)
         # This prevents matching a heading that's too far ahead
-        next_matched_line = float('inf')
+        next_matched_line = float("inf")
         for next_idx in range(toc_idx + 1, len(toc_entries)):
             if results[next_idx] is not None and results[next_idx].line_number > 0:
                 next_matched_line = results[next_idx].line_number
@@ -203,9 +203,7 @@ def match_toc_to_body(
                 continue
 
             # Fuzzy match
-            similarity = difflib.SequenceMatcher(
-                None, toc_title_normalized, h_no_number
-            ).ratio()
+            similarity = difflib.SequenceMatcher(None, toc_title_normalized, h_no_number).ratio()
 
             if similarity >= similarity_threshold and similarity > best_similarity:
                 best_similarity = similarity
@@ -274,7 +272,7 @@ def find_similar_candidate(
     for heading in headings:
         # Normalize heading text and strip leading number for comparison
         heading_text = normalize_spaces(normalize_number_format(heading.text))
-        heading_title = re.sub(r'^\d+(?:\.\d+)*\s+', '', heading_text)
+        heading_title = re.sub(r"^\d+(?:\.\d+)*\s+", "", heading_text)
 
         # Calculate similarity using title-only comparison
         similarity = difflib.SequenceMatcher(None, toc_text, heading_title).ratio()
@@ -311,17 +309,13 @@ def generate_validation_report(
     body_heading_count = len(headings)
 
     # Count matched entries (EXACT or FUZZY)
-    matched_count = sum(
-        1 for m in matches if m.match_type in (MatchType.EXACT, MatchType.FUZZY)
-    )
+    matched_count = sum(1 for m in matches if m.match_type in (MatchType.EXACT, MatchType.FUZZY))
 
     # Calculate match rate (avoid division by zero)
     match_rate = matched_count / toc_entry_count if toc_entry_count > 0 else 0.0
 
     # Collect missing entries (MISSING type)
-    missing_entries = tuple(
-        m.toc_entry for m in matches if m.match_type == MatchType.MISSING
-    )
+    missing_entries = tuple(m.toc_entry for m in matches if m.match_type == MatchType.MISSING)
 
     # Collect excluded headings (special marker headings)
     excluded_headings = tuple(h for h in headings if is_special_marker(h.text))
@@ -412,8 +406,9 @@ def format_validation_report(
                 similar_heading, similar_sim = similar_candidates[match.toc_entry]
                 similar_text = similar_heading.text[:25].ljust(25)
                 similar_pct = int(similar_sim * 100)
+                similar_col = f"-> Similar: {similar_text[:18]:<18}"
                 lines.append(
-                    f"|    |                           | -> Similar: {similar_text[:18]:<18} |        | {similar_pct:4d} |       |      |"
+                    f"|    |                           | {similar_col} |        | {similar_pct:4d} |       |      |"
                 )
 
         lines.append("+----+---------------------------+---------------------------+--------+------+-------+------+")

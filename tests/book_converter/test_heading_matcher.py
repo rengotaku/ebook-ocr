@@ -12,11 +12,9 @@ from src.book_converter.models import (
     Heading,
     MatchResult,
     MatchType,
-    NormalizationAction,
     TocEntry,
     ValidationReport,
 )
-
 
 # ============================================================
 # Fixtures
@@ -89,9 +87,7 @@ class TestMatchResultModel:
         assert result.body_heading is not None
         assert result.line_number == 52
 
-    def test_match_result_fuzzy_similarity_range(
-        self, toc_entry_numbered: TocEntry, heading_fuzzy: Heading
-    ) -> None:
+    def test_match_result_fuzzy_similarity_range(self, toc_entry_numbered: TocEntry, heading_fuzzy: Heading) -> None:
         """FUZZY マッチの場合、0.8 <= similarity < 1.0 であること"""
         result = MatchResult(
             toc_entry=toc_entry_numbered,
@@ -104,9 +100,7 @@ class TestMatchResultModel:
         assert 0.8 <= result.similarity < 1.0
         assert result.body_heading is not None
 
-    def test_match_result_missing_body_heading_is_none(
-        self, toc_entry_numbered: TocEntry
-    ) -> None:
+    def test_match_result_missing_body_heading_is_none(self, toc_entry_numbered: TocEntry) -> None:
         """MISSING の場合、body_heading は None であること"""
         result = MatchResult(
             toc_entry=toc_entry_numbered,
@@ -119,9 +113,7 @@ class TestMatchResultModel:
         assert result.body_heading is None
         assert result.similarity == 0.0
 
-    def test_match_result_excluded(
-        self, toc_entry_numbered: TocEntry, heading_special_marker: Heading
-    ) -> None:
+    def test_match_result_excluded(self, toc_entry_numbered: TocEntry, heading_special_marker: Heading) -> None:
         """EXCLUDED の場合、特殊マーカー付き見出しが設定されること"""
         result = MatchResult(
             toc_entry=toc_entry_numbered,
@@ -134,9 +126,7 @@ class TestMatchResultModel:
         assert result.body_heading is not None
         assert result.body_heading.text == "■コードベース"
 
-    def test_match_result_is_frozen(
-        self, toc_entry_numbered: TocEntry, heading_with_number: Heading
-    ) -> None:
+    def test_match_result_is_frozen(self, toc_entry_numbered: TocEntry, heading_with_number: Heading) -> None:
         """MatchResult は frozen dataclass であること (immutability)"""
         result = MatchResult(
             toc_entry=toc_entry_numbered,
@@ -357,9 +347,7 @@ class TestFuzzyMatching:
         ]
 
         # 高い閾値では MISSING
-        results_strict = match_toc_to_body(
-            toc_entries, body_headings, similarity_threshold=0.95
-        )
+        results_strict = match_toc_to_body(toc_entries, body_headings, similarity_threshold=0.95)
         assert len(results_strict) == 1
         assert results_strict[0].match_type == MatchType.MISSING
 
@@ -456,14 +444,8 @@ class TestMatchingEdgeCases:
         """1000件以上のエントリでもマッチングが機能する"""
         from src.book_converter.heading_matcher import match_toc_to_body
 
-        toc_entries = [
-            TocEntry(text=f"セクション{i}", level=2, number=f"1.{i}", page=f"{i:03d}")
-            for i in range(1000)
-        ]
-        body_headings = [
-            Heading(level=2, text=f"1.{i} セクション{i}")
-            for i in range(1000)
-        ]
+        toc_entries = [TocEntry(text=f"セクション{i}", level=2, number=f"1.{i}", page=f"{i:03d}") for i in range(1000)]
+        body_headings = [Heading(level=2, text=f"1.{i} セクション{i}") for i in range(1000)]
         results = match_toc_to_body(toc_entries, body_headings)
 
         assert len(results) == 1000
@@ -760,9 +742,27 @@ class TestGenerateValidationReport:
         heading_excluded = Heading(level=2, text="■コードベース")
 
         matches = [
-            MatchResult(toc_entry=toc1, body_heading=heading1, match_type=MatchType.EXACT, similarity=1.0, line_number=52),
-            MatchResult(toc_entry=toc2, body_heading=heading2, match_type=MatchType.EXACT, similarity=1.0, line_number=68),
-            MatchResult(toc_entry=toc3, body_heading=None, match_type=MatchType.MISSING, similarity=0.0, line_number=0),
+            MatchResult(
+                toc_entry=toc1,
+                body_heading=heading1,
+                match_type=MatchType.EXACT,
+                similarity=1.0,
+                line_number=52,
+            ),
+            MatchResult(
+                toc_entry=toc2,
+                body_heading=heading2,
+                match_type=MatchType.EXACT,
+                similarity=1.0,
+                line_number=68,
+            ),
+            MatchResult(
+                toc_entry=toc3,
+                body_heading=None,
+                match_type=MatchType.MISSING,
+                similarity=0.0,
+                line_number=0,
+            ),
         ]
         headings = [heading1, heading2, heading_excluded]
 
@@ -783,7 +783,13 @@ class TestGenerateValidationReport:
         heading1 = Heading(level=2, text="1.1 SREの概要")
 
         matches = [
-            MatchResult(toc_entry=toc1, body_heading=heading1, match_type=MatchType.EXACT, similarity=1.0, line_number=52),
+            MatchResult(
+                toc_entry=toc1,
+                body_heading=heading1,
+                match_type=MatchType.EXACT,
+                similarity=1.0,
+                line_number=52,
+            ),
         ]
 
         report = generate_validation_report(matches, [heading1])
@@ -820,7 +826,13 @@ class TestGenerateValidationReport:
         heading_excluded2 = Heading(level=2, text="◆注意事項")
 
         matches = [
-            MatchResult(toc_entry=toc1, body_heading=heading1, match_type=MatchType.EXACT, similarity=1.0, line_number=52),
+            MatchResult(
+                toc_entry=toc1,
+                body_heading=heading1,
+                match_type=MatchType.EXACT,
+                similarity=1.0,
+                line_number=52,
+            ),
         ]
         headings = [heading1, heading_excluded1, heading_excluded2]
 
@@ -850,7 +862,13 @@ class TestGenerateValidationReport:
         heading1 = Heading(level=2, text="信頼性とは")
 
         matches = [
-            MatchResult(toc_entry=toc1, body_heading=heading1, match_type=MatchType.FUZZY, similarity=0.85, line_number=85),
+            MatchResult(
+                toc_entry=toc1,
+                body_heading=heading1,
+                match_type=MatchType.FUZZY,
+                similarity=0.85,
+                line_number=85,
+            ),
         ]
 
         report = generate_validation_report(matches, [heading1])
@@ -870,7 +888,13 @@ class TestFormatValidationReport:
         heading1 = Heading(level=2, text="1.1 SREの概要")
 
         matches = [
-            MatchResult(toc_entry=toc1, body_heading=heading1, match_type=MatchType.EXACT, similarity=1.0, line_number=52),
+            MatchResult(
+                toc_entry=toc1,
+                body_heading=heading1,
+                match_type=MatchType.EXACT,
+                similarity=1.0,
+                line_number=52,
+            ),
         ]
 
         report = ValidationReport(
@@ -933,7 +957,13 @@ class TestFormatValidationReport:
         )
 
         matches = [
-            MatchResult(toc_entry=toc_missing, body_heading=None, match_type=MatchType.MISSING, similarity=0.0, line_number=0),
+            MatchResult(
+                toc_entry=toc_missing,
+                body_heading=None,
+                match_type=MatchType.MISSING,
+                similarity=0.0,
+                line_number=0,
+            ),
         ]
 
         similar_candidates = {
@@ -976,9 +1006,7 @@ class TestFormatValidationReport:
             body_heading_count=8,
             matched_count=8,
             match_rate=0.8,
-            missing_entries=(
-                TocEntry(text="第1章 SREとは", level=1, number="1", page="001"),
-            ),
+            missing_entries=(TocEntry(text="第1章 SREとは", level=1, number="1", page="001"),),
             excluded_headings=(),
         )
 

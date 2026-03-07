@@ -66,22 +66,17 @@ def generate_rules(matches: list[MatchResult]) -> list[NormalizationRule]:
         body_level = match.body_heading.level
         toc_number = match.toc_entry.number
         toc_title = match.toc_entry.text
-        toc_level = match.toc_entry.level
-
         # Normalize body text
         body_normalized = normalize_spaces(normalize_number_format(body_text))
 
         # Check if body already has number
-        has_number = re.match(r'^\d+(?:\.\d+)*\s+', body_normalized) is not None
+        has_number = re.match(r"^\d+(?:\.\d+)*\s+", body_normalized) is not None
 
         # Build expected text (without markdown marker)
         if toc_number:
             expected_text = f"{toc_number} {toc_title}"
         else:
             expected_text = toc_title
-
-        # Normalize expected text
-        expected_normalized = normalize_spaces(normalize_number_format(expected_text))
 
         # Determine action
         action: NormalizationAction
@@ -115,7 +110,7 @@ def generate_rules(matches: list[MatchResult]) -> list[NormalizationRule]:
                 # Format normalization needed
                 normalized_text = expected_full
                 # Check if only format changed (number format like 1-1 -> 1.1)
-                body_no_number = re.sub(r'^\d+(?:[.\-・]\d+)*\s+', '', body_normalized)
+                body_no_number = re.sub(r"^\d+(?:[.\-・]\d+)*\s+", "", body_normalized)
                 if body_no_number == toc_title and has_number:
                     action = NormalizationAction.FORMAT_ONLY
                 else:
@@ -155,8 +150,6 @@ def generate_sed_script(rules: list[NormalizationRule]) -> str:
     Returns:
         String containing sed commands (one per line)
     """
-    import re
-
     from src.book_converter.models import NormalizationAction
 
     if not rules:
@@ -212,10 +205,7 @@ def preview_diff(content: str, rules: list[NormalizationRule]) -> str:
         if 0 <= line_idx < len(lines):
             current_line = lines[line_idx]
             if current_line == rule.original:
-                diff_line = (
-                    f"- Line {rule.line_number}: "
-                    f'"{rule.original}" -> "{rule.normalized}"'
-                )
+                diff_line = f'- Line {rule.line_number}: "{rule.original}" -> "{rule.normalized}"'
                 diff_lines.append(diff_line)
 
     return "\n".join(diff_lines)

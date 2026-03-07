@@ -21,7 +21,6 @@ from src.book_converter.normalization_rules import (
     preview_diff,
 )
 
-
 # ============================================================
 # Fixtures
 # ============================================================
@@ -95,9 +94,7 @@ def match_format_only() -> MatchResult:
 class TestGenerateRules:
     """generate_rules() のテスト"""
 
-    def test_generate_rule_add_number(
-        self, match_exact_without_number: MatchResult
-    ) -> None:
+    def test_generate_rule_add_number(self, match_exact_without_number: MatchResult) -> None:
         """番号なし見出しに番号を付与するルールが生成される"""
         from src.book_converter.normalization_rules import generate_rules
 
@@ -119,9 +116,7 @@ class TestGenerateRules:
 
         # マーカーなしの本文見出し (level=0 はプレーンテキストを示す)
         match = MatchResult(
-            toc_entry=TocEntry(
-                text="サイトとは何か", level=3, number="1.1.1", page="018"
-            ),
+            toc_entry=TocEntry(text="サイトとは何か", level=3, number="1.1.1", page="018"),
             body_heading=Heading(level=0, text="サイトとは何か"),
             match_type=MatchType.EXACT,
             similarity=1.0,
@@ -138,9 +133,7 @@ class TestGenerateRules:
         assert "1.1.1" in rule.normalized
         assert "サイトとは何か" in rule.normalized
 
-    def test_generate_rule_format_only(
-        self, match_format_only: MatchResult
-    ) -> None:
+    def test_generate_rule_format_only(self, match_format_only: MatchResult) -> None:
         """番号フォーマットのみの正規化ルール (1-1 -> 1.1)"""
         from src.book_converter.normalization_rules import generate_rules
 
@@ -154,9 +147,7 @@ class TestGenerateRules:
         assert "1.1" in rule.normalized
         assert "1-1" not in rule.normalized
 
-    def test_generate_rule_none_already_correct(
-        self, match_exact_with_number: MatchResult
-    ) -> None:
+    def test_generate_rule_none_already_correct(self, match_exact_with_number: MatchResult) -> None:
         """既に正しい形式の場合、NONE ルールまたはルールが生成されない"""
         from src.book_converter.normalization_rules import generate_rules
 
@@ -172,9 +163,7 @@ class TestGenerateRules:
             assert rule.action == NormalizationAction.NONE
             assert rule.original == rule.normalized
 
-    def test_generate_rule_missing_skipped(
-        self, match_missing: MatchResult
-    ) -> None:
+    def test_generate_rule_missing_skipped(self, match_missing: MatchResult) -> None:
         """MISSING マッチからはルールが生成されない"""
         from src.book_converter.normalization_rules import generate_rules
 
@@ -191,18 +180,18 @@ class TestGenerateRules:
         """複数マッチから適切にルールが生成される"""
         from src.book_converter.normalization_rules import generate_rules
 
-        rules = generate_rules([
-            match_exact_without_number,
-            match_exact_with_number,
-            match_missing,
-        ])
+        rules = generate_rules(
+            [
+                match_exact_without_number,
+                match_exact_with_number,
+                match_missing,
+            ]
+        )
 
         # MISSING はスキップされるので、最大2件のルール
         # match_exact_with_number は NONE (変更不要) なので0-1件
         # match_exact_without_number は ADD_NUMBER なので1件
-        add_number_rules = [
-            r for r in rules if r.action == NormalizationAction.ADD_NUMBER
-        ]
+        add_number_rules = [r for r in rules if r.action == NormalizationAction.ADD_NUMBER]
         assert len(add_number_rules) == 1
 
 
@@ -236,9 +225,7 @@ class TestGenerateRulesEdgeCases:
 
         assert len(rules) == 0
 
-    def test_generated_rule_is_frozen(
-        self, match_exact_without_number: MatchResult
-    ) -> None:
+    def test_generated_rule_is_frozen(self, match_exact_without_number: MatchResult) -> None:
         """生成された NormalizationRule は frozen であること"""
         from src.book_converter.normalization_rules import generate_rules
 
@@ -270,9 +257,7 @@ class TestGenerateRulesEdgeCases:
         from src.book_converter.normalization_rules import generate_rules
 
         match = MatchResult(
-            toc_entry=TocEntry(
-                text="C++とRustの比較", level=2, number="3.1", page="045"
-            ),
+            toc_entry=TocEntry(text="C++とRustの比較", level=2, number="3.1", page="045"),
             body_heading=Heading(level=2, text="C++とRustの比較"),
             match_type=MatchType.EXACT,
             similarity=1.0,
@@ -286,9 +271,7 @@ class TestGenerateRulesEdgeCases:
         assert "3.1" in add_rules[0].normalized
         assert "C++とRustの比較" in add_rules[0].normalized
 
-    def test_generate_rule_fuzzy_match_add_number(
-        self, match_fuzzy: MatchResult
-    ) -> None:
+    def test_generate_rule_fuzzy_match_add_number(self, match_fuzzy: MatchResult) -> None:
         """ファジーマッチからも番号付与ルールが生成される"""
         from src.book_converter.normalization_rules import generate_rules
 
@@ -482,16 +465,7 @@ class TestPreviewDiff:
 
     def test_preview_diff_multiple_changes(self) -> None:
         """複数変更の差分プレビュー"""
-        content = (
-            "# タイトル\n"
-            "\n"
-            "## SREの概要\n"
-            "\n"
-            "テキスト\n"
-            "\n"
-            "サイトとは何か\n"
-            "\n"
-        )
+        content = "# タイトル\n\n## SREの概要\n\nテキスト\n\nサイトとは何か\n\n"
         rules = [
             NormalizationRule(
                 original="## SREの概要",
@@ -563,15 +537,7 @@ class TestApplyRules:
 
     def test_apply_rules_multiple_changes(self) -> None:
         """複数ルールの適用"""
-        content = (
-            "# タイトル\n"
-            "\n"
-            "## SREの概要\n"
-            "\n"
-            "テキスト\n"
-            "\n"
-            "サイトとは何か\n"
-        )
+        content = "# タイトル\n\n## SREの概要\n\nテキスト\n\nサイトとは何か\n"
         rules = [
             NormalizationRule(
                 original="## SREの概要",
