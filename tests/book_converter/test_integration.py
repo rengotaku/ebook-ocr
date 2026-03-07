@@ -18,6 +18,9 @@ from src.book_converter.models import Book, BookMetadata
 from src.book_converter.parser import parse_pages
 from src.book_converter.xml_builder import build_xml
 
+# Mark entire file as E2E tests
+pytestmark = pytest.mark.e2e
+
 
 class TestMarkdownToXMLConversion:
     """Markdown -> XML 変換の統合テスト"""

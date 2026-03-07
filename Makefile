@@ -26,7 +26,7 @@ INPUT_MD ?=
 OUTPUT_XML ?=
 USE_LLM ?= $(shell $(call CFG,use_llm_toc_classifier))
 
-.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample ruff pylint lint clean clean-all
+.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample heading-report normalize-headings ruff pylint lint clean clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -165,15 +165,36 @@ converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/
 convert-sample: setup ## Convert sample book.md to XML
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli tests/book_converter/fixtures/sample_book.md output/sample_book.xml --group-pages
 
+# === Heading Normalization ===
+
+heading-report: setup ## Generate heading pattern report (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make heading-report HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_headings report "$(HASHDIR)/book.md"
+
+normalize-headings: setup ## Normalize headings to match TOC (requires HASHDIR, optional APPLY=1)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make normalize-headings HASHDIR=output/<hash> [APPLY=1]"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_headings normalize "$(HASHDIR)/book.md" $(if $(APPLY),--apply)
+
+# validate-toc は normalize-headings の機能のサブセットであったため削除
+
 # === Testing ===
 
-test: setup ## Run tests
+test: setup ## Run fast tests only (excludes slow/e2e/ocr tests)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v -m "not slow and not e2e and not ocr"
+
+test-all: setup ## Run all tests (including slow/e2e/ocr tests)
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v
 
-test-book-converter: setup ## Run book_converter tests
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/book_converter/ -v
+test-slow: setup ## Run only slow tests
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v -m "slow or e2e or ocr"
 
-test-cov: setup ## Run tests with coverage
+test-book-converter: setup ## Run book_converter tests (fast only)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/book_converter/ -v -m "not slow and not e2e and not ocr"
+
+test-cov: setup ## Run tests with coverage (fast only)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing -m "not slow and not e2e and not ocr"
+
+test-cov-all: setup ## Run all tests with coverage (including slow)
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
 
 coverage: test-cov ## Alias for test-cov

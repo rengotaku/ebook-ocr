@@ -17,6 +17,9 @@ import numpy as np
 import pytest
 from PIL import Image
 
+# Mark entire file as slow and OCR tests
+pytestmark = [pytest.mark.slow, pytest.mark.ocr]
+
 # =============================================================================
 # T047: yomitoku words信頼度取得テスト
 # =============================================================================

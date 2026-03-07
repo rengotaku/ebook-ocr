@@ -26,6 +26,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-04
 - Python 3.13+ + ruff (既存), pylint (既存) (017-github-actions-lint)
 - Python 3.13+ + Pillow (画像処理), PyYAML (設定読み込み) (018-spread-mode-trim)
 - ファイルシステム（PNG画像、YAML設定） (018-spread-mode-trim)
+- Python 3.13+ (Constitution 準拠) + re (標準ライブラリ), difflib (ファジーマッチ用、標準ライブラリ) (019-heading-toc-normalize)
+- ファイルベース (book.md 入力/出力) (019-heading-toc-normalize)
 
 - Python 3.13+ + Pillow, imagehash, doclayout-yolo, requests (001-code-refactoring)
 
@@ -38,16 +40,45 @@ tests/
 
 ## Commands
 
-cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+**CRITICAL: このプロジェクトは Makefile を使用します。直接 pytest や ruff を実行するのではなく、必ず make コマンドを使用してください。**
+
+### Testing (MUST use make commands)
+```bash
+make test           # 高速テストのみ（開発時、約20秒）
+make test-all       # 完全テスト（CI用、約3分）
+make test-slow      # 遅いテストのみ
+make test-cov       # カバレッジ測定（高速）
+make test-cov-all   # カバレッジ測定（完全）
+```
+
+### Linting (MUST use make commands)
+```bash
+make ruff           # Ruff linter + formatter
+make pylint         # Pylint static analysis
+make lint           # 両方実行
+```
+
+### Book Converter
+```bash
+make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml
+make heading-report HASHDIR=output/<hash>
+make normalize-headings HASHDIR=output/<hash> [APPLY=1]
+make validate-toc HASHDIR=output/<hash>
+```
+
+**禁止事項**:
+- ❌ `pytest tests/` を直接実行するな（マーカー設定が無視される）
+- ❌ `ruff check .` を直接実行するな（Makefile の設定が無視される）
+- ✅ 常に `make test`, `make lint` などの make コマンドを使用すること
 
 ## Code Style
 
 Python 3.13+: Follow standard conventions
 
 ## Recent Changes
+- 019-heading-toc-normalize: Added Python 3.13+ (Constitution 準拠) + re (標準ライブラリ), difflib (ファジーマッチ用、標準ライブラリ)
 - 018-spread-mode-trim: Added Python 3.13+ + Pillow (画像処理), PyYAML (設定読み込み)
 - 017-github-actions-lint: Added Python 3.13+ + ruff (既存), pylint (既存)
-- 015-cli-limit-option: Added Python 3.13+ + argparse（標準ライブラリ）
 
 ## Configuration (config.yaml)
 

@@ -73,7 +73,7 @@ make preview-extract VIDEO=input.mp4 INTERVAL=3.0
 make preview-trim HASHDIR=output/<hash> \
   SPREAD_MODE=spread \
   GLOBAL_TRIM_TOP=0.02 \
-  LEFT_TRIM=0.03
+  GLOBAL_TRIM_LEFT=0.03
 ```
 
 出力: `output/<hash>/preview/trimmed/`

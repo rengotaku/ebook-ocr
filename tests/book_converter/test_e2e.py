@@ -9,6 +9,9 @@ from pathlib import Path
 
 import pytest
 
+# Mark entire file as E2E tests
+pytestmark = pytest.mark.e2e
+
 
 class TestE2EConversion:
     """T072: E2Eテスト (sample_book.md -> expected_book.xml 比較)"""

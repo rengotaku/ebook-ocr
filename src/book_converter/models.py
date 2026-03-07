@@ -21,6 +21,58 @@ class MarkerType(Enum):
     SKIP_END = "skip_end"
 
 
+class MatchType(Enum):
+    """マッチング結果の種類"""
+
+    EXACT = "exact"  # 完全一致
+    FUZZY = "fuzzy"  # ファジーマッチ（類似度80%以上）
+    MISSING = "missing"  # TOCエントリに対応する本文見出しなし
+    EXCLUDED = "excluded"  # 特殊マーカー付き（マッチング対象外）
+
+
+class NormalizationAction(Enum):
+    """正規化アクションの種類"""
+
+    ADD_NUMBER = "add_number"  # 番号付与（## タイトル → ## 1.1 タイトル）
+    ADD_MARKER = "add_marker"  # Markdownマーカー付与（タイトル → ## 1.1 タイトル）
+    FIX_NUMBER = "fix_number"  # 番号修正（## 12.2 タイトル → ## 1.2.2 タイトル）
+    FORMAT_ONLY = "format_only"  # フォーマット正規化のみ（1-1 → 1.1）
+    NONE = "none"  # 変更なし
+
+
+@dataclass(frozen=True)
+class MatchResult:
+    """TOCエントリと本文見出しのマッチング結果"""
+
+    toc_entry: "TocEntry"
+    body_heading: "Heading | None"  # None = MISSING
+    match_type: MatchType
+    similarity: float  # 0.0-1.0
+    line_number: int  # book.md 内の行番号（1-indexed）
+
+
+@dataclass(frozen=True)
+class NormalizationRule:
+    """正規化ルール"""
+
+    original: str  # 元の見出しテキスト（行全体）
+    normalized: str  # 正規化後のテキスト
+    line_number: int  # book.md 内の行番号（1-indexed）
+    action: NormalizationAction
+
+
+@dataclass(frozen=True)
+class ValidationReport:
+    """TOC検証レポート"""
+
+    toc_entry_count: int  # TOCエントリ総数
+    body_heading_count: int  # 本文見出し総数
+    matched_count: int  # マッチ数
+    match_rate: float  # マッチ率（0.0-1.0）
+    missing_entries: tuple["TocEntry", ...]  # 本文に存在しないTOCエントリ
+    excluded_headings: tuple["Heading", ...]  # マッチング対象外の見出し
+
+
 @dataclass(frozen=True)
 class BookMetadata:
     """書籍メタデータ"""
@@ -38,6 +90,8 @@ class Heading:
     level: int  # 1, 2, 3（0=エラー）
     text: str
     read_aloud: bool = True  # skip区間ではFalse
+    line_number: int = 0  # book.md内の行番号 (1-indexed, 0=未設定)
+    page: str = ""  # ページ番号 (例: "163"), 未設定時は ""
 
 
 @dataclass(frozen=True)

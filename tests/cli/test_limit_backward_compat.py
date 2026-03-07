@@ -10,6 +10,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+# Mark entire file as slow and OCR tests
+pytestmark = [pytest.mark.slow, pytest.mark.ocr]
+
 
 class TestDeduplicateBackwardCompat:
     """deduplicate CLI should process all files without --limit."""
