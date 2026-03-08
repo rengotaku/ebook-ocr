@@ -117,6 +117,8 @@ def visualize_layout(
     paragraphs: list,
     figures: list,
     output_path: str,
+    *,
+    layout_regions: list | None = None,
 ) -> None:
     """Draw bounding boxes on image and save to output_path.
 
@@ -125,6 +127,8 @@ def visualize_layout(
         paragraphs: List of yomitoku ParagraphSchema objects
         figures: List of yomitoku FigureSchema objects
         output_path: Path to save visualized image
+        layout_regions: Optional list of layout regions (from layout.json).
+            If provided, CODE regions are drawn in yellow instead of green.
     """
     import cv2
 
@@ -132,18 +136,30 @@ def visualize_layout(
     if img is None:
         return
 
+    # Build a set of CODE bboxes for lookup
+    code_bboxes = set()
+    if layout_regions:
+        for r in layout_regions:
+            if r.get("type") == "CODE":
+                code_bboxes.add(tuple(r["bbox"]))
+
     # Draw paragraphs
     for p in paragraphs:
         if not hasattr(p, "box") or not p.box:
             continue
 
         x1, y1, x2, y2 = [int(v) for v in p.box]
+        bbox_key = (x1, y1, x2, y2)
 
-        # Determine color based on role
+        # Determine color based on role and CODE detection
         if hasattr(p, "role") and p.role == "section_headings":
             color = (0, 0, 255)  # Red for titles
             thickness = 3
             label = "section_headings"
+        elif bbox_key in code_bboxes:
+            color = (0, 255, 255)  # Yellow for code
+            thickness = 3
+            label = "code"
         else:
             color = (0, 255, 0)  # Green for text
             thickness = 2
@@ -287,14 +303,24 @@ def detect_layout_yomitoku(
         )
         layout_data[page_name] = page_layout
 
-        print(
+        code_count = sum(1 for r in page_layout["regions"] if r["type"] == "CODE")
+        region_summary = (
             f"  → Found {len(page_layout['regions'])} regions "
             f"({len(results.paragraphs)} paragraphs, {len(results.figures)} figures)"
         )
+        if code_count > 0:
+            region_summary += f" [CODE: {code_count}]"
+        print(region_summary)
 
         # Visualize (box反映)
         vis_path = lay_dir / page_name
-        visualize_layout(str(page_path), results.paragraphs, results.figures, str(vis_path))
+        visualize_layout(
+            str(page_path),
+            results.paragraphs,
+            results.figures,
+            str(vis_path),
+            layout_regions=page_layout["regions"],
+        )
 
     # Save layout.json
     layout_file = out_path / "layout.json"

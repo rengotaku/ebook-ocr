@@ -73,14 +73,24 @@ def detect_layout_yomitoku(
         )
         layout_data[page_name] = page_layout
 
-        print(
+        code_count = sum(1 for r in page_layout["regions"] if r["type"] == "CODE")
+        region_summary = (
             f"  → Found {len(page_layout['regions'])} regions "
             f"({len(results.paragraphs)} paragraphs, {len(results.figures)} figures)"
         )
+        if code_count > 0:
+            region_summary += f" [CODE: {code_count}]"
+        print(region_summary)
 
         # Visualize (box反映)
         vis_path = lay_dir / page_name
-        visualize_layout(str(page_path), results.paragraphs, results.figures, str(vis_path))
+        visualize_layout(
+            str(page_path),
+            results.paragraphs,
+            results.figures,
+            str(vis_path),
+            layout_regions=page_layout["regions"],
+        )
 
     # Save layout.json
     layout_file = out_path / "layout.json"
