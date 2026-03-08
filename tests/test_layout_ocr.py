@@ -110,6 +110,16 @@ class TestSelectOcrEngine:
         # Assert
         assert engine == "skip", f"ABANDON region should be skipped. Got: {engine}"
 
+    def test_select_ocr_engine_code(self) -> None:
+        """CODE領域に対してYomitokuが選択されることを検証。"""
+        from src.layout_ocr import select_ocr_engine
+
+        # Act
+        engine = select_ocr_engine("CODE")
+
+        # Assert
+        assert engine == "yomitoku", f"CODE region should use yomitoku engine. Got: {engine}"
+
 
 class TestFormatOcrResult:
     """OCR結果のフォーマット変換テスト。"""
@@ -239,6 +249,50 @@ class TestFormatOcrResult:
 
         # Assert
         assert formatted == "", f"ABANDON should return empty string. Got: {formatted}"
+
+    def test_format_ocr_result_code(self) -> None:
+        """CODE領域のOCR結果がコードフェンスで囲まれることを検証。
+
+        期待フォーマット:
+        ```
+        {text}
+        ```
+        """
+        from src.layout_ocr import format_ocr_result
+
+        # Arrange
+        text = "print('hello')"
+
+        # Act
+        formatted = format_ocr_result("CODE", text)
+
+        # Assert
+        assert formatted == "```\nprint('hello')\n```", f"CODE should be wrapped in code fence. Got: {formatted}"
+
+    def test_format_ocr_result_code_empty(self) -> None:
+        """CODE領域で空テキストの場合は空文字が返されることを検証。"""
+        from src.layout_ocr import format_ocr_result
+
+        # Act
+        formatted = format_ocr_result("CODE", "")
+
+        # Assert
+        assert formatted == "", f"CODE with empty text should return empty string. Got: {formatted}"
+
+    def test_format_ocr_result_code_multiline(self) -> None:
+        """CODE領域で複数行テキストがコードフェンスで正しく囲まれることを検証。"""
+        from src.layout_ocr import format_ocr_result
+
+        # Arrange
+        text = "def foo():\n    return 42"
+
+        # Act
+        formatted = format_ocr_result("CODE", text)
+
+        # Assert
+        assert formatted == "```\ndef foo():\n    return 42\n```", (
+            f"CODE multiline should be wrapped in code fence. Got: {formatted}"
+        )
 
 
 class TestCropRegion:

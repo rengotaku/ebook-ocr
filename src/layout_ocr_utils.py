@@ -148,6 +148,7 @@ def format_ocr_result(region_type: str, text: str) -> str:
     | CAPTION | `*{text}*` |
     | FOOTNOTE | `^{text}^` |
     | FORMULA | `$${text}$$` |
+    | CODE | ` ``` `\\n{text}\\n` ``` ` |
     | FIGURE/ABANDON | `` (empty) |
 
     Args:
@@ -165,6 +166,10 @@ def format_ocr_result(region_type: str, text: str) -> str:
         return f"^{text}^"
     elif region_type == "FORMULA":
         return f"$${text}$$"
+    elif region_type == "CODE":
+        if not text:
+            return ""
+        return f"```\n{text}\n```"
     elif region_type in ("FIGURE", "ABANDON"):
         return ""
     else:
@@ -176,10 +181,11 @@ def select_ocr_engine(region_type: str) -> str:
     """領域種類に応じたOCRエンジンを選択。
 
     Args:
-        region_type: 領域の種類（TITLE, TEXT, FIGURE, etc.）
+        region_type: 領域の種類（TITLE, TEXT, CODE, TABLE, CAPTION, FOOTNOTE, FORMULA, FIGURE, ABANDON）
 
     Returns:
-        "yomitoku" | "skip"
+        "yomitoku": TITLE, TEXT, CODE, TABLE, CAPTION, FOOTNOTE, FORMULA に適用
+        "skip": FIGURE, ABANDON はスキップ
     """
     if region_type in ("FIGURE", "ABANDON"):
         return "skip"

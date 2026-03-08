@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 import cv2
 
+from src.layout.code_detector import detect_gray_background
+
 if TYPE_CHECKING:
     from yomitoku import DocumentAnalyzer
 
@@ -39,13 +41,14 @@ def get_analyzer(device: str = "cpu") -> "DocumentAnalyzer":
     return _yomitoku_analyzer
 
 
-def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, int]) -> dict:
+def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, int], *, cv_img=None) -> dict:
     """Convert yomitoku paragraphs and figures to layout.json format.
 
     Args:
         paragraphs: List of yomitoku ParagraphSchema objects
         figures: List of yomitoku FigureSchema objects
         page_size: (width, height) of the page
+        cv_img: OpenCV BGR image for gray background detection (optional)
 
     Returns:
         Layout dict with regions list
@@ -66,10 +69,25 @@ def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, 
         else:
             continue  # Skip paragraphs without box
 
+        # Check for code block (gray background)
+        if region_type == "TEXT" and cv_img is not None:
+            width = bbox[2] - bbox[0]
+            height = bbox[3] - bbox[1]
+            aspect_ratio = width / max(height, 1)
+            if aspect_ratio <= 8.0 and detect_gray_background(cv_img, bbox):
+                region_type = "CODE"
+
+        if region_type == "TITLE":
+            label = "section_headings"
+        elif region_type == "CODE":
+            label = "code"
+        else:
+            label = "plain text"
+
         regions.append(
             {
                 "type": region_type,
-                "label": "section_headings" if region_type == "TITLE" else "plain text",
+                "label": label,
                 "bbox": bbox,
                 "confidence": 1.0,  # yomitoku doesn't provide confidence per paragraph
             }
@@ -264,7 +282,9 @@ def detect_layout_yomitoku(
         save_yomitoku_results(output_dir, page_path.stem, results)
 
         # Convert to layout format
-        page_layout = paragraphs_to_layout(results.paragraphs, results.figures, (page_width, page_height))
+        page_layout = paragraphs_to_layout(
+            results.paragraphs, results.figures, (page_width, page_height), cv_img=cv_img
+        )
         layout_data[page_name] = page_layout
 
         print(

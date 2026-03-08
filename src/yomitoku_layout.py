@@ -11,129 +11,7 @@ from pathlib import Path
 
 import cv2
 
-
-def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, int]) -> dict:
-    """Convert yomitoku paragraphs and figures to layout.json format.
-
-    Args:
-        paragraphs: List of yomitoku ParagraphSchema objects
-        figures: List of yomitoku FigureSchema objects
-        page_size: (width, height) of the page
-
-    Returns:
-        Layout dict with regions list
-    """
-    regions = []
-
-    # Process paragraphs
-    for p in paragraphs:
-        # Determine region type based on role
-        if hasattr(p, "role") and p.role == "section_headings":
-            region_type = "TITLE"
-        else:
-            region_type = "TEXT"
-
-        # Extract bbox
-        if hasattr(p, "box") and p.box:
-            bbox = [int(p.box[0]), int(p.box[1]), int(p.box[2]), int(p.box[3])]
-        else:
-            continue  # Skip paragraphs without box
-
-        regions.append(
-            {
-                "type": region_type,
-                "label": "section_headings" if region_type == "TITLE" else "plain text",
-                "bbox": bbox,
-                "confidence": 1.0,  # yomitoku doesn't provide confidence per paragraph
-            }
-        )
-
-    # Process figures
-    for f in figures:
-        if hasattr(f, "box") and f.box:
-            bbox = [int(f.box[0]), int(f.box[1]), int(f.box[2]), int(f.box[3])]
-            regions.append(
-                {
-                    "type": "FIGURE",
-                    "label": "figure",
-                    "bbox": bbox,
-                    "confidence": 1.0,
-                }
-            )
-
-    return {
-        "regions": regions,
-        "page_size": list(page_size),
-    }
-
-
-def visualize_layout(
-    img_path: str,
-    paragraphs: list,
-    figures: list,
-    output_path: str,
-) -> None:
-    """Draw bounding boxes on image and save to output_path.
-
-    Args:
-        img_path: Path to input image
-        paragraphs: List of yomitoku ParagraphSchema objects
-        figures: List of yomitoku FigureSchema objects
-        output_path: Path to save visualized image
-    """
-    img = cv2.imread(img_path)
-    if img is None:
-        return
-
-    # Draw paragraphs
-    for p in paragraphs:
-        if not hasattr(p, "box") or not p.box:
-            continue
-
-        x1, y1, x2, y2 = [int(v) for v in p.box]
-
-        # Determine color based on role
-        if hasattr(p, "role") and p.role == "section_headings":
-            color = (0, 0, 255)  # Red for titles
-            thickness = 3
-            label = "section_headings"
-        else:
-            color = (0, 255, 0)  # Green for text
-            thickness = 2
-            label = "text"
-
-        cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
-        cv2.putText(
-            img,
-            label,
-            (x1, y1 - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            color,
-            2,
-        )
-
-    # Draw figures
-    for f in figures:
-        if not hasattr(f, "box") or not f.box:
-            continue
-
-        x1, y1, x2, y2 = [int(v) for v in f.box]
-        color = (255, 0, 0)  # Blue for figures
-        thickness = 3
-
-        cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
-        cv2.putText(
-            img,
-            "figure",
-            (x1, y1 - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            color,
-            2,
-        )
-
-    cv2.imwrite(output_path, img)
+from src.layout.detector import paragraphs_to_layout, visualize_layout
 
 
 def detect_layout_yomitoku(
@@ -190,7 +68,9 @@ def detect_layout_yomitoku(
         save_yomitoku_results(output_dir, page_path.stem, results)
 
         # Convert to layout format
-        page_layout = paragraphs_to_layout(results.paragraphs, results.figures, (page_width, page_height))
+        page_layout = paragraphs_to_layout(
+            results.paragraphs, results.figures, (page_width, page_height), cv_img=cv_img
+        )
         layout_data[page_name] = page_layout
 
         print(
