@@ -1,12 +1,174 @@
-"""Code block detection using gray background analysis.
+"""Code block detection using gray background analysis and text analysis.
 
 This module provides functionality to detect code blocks in document images
-by analyzing the gray background characteristic of code regions.
+by analyzing the gray background characteristic of code regions, as well as
+by analyzing text content for programming symbols and keywords.
 """
 
 from __future__ import annotations
 
 import numpy as np
+
+# Extended keyword list for code detection across 25+ languages
+EXTENDED_KEYWORDS: list[str] = [
+    # Python
+    "def ",
+    "import ",
+    "from ",
+    "self.",
+    "async ",
+    "await ",
+    "lambda ",
+    "elif ",
+    # Go
+    "func ",
+    "package ",
+    "defer ",
+    ":=",
+    # Rust
+    "fn ",
+    "let ",
+    "mut ",
+    "impl ",
+    "pub ",
+    "struct ",
+    "match ",
+    # Ruby / Elixir
+    "require ",
+    "module ",
+    "defmodule ",
+    "rescue ",
+    # C / C++
+    "#include",
+    "typedef ",
+    "sizeof(",
+    "std::",
+    # JavaScript / TypeScript
+    "const ",
+    "function ",
+    "=>",
+    # IaC / DevOps (Dockerfile, Terraform, Kubernetes, Ansible)
+    'resource "',
+    "FROM ",
+    "WORKDIR ",
+    "RUN ",
+    "COPY ",
+    "CMD [",
+    "EXPOSE ",
+    "apiVersion:",
+    "kind:",
+    "spec:",
+    "hosts:",
+    "tasks:",
+    # SQL
+    "SELECT ",
+    "WHERE ",
+    "INSERT ",
+    "CREATE ",
+    # Shell
+    "#!/bin/",
+    "echo ",
+    "${",
+    # General OOP / procedural
+    "class ",
+    "void ",
+    "private ",
+    "public ",
+    "return ",
+    "throw ",
+    "new ",
+    "static ",
+    "interface ",
+    "extends ",
+    "implements ",
+    "var ",
+    "val ",
+]
+
+# Code symbols used for symbol ratio calculation
+_CODE_SYMBOLS: frozenset[str] = frozenset("{}();=<>[]!&|+-*/%#@^~\\")
+
+
+def calc_symbol_ratio(text: str) -> float:
+    """Calculate the ratio of code symbols in text.
+
+    Counts occurrences of programming symbols: { } ( ) ; = < > [ ] ! & | + - * / % # @ ^ ~ \\
+    Japanese punctuation (。、「」 etc.) is NOT counted.
+
+    Args:
+        text: Input text string
+
+    Returns:
+        Ratio of symbol characters to total characters (0.0 to 1.0).
+        Returns 0.0 for empty string.
+    """
+    if not text:
+        return 0.0
+
+    total = len(text)
+    if total == 0:
+        return 0.0
+
+    symbol_count = sum(1 for ch in text if ch in _CODE_SYMBOLS)
+    return float(symbol_count) / total
+
+
+def count_code_keywords(text: str) -> int:
+    """Count occurrences of programming keywords in text.
+
+    Uses EXTENDED_KEYWORDS list covering 25+ languages.
+    Matching is case-insensitive to handle SQL and other uppercase conventions.
+
+    Args:
+        text: Input text string
+
+    Returns:
+        Total count of keyword occurrences found in text. Returns 0 for empty string.
+    """
+    if not text:
+        return 0
+
+    lower_text = text.lower()
+    count = 0
+    for keyword in EXTENDED_KEYWORDS:
+        lower_keyword = keyword.lower()
+        # Count all non-overlapping occurrences using regex for word boundary safety
+        occurrences = lower_text.count(lower_keyword)
+        count += occurrences
+
+    return count
+
+
+def detect_code_by_text(
+    text: str | None,
+    sym_threshold: float = 0.08,
+    kw_threshold: int = 2,
+) -> bool:
+    """Detect if text content is likely code using symbol ratio OR keyword count.
+
+    Uses OR condition: text is code if EITHER:
+    - Symbol ratio > sym_threshold (default 0.08)
+    - Keyword count >= kw_threshold (default 2)
+
+    Args:
+        text: Input text string, or None
+        sym_threshold: Minimum symbol ratio to classify as code (exclusive)
+        kw_threshold: Minimum keyword count to classify as code (inclusive)
+
+    Returns:
+        True if text is likely code, False otherwise.
+        Returns False for None or empty string.
+    """
+    if text is None or not text:
+        return False
+
+    if calc_symbol_ratio(text) > sym_threshold:
+        return True
+
+    if count_code_keywords(text) >= kw_threshold:
+        return True
+
+    return False
 
 
 def _clip_bbox(cv_img: np.ndarray, bbox: list[int]) -> list[int]:

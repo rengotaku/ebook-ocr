@@ -860,9 +860,7 @@ class TestFigureToCodeReclassification:
 
         regions = result["regions"]
         assert len(regions) == 1
-        assert regions[0]["type"] == "CODE", (
-            "FIGURE with code-like paragraphs should be reclassified to CODE"
-        )
+        assert regions[0]["type"] == "CODE", "FIGURE with code-like paragraphs should be reclassified to CODE"
 
     def test_figure_without_code_stays_figure(self) -> None:
         """FIGURE without code text should remain FIGURE."""
@@ -887,9 +885,7 @@ class TestFigureToCodeReclassification:
 
         regions = result["regions"]
         assert len(regions) == 1
-        assert regions[0]["type"] == "FIGURE", (
-            "FIGURE without code text should remain FIGURE"
-        )
+        assert regions[0]["type"] == "FIGURE", "FIGURE without code text should remain FIGURE"
 
     def test_figure_without_paragraphs_stays_figure(self) -> None:
         """FIGURE with no paragraphs attribute should remain FIGURE."""
@@ -905,9 +901,7 @@ class TestFigureToCodeReclassification:
 
         regions = result["regions"]
         assert len(regions) == 1
-        assert regions[0]["type"] == "FIGURE", (
-            "FIGURE without paragraphs attribute should remain FIGURE"
-        )
+        assert regions[0]["type"] == "FIGURE", "FIGURE without paragraphs attribute should remain FIGURE"
 
     def test_figure_code_region_has_code_label(self) -> None:
         """Reclassified FIGURE->CODE should have label='code'."""
@@ -930,9 +924,7 @@ class TestFigureToCodeReclassification:
         )
 
         regions = result["regions"]
-        assert regions[0]["label"] == "code", (
-            "Reclassified FIGURE->CODE should have label='code'"
-        )
+        assert regions[0]["label"] == "code", "Reclassified FIGURE->CODE should have label='code'"
 
 
 # ============================================================
@@ -962,9 +954,7 @@ class TestTextToCodeReclassification:
 
         regions = result["regions"]
         assert len(regions) == 1
-        assert regions[0]["type"] == "CODE", (
-            "TEXT with code contents should be reclassified to CODE via text analysis"
-        )
+        assert regions[0]["type"] == "CODE", "TEXT with code contents should be reclassified to CODE via text analysis"
 
     def test_text_with_normal_japanese_stays_text(self) -> None:
         """Normal Japanese text should remain TEXT."""
@@ -1003,9 +993,7 @@ class TestTextToCodeReclassification:
         )
 
         regions = result["regions"]
-        assert regions[0]["label"] == "code", (
-            "Reclassified TEXT->CODE should have label='code'"
-        )
+        assert regions[0]["label"] == "code", "Reclassified TEXT->CODE should have label='code'"
 
 
 # ============================================================
@@ -1035,9 +1023,7 @@ class TestTitleSkipsTextAnalysis:
 
         regions = result["regions"]
         assert len(regions) == 1
-        assert regions[0]["type"] == "TITLE", (
-            "TITLE should not be reclassified to CODE even with code-like text"
-        )
+        assert regions[0]["type"] == "TITLE", "TITLE should not be reclassified to CODE even with code-like text"
 
     def test_title_label_preserved(self) -> None:
         """TITLE should preserve its label as 'section_headings'."""
@@ -1056,9 +1042,7 @@ class TestTitleSkipsTextAnalysis:
         )
 
         regions = result["regions"]
-        assert regions[0]["label"] == "section_headings", (
-            "TITLE label should remain 'section_headings'"
-        )
+        assert regions[0]["label"] == "section_headings", "TITLE label should remain 'section_headings'"
 
 
 # ============================================================
@@ -1087,9 +1071,7 @@ class TestJapaneseFalsePositive:
         )
 
         regions = result["regions"]
-        assert regions[0]["type"] == "TEXT", (
-            "General Japanese prose should remain TEXT, not be reclassified to CODE"
-        )
+        assert regions[0]["type"] == "TEXT", "General Japanese prose should remain TEXT, not be reclassified to CODE"
 
     def test_japanese_with_technical_terms_stays_text(self) -> None:
         """Japanese text with technical terms (not code) should remain TEXT."""
@@ -1098,8 +1080,7 @@ class TestJapaneseFalsePositive:
         paragraph = make_paragraph_mock(
             box=[10, 10, 190, 90],
             role="plain text",
-            contents="変数の宣言とメソッドの定義について学びます。"
-            "インターフェースの実装方法も解説します。",
+            contents="変数の宣言とメソッドの定義について学びます。インターフェースの実装方法も解説します。",
         )
 
         result = paragraphs_to_layout(
@@ -1109,9 +1090,7 @@ class TestJapaneseFalsePositive:
         )
 
         regions = result["regions"]
-        assert regions[0]["type"] == "TEXT", (
-            "Japanese text with technical terms should remain TEXT"
-        )
+        assert regions[0]["type"] == "TEXT", "Japanese text with technical terms should remain TEXT"
 
     def test_japanese_punctuation_not_counted_as_symbols(self) -> None:
         """Japanese punctuation (。、「」) should not trigger symbol detection."""
@@ -1119,9 +1098,7 @@ class TestJapaneseFalsePositive:
 
         result = calc_symbol_ratio("「こんにちは」と言いました。「ありがとう」と答えました。")
 
-        assert result == 0.0, (
-            f"Japanese punctuation should not count as code symbols, got {result}"
-        )
+        assert result == 0.0, f"Japanese punctuation should not count as code symbols, got {result}"
 
     def test_figure_with_japanese_caption_stays_figure(self) -> None:
         """FIGURE with Japanese caption (not code) should remain FIGURE."""
@@ -1144,9 +1121,7 @@ class TestJapaneseFalsePositive:
         )
 
         regions = result["regions"]
-        assert regions[0]["type"] == "FIGURE", (
-            "FIGURE with Japanese caption should remain FIGURE"
-        )
+        assert regions[0]["type"] == "FIGURE", "FIGURE with Japanese caption should remain FIGURE"
 
 
 # ============================================================

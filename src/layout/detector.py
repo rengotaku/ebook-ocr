@@ -57,7 +57,7 @@ def paragraphs_to_layout(
     Returns:
         Layout dict with regions list
     """
-    from src.layout.code_detector import detect_gray_background
+    from src.layout.code_detector import detect_code_by_text, detect_gray_background
 
     regions = []
 
@@ -85,6 +85,12 @@ def paragraphs_to_layout(
                 if detect_gray_background(cv_img, bbox):
                     region_type = "CODE"
 
+        # Text analysis: only for TEXT regions (not TITLE, not already CODE)
+        if region_type == "TEXT":
+            contents = getattr(p, "contents", None)
+            if detect_code_by_text(contents):
+                region_type = "CODE"
+
         if region_type == "CODE":
             label = "code"
         elif region_type == "TITLE":
@@ -105,10 +111,22 @@ def paragraphs_to_layout(
     for f in figures:
         if hasattr(f, "box") and f.box:
             bbox = [int(f.box[0]), int(f.box[1]), int(f.box[2]), int(f.box[3])]
+            figure_type = "FIGURE"
+            figure_label = "figure"
+
+            # Text analysis for FIGURE: check paragraphs within the figure
+            if hasattr(f, "paragraphs") and f.paragraphs:
+                for fp in f.paragraphs:
+                    fp_contents = getattr(fp, "contents", None)
+                    if detect_code_by_text(fp_contents):
+                        figure_type = "CODE"
+                        figure_label = "code"
+                        break
+
             regions.append(
                 {
-                    "type": "FIGURE",
-                    "label": "figure",
+                    "type": figure_type,
+                    "label": figure_label,
                     "bbox": bbox,
                     "confidence": 1.0,
                 }

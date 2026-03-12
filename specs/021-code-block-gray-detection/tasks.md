@@ -116,20 +116,20 @@
 
 ### Implementation (GREEN)
 
-- [ ] T042 RED テストを読む: `specs/021-code-block-gray-detection/red-tests/ph3-test.md`
-- [ ] T043 [P] [US2] `EXTENDED_KEYWORDS` 定数を定義（25言語対応キーワードリスト） in `src/layout/code_detector.py`
-- [ ] T044 [P] [US2] `calc_symbol_ratio(text)` を実装: 記号文字の比率を計算 in `src/layout/code_detector.py`
-- [ ] T045 [P] [US2] `count_code_keywords(text)` を実装: 拡張キーワードの出現数をカウント in `src/layout/code_detector.py`
-- [ ] T046 [US2] `detect_code_by_text(text, sym_threshold, kw_threshold)` を実装: OR 条件判定 in `src/layout/code_detector.py`
-- [ ] T047 [US2] `paragraphs_to_layout()` に FIGURE テキスト分析を追加: figure.paragraphs からテキスト取得 → detect_code_by_text() in `src/layout/detector.py`
-- [ ] T048 [US3] `paragraphs_to_layout()` に TEXT テキスト分析を追加: paragraph.contents → detect_code_by_text()（TITLE はスキップ） in `src/layout/detector.py`
-- [ ] T049 `make test` で PASS を確認 (GREEN)
+- [x] T042 RED テストを読む: `specs/021-code-block-gray-detection/red-tests/ph3-test.md`
+- [x] T043 [P] [US2] `EXTENDED_KEYWORDS` 定数を定義（25言語対応キーワードリスト） in `src/layout/code_detector.py`
+- [x] T044 [P] [US2] `calc_symbol_ratio(text)` を実装: 記号文字の比率を計算 in `src/layout/code_detector.py`
+- [x] T045 [P] [US2] `count_code_keywords(text)` を実装: 拡張キーワードの出現数をカウント in `src/layout/code_detector.py`
+- [x] T046 [US2] `detect_code_by_text(text, sym_threshold, kw_threshold)` を実装: OR 条件判定 in `src/layout/code_detector.py`
+- [x] T047 [US2] `paragraphs_to_layout()` に FIGURE テキスト分析を追加: figure.paragraphs からテキスト取得 → detect_code_by_text() in `src/layout/detector.py`
+- [x] T048 [US3] `paragraphs_to_layout()` に TEXT テキスト分析を追加: paragraph.contents → detect_code_by_text()（TITLE はスキップ） in `src/layout/detector.py`
+- [x] T049 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T050 `make test` で全テスト通過（リグレッションなし）を確認
-- [ ] T051 `make lint` で lint エラーなしを確認
-- [ ] T052 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph3-output.md`
+- [x] T050 `make test` で全テスト通過（リグレッションなし）を確認
+- [x] T051 `make lint` で lint エラーなしを確認
+- [x] T052 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph3-output.md`
 
 **Checkpoint**: TEXT + FIGURE 両方のリージョンでテキスト分析によるコード検出が動作。日本語本文の false positive なし。
 
