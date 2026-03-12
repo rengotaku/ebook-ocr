@@ -1433,9 +1433,7 @@ class TestMergeCodeFragmentsMergeBreak:
         result = merge_code_fragments(regions)
 
         code_regions = [r for r in result if r["type"] == "CODE"]
-        assert len(code_regions) == 2, (
-            f"CODE+TEXT+CODE should produce 2 separate CODEs, got {len(code_regions)}"
-        )
+        assert len(code_regions) == 2, f"CODE+TEXT+CODE should produce 2 separate CODEs, got {len(code_regions)}"
 
     def test_text_region_preserved(self) -> None:
         """TEXT region between CODEs should be preserved in output."""
@@ -1490,9 +1488,7 @@ class TestMergeCodeFragmentsFragMerge:
         result = merge_code_fragments(regions)
 
         code_regions = [r for r in result if r["type"] == "CODE"]
-        assert len(code_regions) == 1, (
-            f"CODE+FRAG('}}')+ CODE should merge to 1 CODE, got {len(code_regions)}"
-        )
+        assert len(code_regions) == 1, f"CODE+FRAG('}}')+ CODE should merge to 1 CODE, got {len(code_regions)}"
 
     def test_code_frag_ocr_misread_code_merged(self) -> None:
         """CODE + TEXT(fragment '3' OCR misread) + CODE should merge into 1 CODE."""
@@ -1507,9 +1503,7 @@ class TestMergeCodeFragmentsFragMerge:
         result = merge_code_fragments(regions)
 
         code_regions = [r for r in result if r["type"] == "CODE"]
-        assert len(code_regions) == 1, (
-            f"CODE+FRAG('3')+CODE should merge to 1 CODE, got {len(code_regions)}"
-        )
+        assert len(code_regions) == 1, f"CODE+FRAG('3')+CODE should merge to 1 CODE, got {len(code_regions)}"
 
     def test_frag_merged_bbox_covers_all(self) -> None:
         """Merged CODE (with FRAG) bbox should cover all three regions."""
@@ -1563,9 +1557,7 @@ class TestMergeCodeFragmentsFragMerge:
         result = merge_code_fragments(regions)
 
         code_regions = [r for r in result if r["type"] == "CODE"]
-        assert len(code_regions) == 2, (
-            "CODE + long TEXT (not fragment) + CODE should produce 2 separate CODEs"
-        )
+        assert len(code_regions) == 2, "CODE + long TEXT (not fragment) + CODE should produce 2 separate CODEs"
 
 
 # ============================================================
@@ -1589,9 +1581,7 @@ class TestMergeCodeFragmentsGapExceeded:
         result = merge_code_fragments(regions)
 
         code_regions = [r for r in result if r["type"] == "CODE"]
-        assert len(code_regions) == 2, (
-            f"CODE+CODE with gap 150px > 80px should remain 2 CODEs, got {len(code_regions)}"
-        )
+        assert len(code_regions) == 2, f"CODE+CODE with gap 150px > 80px should remain 2 CODEs, got {len(code_regions)}"
 
     def test_custom_gap_threshold(self) -> None:
         """Custom gap_threshold should be respected."""
@@ -1606,9 +1596,7 @@ class TestMergeCodeFragmentsGapExceeded:
         result = merge_code_fragments(regions, gap_threshold=30)
 
         code_regions = [r for r in result if r["type"] == "CODE"]
-        assert len(code_regions) == 2, (
-            "CODE+CODE with gap 50px > custom threshold 30px should remain 2 CODEs"
-        )
+        assert len(code_regions) == 2, "CODE+CODE with gap 50px > custom threshold 30px should remain 2 CODEs"
 
     def test_exact_threshold_boundary(self) -> None:
         """Gap exactly at threshold should be handled consistently."""
@@ -1652,9 +1640,7 @@ class TestMergeCodeFragmentsImmutability:
 
         merge_code_fragments(regions)
 
-        assert len(regions) == original_len, (
-            f"Input list length changed from {original_len} to {len(regions)}"
-        )
+        assert len(regions) == original_len, f"Input list length changed from {original_len} to {len(regions)}"
         for i, region in enumerate(regions):
             assert region == original_regions[i], (
                 f"Input region at index {i} was mutated: {region} != {original_regions[i]}"
@@ -1676,9 +1662,7 @@ class TestMergeCodeFragmentsImmutability:
         merge_code_fragments(regions)
 
         for i, region in enumerate(regions):
-            assert region == deep_copy[i], (
-                f"Input region dict at index {i} was mutated"
-            )
+            assert region == deep_copy[i], f"Input region dict at index {i} was mutated"
 
     def test_input_bbox_lists_not_mutated(self) -> None:
         """bbox lists inside input regions should not be modified."""

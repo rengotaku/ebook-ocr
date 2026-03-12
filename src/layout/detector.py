@@ -57,7 +57,11 @@ def paragraphs_to_layout(
     Returns:
         Layout dict with regions list
     """
-    from src.layout.code_detector import detect_code_by_text, detect_gray_background
+    from src.layout.code_detector import (
+        detect_code_by_text,
+        detect_gray_background,
+        merge_code_fragments,
+    )
 
     regions = []
 
@@ -98,12 +102,14 @@ def paragraphs_to_layout(
         else:
             label = "plain text"
 
+        text = getattr(p, "contents", "") or ""
         regions.append(
             {
                 "type": region_type,
                 "label": label,
                 "bbox": bbox,
                 "confidence": 1.0,  # yomitoku doesn't provide confidence per paragraph
+                "text": text,
             }
         )
 
@@ -129,11 +135,15 @@ def paragraphs_to_layout(
                     "label": figure_label,
                     "bbox": bbox,
                     "confidence": 1.0,
+                    "text": "",
                 }
             )
 
+    # Merge adjacent CODE and code-fragment regions
+    merged_regions = merge_code_fragments(regions)
+
     return {
-        "regions": regions,
+        "regions": merged_regions,
         "page_size": list(page_size),
     }
 

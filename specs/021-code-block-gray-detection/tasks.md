@@ -159,17 +159,17 @@
 
 ### Implementation (GREEN)
 
-- [ ] T063 RED テストを読む: `specs/021-code-block-gray-detection/red-tests/ph4-test.md`
-- [ ] T064 [P] [US4] `is_code_fragment(text)` を実装: 短いテキストの断片判定 in `src/layout/code_detector.py`
-- [ ] T065 [US4] `merge_code_fragments(regions, gap_threshold)` を実装: 隣接 CODE/FRAG の結合 + 外接矩形計算 in `src/layout/code_detector.py`
-- [ ] T066 [US4] `paragraphs_to_layout()` 末尾で `merge_code_fragments()` を呼び出し in `src/layout/detector.py`
-- [ ] T067 `make test` で PASS を確認 (GREEN)
+- [x] T063 RED テストを読む: `specs/021-code-block-gray-detection/red-tests/ph4-test.md`
+- [x] T064 [P] [US4] `is_code_fragment(text)` を実装: 短いテキストの断片判定 in `src/layout/code_detector.py`
+- [x] T065 [US4] `merge_code_fragments(regions, gap_threshold)` を実装: 隣接 CODE/FRAG の結合 + 外接矩形計算 in `src/layout/code_detector.py`
+- [x] T066 [US4] `paragraphs_to_layout()` 末尾で `merge_code_fragments()` を呼び出し in `src/layout/detector.py`
+- [x] T067 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T068 `make test` で全テスト通過（リグレッションなし）を確認
-- [ ] T069 `make lint` で lint エラーなしを確認
-- [ ] T070 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph4-output.md`
+- [x] T068 `make test` で全テスト通過（リグレッションなし）を確認
+- [x] T069 `make lint` で lint エラーなしを確認
+- [x] T070 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph4-output.md`
 
 **Checkpoint**: 断片化された CODE パラグラフが正しく結合される。non-CODE による結合打ち切りも動作。
 
