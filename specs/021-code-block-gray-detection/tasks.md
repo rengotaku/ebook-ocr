@@ -143,19 +143,19 @@
 
 ### Input
 
-- [ ] T053 セットアップ分析を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
-- [ ] T054 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph3-output.md`
+- [x] T053 セットアップ分析を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
+- [x] T054 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph3-output.md`
 
 ### Test Implementation (RED)
 
-- [ ] T055 [P] [US4] `is_code_fragment()` テストを実装: "}"→True, "3"→True, "日本語"→False in `tests/test_code_detector.py`
-- [ ] T056 [P] [US4] `merge_code_fragments()` 隣接結合テストを実装: CODE+CODE(gap<80px)→1つのCODE in `tests/test_code_detector.py`
-- [ ] T057 [P] [US4] `merge_code_fragments()` 結合打ち切りテストを実装: CODE+TEXT+CODE→2つのCODE in `tests/test_code_detector.py`
-- [ ] T058 [P] [US4] `merge_code_fragments()` FRAG 結合テストを実装: CODE+FRAG+CODE→1つのCODE in `tests/test_code_detector.py`
-- [ ] T059 [P] [US4] `merge_code_fragments()` ギャップ超過テストを実装: CODE+CODE(gap>80px)→2つのCODE in `tests/test_code_detector.py`
-- [ ] T060 [P] [US4] `merge_code_fragments()` イミュータブル性テストを実装: 入力リストが変更されない in `tests/test_code_detector.py`
-- [ ] T061 `make test` で FAIL を確認 (RED)
-- [ ] T062 RED 出力を生成: `specs/021-code-block-gray-detection/red-tests/ph4-test.md`
+- [x] T055 [P] [US4] `is_code_fragment()` テストを実装: "}"→True, "3"→True, "日本語"→False in `tests/test_code_detector.py`
+- [x] T056 [P] [US4] `merge_code_fragments()` 隣接結合テストを実装: CODE+CODE(gap<80px)→1つのCODE in `tests/test_code_detector.py`
+- [x] T057 [P] [US4] `merge_code_fragments()` 結合打ち切りテストを実装: CODE+TEXT+CODE→2つのCODE in `tests/test_code_detector.py`
+- [x] T058 [P] [US4] `merge_code_fragments()` FRAG 結合テストを実装: CODE+FRAG+CODE→1つのCODE in `tests/test_code_detector.py`
+- [x] T059 [P] [US4] `merge_code_fragments()` ギャップ超過テストを実装: CODE+CODE(gap>80px)→2つのCODE in `tests/test_code_detector.py`
+- [x] T060 [P] [US4] `merge_code_fragments()` イミュータブル性テストを実装: 入力リストが変更されない in `tests/test_code_detector.py`
+- [x] T061 `make test` で FAIL を確認 (RED)
+- [x] T062 RED 出力を生成: `specs/021-code-block-gray-detection/red-tests/ph4-test.md`
 
 ### Implementation (GREEN)
 

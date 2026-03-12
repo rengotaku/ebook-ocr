@@ -2,6 +2,7 @@
 
 Phase 2 RED tests for US1 - Gray background code block auto-detection.
 Phase 3 RED tests for US2/US3 - Text analysis code detection.
+Phase 4 RED tests for US4 - Fragment code block merging.
 
 Detection Rules:
 | Condition | Result |
@@ -1196,3 +1197,516 @@ class TestMultiLanguageKeywords:
         result = count_code_keywords("import sys\npublic class Main {\n    return 0;\n}")
 
         assert result >= 3, f"Mixed language code should have >= 3 keywords, got {result}"
+
+
+# ============================================================
+# Phase 4 RED Tests: US4 - Fragment code block merging
+# ============================================================
+
+
+# ============================================================
+# T055: is_code_fragment() tests
+# ============================================================
+
+
+class TestIsCodeFragment:
+    """is_code_fragment() identifies short code-like text fragments."""
+
+    def test_closing_brace_is_fragment(self) -> None:
+        """Single '}' should be identified as a code fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("}")
+
+        assert result is True, "Single '}' should be a code fragment"
+
+    def test_opening_brace_is_fragment(self) -> None:
+        """Single '{' should be identified as a code fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("{")
+
+        assert result is True, "Single '{' should be a code fragment"
+
+    def test_ocr_misread_3_is_fragment(self) -> None:
+        """'3' (OCR misread of '}') should be identified as a code fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("3")
+
+        assert result is True, "'3' (OCR misread of '}') should be a code fragment"
+
+    def test_short_code_like_text_is_fragment(self) -> None:
+        """Short text with high symbol ratio (< 20 chars) should be fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("});")
+
+        assert result is True, "Short code-like text '});' should be a code fragment"
+
+    def test_japanese_text_is_not_fragment(self) -> None:
+        """Normal Japanese text should NOT be a fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("日本語テキスト")
+
+        assert result is False, "Japanese text should not be a code fragment"
+
+    def test_long_text_is_not_fragment(self) -> None:
+        """Long text (>= 20 chars) should NOT be a fragment even with symbols."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("This is a normal sentence that is quite long")
+
+        assert result is False, "Long normal text should not be a code fragment"
+
+    def test_empty_string_is_not_fragment(self) -> None:
+        """Empty string should NOT be a fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("")
+
+        assert result is False, "Empty string should not be a code fragment"
+
+    def test_none_input_is_not_fragment(self) -> None:
+        """None input should NOT be a fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment(None)
+
+        assert result is False, "None input should not be a code fragment"
+
+    def test_returns_bool(self) -> None:
+        """Return type should be bool."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("}")
+
+        assert isinstance(result, bool), f"Expected bool, got {type(result)}"
+
+    def test_semicolon_is_fragment(self) -> None:
+        """Single ';' should be a code fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment(";")
+
+        assert result is True, "Single ';' should be a code fragment"
+
+    def test_short_symbols_bracket_paren(self) -> None:
+        """Short symbol combinations like '])' should be fragments."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("])")
+
+        assert result is True, "Short symbol text '])' should be a code fragment"
+
+    def test_whitespace_only_is_not_fragment(self) -> None:
+        """Whitespace-only text should NOT be a fragment."""
+        from src.layout.code_detector import is_code_fragment
+
+        result = is_code_fragment("   ")
+
+        assert result is False, "Whitespace-only text should not be a code fragment"
+
+
+# ============================================================
+# T056: merge_code_fragments() adjacent merge test
+# ============================================================
+
+
+def _make_region(
+    region_type: str,
+    label: str,
+    bbox: list[int],
+    text: str = "",
+    confidence: float = 1.0,
+) -> dict:
+    """Helper to create a region dict for merge tests."""
+    return {
+        "type": region_type,
+        "label": label,
+        "bbox": bbox,
+        "confidence": confidence,
+        "text": text,
+    }
+
+
+class TestMergeCodeFragmentsAdjacentMerge:
+    """Adjacent CODE regions with gap < threshold should be merged."""
+
+    def test_two_adjacent_codes_merged(self) -> None:
+        """Two CODE regions with gap < 80px should merge into one CODE."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200], text="line1"),
+            _make_region("CODE", "code", [100, 250, 500, 350], text="line2"),
+        ]
+        # gap = 250 - 200 = 50px < 80px threshold
+
+        result = merge_code_fragments(regions)
+
+        assert len(result) == 1, f"Two adjacent CODEs should merge to 1, got {len(result)}"
+        assert result[0]["type"] == "CODE"
+
+    def test_merged_bbox_is_bounding_rect(self) -> None:
+        """Merged region bbox should be the bounding rectangle of both."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+            _make_region("CODE", "code", [80, 250, 520, 350]),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        assert len(result) == 1
+        # Bounding rect: [min(100,80), min(100,250), max(500,520), max(200,350)]
+        assert result[0]["bbox"] == [80, 100, 520, 350], (
+            f"Merged bbox should be bounding rect [80, 100, 520, 350], got {result[0]['bbox']}"
+        )
+
+    def test_three_adjacent_codes_merged(self) -> None:
+        """Three adjacent CODE regions should all merge into one."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+            _make_region("CODE", "code", [100, 250, 500, 350]),  # gap 50
+            _make_region("CODE", "code", [100, 400, 500, 500]),  # gap 50
+        ]
+
+        result = merge_code_fragments(regions)
+
+        assert len(result) == 1, f"Three adjacent CODEs should merge to 1, got {len(result)}"
+        assert result[0]["bbox"] == [100, 100, 500, 500]
+
+    def test_single_code_returned_as_is(self) -> None:
+        """Single CODE region should be returned unchanged."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        assert len(result) == 1
+        assert result[0]["type"] == "CODE"
+        assert result[0]["bbox"] == [100, 100, 500, 200]
+
+    def test_empty_list_returns_empty(self) -> None:
+        """Empty region list should return empty list."""
+        from src.layout.code_detector import merge_code_fragments
+
+        result = merge_code_fragments([])
+
+        assert result == [], f"Empty input should return empty list, got {result}"
+
+    def test_returns_list(self) -> None:
+        """Return type should be list."""
+        from src.layout.code_detector import merge_code_fragments
+
+        result = merge_code_fragments([])
+
+        assert isinstance(result, list), f"Expected list, got {type(result)}"
+
+
+# ============================================================
+# T057: merge_code_fragments() merge break test (non-CODE in between)
+# ============================================================
+
+
+class TestMergeCodeFragmentsMergeBreak:
+    """Non-CODE region between CODEs should break the merge chain."""
+
+    def test_code_text_code_produces_two_codes(self) -> None:
+        """CODE + TEXT + CODE should remain as 2 separate CODEs."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200], text="code1"),
+            _make_region("TEXT", "plain text", [100, 250, 500, 350], text="Normal text here"),
+            _make_region("CODE", "code", [100, 400, 500, 500], text="code2"),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 2, (
+            f"CODE+TEXT+CODE should produce 2 separate CODEs, got {len(code_regions)}"
+        )
+
+    def test_text_region_preserved(self) -> None:
+        """TEXT region between CODEs should be preserved in output."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+            _make_region("TEXT", "plain text", [100, 250, 500, 350], text="Normal text"),
+            _make_region("CODE", "code", [100, 400, 500, 500]),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        types = [r["type"] for r in result]
+        assert "TEXT" in types, "TEXT region should be preserved in output"
+        assert len(result) == 3, f"Should have 3 regions (CODE, TEXT, CODE), got {len(result)}"
+
+    def test_code_title_code_not_merged(self) -> None:
+        """CODE + TITLE + CODE should not merge through TITLE."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+            _make_region("TITLE", "section_headings", [100, 250, 500, 300], text="Chapter 1"),
+            _make_region("CODE", "code", [100, 350, 500, 450]),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 2, "CODE+TITLE+CODE should produce 2 separate CODEs"
+
+
+# ============================================================
+# T058: merge_code_fragments() FRAG merge test
+# ============================================================
+
+
+class TestMergeCodeFragmentsFragMerge:
+    """CODE + fragment-like TEXT + CODE should merge into one CODE."""
+
+    def test_code_frag_code_merged(self) -> None:
+        """CODE + TEXT(fragment '}') + CODE should merge into 1 CODE."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200], text="if (x > 0) {"),
+            _make_region("TEXT", "plain text", [100, 250, 500, 280], text="}"),
+            _make_region("CODE", "code", [100, 330, 500, 430], text="return result;"),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 1, (
+            f"CODE+FRAG('}}')+ CODE should merge to 1 CODE, got {len(code_regions)}"
+        )
+
+    def test_code_frag_ocr_misread_code_merged(self) -> None:
+        """CODE + TEXT(fragment '3' OCR misread) + CODE should merge into 1 CODE."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200], text="for (int i = 0;"),
+            _make_region("TEXT", "plain text", [100, 250, 500, 280], text="3"),
+            _make_region("CODE", "code", [100, 330, 500, 430], text="i++; }"),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 1, (
+            f"CODE+FRAG('3')+CODE should merge to 1 CODE, got {len(code_regions)}"
+        )
+
+    def test_frag_merged_bbox_covers_all(self) -> None:
+        """Merged CODE (with FRAG) bbox should cover all three regions."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200], text="code1"),
+            _make_region("TEXT", "plain text", [120, 250, 480, 280], text="}"),
+            _make_region("CODE", "code", [90, 330, 510, 430], text="code2"),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 1
+        # Bounding rect: [min(100,120,90), min(100,250,330), max(500,480,510), max(200,280,430)]
+        assert code_regions[0]["bbox"] == [90, 100, 510, 430], (
+            f"Merged bbox should cover all 3 regions, got {code_regions[0]['bbox']}"
+        )
+
+    def test_code_frag_brace_opening_code_merged(self) -> None:
+        """CODE + TEXT(fragment '{') + CODE should merge."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200], text="class Foo"),
+            _make_region("TEXT", "plain text", [100, 250, 500, 280], text="{"),
+            _make_region("CODE", "code", [100, 330, 500, 430], text="int x = 1;"),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 1, "CODE+FRAG('{')+CODE should merge to 1 CODE"
+
+    def test_non_fragment_text_breaks_merge(self) -> None:
+        """CODE + TEXT(long Japanese, not fragment) + CODE should NOT merge."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200], text="code1"),
+            _make_region(
+                "TEXT",
+                "plain text",
+                [100, 250, 500, 350],
+                text="これはコードではない通常のテキストです。長い日本語の文章が続きます。",
+            ),
+            _make_region("CODE", "code", [100, 400, 500, 500], text="code2"),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 2, (
+            "CODE + long TEXT (not fragment) + CODE should produce 2 separate CODEs"
+        )
+
+
+# ============================================================
+# T059: merge_code_fragments() gap exceeded test
+# ============================================================
+
+
+class TestMergeCodeFragmentsGapExceeded:
+    """CODE regions with gap > threshold should NOT be merged."""
+
+    def test_large_gap_not_merged(self) -> None:
+        """CODE + CODE with gap > 80px should remain as 2 separate CODEs."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200], text="code1"),
+            _make_region("CODE", "code", [100, 350, 500, 450], text="code2"),
+        ]
+        # gap = 350 - 200 = 150px > 80px threshold
+
+        result = merge_code_fragments(regions)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 2, (
+            f"CODE+CODE with gap 150px > 80px should remain 2 CODEs, got {len(code_regions)}"
+        )
+
+    def test_custom_gap_threshold(self) -> None:
+        """Custom gap_threshold should be respected."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+            _make_region("CODE", "code", [100, 250, 500, 350]),
+        ]
+        # gap = 50px. With threshold=30, should NOT merge
+
+        result = merge_code_fragments(regions, gap_threshold=30)
+
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert len(code_regions) == 2, (
+            "CODE+CODE with gap 50px > custom threshold 30px should remain 2 CODEs"
+        )
+
+    def test_exact_threshold_boundary(self) -> None:
+        """Gap exactly at threshold should be handled consistently."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+            _make_region("CODE", "code", [100, 280, 500, 380]),
+        ]
+        # gap = 280 - 200 = 80px == threshold
+
+        result = merge_code_fragments(regions, gap_threshold=80)
+
+        # At exact boundary, either merge or not is acceptable,
+        # but the function must return a valid result
+        assert isinstance(result, list), "Should return a list"
+        code_regions = [r for r in result if r["type"] == "CODE"]
+        assert 1 <= len(code_regions) <= 2, (
+            f"At exact threshold boundary, should have 1 or 2 CODEs, got {len(code_regions)}"
+        )
+
+
+# ============================================================
+# T060: merge_code_fragments() immutability test
+# ============================================================
+
+
+class TestMergeCodeFragmentsImmutability:
+    """merge_code_fragments() must NOT mutate the input list."""
+
+    def test_input_list_not_mutated(self) -> None:
+        """Original input list should not be modified."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+            _make_region("CODE", "code", [100, 250, 500, 350]),
+        ]
+        original_len = len(regions)
+        original_regions = [dict(r) for r in regions]
+
+        merge_code_fragments(regions)
+
+        assert len(regions) == original_len, (
+            f"Input list length changed from {original_len} to {len(regions)}"
+        )
+        for i, region in enumerate(regions):
+            assert region == original_regions[i], (
+                f"Input region at index {i} was mutated: {region} != {original_regions[i]}"
+            )
+
+    def test_input_region_dicts_not_mutated(self) -> None:
+        """Individual region dicts in input should not be modified."""
+        import copy
+
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+            _make_region("TEXT", "plain text", [100, 250, 500, 300], text="}"),
+            _make_region("CODE", "code", [100, 350, 500, 450]),
+        ]
+        deep_copy = copy.deepcopy(regions)
+
+        merge_code_fragments(regions)
+
+        for i, region in enumerate(regions):
+            assert region == deep_copy[i], (
+                f"Input region dict at index {i} was mutated"
+            )
+
+    def test_input_bbox_lists_not_mutated(self) -> None:
+        """bbox lists inside input regions should not be modified."""
+        from src.layout.code_detector import merge_code_fragments
+
+        bbox1 = [100, 100, 500, 200]
+        bbox2 = [100, 250, 500, 350]
+        original_bbox1 = list(bbox1)
+        original_bbox2 = list(bbox2)
+
+        regions = [
+            _make_region("CODE", "code", bbox1),
+            _make_region("CODE", "code", bbox2),
+        ]
+
+        merge_code_fragments(regions)
+
+        assert bbox1 == original_bbox1, f"bbox1 was mutated: {bbox1} != {original_bbox1}"
+        assert bbox2 == original_bbox2, f"bbox2 was mutated: {bbox2} != {original_bbox2}"
+
+    def test_result_is_new_list(self) -> None:
+        """Result should be a new list, not the same object as input."""
+        from src.layout.code_detector import merge_code_fragments
+
+        regions = [
+            _make_region("CODE", "code", [100, 100, 500, 200]),
+        ]
+
+        result = merge_code_fragments(regions)
+
+        assert result is not regions, "Result should be a new list, not the same object as input"
