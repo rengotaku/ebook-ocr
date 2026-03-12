@@ -1682,3 +1682,97 @@ class TestResultConcatenationWithReadingOrder:
         assert results[0].region_type == "TITLE", "First should be TITLE (top)"
         assert results[1].region_type == "TEXT", "Second should be TEXT (middle)"
         assert results[2].region_type == "TEXT", "Third should be TEXT (bottom)"
+
+
+# ============================================================
+# T015: format_ocr_result("CODE", text) -> code fence output
+# ============================================================
+
+
+class TestFormatOcrResultCode:
+    """CODE region should be formatted with code fences."""
+
+    def test_code_region_wrapped_in_code_fence(self) -> None:
+        """format_ocr_result("CODE", text) should wrap text in code fences."""
+        from src.layout_ocr_utils import format_ocr_result
+
+        text = "class Foo {\n    int x;\n}"
+        result = format_ocr_result("CODE", text)
+
+        assert result.startswith("```"), "CODE output should start with code fence"
+        assert result.endswith("```"), "CODE output should end with code fence"
+        assert text in result, "CODE output should contain original text"
+
+    def test_code_region_format_structure(self) -> None:
+        """Code fence format should be: ```\\n{text}\\n```"""
+        from src.layout_ocr_utils import format_ocr_result
+
+        text = "print('hello')"
+        result = format_ocr_result("CODE", text)
+
+        expected = f"```\n{text}\n```"
+        assert result == expected, f"Expected '{expected}', got '{result}'"
+
+    def test_code_region_multiline(self) -> None:
+        """Multi-line code should be preserved inside code fence."""
+        from src.layout_ocr_utils import format_ocr_result
+
+        text = "def hello():\n    print('world')\n    return 42"
+        result = format_ocr_result("CODE", text)
+
+        expected = f"```\n{text}\n```"
+        assert result == expected
+
+    def test_code_region_empty_text(self) -> None:
+        """Empty text CODE should still produce code fences."""
+        from src.layout_ocr_utils import format_ocr_result
+
+        result = format_ocr_result("CODE", "")
+
+        expected = "```\n\n```"
+        assert result == expected
+
+    def test_code_region_special_chars(self) -> None:
+        """Special characters in code should be preserved inside code fences."""
+        from src.layout_ocr_utils import format_ocr_result
+
+        text = 'std::cout << "hello" >> file;'
+        result = format_ocr_result("CODE", text)
+
+        expected = f"```\n{text}\n```"
+        assert result == expected, f"Expected code fence with special chars. Got: {result}"
+
+    def test_code_region_unicode(self) -> None:
+        """Unicode characters (Japanese comments) should be preserved."""
+        from src.layout_ocr_utils import format_ocr_result
+
+        text = "# コメント\nprint('hello')"
+        result = format_ocr_result("CODE", text)
+
+        expected = f"```\n{text}\n```"
+        assert result == expected
+
+
+# ============================================================
+# T016: select_ocr_engine("CODE") -> "yomitoku"
+# ============================================================
+
+
+class TestSelectOcrEngineCode:
+    """CODE region should use yomitoku OCR engine."""
+
+    def test_code_region_uses_yomitoku(self) -> None:
+        """select_ocr_engine("CODE") should return "yomitoku"."""
+        from src.layout_ocr_utils import select_ocr_engine
+
+        engine = select_ocr_engine("CODE")
+
+        assert engine == "yomitoku", f"CODE region should use yomitoku. Got: {engine}"
+
+    def test_code_engine_not_skip(self) -> None:
+        """CODE region should NOT be skipped."""
+        from src.layout_ocr_utils import select_ocr_engine
+
+        engine = select_ocr_engine("CODE")
+
+        assert engine != "skip", "CODE region should not be skipped"

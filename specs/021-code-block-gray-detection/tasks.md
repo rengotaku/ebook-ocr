@@ -54,20 +54,20 @@
 
 ### Input
 
-- [ ] T008 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
+- [x] T008 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
 
 ### Test Implementation (RED)
 
-- [ ] T009 [P] [US1] `detect_gray_background()` の基本テストを実装: 灰色画像→True、白画像→False、黒画像→False in `tests/test_code_detector.py`
-- [ ] T010 [P] [US1] `detect_gray_background()` の閾値境界テストを実装: threshold=0.7 前後の mixed 画像 in `tests/test_code_detector.py`
-- [ ] T011 [P] [US1] `detect_gray_background()` の入力バリデーションテストを実装: None 画像、範囲外 bbox、ゼロサイズ bbox in `tests/test_code_detector.py`
-- [ ] T012 [P] [US1] アスペクト比フィルタテストを実装: 横長帯状リージョン(ratio>8)は CODE 判定しない in `tests/test_code_detector.py`
-- [ ] T013 [P] [US1] `paragraphs_to_layout()` 統合テストを実装: cv_img ありで灰色 TEXT が CODE に変換される in `tests/test_code_detector.py`
-- [ ] T014 [P] [US1] `paragraphs_to_layout()` 後方互換テストを実装: cv_img=None で従来通り TEXT のまま in `tests/test_code_detector.py`
-- [ ] T015 [P] [US1] `format_ocr_result("CODE", text)` テストを実装: コードフェンス囲み in `tests/test_layout_ocr.py`
-- [ ] T016 [P] [US1] `select_ocr_engine("CODE")` テストを実装: "yomitoku" を返す in `tests/test_layout_ocr.py`
-- [ ] T017 `make test` で FAIL を確認 (RED)
-- [ ] T018 RED 出力を生成: `specs/021-code-block-gray-detection/red-tests/ph2-test.md`
+- [x] T009 [P] [US1] `detect_gray_background()` の基本テストを実装: 灰色画像→True、白画像→False、黒画像→False in `tests/test_code_detector.py`
+- [x] T010 [P] [US1] `detect_gray_background()` の閾値境界テストを実装: threshold=0.7 前後の mixed 画像 in `tests/test_code_detector.py`
+- [x] T011 [P] [US1] `detect_gray_background()` の入力バリデーションテストを実装: None 画像、範囲外 bbox、ゼロサイズ bbox in `tests/test_code_detector.py`
+- [x] T012 [P] [US1] アスペクト比フィルタテストを実装: 横長帯状リージョン(ratio>8)は CODE 判定しない in `tests/test_code_detector.py`
+- [x] T013 [P] [US1] `paragraphs_to_layout()` 統合テストを実装: cv_img ありで灰色 TEXT が CODE に変換される in `tests/test_code_detector.py`
+- [x] T014 [P] [US1] `paragraphs_to_layout()` 後方互換テストを実装: cv_img=None で従来通り TEXT のまま in `tests/test_code_detector.py`
+- [x] T015 [P] [US1] `format_ocr_result("CODE", text)` テストを実装: コードフェンス囲み in `tests/test_layout_ocr.py`
+- [x] T016 [P] [US1] `select_ocr_engine("CODE")` テストを実装: "yomitoku" を返す in `tests/test_layout_ocr.py`
+- [x] T017 `make test` で FAIL を確認 (RED)
+- [x] T018 RED 出力を生成: `specs/021-code-block-gray-detection/red-tests/ph2-test.md`
 
 ### Implementation (GREEN)
 
