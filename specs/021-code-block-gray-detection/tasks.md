@@ -183,16 +183,16 @@
 
 ### Input
 
-- [ ] T071 セットアップ分析を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
-- [ ] T072 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph4-output.md`
+- [x] T071 セットアップ分析を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
+- [x] T072 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph4-output.md`
 
 ### Test Implementation (RED)
 
-- [ ] T073 [P] [US5] `visualize_layout()` CODE 色分けテストを実装: layout_regions に CODE があれば黄色で描画 in `tests/test_code_detector.py`
-- [ ] T074 [P] [US5] `detect_layout_yomitoku()` の CODE 数サマリ出力テストを実装: stdout に `[CODE: N]` が含まれる in `tests/test_code_detector.py`
-- [ ] T075 [P] [US5] 設定読み込みテストを実装: config.yaml の code_detection セクションからデフォルト値取得 in `tests/test_code_detector.py`
-- [ ] T076 `make test` で FAIL を確認 (RED)
-- [ ] T077 RED 出力を生成: `specs/021-code-block-gray-detection/red-tests/ph5-test.md`
+- [x] T073 [P] [US5] `visualize_layout()` CODE 色分けテストを実装: layout_regions に CODE があれば黄色で描画 in `tests/test_code_detector.py`
+- [x] T074 [P] [US5] `detect_layout_yomitoku()` の CODE 数サマリ出力テストを実装: stdout に `[CODE: N]` が含まれる in `tests/test_code_detector.py`
+- [x] T075 [P] [US5] 設定読み込みテストを実装: config.yaml の code_detection セクションからデフォルト値取得 in `tests/test_code_detector.py`
+- [x] T076 `make test` で FAIL を確認 (RED)
+- [x] T077 RED 出力を生成: `specs/021-code-block-gray-detection/red-tests/ph5-test.md`
 
 ### Implementation (GREEN)
 

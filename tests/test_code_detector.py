@@ -3,6 +3,7 @@
 Phase 2 RED tests for US1 - Gray background code block auto-detection.
 Phase 3 RED tests for US2/US3 - Text analysis code detection.
 Phase 4 RED tests for US4 - Fragment code block merging.
+Phase 5 RED tests for US5 - Visualization, summary output, config loading.
 
 Detection Rules:
 | Condition | Result |
@@ -18,6 +19,9 @@ Detection Rules:
 | OR condition: symbol OR keyword | Either triggers CODE |
 | TITLE (section_headings) | Skip text analysis |
 | Japanese text (no symbols/keywords) | TEXT (unchanged) |
+| CODE region in visualization | Yellow (0,255,255) BGR drawing |
+| CODE count in summary output | stdout contains [CODE: N] |
+| code_detection config section | Default threshold values loaded |
 """
 
 from __future__ import annotations
@@ -1694,3 +1698,475 @@ class TestMergeCodeFragmentsImmutability:
         result = merge_code_fragments(regions)
 
         assert result is not regions, "Result should be a new list, not the same object as input"
+
+
+# ============================================================
+# Phase 5 RED tests: US5 - Visualization, summary output, config
+# ============================================================
+
+
+# ============================================================
+# T073: visualize_layout() CODE color test
+# ============================================================
+
+
+class TestVisualizeLayoutCodeColor:
+    """visualize_layout() should draw CODE regions in yellow (0, 255, 255) BGR."""
+
+    def test_code_region_drawn_in_yellow(self, tmp_path: "Path") -> None:
+        """CODE region in layout_regions should be drawn in yellow color."""
+        import cv2
+
+        from src.layout.detector import visualize_layout
+
+        # Create a white test image (200x300 BGR)
+        img = np.full((300, 200, 3), 255, dtype=np.uint8)
+        img_path = str(tmp_path / "test_page.png")
+        cv2.imwrite(img_path, img)
+
+        output_path = str(tmp_path / "output.png")
+
+        # layout_regions with a CODE region
+        layout_regions = [
+            {
+                "type": "CODE",
+                "label": "code",
+                "bbox": [10, 10, 190, 100],
+                "confidence": 1.0,
+            }
+        ]
+
+        # Call with new layout_regions parameter
+        visualize_layout(
+            img_path, [], [], output_path, layout_regions=layout_regions
+        )
+
+        # Read back the output image and check that yellow was drawn
+        result_img = cv2.imread(output_path)
+        assert result_img is not None, "Output image should be created"
+
+        # Check for yellow pixels (0, 255, 255) in the region boundary area
+        # The rectangle should be drawn at the bbox coordinates
+        # Yellow BGR = (0, 255, 255)
+        yellow_bgr = np.array([0, 255, 255], dtype=np.uint8)
+
+        # Check pixels on the top edge of the rectangle (y=10, x from 10 to 190)
+        top_edge = result_img[10, 10:190]
+        has_yellow = any(
+            np.array_equal(pixel, yellow_bgr) for pixel in top_edge
+        )
+        assert has_yellow, (
+            f"CODE region should be drawn in yellow (0,255,255) BGR, "
+            f"but no yellow pixels found on top edge. Sample pixels: {top_edge[:5]}"
+        )
+
+    def test_text_region_not_drawn_in_yellow(self, tmp_path: "Path") -> None:
+        """TEXT region should NOT be drawn in yellow."""
+        import cv2
+
+        from src.layout.detector import visualize_layout
+
+        img = np.full((300, 200, 3), 255, dtype=np.uint8)
+        img_path = str(tmp_path / "test_page.png")
+        cv2.imwrite(img_path, img)
+
+        output_path = str(tmp_path / "output.png")
+
+        layout_regions = [
+            {
+                "type": "TEXT",
+                "label": "plain text",
+                "bbox": [10, 10, 190, 100],
+                "confidence": 1.0,
+            }
+        ]
+
+        visualize_layout(
+            img_path, [], [], output_path, layout_regions=layout_regions
+        )
+
+        result_img = cv2.imread(output_path)
+        assert result_img is not None, "Output image should be created"
+
+        # TEXT should NOT have yellow. Check the drawn rectangle area.
+        yellow_bgr = np.array([0, 255, 255], dtype=np.uint8)
+        top_edge = result_img[10, 10:190]
+        has_yellow = any(
+            np.array_equal(pixel, yellow_bgr) for pixel in top_edge
+        )
+        assert not has_yellow, (
+            "TEXT region should NOT be drawn in yellow"
+        )
+
+    def test_multiple_region_types_correct_colors(self, tmp_path: "Path") -> None:
+        """CODE should be yellow, other types should use their default colors."""
+        import cv2
+
+        from src.layout.detector import visualize_layout
+
+        img = np.full((500, 300, 3), 255, dtype=np.uint8)
+        img_path = str(tmp_path / "test_page.png")
+        cv2.imwrite(img_path, img)
+
+        output_path = str(tmp_path / "output.png")
+
+        layout_regions = [
+            {
+                "type": "CODE",
+                "label": "code",
+                "bbox": [10, 10, 290, 100],
+                "confidence": 1.0,
+            },
+            {
+                "type": "TEXT",
+                "label": "plain text",
+                "bbox": [10, 120, 290, 200],
+                "confidence": 1.0,
+            },
+            {
+                "type": "FIGURE",
+                "label": "figure",
+                "bbox": [10, 220, 290, 300],
+                "confidence": 1.0,
+            },
+        ]
+
+        visualize_layout(
+            img_path, [], [], output_path, layout_regions=layout_regions
+        )
+
+        result_img = cv2.imread(output_path)
+        assert result_img is not None
+
+        yellow_bgr = np.array([0, 255, 255], dtype=np.uint8)
+
+        # CODE region should have yellow
+        code_edge = result_img[10, 10:290]
+        has_yellow_code = any(
+            np.array_equal(pixel, yellow_bgr) for pixel in code_edge
+        )
+        assert has_yellow_code, "CODE region should be drawn in yellow"
+
+        # TEXT region should NOT have yellow
+        text_edge = result_img[120, 10:290]
+        has_yellow_text = any(
+            np.array_equal(pixel, yellow_bgr) for pixel in text_edge
+        )
+        assert not has_yellow_text, "TEXT region should NOT be drawn in yellow"
+
+    def test_empty_layout_regions(self, tmp_path: "Path") -> None:
+        """Empty layout_regions should not cause errors."""
+        import cv2
+
+        from src.layout.detector import visualize_layout
+
+        img = np.full((100, 100, 3), 255, dtype=np.uint8)
+        img_path = str(tmp_path / "test_page.png")
+        cv2.imwrite(img_path, img)
+
+        output_path = str(tmp_path / "output.png")
+
+        # Should not raise with empty list
+        visualize_layout(
+            img_path, [], [], output_path, layout_regions=[]
+        )
+
+        result_img = cv2.imread(output_path)
+        assert result_img is not None, "Output image should be created even with empty regions"
+
+    def test_no_layout_regions_backward_compat(self, tmp_path: "Path") -> None:
+        """visualize_layout() without layout_regions should still work (backward compat)."""
+        import cv2
+
+        from src.layout.detector import visualize_layout
+
+        img = np.full((100, 100, 3), 255, dtype=np.uint8)
+        img_path = str(tmp_path / "test_page.png")
+        cv2.imwrite(img_path, img)
+
+        output_path = str(tmp_path / "output.png")
+
+        # Call without layout_regions (backward compatible)
+        visualize_layout(img_path, [], [], output_path)
+
+        result_img = cv2.imread(output_path)
+        assert result_img is not None, "Output image should be created without layout_regions"
+
+
+# ============================================================
+# T074: detect_layout_yomitoku() CODE count summary test
+# ============================================================
+
+
+class TestCodeCountSummaryOutput:
+    """detect_layout_yomitoku() should output [CODE: N] summary to stdout."""
+
+    def test_code_count_in_summary_output(self, capsys) -> None:
+        """Summary output should contain [CODE: N] with correct count."""
+        from src.layout.detector import _format_region_summary
+
+        # Test with regions containing CODE
+        regions = [
+            {"type": "CODE", "label": "code", "bbox": [0, 0, 100, 100]},
+            {"type": "TEXT", "label": "plain text", "bbox": [0, 100, 100, 200]},
+            {"type": "CODE", "label": "code", "bbox": [0, 200, 100, 300]},
+            {"type": "CODE", "label": "code", "bbox": [0, 300, 100, 400]},
+        ]
+
+        summary = _format_region_summary(regions)
+
+        assert "[CODE: 3]" in summary, (
+            f"Summary should contain [CODE: 3] for 3 CODE regions, got: {summary}"
+        )
+
+    def test_zero_code_count_in_summary(self, capsys) -> None:
+        """Summary should contain [CODE: 0] when no CODE regions exist."""
+        from src.layout.detector import _format_region_summary
+
+        regions = [
+            {"type": "TEXT", "label": "plain text", "bbox": [0, 0, 100, 100]},
+            {"type": "FIGURE", "label": "figure", "bbox": [0, 100, 100, 200]},
+        ]
+
+        summary = _format_region_summary(regions)
+
+        assert "[CODE: 0]" in summary, (
+            f"Summary should contain [CODE: 0] when no CODE regions, got: {summary}"
+        )
+
+    def test_single_code_count(self) -> None:
+        """Summary should show [CODE: 1] for single CODE region."""
+        from src.layout.detector import _format_region_summary
+
+        regions = [
+            {"type": "CODE", "label": "code", "bbox": [0, 0, 100, 100]},
+        ]
+
+        summary = _format_region_summary(regions)
+
+        assert "[CODE: 1]" in summary, (
+            f"Summary should contain [CODE: 1], got: {summary}"
+        )
+
+    def test_summary_includes_total_regions(self) -> None:
+        """Summary should also include total region count."""
+        from src.layout.detector import _format_region_summary
+
+        regions = [
+            {"type": "CODE", "label": "code", "bbox": [0, 0, 100, 100]},
+            {"type": "TEXT", "label": "plain text", "bbox": [0, 100, 100, 200]},
+        ]
+
+        summary = _format_region_summary(regions)
+
+        # Should contain region count info
+        assert "2" in summary, (
+            f"Summary should include total region count (2), got: {summary}"
+        )
+
+
+# ============================================================
+# T075: Config loading tests
+# ============================================================
+
+
+class TestLoadCodeDetectionConfig:
+    """load_code_detection_config() should read code_detection section from config.yaml."""
+
+    def test_default_config_keys(self) -> None:
+        """Config should contain all expected default keys."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        expected_keys = {
+            "gray_background_threshold",
+            "gray_saturation_max",
+            "gray_value_min",
+            "gray_value_max",
+            "aspect_ratio_max",
+            "symbol_ratio_threshold",
+            "keyword_threshold",
+            "fragment_gap_threshold",
+        }
+
+        for key in expected_keys:
+            assert key in config, (
+                f"Config should contain key '{key}', "
+                f"got keys: {list(config.keys())}"
+            )
+
+    def test_default_gray_background_threshold(self) -> None:
+        """Default gray_background_threshold should be 0.7."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        assert config["gray_background_threshold"] == 0.7, (
+            f"gray_background_threshold should be 0.7, got {config['gray_background_threshold']}"
+        )
+
+    def test_default_symbol_ratio_threshold(self) -> None:
+        """Default symbol_ratio_threshold should be 0.08."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        assert config["symbol_ratio_threshold"] == 0.08, (
+            f"symbol_ratio_threshold should be 0.08, got {config['symbol_ratio_threshold']}"
+        )
+
+    def test_default_keyword_threshold(self) -> None:
+        """Default keyword_threshold should be 2."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        assert config["keyword_threshold"] == 2, (
+            f"keyword_threshold should be 2, got {config['keyword_threshold']}"
+        )
+
+    def test_default_fragment_gap_threshold(self) -> None:
+        """Default fragment_gap_threshold should be 80."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        assert config["fragment_gap_threshold"] == 80, (
+            f"fragment_gap_threshold should be 80, got {config['fragment_gap_threshold']}"
+        )
+
+    def test_default_aspect_ratio_max(self) -> None:
+        """Default aspect_ratio_max should be 8.0."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        assert config["aspect_ratio_max"] == 8.0, (
+            f"aspect_ratio_max should be 8.0, got {config['aspect_ratio_max']}"
+        )
+
+    def test_default_gray_saturation_max(self) -> None:
+        """Default gray_saturation_max should be 30."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        assert config["gray_saturation_max"] == 30, (
+            f"gray_saturation_max should be 30, got {config['gray_saturation_max']}"
+        )
+
+    def test_default_gray_value_range(self) -> None:
+        """Default gray_value_min=50, gray_value_max=200."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        assert config["gray_value_min"] == 50, (
+            f"gray_value_min should be 50, got {config['gray_value_min']}"
+        )
+        assert config["gray_value_max"] == 200, (
+            f"gray_value_max should be 200, got {config['gray_value_max']}"
+        )
+
+    def test_custom_config_from_file(self, tmp_path: "Path") -> None:
+        """load_code_detection_config() should read from a specified config file."""
+        import yaml
+
+        from src.layout.code_detector import load_code_detection_config
+
+        custom_config = {
+            "code_detection": {
+                "gray_background_threshold": 0.5,
+                "gray_saturation_max": 40,
+                "gray_value_min": 60,
+                "gray_value_max": 180,
+                "aspect_ratio_max": 6.0,
+                "symbol_ratio_threshold": 0.12,
+                "keyword_threshold": 3,
+                "fragment_gap_threshold": 100,
+            }
+        }
+
+        config_path = tmp_path / "config.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(custom_config, f)
+
+        config = load_code_detection_config(str(config_path))
+
+        assert config["gray_background_threshold"] == 0.5, (
+            f"Custom threshold should be 0.5, got {config['gray_background_threshold']}"
+        )
+        assert config["symbol_ratio_threshold"] == 0.12, (
+            f"Custom symbol ratio should be 0.12, got {config['symbol_ratio_threshold']}"
+        )
+        assert config["keyword_threshold"] == 3, (
+            f"Custom keyword threshold should be 3, got {config['keyword_threshold']}"
+        )
+        assert config["fragment_gap_threshold"] == 100, (
+            f"Custom gap threshold should be 100, got {config['fragment_gap_threshold']}"
+        )
+
+    def test_missing_config_section_returns_defaults(self, tmp_path: "Path") -> None:
+        """Config file without code_detection section should return defaults."""
+        import yaml
+
+        from src.layout.code_detector import load_code_detection_config
+
+        config_data = {"video": "test.mp4"}
+        config_path = tmp_path / "config.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(config_data, f)
+
+        config = load_code_detection_config(str(config_path))
+
+        # Should return defaults
+        assert config["gray_background_threshold"] == 0.7
+        assert config["symbol_ratio_threshold"] == 0.08
+        assert config["keyword_threshold"] == 2
+
+    def test_partial_config_fills_missing_with_defaults(self, tmp_path: "Path") -> None:
+        """Partial code_detection section should use defaults for missing keys."""
+        import yaml
+
+        from src.layout.code_detector import load_code_detection_config
+
+        config_data = {
+            "code_detection": {
+                "gray_background_threshold": 0.9,
+                # Other keys omitted
+            }
+        }
+        config_path = tmp_path / "config.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(config_data, f)
+
+        config = load_code_detection_config(str(config_path))
+
+        assert config["gray_background_threshold"] == 0.9, "Custom value should be used"
+        assert config["symbol_ratio_threshold"] == 0.08, "Missing key should use default"
+        assert config["keyword_threshold"] == 2, "Missing key should use default"
+
+    def test_nonexistent_config_file_returns_defaults(self) -> None:
+        """Non-existent config file should return defaults without error."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config("/nonexistent/path/config.yaml")
+
+        assert config["gray_background_threshold"] == 0.7
+        assert config["symbol_ratio_threshold"] == 0.08
+
+    def test_config_values_are_correct_types(self) -> None:
+        """Config values should have correct types."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+
+        assert isinstance(config["gray_background_threshold"], float)
+        assert isinstance(config["gray_saturation_max"], int)
+        assert isinstance(config["gray_value_min"], int)
+        assert isinstance(config["gray_value_max"], int)
+        assert isinstance(config["aspect_ratio_max"], float)
+        assert isinstance(config["symbol_ratio_threshold"], float)
+        assert isinstance(config["keyword_threshold"], int)
+        assert isinstance(config["fragment_gap_threshold"], int)
