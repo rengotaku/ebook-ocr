@@ -26,6 +26,7 @@ Detection Rules:
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -1737,9 +1738,7 @@ class TestVisualizeLayoutCodeColor:
         ]
 
         # Call with new layout_regions parameter
-        visualize_layout(
-            img_path, [], [], output_path, layout_regions=layout_regions
-        )
+        visualize_layout(img_path, [], [], output_path, layout_regions=layout_regions)
 
         # Read back the output image and check that yellow was drawn
         result_img = cv2.imread(output_path)
@@ -1752,9 +1751,7 @@ class TestVisualizeLayoutCodeColor:
 
         # Check pixels on the top edge of the rectangle (y=10, x from 10 to 190)
         top_edge = result_img[10, 10:190]
-        has_yellow = any(
-            np.array_equal(pixel, yellow_bgr) for pixel in top_edge
-        )
+        has_yellow = any(np.array_equal(pixel, yellow_bgr) for pixel in top_edge)
         assert has_yellow, (
             f"CODE region should be drawn in yellow (0,255,255) BGR, "
             f"but no yellow pixels found on top edge. Sample pixels: {top_edge[:5]}"
@@ -1781,9 +1778,7 @@ class TestVisualizeLayoutCodeColor:
             }
         ]
 
-        visualize_layout(
-            img_path, [], [], output_path, layout_regions=layout_regions
-        )
+        visualize_layout(img_path, [], [], output_path, layout_regions=layout_regions)
 
         result_img = cv2.imread(output_path)
         assert result_img is not None, "Output image should be created"
@@ -1791,12 +1786,8 @@ class TestVisualizeLayoutCodeColor:
         # TEXT should NOT have yellow. Check the drawn rectangle area.
         yellow_bgr = np.array([0, 255, 255], dtype=np.uint8)
         top_edge = result_img[10, 10:190]
-        has_yellow = any(
-            np.array_equal(pixel, yellow_bgr) for pixel in top_edge
-        )
-        assert not has_yellow, (
-            "TEXT region should NOT be drawn in yellow"
-        )
+        has_yellow = any(np.array_equal(pixel, yellow_bgr) for pixel in top_edge)
+        assert not has_yellow, "TEXT region should NOT be drawn in yellow"
 
     def test_multiple_region_types_correct_colors(self, tmp_path: "Path") -> None:
         """CODE should be yellow, other types should use their default colors."""
@@ -1831,9 +1822,7 @@ class TestVisualizeLayoutCodeColor:
             },
         ]
 
-        visualize_layout(
-            img_path, [], [], output_path, layout_regions=layout_regions
-        )
+        visualize_layout(img_path, [], [], output_path, layout_regions=layout_regions)
 
         result_img = cv2.imread(output_path)
         assert result_img is not None
@@ -1842,16 +1831,12 @@ class TestVisualizeLayoutCodeColor:
 
         # CODE region should have yellow
         code_edge = result_img[10, 10:290]
-        has_yellow_code = any(
-            np.array_equal(pixel, yellow_bgr) for pixel in code_edge
-        )
+        has_yellow_code = any(np.array_equal(pixel, yellow_bgr) for pixel in code_edge)
         assert has_yellow_code, "CODE region should be drawn in yellow"
 
         # TEXT region should NOT have yellow
         text_edge = result_img[120, 10:290]
-        has_yellow_text = any(
-            np.array_equal(pixel, yellow_bgr) for pixel in text_edge
-        )
+        has_yellow_text = any(np.array_equal(pixel, yellow_bgr) for pixel in text_edge)
         assert not has_yellow_text, "TEXT region should NOT be drawn in yellow"
 
     def test_empty_layout_regions(self, tmp_path: "Path") -> None:
@@ -1867,9 +1852,7 @@ class TestVisualizeLayoutCodeColor:
         output_path = str(tmp_path / "output.png")
 
         # Should not raise with empty list
-        visualize_layout(
-            img_path, [], [], output_path, layout_regions=[]
-        )
+        visualize_layout(img_path, [], [], output_path, layout_regions=[])
 
         result_img = cv2.imread(output_path)
         assert result_img is not None, "Output image should be created even with empty regions"
@@ -1915,9 +1898,7 @@ class TestCodeCountSummaryOutput:
 
         summary = _format_region_summary(regions)
 
-        assert "[CODE: 3]" in summary, (
-            f"Summary should contain [CODE: 3] for 3 CODE regions, got: {summary}"
-        )
+        assert "[CODE: 3]" in summary, f"Summary should contain [CODE: 3] for 3 CODE regions, got: {summary}"
 
     def test_zero_code_count_in_summary(self, capsys) -> None:
         """Summary should contain [CODE: 0] when no CODE regions exist."""
@@ -1930,9 +1911,7 @@ class TestCodeCountSummaryOutput:
 
         summary = _format_region_summary(regions)
 
-        assert "[CODE: 0]" in summary, (
-            f"Summary should contain [CODE: 0] when no CODE regions, got: {summary}"
-        )
+        assert "[CODE: 0]" in summary, f"Summary should contain [CODE: 0] when no CODE regions, got: {summary}"
 
     def test_single_code_count(self) -> None:
         """Summary should show [CODE: 1] for single CODE region."""
@@ -1944,9 +1923,7 @@ class TestCodeCountSummaryOutput:
 
         summary = _format_region_summary(regions)
 
-        assert "[CODE: 1]" in summary, (
-            f"Summary should contain [CODE: 1], got: {summary}"
-        )
+        assert "[CODE: 1]" in summary, f"Summary should contain [CODE: 1], got: {summary}"
 
     def test_summary_includes_total_regions(self) -> None:
         """Summary should also include total region count."""
@@ -1960,9 +1937,7 @@ class TestCodeCountSummaryOutput:
         summary = _format_region_summary(regions)
 
         # Should contain region count info
-        assert "2" in summary, (
-            f"Summary should include total region count (2), got: {summary}"
-        )
+        assert "2" in summary, f"Summary should include total region count (2), got: {summary}"
 
 
 # ============================================================
@@ -1991,10 +1966,7 @@ class TestLoadCodeDetectionConfig:
         }
 
         for key in expected_keys:
-            assert key in config, (
-                f"Config should contain key '{key}', "
-                f"got keys: {list(config.keys())}"
-            )
+            assert key in config, f"Config should contain key '{key}', got keys: {list(config.keys())}"
 
     def test_default_gray_background_threshold(self) -> None:
         """Default gray_background_threshold should be 0.7."""
@@ -2022,9 +1994,7 @@ class TestLoadCodeDetectionConfig:
 
         config = load_code_detection_config()
 
-        assert config["keyword_threshold"] == 2, (
-            f"keyword_threshold should be 2, got {config['keyword_threshold']}"
-        )
+        assert config["keyword_threshold"] == 2, f"keyword_threshold should be 2, got {config['keyword_threshold']}"
 
     def test_default_fragment_gap_threshold(self) -> None:
         """Default fragment_gap_threshold should be 80."""
@@ -2042,9 +2012,7 @@ class TestLoadCodeDetectionConfig:
 
         config = load_code_detection_config()
 
-        assert config["aspect_ratio_max"] == 8.0, (
-            f"aspect_ratio_max should be 8.0, got {config['aspect_ratio_max']}"
-        )
+        assert config["aspect_ratio_max"] == 8.0, f"aspect_ratio_max should be 8.0, got {config['aspect_ratio_max']}"
 
     def test_default_gray_saturation_max(self) -> None:
         """Default gray_saturation_max should be 30."""
@@ -2062,12 +2030,8 @@ class TestLoadCodeDetectionConfig:
 
         config = load_code_detection_config()
 
-        assert config["gray_value_min"] == 50, (
-            f"gray_value_min should be 50, got {config['gray_value_min']}"
-        )
-        assert config["gray_value_max"] == 200, (
-            f"gray_value_max should be 200, got {config['gray_value_max']}"
-        )
+        assert config["gray_value_min"] == 50, f"gray_value_min should be 50, got {config['gray_value_min']}"
+        assert config["gray_value_max"] == 200, f"gray_value_max should be 200, got {config['gray_value_max']}"
 
     def test_custom_config_from_file(self, tmp_path: "Path") -> None:
         """load_code_detection_config() should read from a specified config file."""

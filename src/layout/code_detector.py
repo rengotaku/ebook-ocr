@@ -7,7 +7,79 @@ by analyzing text content for programming symbols and keywords.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
+
+# Default values for code detection configuration
+_DEFAULT_CODE_DETECTION_CONFIG: dict = {
+    "gray_background_threshold": 0.7,
+    "gray_saturation_max": 30,
+    "gray_value_min": 50,
+    "gray_value_max": 200,
+    "aspect_ratio_max": 8.0,
+    "symbol_ratio_threshold": 0.08,
+    "keyword_threshold": 2,
+    "fragment_gap_threshold": 80,
+}
+
+
+def load_code_detection_config(config_path: str | None = None) -> dict:
+    """Load code detection configuration from config.yaml.
+
+    Reads the code_detection section from the specified config file.
+    Missing keys are filled with default values.
+    If the file does not exist or the section is missing, returns defaults.
+
+    Args:
+        config_path: Path to the config YAML file. If None, searches for
+                     config.yaml in the project root (3 levels up from this file).
+
+    Returns:
+        Dict with all 8 code detection configuration keys and their values.
+    """
+    import yaml
+
+    defaults = dict(_DEFAULT_CODE_DETECTION_CONFIG)
+
+    # Determine config file path
+    if config_path is None:
+        # Search for config.yaml relative to this file's location
+        # src/layout/code_detector.py -> project root is ../../..
+        candidate = Path(__file__).parent.parent.parent / "config.yaml"
+        resolved_path = candidate
+    else:
+        resolved_path = Path(config_path)
+
+    if not resolved_path.exists():
+        return defaults
+
+    try:
+        with open(resolved_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except Exception:  # noqa: BLE001
+        return defaults
+
+    section = data.get("code_detection", {}) or {}
+
+    # Merge: use defaults, then override with values from file
+    result = dict(defaults)
+    for key in defaults:
+        if key in section:
+            result[key] = section[key]
+
+    # Ensure correct types
+    result["gray_background_threshold"] = float(result["gray_background_threshold"])
+    result["gray_saturation_max"] = int(result["gray_saturation_max"])
+    result["gray_value_min"] = int(result["gray_value_min"])
+    result["gray_value_max"] = int(result["gray_value_max"])
+    result["aspect_ratio_max"] = float(result["aspect_ratio_max"])
+    result["symbol_ratio_threshold"] = float(result["symbol_ratio_threshold"])
+    result["keyword_threshold"] = int(result["keyword_threshold"])
+    result["fragment_gap_threshold"] = int(result["fragment_gap_threshold"])
+
+    return result
+
 
 # Extended keyword list for code detection across 25+ languages
 EXTENDED_KEYWORDS: list[str] = [

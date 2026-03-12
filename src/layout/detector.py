@@ -148,11 +148,26 @@ def paragraphs_to_layout(
     }
 
 
+def _format_region_summary(regions: list) -> str:
+    """Format a summary string for layout regions including CODE count.
+
+    Args:
+        regions: List of region dicts with at least a 'type' key
+
+    Returns:
+        Summary string containing total region count and [CODE: N] annotation
+    """
+    total = len(regions)
+    code_count = sum(1 for r in regions if r.get("type") == "CODE")
+    return f"{total} regions [CODE: {code_count}]"
+
+
 def visualize_layout(
     img_path: str,
     paragraphs: list,
     figures: list,
     output_path: str,
+    layout_regions: list | None = None,
 ) -> None:
     """Draw bounding boxes on image and save to output_path.
 
@@ -161,12 +176,52 @@ def visualize_layout(
         paragraphs: List of yomitoku ParagraphSchema objects
         figures: List of yomitoku FigureSchema objects
         output_path: Path to save visualized image
+        layout_regions: Optional list of region dicts (from paragraphs_to_layout).
+                        If provided, CODE regions are drawn in yellow (0,255,255) BGR.
+                        Other region types use their default colors.
     """
     import cv2
 
     img = cv2.imread(img_path)
     if img is None:
         return
+
+    # Draw layout_regions if provided (CODE regions in yellow, others in default colors)
+    if layout_regions is not None:
+        for region in layout_regions:
+            region_type = region.get("type", "")
+            bbox = region.get("bbox")
+            if not bbox or len(bbox) < 4:
+                continue
+            x1, y1, x2, y2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+
+            if region_type == "CODE":
+                color = (0, 255, 255)  # Yellow (BGR) for CODE regions
+                thickness = 2
+                label = "code"
+            elif region_type == "TITLE":
+                color = (0, 0, 255)  # Red for titles
+                thickness = 3
+                label = "title"
+            elif region_type == "FIGURE":
+                color = (255, 0, 0)  # Blue for figures
+                thickness = 3
+                label = "figure"
+            else:
+                color = (0, 255, 0)  # Green for text
+                thickness = 2
+                label = "text"
+
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
+            cv2.putText(
+                img,
+                label,
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                color,
+                2,
+            )
 
     # Draw paragraphs
     for p in paragraphs:

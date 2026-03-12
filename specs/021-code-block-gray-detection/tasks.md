@@ -196,18 +196,18 @@
 
 ### Implementation (GREEN)
 
-- [ ] T078 RED テストを読む: `specs/021-code-block-gray-detection/red-tests/ph5-test.md`
-- [ ] T079 [P] [US5] `visualize_layout()` に `layout_regions` パラメータ追加 + CODE 黄色描画 in `src/layout/detector.py`
-- [ ] T080 [P] [US5] `detect_layout_yomitoku()` のサマリ出力に CODE 数表示を追加 in `src/layout/detector.py`
-- [ ] T081 [P] [US5] `config.yaml` に `code_detection` セクションを追加（全閾値のデフォルト値） in `config.yaml`
-- [ ] T082 [US5] `src/layout/code_detector.py` に config.yaml 読み込み関数を追加し、各関数でデフォルト値を設定から取得
-- [ ] T083 `make test` で PASS を確認 (GREEN)
+- [x] T078 RED テストを読む: `specs/021-code-block-gray-detection/red-tests/ph5-test.md`
+- [x] T079 [P] [US5] `visualize_layout()` に `layout_regions` パラメータ追加 + CODE 黄色描画 in `src/layout/detector.py`
+- [x] T080 [P] [US5] `detect_layout_yomitoku()` のサマリ出力に CODE 数表示を追加 in `src/layout/detector.py`
+- [x] T081 [P] [US5] `config.yaml` に `code_detection` セクションを追加（全閾値のデフォルト値） in `config.yaml`
+- [x] T082 [US5] `src/layout/code_detector.py` に config.yaml 読み込み関数を追加し、各関数でデフォルト値を設定から取得
+- [x] T083 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T084 `make test` で全テスト通過（リグレッションなし）を確認
-- [ ] T085 `make lint` で lint エラーなしを確認
-- [ ] T086 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph5-output.md`
+- [x] T084 `make test` で全テスト通過（リグレッションなし）を確認
+- [x] T085 `make lint` で lint エラーなしを確認
+- [x] T086 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph5-output.md`
 
 **Checkpoint**: CODE が可視化画像で黄色描画。config.yaml で閾値調整可能。
 
