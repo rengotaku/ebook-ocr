@@ -18,8 +18,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import numpy as np
-import pytest
-
 
 # ============================================================
 # Fixtures: image generation helpers
@@ -333,9 +331,7 @@ class TestAspectRatioFilter:
 
         regions = result["regions"]
         assert len(regions) == 1
-        assert regions[0]["type"] == "CODE", (
-            "Normal aspect ratio gray region should become CODE"
-        )
+        assert regions[0]["type"] == "CODE", "Normal aspect ratio gray region should become CODE"
 
 
 # ============================================================
@@ -415,9 +411,7 @@ class TestParagraphsToLayoutIntegration:
 
         regions = result["regions"]
         assert len(regions) == 1
-        assert regions[0]["type"] == "TITLE", (
-            "TITLE should not be converted to CODE"
-        )
+        assert regions[0]["type"] == "TITLE", "TITLE should not be converted to CODE"
 
     def test_code_region_has_correct_bbox(self) -> None:
         """CODE region should preserve original bbox coordinates."""
@@ -500,9 +494,7 @@ class TestParagraphsToLayoutBackwardCompat:
 
         regions = result["regions"]
         assert len(regions) == 1
-        assert regions[0]["type"] == "TEXT", (
-            "Without cv_img, TEXT should remain TEXT"
-        )
+        assert regions[0]["type"] == "TEXT", "Without cv_img, TEXT should remain TEXT"
 
     def test_existing_signature_still_works(self) -> None:
         """Original 3-arg signature should still work without error."""

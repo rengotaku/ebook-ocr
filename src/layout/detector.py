@@ -39,17 +39,26 @@ def get_analyzer(device: str = "cpu") -> "DocumentAnalyzer":
     return _yomitoku_analyzer
 
 
-def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, int]) -> dict:
+def paragraphs_to_layout(
+    paragraphs: list,
+    figures: list,
+    page_size: tuple[int, int],
+    cv_img=None,
+) -> dict:
     """Convert yomitoku paragraphs and figures to layout.json format.
 
     Args:
         paragraphs: List of yomitoku ParagraphSchema objects
         figures: List of yomitoku FigureSchema objects
         page_size: (width, height) of the page
+        cv_img: Optional BGR image (numpy array) for gray background detection.
+                If None, no gray detection is performed (backward compatible).
 
     Returns:
         Layout dict with regions list
     """
+    from src.layout.code_detector import detect_gray_background
+
     regions = []
 
     # Process paragraphs
@@ -66,10 +75,27 @@ def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, 
         else:
             continue  # Skip paragraphs without box
 
+        # Gray background detection: only for TEXT regions when cv_img is provided
+        if cv_img is not None and region_type == "TEXT":
+            x1, y1, x2, y2 = bbox
+            width = x2 - x1
+            height = y2 - y1
+            # Skip aspect ratio filter: wide strips (width/height > 8.0) stay TEXT
+            if height > 0 and (width / height) <= 8.0:
+                if detect_gray_background(cv_img, bbox):
+                    region_type = "CODE"
+
+        if region_type == "CODE":
+            label = "code"
+        elif region_type == "TITLE":
+            label = "section_headings"
+        else:
+            label = "plain text"
+
         regions.append(
             {
                 "type": region_type,
-                "label": "section_headings" if region_type == "TITLE" else "plain text",
+                "label": label,
                 "bbox": bbox,
                 "confidence": 1.0,  # yomitoku doesn't provide confidence per paragraph
             }
@@ -264,7 +290,9 @@ def detect_layout_yomitoku(
         save_yomitoku_results(output_dir, page_path.stem, results)
 
         # Convert to layout format
-        page_layout = paragraphs_to_layout(results.paragraphs, results.figures, (page_width, page_height))
+        page_layout = paragraphs_to_layout(
+            results.paragraphs, results.figures, (page_width, page_height), cv_img=cv_img
+        )
         layout_data[page_name] = page_layout
 
         print(

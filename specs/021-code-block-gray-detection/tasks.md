@@ -71,20 +71,20 @@
 
 ### Implementation (GREEN)
 
-- [ ] T019 RED テストを読む: `specs/021-code-block-gray-detection/red-tests/ph2-test.md`
-- [ ] T020 [P] [US1] `detect_gray_background()` を実装: HSV 色空間で灰色画素比率を計算 in `src/layout/code_detector.py`（新規ファイル）
-- [ ] T021 [P] [US1] `format_ocr_result()` に CODE 分岐を追加: ` ```\n{text}\n``` ` in `src/layout_ocr_utils.py`
-- [ ] T022 [P] [US1] `select_ocr_engine()` に CODE 分岐を追加: → "yomitoku" in `src/layout_ocr_utils.py`
-- [ ] T023 [US1] `paragraphs_to_layout()` に `cv_img` パラメータ追加 + 灰色判定呼び出し + アスペクト比フィルタ in `src/layout/detector.py`
-- [ ] T024 [US1] `detect_layout_yomitoku()` で `cv_img` を `paragraphs_to_layout()` に渡す in `src/layout/detector.py`
-- [ ] T025 [US1] `src/layout/__init__.py` に `code_detector` を export 追加
-- [ ] T026 `make test` で PASS を確認 (GREEN)
+- [x] T019 RED テストを読む: `specs/021-code-block-gray-detection/red-tests/ph2-test.md`
+- [x] T020 [P] [US1] `detect_gray_background()` を実装: HSV 色空間で灰色画素比率を計算 in `src/layout/code_detector.py`（新規ファイル）
+- [x] T021 [P] [US1] `format_ocr_result()` に CODE 分岐を追加: ` ```\n{text}\n``` ` in `src/layout_ocr_utils.py`
+- [x] T022 [P] [US1] `select_ocr_engine()` に CODE 分岐を追加: → "yomitoku" in `src/layout_ocr_utils.py`
+- [x] T023 [US1] `paragraphs_to_layout()` に `cv_img` パラメータ追加 + 灰色判定呼び出し + アスペクト比フィルタ in `src/layout/detector.py`
+- [x] T024 [US1] `detect_layout_yomitoku()` で `cv_img` を `paragraphs_to_layout()` に渡す in `src/layout/detector.py`
+- [x] T025 [US1] `src/layout/__init__.py` に `code_detector` を export 追加
+- [x] T026 `make test` で PASS を確認 (GREEN)
 
 ### Verification
 
-- [ ] T027 `make test` で全テスト通過（リグレッションなし）を確認
-- [ ] T028 `make lint` で lint エラーなしを確認
-- [ ] T029 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph2-output.md`
+- [x] T027 `make test` で全テスト通過（リグレッションなし）を確認
+- [x] T028 `make lint` で lint エラーなしを確認
+- [x] T029 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph2-output.md`
 
 **Checkpoint**: 灰色背景の TEXT リージョンが CODE に再分類され、コードフェンスで出力される。白背景や帯状ヘッダーは誤判定しない。
 

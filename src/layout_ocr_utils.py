@@ -159,6 +159,8 @@ def format_ocr_result(region_type: str, text: str) -> str:
     """
     if region_type == "TITLE":
         return f"## {text}"
+    elif region_type == "CODE":
+        return f"```\n{text}\n```"
     elif region_type == "CAPTION":
         return f"*{text}*"
     elif region_type == "FOOTNOTE":
@@ -183,5 +185,7 @@ def select_ocr_engine(region_type: str) -> str:
     """
     if region_type in ("FIGURE", "ABANDON"):
         return "skip"
+    elif region_type == "CODE":
+        return "yomitoku"
     else:
         return "yomitoku"
