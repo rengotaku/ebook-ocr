@@ -160,6 +160,9 @@ EXTENDED_KEYWORDS: list[str] = [
 # Code symbols used for symbol ratio calculation
 _CODE_SYMBOLS: frozenset[str] = frozenset("{}();=<>[]!&|+-*/%#@^~\\")
 
+# OCR misread patterns: single characters commonly misread (e.g., '3' for '}')
+_OCR_MISREADS: frozenset[str] = frozenset({"3"})
+
 
 def calc_symbol_ratio(text: str) -> float:
     """Calculate the ratio of code symbols in text.
@@ -267,8 +270,6 @@ def is_code_fragment(text: str | None) -> bool:
     if len(stripped) >= 20:
         return False
 
-    # OCR misread patterns: '3' is commonly misread as '}'
-    _OCR_MISREADS: frozenset[str] = frozenset({"3"})
     if stripped in _OCR_MISREADS:
         return True
 

@@ -219,20 +219,20 @@
 
 ### Input
 
-- [ ] T087 セットアップ分析を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
-- [ ] T088 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph5-output.md`
+- [x] T087 セットアップ分析を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
+- [x] T088 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph5-output.md`
 
 ### Implementation
 
-- [ ] T089 [P] `src/layout/code_detector.py` のファイルサイズ確認（800行以下）、必要に応じて分割
-- [ ] T090 [P] 不要な import やデッドコードを削除
-- [ ] T091 quickstart.md の手順に従い動作確認
+- [x] T089 [P] `src/layout/code_detector.py` のファイルサイズ確認（800行以下）、必要に応じて分割
+- [x] T090 [P] 不要な import やデッドコードを削除
+- [x] T091 quickstart.md の手順に従い動作確認
 
 ### Verification
 
-- [ ] T092 `make test` で全テスト通過を確認
-- [ ] T093 `make lint` で lint エラーなしを確認
-- [ ] T094 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph6-output.md`
+- [x] T092 `make test` で全テスト通過を確認
+- [x] T093 `make lint` で lint エラーなしを確認
+- [x] T094 フェーズ出力を生成: `specs/021-code-block-gray-detection/tasks/ph6-output.md`
 
 ---
 

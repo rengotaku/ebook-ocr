@@ -34,7 +34,7 @@ make test
 make detect-layout HASHDIR=output/<hash>
 
 # OCR 実行（CODE はコードフェンスで出力）
-make ocr HASHDIR=output/<hash>
+make run-ocr HASHDIR=output/<hash>
 
 # テスト
 make test           # 高速テスト

@@ -185,7 +185,4 @@ def select_ocr_engine(region_type: str) -> str:
     """
     if region_type in ("FIGURE", "ABANDON"):
         return "skip"
-    elif region_type == "CODE":
-        return "yomitoku"
-    else:
-        return "yomitoku"
+    return "yomitoku"
