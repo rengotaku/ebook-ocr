@@ -98,21 +98,21 @@
 
 ### Input
 
-- [ ] T030 セットアップ分析を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
-- [ ] T031 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph2-output.md`
+- [x] T030 セットアップ分析を読む: `specs/021-code-block-gray-detection/tasks/ph1-output.md`
+- [x] T031 前フェーズの出力を読む: `specs/021-code-block-gray-detection/tasks/ph2-output.md`
 
 ### Test Implementation (RED)
 
-- [ ] T032 [P] [US2] `calc_symbol_ratio()` テストを実装: コードテキスト→高比率、日本語テキスト→0.0 in `tests/test_code_detector.py`
-- [ ] T033 [P] [US2] `count_code_keywords()` テストを実装: "class Foo extends Bar"→>=2、"日本語テキスト"→0 in `tests/test_code_detector.py`
-- [ ] T034 [P] [US2] `detect_code_by_text()` の OR 条件テストを実装: 記号比率のみ True、キーワードのみ True、両方 False in `tests/test_code_detector.py`
-- [ ] T035 [P] [US2] FIGURE → CODE 再分類テストを実装: コードテキスト含む FIGURE が CODE に変換 in `tests/test_code_detector.py`
-- [ ] T036 [P] [US3] TEXT → CODE 再分類テストを実装: コードテキスト含む TEXT が CODE に変換 in `tests/test_code_detector.py`
-- [ ] T037 [P] [US3] TITLE スキップテストを実装: section_headings リージョンはテキスト分析をスキップ in `tests/test_code_detector.py`
-- [ ] T038 [P] [US2] 日本語本文 false positive なしテストを実装: 一般的な日本語テキストが TEXT のまま in `tests/test_code_detector.py`
-- [ ] T039 [P] [US2] 多言語キーワードテストを実装: Python(def/import), Go(func/package), Rust(fn/impl) のキーワード検出 in `tests/test_code_detector.py`
-- [ ] T040 `make test` で FAIL を確認 (RED)
-- [ ] T041 RED 出力を生成: `specs/021-code-block-gray-detection/red-tests/ph3-test.md`
+- [x] T032 [P] [US2] `calc_symbol_ratio()` テストを実装: コードテキスト→高比率、日本語テキスト→0.0 in `tests/test_code_detector.py`
+- [x] T033 [P] [US2] `count_code_keywords()` テストを実装: "class Foo extends Bar"→>=2、"日本語テキスト"→0 in `tests/test_code_detector.py`
+- [x] T034 [P] [US2] `detect_code_by_text()` の OR 条件テストを実装: 記号比率のみ True、キーワードのみ True、両方 False in `tests/test_code_detector.py`
+- [x] T035 [P] [US2] FIGURE → CODE 再分類テストを実装: コードテキスト含む FIGURE が CODE に変換 in `tests/test_code_detector.py`
+- [x] T036 [P] [US3] TEXT → CODE 再分類テストを実装: コードテキスト含む TEXT が CODE に変換 in `tests/test_code_detector.py`
+- [x] T037 [P] [US3] TITLE スキップテストを実装: section_headings リージョンはテキスト分析をスキップ in `tests/test_code_detector.py`
+- [x] T038 [P] [US2] 日本語本文 false positive なしテストを実装: 一般的な日本語テキストが TEXT のまま in `tests/test_code_detector.py`
+- [x] T039 [P] [US2] 多言語キーワードテストを実装: Python(def/import), Go(func/package), Rust(fn/impl) のキーワード検出 in `tests/test_code_detector.py`
+- [x] T040 `make test` で FAIL を確認 (RED)
+- [x] T041 RED 出力を生成: `specs/021-code-block-gray-detection/red-tests/ph3-test.md`
 
 ### Implementation (GREEN)
 

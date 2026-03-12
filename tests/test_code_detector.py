@@ -1,6 +1,7 @@
-"""Tests for src.layout.code_detector - gray background code block detection.
+"""Tests for src.layout.code_detector - code block detection.
 
 Phase 2 RED tests for US1 - Gray background code block auto-detection.
+Phase 3 RED tests for US2/US3 - Text analysis code detection.
 
 Detection Rules:
 | Condition | Result |
@@ -11,6 +12,11 @@ Detection Rules:
 | Aspect ratio > 8.0 (wide strip) | TEXT (unchanged, even if gray) |
 | cv_img=None (backward compat) | TEXT (unchanged) |
 | None image / invalid bbox | False (safe fallback) |
+| Symbol ratio > 0.08 (code text) | TEXT/FIGURE -> CODE |
+| Keyword count >= 2 (code keywords) | TEXT/FIGURE -> CODE |
+| OR condition: symbol OR keyword | Either triggers CODE |
+| TITLE (section_headings) | Skip text analysis |
+| Japanese text (no symbols/keywords) | TEXT (unchanged) |
 """
 
 from __future__ import annotations
@@ -537,3 +543,681 @@ class TestParagraphsToLayoutBackwardCompat:
         regions = result["regions"]
         assert len(regions) == 1
         assert regions[0]["type"] == "TEXT"
+
+
+# ============================================================
+# Phase 3: US2 + US3 - Text analysis code detection
+# ============================================================
+
+
+def make_figure_mock(
+    box: list[int],
+    paragraphs: list | None = None,
+) -> MagicMock:
+    """Create a mock yomitoku figure object with paragraphs.
+
+    Args:
+        box: [x1, y1, x2, y2] bounding box
+        paragraphs: List of mock paragraph objects within the figure
+    """
+    f = MagicMock()
+    f.box = box
+    if paragraphs is not None:
+        f.paragraphs = paragraphs
+    else:
+        # No paragraphs attribute by default
+        del f.paragraphs
+    return f
+
+
+# ============================================================
+# T032: calc_symbol_ratio() tests
+# ============================================================
+
+
+class TestCalcSymbolRatio:
+    """calc_symbol_ratio() should compute the ratio of code symbols in text."""
+
+    def test_code_text_high_ratio(self) -> None:
+        """Code text like 'class Foo { }' should return a high symbol ratio."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("class Foo { }")
+
+        assert result > 0.08, f"Code text should have symbol ratio > 0.08, got {result}"
+
+    def test_curly_braces_and_semicolons(self) -> None:
+        """Text with many symbols: 'if (x > 0) { return x; }' should have high ratio."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("if (x > 0) { return x; }")
+
+        assert result > 0.08, f"Symbol-heavy code should have ratio > 0.08, got {result}"
+
+    def test_japanese_text_zero_ratio(self) -> None:
+        """Japanese text should have zero or near-zero symbol ratio."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("今日は良い天気です。明日も晴れるでしょう。")
+
+        assert result == 0.0, f"Japanese text should have 0.0 symbol ratio, got {result}"
+
+    def test_empty_string_returns_zero(self) -> None:
+        """Empty string should return 0.0."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("")
+
+        assert result == 0.0, "Empty string should return 0.0"
+
+    def test_only_symbols(self) -> None:
+        """Text of only symbols should return a high ratio (close to 1.0)."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("{}();=<>[]")
+
+        assert result > 0.5, f"All-symbol text should have very high ratio, got {result}"
+
+    def test_mixed_code_and_text(self) -> None:
+        """Mixed code: 'public void main(String[] args) {' should have moderate ratio."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("public void main(String[] args) {")
+
+        assert result > 0.0, f"Mixed code should have positive ratio, got {result}"
+
+    def test_returns_float(self) -> None:
+        """Return type should be float."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("hello world")
+
+        assert isinstance(result, float), f"Expected float, got {type(result)}"
+
+    def test_special_chars_unicode(self) -> None:
+        """Unicode and emoji text without code symbols should return 0.0."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("Hello World")
+
+        assert result == 0.0, f"Plain text should have 0.0 ratio, got {result}"
+
+    def test_hash_and_at_symbols(self) -> None:
+        """Text with # and @ symbols (used in code) should count."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("#include <stdio.h>")
+
+        assert result > 0.0, f"Text with # and < > should have positive ratio, got {result}"
+
+
+# ============================================================
+# T033: count_code_keywords() tests
+# ============================================================
+
+
+class TestCountCodeKeywords:
+    """count_code_keywords() should count programming keyword occurrences."""
+
+    def test_class_extends_detected(self) -> None:
+        """'class Foo extends Bar' should detect >= 2 keywords (class, extends)."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("class Foo extends Bar")
+
+        assert result >= 2, f"'class Foo extends Bar' should have >= 2 keywords, got {result}"
+
+    def test_japanese_text_zero_keywords(self) -> None:
+        """Japanese text should have 0 keywords."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("日本語テキストです")
+
+        assert result == 0, f"Japanese text should have 0 keywords, got {result}"
+
+    def test_python_keywords(self) -> None:
+        """Python keywords: def, import should be detected."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("def hello():\n    import os")
+
+        assert result >= 2, f"Python code should have >= 2 keywords (def, import), got {result}"
+
+    def test_go_keywords(self) -> None:
+        """Go keywords: func, package should be detected."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("package main\nfunc main() {}")
+
+        assert result >= 2, f"Go code should have >= 2 keywords (func, package), got {result}"
+
+    def test_rust_keywords(self) -> None:
+        """Rust keywords: fn, impl should be detected."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("impl MyStruct {\n    fn new() -> Self {}")
+
+        assert result >= 2, f"Rust code should have >= 2 keywords (fn, impl), got {result}"
+
+    def test_sql_case_insensitive(self) -> None:
+        """SQL keywords should be case insensitive: SELECT, WHERE."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("SELECT * FROM users WHERE id = 1")
+
+        assert result >= 2, f"SQL should have >= 2 keywords (SELECT, WHERE), got {result}"
+
+    def test_empty_string_returns_zero(self) -> None:
+        """Empty string should return 0."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("")
+
+        assert result == 0, "Empty string should return 0 keywords"
+
+    def test_returns_int(self) -> None:
+        """Return type should be int."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("some text")
+
+        assert isinstance(result, int), f"Expected int, got {type(result)}"
+
+    def test_javascript_keywords(self) -> None:
+        """JavaScript keywords: const, function, => should be detected."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("const handler = function(event) { return event; }")
+
+        assert result >= 2, f"JS code should have >= 2 keywords, got {result}"
+
+    def test_shell_keywords(self) -> None:
+        """Shell keywords: #!/bin/, echo should be detected."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("#!/bin/bash\necho 'hello'")
+
+        assert result >= 2, f"Shell code should have >= 2 keywords, got {result}"
+
+    def test_cpp_keywords(self) -> None:
+        """C/C++ keywords: #include, std:: should be detected."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords('#include <iostream>\nstd::cout << "hello";')
+
+        assert result >= 2, f"C++ code should have >= 2 keywords, got {result}"
+
+
+# ============================================================
+# T034: detect_code_by_text() OR condition tests
+# ============================================================
+
+
+class TestDetectCodeByTextOrCondition:
+    """detect_code_by_text() uses OR condition: symbol ratio OR keyword count."""
+
+    def test_symbol_ratio_only_returns_true(self) -> None:
+        """High symbol ratio alone (no keywords) should return True."""
+        from src.layout.code_detector import detect_code_by_text
+
+        # Lots of symbols but no language keywords
+        result = detect_code_by_text("{{{{}}}}()()()()")
+
+        assert result is True, "High symbol ratio alone should trigger CODE"
+
+    def test_keyword_only_returns_true(self) -> None:
+        """Enough keywords alone (low symbol ratio) should return True."""
+        from src.layout.code_detector import detect_code_by_text
+
+        # Keywords but few code symbols
+        result = detect_code_by_text("class Foo extends Bar implements Baz")
+
+        assert result is True, "Keyword count alone should trigger CODE"
+
+    def test_both_false_returns_false(self) -> None:
+        """Neither symbol ratio nor keywords met should return False."""
+        from src.layout.code_detector import detect_code_by_text
+
+        result = detect_code_by_text("今日は良い天気です")
+
+        assert result is False, "Neither condition met should return False"
+
+    def test_both_true_returns_true(self) -> None:
+        """Both conditions met should return True."""
+        from src.layout.code_detector import detect_code_by_text
+
+        result = detect_code_by_text("public class Foo { private int bar; }")
+
+        assert result is True, "Both conditions met should return True"
+
+    def test_returns_bool(self) -> None:
+        """Return type should be bool."""
+        from src.layout.code_detector import detect_code_by_text
+
+        result = detect_code_by_text("some text")
+
+        assert isinstance(result, bool), f"Expected bool, got {type(result)}"
+
+    def test_empty_string_returns_false(self) -> None:
+        """Empty string should return False."""
+        from src.layout.code_detector import detect_code_by_text
+
+        result = detect_code_by_text("")
+
+        assert result is False, "Empty string should return False"
+
+    def test_custom_thresholds(self) -> None:
+        """Custom thresholds should be respected."""
+        from src.layout.code_detector import detect_code_by_text
+
+        # Very high thresholds - should return False for normal code
+        result = detect_code_by_text(
+            "class Foo { }",
+            sym_threshold=0.9,
+            kw_threshold=10,
+        )
+
+        assert result is False, "Very high thresholds should make normal code return False"
+
+    def test_none_input_returns_false(self) -> None:
+        """None input should return False without error."""
+        from src.layout.code_detector import detect_code_by_text
+
+        # None should be handled gracefully
+        result = detect_code_by_text(None)
+
+        assert result is False, "None input should return False"
+
+
+# ============================================================
+# T035: FIGURE -> CODE reclassification test
+# ============================================================
+
+
+class TestFigureToCodeReclassification:
+    """FIGURE with code-like paragraph text should be reclassified to CODE."""
+
+    def test_figure_with_code_paragraphs_becomes_code(self) -> None:
+        """FIGURE containing code text in paragraphs should become CODE."""
+        from src.layout.detector import paragraphs_to_layout
+
+        # Create a figure with code-like paragraphs
+        code_paragraph = make_paragraph_mock(
+            box=[20, 20, 180, 80],
+            role="plain text",
+            contents="public class Foo { private int bar; }",
+        )
+        figure = make_figure_mock(
+            box=[10, 10, 190, 90],
+            paragraphs=[code_paragraph],
+        )
+
+        result = paragraphs_to_layout(
+            [],
+            [figure],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "CODE", (
+            "FIGURE with code-like paragraphs should be reclassified to CODE"
+        )
+
+    def test_figure_without_code_stays_figure(self) -> None:
+        """FIGURE without code text should remain FIGURE."""
+        from src.layout.detector import paragraphs_to_layout
+
+        # Non-code paragraph in figure
+        text_paragraph = make_paragraph_mock(
+            box=[20, 20, 180, 80],
+            role="plain text",
+            contents="これはフローチャートの説明です",
+        )
+        figure = make_figure_mock(
+            box=[10, 10, 190, 90],
+            paragraphs=[text_paragraph],
+        )
+
+        result = paragraphs_to_layout(
+            [],
+            [figure],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "FIGURE", (
+            "FIGURE without code text should remain FIGURE"
+        )
+
+    def test_figure_without_paragraphs_stays_figure(self) -> None:
+        """FIGURE with no paragraphs attribute should remain FIGURE."""
+        from src.layout.detector import paragraphs_to_layout
+
+        figure = make_figure_mock(box=[10, 10, 190, 90])
+
+        result = paragraphs_to_layout(
+            [],
+            [figure],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "FIGURE", (
+            "FIGURE without paragraphs attribute should remain FIGURE"
+        )
+
+    def test_figure_code_region_has_code_label(self) -> None:
+        """Reclassified FIGURE->CODE should have label='code'."""
+        from src.layout.detector import paragraphs_to_layout
+
+        code_paragraph = make_paragraph_mock(
+            box=[20, 20, 180, 80],
+            role="plain text",
+            contents="import java.util.List;\nclass Foo extends Bar {",
+        )
+        figure = make_figure_mock(
+            box=[10, 10, 190, 90],
+            paragraphs=[code_paragraph],
+        )
+
+        result = paragraphs_to_layout(
+            [],
+            [figure],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert regions[0]["label"] == "code", (
+            "Reclassified FIGURE->CODE should have label='code'"
+        )
+
+
+# ============================================================
+# T036: TEXT -> CODE reclassification test
+# ============================================================
+
+
+class TestTextToCodeReclassification:
+    """TEXT with code-like contents should be reclassified to CODE via text analysis."""
+
+    def test_text_with_code_contents_becomes_code(self) -> None:
+        """TEXT paragraph with code contents should become CODE."""
+        from src.layout.detector import paragraphs_to_layout
+
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 190, 90],
+            role="plain text",
+            contents="public static void main(String[] args) {",
+        )
+
+        # No cv_img: gray detection won't trigger, only text analysis
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "CODE", (
+            "TEXT with code contents should be reclassified to CODE via text analysis"
+        )
+
+    def test_text_with_normal_japanese_stays_text(self) -> None:
+        """Normal Japanese text should remain TEXT."""
+        from src.layout.detector import paragraphs_to_layout
+
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 190, 90],
+            role="plain text",
+            contents="プログラミングの基礎を学ぶことは重要です。",
+        )
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "TEXT", "Normal Japanese text should remain TEXT"
+
+    def test_text_code_region_has_code_label(self) -> None:
+        """Reclassified TEXT->CODE should have label='code'."""
+        from src.layout.detector import paragraphs_to_layout
+
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 190, 90],
+            role="plain text",
+            contents="def calculate(x, y):\n    return x + y",
+        )
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert regions[0]["label"] == "code", (
+            "Reclassified TEXT->CODE should have label='code'"
+        )
+
+
+# ============================================================
+# T037: TITLE skip test (section_headings skip text analysis)
+# ============================================================
+
+
+class TestTitleSkipsTextAnalysis:
+    """TITLE (section_headings) should skip text analysis and stay TITLE."""
+
+    def test_title_with_code_like_text_stays_title(self) -> None:
+        """TITLE with code-like text should NOT be reclassified to CODE."""
+        from src.layout.detector import paragraphs_to_layout
+
+        # Even if the heading text looks like code, TITLE should be skipped
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 190, 40],
+            role="section_headings",
+            contents="class MyClass implements Interface {",
+        )
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "TITLE", (
+            "TITLE should not be reclassified to CODE even with code-like text"
+        )
+
+    def test_title_label_preserved(self) -> None:
+        """TITLE should preserve its label as 'section_headings'."""
+        from src.layout.detector import paragraphs_to_layout
+
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 190, 40],
+            role="section_headings",
+            contents="def function_name():",
+        )
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert regions[0]["label"] == "section_headings", (
+            "TITLE label should remain 'section_headings'"
+        )
+
+
+# ============================================================
+# T038: Japanese false positive test
+# ============================================================
+
+
+class TestJapaneseFalsePositive:
+    """Normal Japanese text should NOT be reclassified to CODE."""
+
+    def test_general_japanese_prose_stays_text(self) -> None:
+        """General Japanese prose should remain TEXT."""
+        from src.layout.detector import paragraphs_to_layout
+
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 190, 90],
+            role="plain text",
+            contents="この章ではオブジェクト指向プログラミングの概念について説明します。"
+            "クラスとインスタンスの関係を理解することが重要です。",
+        )
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert regions[0]["type"] == "TEXT", (
+            "General Japanese prose should remain TEXT, not be reclassified to CODE"
+        )
+
+    def test_japanese_with_technical_terms_stays_text(self) -> None:
+        """Japanese text with technical terms (not code) should remain TEXT."""
+        from src.layout.detector import paragraphs_to_layout
+
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 190, 90],
+            role="plain text",
+            contents="変数の宣言とメソッドの定義について学びます。"
+            "インターフェースの実装方法も解説します。",
+        )
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert regions[0]["type"] == "TEXT", (
+            "Japanese text with technical terms should remain TEXT"
+        )
+
+    def test_japanese_punctuation_not_counted_as_symbols(self) -> None:
+        """Japanese punctuation (。、「」) should not trigger symbol detection."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        result = calc_symbol_ratio("「こんにちは」と言いました。「ありがとう」と答えました。")
+
+        assert result == 0.0, (
+            f"Japanese punctuation should not count as code symbols, got {result}"
+        )
+
+    def test_figure_with_japanese_caption_stays_figure(self) -> None:
+        """FIGURE with Japanese caption (not code) should remain FIGURE."""
+        from src.layout.detector import paragraphs_to_layout
+
+        caption_paragraph = make_paragraph_mock(
+            box=[20, 20, 180, 80],
+            role="plain text",
+            contents="図2.5 システム構成の概要図",
+        )
+        figure = make_figure_mock(
+            box=[10, 10, 190, 90],
+            paragraphs=[caption_paragraph],
+        )
+
+        result = paragraphs_to_layout(
+            [],
+            [figure],
+            (200, 100),
+        )
+
+        regions = result["regions"]
+        assert regions[0]["type"] == "FIGURE", (
+            "FIGURE with Japanese caption should remain FIGURE"
+        )
+
+
+# ============================================================
+# T039: Multi-language keyword test
+# ============================================================
+
+
+class TestMultiLanguageKeywords:
+    """Keywords from multiple programming languages should be detected."""
+
+    def test_python_def_import(self) -> None:
+        """Python keywords: def, import should be counted."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("def process(data):\n    import json")
+
+        assert result >= 2, f"Python def/import should count >= 2, got {result}"
+
+    def test_go_func_package(self) -> None:
+        """Go keywords: func, package should be counted."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("package main\n\nfunc Hello() string {")
+
+        assert result >= 2, f"Go func/package should count >= 2, got {result}"
+
+    def test_rust_fn_impl(self) -> None:
+        """Rust keywords: fn, impl should be counted."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("impl Display for Point {\n    fn fmt(&self)")
+
+        assert result >= 2, f"Rust fn/impl should count >= 2, got {result}"
+
+    def test_java_class_public_void(self) -> None:
+        """Java keywords: class, public, void should be counted."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("public class Main {\n    public void run() {")
+
+        assert result >= 2, f"Java class/public/void should count >= 2, got {result}"
+
+    def test_ruby_require_module(self) -> None:
+        """Ruby keywords: require, module should be counted."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("require 'json'\nmodule MyApp")
+
+        assert result >= 2, f"Ruby require/module should count >= 2, got {result}"
+
+    def test_iac_dockerfile_keywords(self) -> None:
+        """IaC/Docker keywords: FROM, WORKDIR, RUN should be counted."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("FROM ubuntu:22.04\nWORKDIR /app\nRUN apt-get update")
+
+        assert result >= 2, f"Dockerfile FROM/WORKDIR/RUN should count >= 2, got {result}"
+
+    def test_sql_select_where_case_insensitive(self) -> None:
+        """SQL keywords should work case-insensitively."""
+        from src.layout.code_detector import count_code_keywords
+
+        result = count_code_keywords("select * from users where active = true")
+
+        assert result >= 2, f"SQL select/where (lowercase) should count >= 2, got {result}"
+
+    def test_mixed_language_keywords(self) -> None:
+        """Mixed language keywords in one text should all be counted."""
+        from src.layout.code_detector import count_code_keywords
+
+        # Mix of Python, Java, generic keywords
+        result = count_code_keywords("import sys\npublic class Main {\n    return 0;\n}")
+
+        assert result >= 3, f"Mixed language code should have >= 3 keywords, got {result}"
