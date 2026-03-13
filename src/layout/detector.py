@@ -378,14 +378,18 @@ def detect_layout_yomitoku(
         )
         layout_data[page_name] = page_layout
 
-        print(
-            f"  → Found {len(page_layout['regions'])} regions "
-            f"({len(results.paragraphs)} paragraphs, {len(results.figures)} figures)"
-        )
+        summary = _format_region_summary(page_layout["regions"])
+        print(f"  → Found {summary} ({len(results.paragraphs)} paragraphs, {len(results.figures)} figures)")
 
-        # Visualize (box反映)
+        # Visualize (box反映 + CODE黄色描画)
         vis_path = lay_dir / page_name
-        visualize_layout(str(page_path), results.paragraphs, results.figures, str(vis_path))
+        visualize_layout(
+            str(page_path),
+            results.paragraphs,
+            results.figures,
+            str(vis_path),
+            layout_regions=page_layout["regions"],
+        )
 
     # Save layout.json
     layout_file = out_path / "layout.json"
