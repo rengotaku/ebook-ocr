@@ -39,17 +39,30 @@ def get_analyzer(device: str = "cpu") -> "DocumentAnalyzer":
     return _yomitoku_analyzer
 
 
-def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, int]) -> dict:
+def paragraphs_to_layout(
+    paragraphs: list,
+    figures: list,
+    page_size: tuple[int, int],
+    cv_img=None,
+) -> dict:
     """Convert yomitoku paragraphs and figures to layout.json format.
 
     Args:
         paragraphs: List of yomitoku ParagraphSchema objects
         figures: List of yomitoku FigureSchema objects
         page_size: (width, height) of the page
+        cv_img: Optional BGR image (numpy array) for gray background detection.
+                If None, no gray detection is performed (backward compatible).
 
     Returns:
         Layout dict with regions list
     """
+    from src.layout.code_detector import (
+        detect_code_by_text,
+        detect_gray_background,
+        merge_code_fragments,
+    )
+
     regions = []
 
     # Process paragraphs
@@ -66,12 +79,37 @@ def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, 
         else:
             continue  # Skip paragraphs without box
 
+        # Gray background detection: only for TEXT regions when cv_img is provided
+        if cv_img is not None and region_type == "TEXT":
+            x1, y1, x2, y2 = bbox
+            width = x2 - x1
+            height = y2 - y1
+            # Skip aspect ratio filter: wide strips (width/height > 8.0) stay TEXT
+            if height > 0 and (width / height) <= 8.0:
+                if detect_gray_background(cv_img, bbox):
+                    region_type = "CODE"
+
+        # Text analysis: only for TEXT regions (not TITLE, not already CODE)
+        if region_type == "TEXT":
+            contents = getattr(p, "contents", None)
+            if detect_code_by_text(contents):
+                region_type = "CODE"
+
+        if region_type == "CODE":
+            label = "code"
+        elif region_type == "TITLE":
+            label = "section_headings"
+        else:
+            label = "plain text"
+
+        text = getattr(p, "contents", "") or ""
         regions.append(
             {
                 "type": region_type,
-                "label": "section_headings" if region_type == "TITLE" else "plain text",
+                "label": label,
                 "bbox": bbox,
                 "confidence": 1.0,  # yomitoku doesn't provide confidence per paragraph
+                "text": text,
             }
         )
 
@@ -79,19 +117,49 @@ def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, 
     for f in figures:
         if hasattr(f, "box") and f.box:
             bbox = [int(f.box[0]), int(f.box[1]), int(f.box[2]), int(f.box[3])]
+            figure_type = "FIGURE"
+            figure_label = "figure"
+
+            # Text analysis for FIGURE: check paragraphs within the figure
+            if hasattr(f, "paragraphs") and f.paragraphs:
+                for fp in f.paragraphs:
+                    fp_contents = getattr(fp, "contents", None)
+                    if detect_code_by_text(fp_contents):
+                        figure_type = "CODE"
+                        figure_label = "code"
+                        break
+
             regions.append(
                 {
-                    "type": "FIGURE",
-                    "label": "figure",
+                    "type": figure_type,
+                    "label": figure_label,
                     "bbox": bbox,
                     "confidence": 1.0,
+                    "text": "",
                 }
             )
 
+    # Merge adjacent CODE and code-fragment regions
+    merged_regions = merge_code_fragments(regions)
+
     return {
-        "regions": regions,
+        "regions": merged_regions,
         "page_size": list(page_size),
     }
+
+
+def _format_region_summary(regions: list) -> str:
+    """Format a summary string for layout regions including CODE count.
+
+    Args:
+        regions: List of region dicts with at least a 'type' key
+
+    Returns:
+        Summary string containing total region count and [CODE: N] annotation
+    """
+    total = len(regions)
+    code_count = sum(1 for r in regions if r.get("type") == "CODE")
+    return f"{total} regions [CODE: {code_count}]"
 
 
 def visualize_layout(
@@ -99,6 +167,7 @@ def visualize_layout(
     paragraphs: list,
     figures: list,
     output_path: str,
+    layout_regions: list | None = None,
 ) -> None:
     """Draw bounding boxes on image and save to output_path.
 
@@ -107,12 +176,52 @@ def visualize_layout(
         paragraphs: List of yomitoku ParagraphSchema objects
         figures: List of yomitoku FigureSchema objects
         output_path: Path to save visualized image
+        layout_regions: Optional list of region dicts (from paragraphs_to_layout).
+                        If provided, CODE regions are drawn in yellow (0,255,255) BGR.
+                        Other region types use their default colors.
     """
     import cv2
 
     img = cv2.imread(img_path)
     if img is None:
         return
+
+    # Draw layout_regions if provided (CODE regions in yellow, others in default colors)
+    if layout_regions is not None:
+        for region in layout_regions:
+            region_type = region.get("type", "")
+            bbox = region.get("bbox")
+            if not bbox or len(bbox) < 4:
+                continue
+            x1, y1, x2, y2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+
+            if region_type == "CODE":
+                color = (0, 255, 255)  # Yellow (BGR) for CODE regions
+                thickness = 2
+                label = "code"
+            elif region_type == "TITLE":
+                color = (0, 0, 255)  # Red for titles
+                thickness = 3
+                label = "title"
+            elif region_type == "FIGURE":
+                color = (255, 0, 0)  # Blue for figures
+                thickness = 3
+                label = "figure"
+            else:
+                color = (0, 255, 0)  # Green for text
+                thickness = 2
+                label = "text"
+
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
+            cv2.putText(
+                img,
+                label,
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                color,
+                2,
+            )
 
     # Draw paragraphs
     for p in paragraphs:
@@ -264,17 +373,23 @@ def detect_layout_yomitoku(
         save_yomitoku_results(output_dir, page_path.stem, results)
 
         # Convert to layout format
-        page_layout = paragraphs_to_layout(results.paragraphs, results.figures, (page_width, page_height))
+        page_layout = paragraphs_to_layout(
+            results.paragraphs, results.figures, (page_width, page_height), cv_img=cv_img
+        )
         layout_data[page_name] = page_layout
 
-        print(
-            f"  → Found {len(page_layout['regions'])} regions "
-            f"({len(results.paragraphs)} paragraphs, {len(results.figures)} figures)"
-        )
+        summary = _format_region_summary(page_layout["regions"])
+        print(f"  → Found {summary} ({len(results.paragraphs)} paragraphs, {len(results.figures)} figures)")
 
-        # Visualize (box反映)
+        # Visualize (box反映 + CODE黄色描画)
         vis_path = lay_dir / page_name
-        visualize_layout(str(page_path), results.paragraphs, results.figures, str(vis_path))
+        visualize_layout(
+            str(page_path),
+            results.paragraphs,
+            results.figures,
+            str(vis_path),
+            layout_regions=page_layout["regions"],
+        )
 
     # Save layout.json
     layout_file = out_path / "layout.json"

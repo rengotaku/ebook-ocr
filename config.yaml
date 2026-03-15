@@ -54,3 +54,14 @@ global_trim_top: 0.0       # 上端トリム率（0.0-0.5）
 global_trim_bottom: 0.0    # 下端トリム率（0.0-0.5）
 global_trim_left: 0.0      # 左端トリム率（0.0-0.5）
 global_trim_right: 0.0     # 右端トリム率（0.0-0.5）
+
+# Code block detection (021-code-block-gray-detection)
+code_detection:
+  gray_background_threshold: 0.7   # 灰色背景と判定するピクセル比率しきい値
+  gray_saturation_max: 30          # 灰色判定の最大彩度（HSV S値）
+  gray_value_min: 50               # 灰色判定の最小明度（HSV V値）
+  gray_value_max: 200              # 灰色判定の最大明度（HSV V値）
+  aspect_ratio_max: 8.0            # コードブロック判定から除外する横長比率
+  symbol_ratio_threshold: 0.08     # コード記号比率のしきい値
+  keyword_threshold: 2             # コードキーワード検出数のしきい値
+  fragment_gap_threshold: 80       # 断片化コードブロック結合の縦方向ギャップしきい値（px）
