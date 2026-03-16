@@ -1,6 +1,6 @@
 """Video-separater main package."""
 
 # New package structure (Phase 4)
-from src import layout, preprocessing, rover
+from src import layout, preprocessing
 
-__all__ = ["rover", "preprocessing", "layout"]
+__all__ = ["preprocessing", "layout"]

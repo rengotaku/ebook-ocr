@@ -1,20 +1,18 @@
-"""Consolidate ROVER outputs into book.txt and book.md.
+"""Consolidate OCR outputs into book.txt and book.md.
 
-This script combines individual page OCR results from ROVER into:
+This script combines individual page OCR results from layout-aware OCR into:
 - book.txt: Plain text with page markers
-- book.md: Markdown with heading formatting (## prefix)
+- book.md: Markdown (OCR output already contains Markdown formatting)
 """
 
 from __future__ import annotations
 
-import argparse
+import sys
 from pathlib import Path
 
-from src.rover.output import ROVEROutput
 
-
-def consolidate_rover_output(hashdir: str, *, limit: int | None = None) -> tuple[str, str]:
-    """Consolidate ROVER outputs into book.txt and book.md.
+def consolidate_ocr_output(hashdir: str, *, limit: int | None = None) -> tuple[str, str]:
+    """Consolidate OCR outputs into book.txt and book.md.
 
     Args:
         hashdir: Output directory (e.g., output/a3f8c2d1e5b7f9c0).
@@ -23,8 +21,6 @@ def consolidate_rover_output(hashdir: str, *, limit: int | None = None) -> tuple
     Returns:
         Tuple of (book_txt_path, book_md_path).
     """
-    import sys
-
     base_dir = Path(hashdir)
     ocr_output_dir = base_dir / "ocr_output"
     text_file = base_dir / "book.txt"
@@ -33,50 +29,37 @@ def consolidate_rover_output(hashdir: str, *, limit: int | None = None) -> tuple
     if not ocr_output_dir.exists():
         raise FileNotFoundError(f"OCR output directory not found: {ocr_output_dir}")
 
-    # Load headings metadata
-    rover_output = ROVEROutput(str(ocr_output_dir))
-    all_headings = rover_output.get_all_headings()
+    # Read OCR text files from ocr_texts/ directory
+    ocr_texts_dir = ocr_output_dir / "ocr_texts"
+    if not ocr_texts_dir.exists():
+        raise FileNotFoundError(f"OCR texts directory not found: {ocr_texts_dir}")
 
-    # Consolidate ROVER results
-    rover_dir = ocr_output_dir / "rover"
-    rover_pages = sorted(rover_dir.glob("*.txt"))
+    pages = sorted(ocr_texts_dir.glob("*.txt"))
     if limit:
-        print(f"Processing first {limit} of {len(rover_pages)} files", file=sys.stderr)
-        rover_pages = rover_pages[:limit]
+        print(f"Processing first {limit} of {len(pages)} files", file=sys.stderr)
+        pages = pages[:limit]
 
-    if not rover_pages:
-        raise FileNotFoundError(f"No ROVER output files found in: {rover_dir}")
+    if not pages:
+        raise FileNotFoundError(f"No OCR output files found in: {ocr_texts_dir}")
 
-    print(f"Consolidating {len(rover_pages)} pages...")
-    print(f"  Headings: {len(all_headings)} pages with section headings")
+    print(f"Consolidating {len(pages)} pages...")
 
-    # Build book.txt (plain text, no heading markers)
+    # Build book.txt and book.md
+    # Layout-aware OCR already produces Markdown-formatted text
+    # (## headings, ``` code fences, etc.)
     txt_lines: list[str] = []
-    # Build book.md (with ## heading markers)
     md_lines: list[str] = []
 
-    for page_file in rover_pages:
+    for page_file in pages:
         page_name = page_file.stem
-        page_headings = set(all_headings.get(page_name, []))
-        page_text = page_file.read_text(encoding="utf-8")
+        page_text = page_file.read_text(encoding="utf-8").rstrip()
 
-        # book.txt: plain text
+        # book.txt: plain text with page markers
         txt_lines.append(f"\n--- {page_name} ---\n\n")
         txt_lines.append(page_text)
         txt_lines.append("\n\n")
 
-        # book.md: apply heading markers
-        if page_headings:
-            lines = page_text.split("\n")
-            new_lines = []
-            for line in lines:
-                stripped = line.strip()
-                if stripped in page_headings:
-                    new_lines.append(f"\n## {stripped}\n")
-                else:
-                    new_lines.append(line)
-            page_text = "\n".join(new_lines)
-
+        # book.md: same content (already Markdown-formatted by layout_ocr)
         md_lines.append(f"\n--- {page_name} ---\n\n")
         md_lines.append(page_text)
         md_lines.append("\n\n")
@@ -93,7 +76,9 @@ def consolidate_rover_output(hashdir: str, *, limit: int | None = None) -> tuple
 
 def main() -> None:
     """CLI entry point."""
-    parser = argparse.ArgumentParser(description="Consolidate ROVER outputs into book.txt and book.md")
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Consolidate OCR outputs into book.txt and book.md")
     parser.add_argument(
         "hashdir",
         help="Output directory (e.g., output/a3f8c2d1e5b7f9c0)",
@@ -102,9 +87,8 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        text_file, md_file = consolidate_rover_output(hashdir=args.hashdir)
-        print("\n✅ Consolidation complete")
-        print(f"  book.txt: {text_file}")
+        text_file, md_file = consolidate_ocr_output(hashdir=args.hashdir)
+        print(f"\n  book.txt: {text_file}")
         print(f"  book.md:  {md_file}")
     except FileNotFoundError as e:
         print(f"Error: {e}")
