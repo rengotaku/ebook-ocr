@@ -11,6 +11,7 @@ from src.book_converter.models import (
     Book,
     BookMetadata,
     Chapter,
+    CodeBlock,
     Content,
     Figure,
     Heading,
@@ -151,6 +152,9 @@ def transform_section(section: Section) -> Element:
         elif isinstance(child, Figure):
             child_elem = transform_figure(child)
             elem.append(child_elem)
+        elif isinstance(child, CodeBlock):
+            child_elem = transform_code_block(child)
+            elem.append(child_elem)
 
     return elem
 
@@ -244,6 +248,27 @@ def transform_figure(figure: Figure) -> Element:
     if figure.marker:
         elem.set("marker", figure.marker)
 
+    return elem
+
+
+def transform_code_block(code_block: CodeBlock) -> Element:
+    """Transform CodeBlock to XML element.
+
+    <code language="python" readAloud="false">print("hello")</code>
+
+    Args:
+        code_block: The CodeBlock object to transform.
+
+    Returns:
+        An XML Element representing the code block.
+    """
+    elem = Element("code")
+    elem.set("readAloud", "false")
+
+    if code_block.language:
+        elem.set("language", code_block.language)
+
+    elem.text = code_block.text
     return elem
 
 
@@ -366,6 +391,9 @@ def transform_content(content: Content) -> Element | None:
                 apply_emphasis(item, item_elem)
                 list_elem.append(item_elem)
             elem.append(list_elem)
+        elif isinstance(element, CodeBlock):
+            code_elem = transform_code_block(element)
+            elem.append(code_elem)
 
     return elem
 
@@ -441,6 +469,9 @@ def transform_structure_container(container: StructureContainer) -> Element:
                 apply_emphasis(item, item_elem)
                 list_elem.append(item_elem)
             elem.append(list_elem)
+        elif isinstance(child, CodeBlock):
+            code_elem = transform_code_block(child)
+            elem.append(code_elem)
 
     return elem
 
