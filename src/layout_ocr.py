@@ -185,6 +185,8 @@ def run_layout_ocr(
     output_file: str,
     device: str = "cpu",
     warmup: bool = True,
+    *,
+    limit: int | None = None,
 ) -> list[tuple[str, list[OCRResult]]]:
     """Run layout-aware OCR on all pages in a directory.
 
@@ -225,6 +227,8 @@ def run_layout_ocr(
     ocr_texts_dir.mkdir(parents=True, exist_ok=True)
 
     pages = sorted(pages_path.glob("*.png"))
+    if limit is not None:
+        pages = pages[:limit]
     all_results: list[tuple[str, list[OCRResult]]] = []
 
     for page_path in pages:

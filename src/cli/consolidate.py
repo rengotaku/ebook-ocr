@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.consolidate import consolidate_rover_output
+from src.consolidate import consolidate_ocr_output
 
 
 def main() -> int:
@@ -33,16 +33,14 @@ def main() -> int:
         return 1
 
     # Check if directory has OCR results
-    # input_path is already the ocr_output directory, so check for rover subdir directly
-    rover_dir = input_path / "rover"
-    if not rover_dir.exists() or not list(rover_dir.glob("*.txt")):
+    ocr_texts_dir = input_path / "ocr_texts"
+    if not ocr_texts_dir.exists() or not list(ocr_texts_dir.glob("*.txt")):
         print(f"Error: No OCR results found in: {args.ocr_dir}", file=sys.stderr)
         return 1
 
-    # Call existing function
-    # The function expects hashdir (parent directory), which is args.output
+    # Call consolidation function
     try:
-        consolidate_rover_output(args.output, limit=args.limit)
+        consolidate_ocr_output(args.output, limit=args.limit)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

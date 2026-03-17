@@ -1,86 +1,23 @@
-"""Tests for new package structure (Phase 4: フォルダ構造整理).
+"""Tests for package structure.
 
-このテストは新しいパッケージ構造が正しくインポート可能であることを検証する。
-Phase 4の実装が完了するまで、これらのテストはFAILする（RED状態）。
+パッケージ構造が正しくインポート可能であることを検証する。
 
-新パッケージ構造:
-- src/rover/: OCR統合（ocr_rover.py, ocr_engines.py, ocr_alignment.py, ocr_output.pyから移動）
-- src/preprocessing/: 前処理（extract_frames.py, deduplicate.py, split_spread.py, video_hash.pyから移動）
-- src/layout/: レイアウト解析（ocr_yomitoku.py, detect_figures.py, reading_order.pyから移動）
+パッケージ構造:
+- src/preprocessing/: 前処理（extract_frames.py, deduplicate.py, split_spread.py, video_hash.py）
+- src/layout/: レイアウト解析（detector.py, figures.py, reading_order.py）
 """
 
 import importlib
 
 
-class TestNewPackageStructure:
-    """新パッケージ構造がインポート可能であることを検証するテスト."""
-
-    def test_rover_package_exists(self):
-        """src.rover パッケージがインポート可能であることを検証."""
-        rover = importlib.import_module("src.rover")
-        assert rover is not None
-        assert hasattr(rover, "__name__")
-        assert rover.__name__ == "src.rover"
+class TestPreprocessingImports:
+    """preprocessing パッケージのエクスポートを検証するテスト."""
 
     def test_preprocessing_package_exists(self):
         """src.preprocessing パッケージがインポート可能であることを検証."""
         preprocessing = importlib.import_module("src.preprocessing")
         assert preprocessing is not None
-        assert hasattr(preprocessing, "__name__")
         assert preprocessing.__name__ == "src.preprocessing"
-
-    def test_layout_package_exists(self):
-        """src.layout パッケージがインポート可能であることを検証."""
-        layout = importlib.import_module("src.layout")
-        assert layout is not None
-        assert hasattr(layout, "__name__")
-        assert layout.__name__ == "src.layout"
-
-
-class TestRoverImports:
-    """rover パッケージのエクスポートを検証するテスト."""
-
-    def test_rover_ensemble_module_exists(self):
-        """src.rover.ensemble モジュールがインポート可能であることを検証."""
-        ensemble = importlib.import_module("src.rover.ensemble")
-        assert ensemble is not None
-
-    def test_rover_merge_importable(self):
-        """rover_merge 関数が rover.ensemble からインポート可能であることを検証."""
-        from src.rover.ensemble import rover_merge
-
-        assert callable(rover_merge)
-
-    def test_rover_engines_module_exists(self):
-        """src.rover.engines モジュールがインポート可能であることを検証."""
-        engines = importlib.import_module("src.rover.engines")
-        assert engines is not None
-
-    def test_run_all_engines_importable(self):
-        """run_all_engines 関数が rover.engines からインポート可能であることを検証."""
-        from src.rover.engines import run_all_engines
-
-        assert callable(run_all_engines)
-
-    def test_rover_alignment_module_exists(self):
-        """src.rover.alignment モジュールがインポート可能であることを検証."""
-        alignment = importlib.import_module("src.rover.alignment")
-        assert alignment is not None
-
-    def test_align_texts_importable(self):
-        """align_texts_character_level 関数が rover.alignment からインポート可能であることを検証."""
-        from src.rover.alignment import align_texts_character_level
-
-        assert callable(align_texts_character_level)
-
-    def test_rover_output_module_exists(self):
-        """src.rover.output モジュールがインポート可能であることを検証."""
-        output = importlib.import_module("src.rover.output")
-        assert output is not None
-
-
-class TestPreprocessingImports:
-    """preprocessing パッケージのエクスポートを検証するテスト."""
 
     def test_preprocessing_frames_module_exists(self):
         """src.preprocessing.frames モジュールがインポート可能であることを検証."""
@@ -124,6 +61,12 @@ class TestPreprocessingImports:
 class TestLayoutImports:
     """layout パッケージのエクスポートを検証するテスト."""
 
+    def test_layout_package_exists(self):
+        """src.layout パッケージがインポート可能であることを検証."""
+        layout = importlib.import_module("src.layout")
+        assert layout is not None
+        assert layout.__name__ == "src.layout"
+
     def test_layout_detector_module_exists(self):
         """src.layout.detector モジュールがインポート可能であることを検証."""
         detector = importlib.import_module("src.layout.detector")
@@ -161,23 +104,14 @@ class TestLayoutImports:
 class TestPackageInit:
     """各パッケージの__init__.pyが適切にモジュールをエクスポートしていることを検証."""
 
-    def test_rover_package_has_main_exports(self):
-        """rover パッケージが主要な関数をエクスポートしていることを検証."""
-        from src import rover
-
-        # 主要関数がパッケージレベルでアクセス可能
-        assert hasattr(rover, "rover_merge") or hasattr(rover, "ensemble")
-
     def test_preprocessing_package_has_main_exports(self):
         """preprocessing パッケージが主要な関数をエクスポートしていることを検証."""
         from src import preprocessing
 
-        # 主要関数がパッケージレベルでアクセス可能
         assert hasattr(preprocessing, "extract_frames") or hasattr(preprocessing, "frames")
 
     def test_layout_package_has_main_exports(self):
         """layout パッケージが主要な関数をエクスポートしていることを検証."""
         from src import layout
 
-        # 主要関数がパッケージレベルでアクセス可能
         assert hasattr(layout, "detect_layout") or hasattr(layout, "detector")

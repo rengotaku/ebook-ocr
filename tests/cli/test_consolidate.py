@@ -74,6 +74,32 @@ class TestConsolidateCLI:
         assert result.returncode == 1
         assert "error" in result.stderr.lower()
 
+    def test_valid_input_succeeds(self, tmp_path: Path):
+        """Verify consolidation succeeds with valid ocr_texts directory."""
+        hashdir = tmp_path / "project"
+        ocr_output_dir = hashdir / "ocr_output"
+        ocr_texts_dir = ocr_output_dir / "ocr_texts"
+        ocr_texts_dir.mkdir(parents=True)
+
+        # Create dummy OCR result files
+        for i in range(3):
+            txt_file = ocr_texts_dir / f"page_{i:04d}.txt"
+            txt_file.write_text(f"OCR result for page {i}")
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.cli.consolidate",
+                str(ocr_output_dir),
+                "-o",
+                str(hashdir),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+
     def test_requires_output_arg(self):
         """Verify -o/--output is required."""
         result = subprocess.run(

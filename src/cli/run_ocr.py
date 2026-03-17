@@ -1,12 +1,13 @@
-"""CLI wrapper for run_ocr."""
+"""CLI wrapper for run_ocr (layout-aware single-engine OCR)."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
-from src.rover.ensemble import run_rover_batch
+from src.layout_ocr import run_layout_ocr
 
 
 def main() -> int:
@@ -16,7 +17,7 @@ def main() -> int:
     parser.add_argument("-o", "--output", required=True, help="Output directory")
     parser.add_argument(
         "--layout-dir",
-        help="Layout directory (optional)",
+        help="Layout directory containing layout.json",
     )
     parser.add_argument(
         "--device",
@@ -37,15 +38,41 @@ def main() -> int:
         return 1
 
     # Validate input
-    if not Path(args.pages_dir).exists():
+    pages_path = Path(args.pages_dir)
+    if not pages_path.exists():
         print(f"Error: Input not found: {args.pages_dir}", file=sys.stderr)
         return 1
 
-    # Call existing function
+    # Load layout.json
+    layout_data: dict = {}
+    if args.layout_dir:
+        layout_file = Path(args.layout_dir) / "layout.json"
+        if layout_file.exists():
+            with open(layout_file, encoding="utf-8") as f:
+                layout_data = json.load(f)
+
+    # Apply --limit: filter pages before passing to run_layout_ocr
+    if args.limit is not None:
+        all_pages = sorted(pages_path.glob("*.png"))
+        if args.limit < len(all_pages):
+            print(
+                f"Limiting to first {args.limit} of {len(all_pages)} files",
+                file=sys.stderr,
+            )
+            # Filter layout_data to only include limited pages
+            limited_pages = {p.name for p in all_pages[: args.limit]}
+            layout_data = {k: v for k, v in layout_data.items() if k in limited_pages}
+
+    # Call layout-aware OCR
+    output_dir = Path(args.output)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / "ocr_combined.txt"
+
     try:
-        run_rover_batch(
-            args.pages_dir,
-            args.output,
+        run_layout_ocr(
+            pages_dir=args.pages_dir,
+            layout_data=layout_data,
+            output_file=str(output_file),
             device=args.device,
             limit=args.limit,
         )
