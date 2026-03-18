@@ -22,8 +22,6 @@ LIMIT ?=
 LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),)
 
 # Book converter variables
-INPUT_MD ?=
-OUTPUT_XML ?=
 
 .PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample heading-report normalize-toc normalize-headings ruff pylint lint clean clean-all
 
@@ -149,15 +147,14 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT option
 	@echo "=== Step 5: Consolidate ==="
 	@$(MAKE) --no-print-directory consolidate HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
 	@echo "=== Step 6: Convert to XML ==="
-	@$(MAKE) --no-print-directory converter INPUT_MD="$(HASHDIR)/book.md" OUTPUT_XML="$(HASHDIR)/book.xml"
+	@$(MAKE) --no-print-directory converter HASHDIR="$(HASHDIR)"
 	@echo "=== Done: $(HASHDIR)/book.xml ==="
 
 # === Book Converter ===
 
-converter: setup ## Convert book.md to XML (Usage: make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml [THRESHOLD=0.5] [VERBOSE=1])
-	@test -n "$(INPUT_MD)" || { echo "Error: INPUT_MD required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
-	@test -n "$(OUTPUT_XML)" || { echo "Error: OUTPUT_XML required. Usage: make converter INPUT_MD=input.md OUTPUT_XML=output.xml"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli "$(INPUT_MD)" "$(OUTPUT_XML)" --group-pages \
+converter: setup ## Step 6: Convert book.md to XML (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make converter HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli "$(HASHDIR)/book.md" "$(HASHDIR)/book.xml" --group-pages \
 		$(if $(THRESHOLD),--running-head-threshold $(THRESHOLD)) \
 		$(if $(VERBOSE),--verbose)
 

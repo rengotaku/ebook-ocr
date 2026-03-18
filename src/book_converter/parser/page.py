@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Iterator
 
 from src.book_converter.models import (
+    CodeBlock,
     Content,
     ConversionError,
     Heading,
@@ -450,6 +451,51 @@ def _collect_list_lines(lines: list[str], start_idx: int) -> tuple[list[str], in
     return list_lines, list_idx
 
 
+def _is_code_fence(line: str) -> tuple[bool, str]:
+    """Check if a line is a code fence marker.
+
+    Args:
+        line: Line to check.
+
+    Returns:
+        Tuple of (is_fence, language). language is only set for opening fences.
+    """
+    stripped = line.strip()
+    if stripped.startswith("```"):
+        lang = stripped[3:].strip()
+        return True, lang
+    return False, ""
+
+
+def _collect_code_block(lines: list[str], start_idx: int) -> tuple[CodeBlock | None, int]:
+    """Collect lines within a code fence block.
+
+    Args:
+        lines: All lines.
+        start_idx: Index of the opening ``` line.
+
+    Returns:
+        Tuple of (CodeBlock, next_index). CodeBlock is None if fence is never closed.
+    """
+    opening_line = lines[start_idx].strip()
+    language = opening_line[3:].strip()
+
+    code_lines = []
+    idx = start_idx + 1
+    while idx < len(lines):
+        line = lines[idx]
+        if line.strip().startswith("```"):
+            # Closing fence found
+            code_text = "\n".join(code_lines)
+            return CodeBlock(text=code_text, language=language), idx + 1
+        code_lines.append(line)
+        idx += 1
+
+    # No closing fence found - treat as unclosed code block
+    code_text = "\n".join(code_lines)
+    return CodeBlock(text=code_text, language=language), idx
+
+
 def _should_stop_paragraph(para_line: str, lines: list[str], para_idx: int) -> bool:
     """Check if paragraph collection should stop.
 
@@ -482,6 +528,10 @@ def _should_stop_paragraph(para_line: str, lines: list[str], para_idx: int) -> b
         return True
     # Stop at page metadata
     if parse_page_metadata(para_line.strip()) is not None:
+        return True
+    # Stop at code fence
+    is_fence, _ = _is_code_fence(para_line)
+    if is_fence:
         return True
     # Stop at markers (toc, content, skip)
     if parse_toc_marker(para_line) is not None:
@@ -598,6 +648,15 @@ def _parse_single_page_content(
         if heading is not None:
             state.content_elements.append(heading)
             idx += 1
+            continue
+
+        # Check for code fence
+        is_fence, _ = _is_code_fence(line)
+        if is_fence:
+            code_block, next_idx = _collect_code_block(lines, idx)
+            if code_block is not None:
+                state.content_elements.append(code_block)
+            idx = next_idx
             continue
 
         # Check for figure comment

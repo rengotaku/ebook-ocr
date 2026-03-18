@@ -112,6 +112,15 @@ class List:
 
 
 @dataclass(frozen=True)
+class CodeBlock:
+    """コードブロック"""
+
+    text: str  # コード本文
+    language: str = ""  # 言語ヒント (e.g., "python")
+    read_aloud: bool = False  # コードは基本的に読み上げない
+
+
+@dataclass(frozen=True)
 class Figure:
     """図表"""
 
@@ -140,7 +149,7 @@ class TableOfContents:
 
 
 # Section の子要素
-SectionElement = Union[Heading, Paragraph, List, Figure]
+SectionElement = Union[Heading, Paragraph, List, Figure, CodeBlock]
 
 
 @dataclass(frozen=True)
@@ -371,4 +380,4 @@ class StructureContainer:
 
 
 # Legacy union type
-ContentElement = Union[Heading, Paragraph, List]
+ContentElement = Union[Heading, Paragraph, List, CodeBlock]

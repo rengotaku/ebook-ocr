@@ -62,7 +62,7 @@ make lint           # 両方実行
 
 ### Book Converter
 ```bash
-make converter INPUT_MD=path/to/book.md OUTPUT_XML=path/to/book.xml
+make converter HASHDIR=output/<hash>
 make heading-report HASHDIR=output/<hash>
 make normalize-headings HASHDIR=output/<hash> [APPLY=1]
 make validate-toc HASHDIR=output/<hash>
