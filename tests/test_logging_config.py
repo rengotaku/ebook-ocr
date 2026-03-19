@@ -36,12 +36,7 @@ class TestSetupLogging:
     def test_setup_with_string_path(self, tmp_path: Path) -> None:
         """文字列パスでもセットアップ可能"""
         config_file = tmp_path / "logging.yml"
-        config_file.write_text(
-            "version: 1\n"
-            "disable_existing_loggers: false\n"
-            "root:\n"
-            "  level: WARNING\n"
-        )
+        config_file.write_text("version: 1\ndisable_existing_loggers: false\nroot:\n  level: WARNING\n")
 
         setup_logging(config_path=str(config_file))
 
