@@ -1,0 +1,36 @@
+# Kedro-style Rich logging configuration
+# Usage: from src.logging_config import setup_logging; setup_logging()
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  simple:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+handlers:
+  rich:
+    class: rich.logging.RichHandler
+    level: INFO
+    rich_tracebacks: true
+    tracebacks_show_locals: false
+    show_path: true
+    markup: true
+
+  file:
+    class: logging.FileHandler
+    level: DEBUG
+    filename: logs/app.log
+    formatter: simple
+    mode: a
+
+root:
+  level: INFO
+  handlers: [rich]
+
+loggers:
+  src:
+    level: INFO
+    handlers: [rich]
+    propagate: false

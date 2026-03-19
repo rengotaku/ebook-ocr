@@ -8,6 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from src.logging_config import setup_logging
 from src.preprocessing.split_spread import (
     SpreadMode,
     TrimConfig,
@@ -19,6 +20,7 @@ from src.preprocessing.split_spread import (
 
 def main() -> int:
     """CLI entry point."""
+    setup_logging()
     parser = argparse.ArgumentParser(description="Split spread pages into separate images")
     parser.add_argument("pages_dir", help="Pages directory (in-place update)")
     parser.add_argument(

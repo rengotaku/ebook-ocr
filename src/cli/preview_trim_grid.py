@@ -16,6 +16,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from src.logging_config import setup_logging
+
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse command-line arguments.
@@ -214,6 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Exit code (0 for success, 1 for error)
     """
+    setup_logging()
     try:
         args = parse_args(argv)
         validate_args(args)

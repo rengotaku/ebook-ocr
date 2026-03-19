@@ -8,10 +8,12 @@ import sys
 from pathlib import Path
 
 from src.layout_ocr import run_layout_ocr
+from src.logging_config import setup_logging
 
 
 def main() -> int:
     """CLI entry point."""
+    setup_logging()
     parser = argparse.ArgumentParser(description="Run OCR on pages")
     parser.add_argument("pages_dir", help="Pages directory")
     parser.add_argument("-o", "--output", required=True, help="Output directory")

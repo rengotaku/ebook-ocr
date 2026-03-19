@@ -7,10 +7,12 @@ import sys
 from pathlib import Path
 
 from src.layout.detector import detect_layout
+from src.logging_config import setup_logging
 
 
 def main() -> int:
     """CLI entry point."""
+    setup_logging()
     parser = argparse.ArgumentParser(description="Detect page layout")
     parser.add_argument("pages_dir", help="Pages directory")
     parser.add_argument("-o", "--output", required=True, help="Output directory")

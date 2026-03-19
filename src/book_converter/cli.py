@@ -25,6 +25,7 @@ from src.book_converter.models import (
 )
 from src.book_converter.parser import count_markers, parse_pages_with_errors
 from src.book_converter.xml_builder import build_xml_with_errors
+from src.logging_config import setup_logging
 
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
@@ -205,6 +206,7 @@ def main(args: list[str] | None = None) -> int:
     Returns:
         Exit code (0 for success, non-zero for error).
     """
+    setup_logging()
     try:
         parsed = parse_args(args)
 
