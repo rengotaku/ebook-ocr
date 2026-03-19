@@ -7,10 +7,12 @@ import sys
 from pathlib import Path
 
 from src.consolidate import consolidate_ocr_output
+from src.logging_config import setup_logging
 
 
 def main() -> int:
     """CLI entry point."""
+    setup_logging()
     parser = argparse.ArgumentParser(description="Consolidate OCR results")
     parser.add_argument("ocr_dir", help="OCR directory")
     parser.add_argument("-o", "--output", required=True, help="Output directory")

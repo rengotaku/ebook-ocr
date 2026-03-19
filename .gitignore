@@ -8,6 +8,7 @@ venv/
 # Project artifacts
 movies/
 output/
+logs/
 
 # IDE / Tools
 .serena/

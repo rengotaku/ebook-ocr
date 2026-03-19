@@ -20,6 +20,8 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.logging_config import setup_logging
+
 
 @dataclass(frozen=True)
 class TocFix:
@@ -243,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Exit code (0 = success, 1 = error).
     """
+    setup_logging()
     parser = argparse.ArgumentParser(
         description="Normalize OCR errors in TOC entries of book.md",
     )

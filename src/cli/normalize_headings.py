@@ -18,6 +18,8 @@ import sys
 import unicodedata
 from pathlib import Path
 
+from src.logging_config import setup_logging
+
 
 def _display_width(text: str) -> int:
     """Calculate display width of text (handles CJK characters)."""
@@ -652,6 +654,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 def main() -> int:
     """CLI entry point."""
+    setup_logging()
     parser = argparse.ArgumentParser(
         description="Normalize book.md headings to match TOC format",
     )

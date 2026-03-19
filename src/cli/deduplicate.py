@@ -6,11 +6,13 @@ import argparse
 import sys
 from pathlib import Path
 
+from src.logging_config import setup_logging
 from src.preprocessing.deduplicate import deduplicate_frames
 
 
 def main() -> int:
     """CLI entry point."""
+    setup_logging()
     parser = argparse.ArgumentParser(description="Remove duplicate frames")
     parser.add_argument("input_dir", help="Input directory with frames")
     parser.add_argument("-o", "--output", required=True, help="Output directory")

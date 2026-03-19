@@ -6,11 +6,13 @@ import argparse
 import sys
 from pathlib import Path
 
+from src.logging_config import setup_logging
 from src.preprocessing.frames import extract_frames
 
 
 def main() -> int:
     """CLI entry point."""
+    setup_logging()
     parser = argparse.ArgumentParser(description="Extract frames from video")
     parser.add_argument("video", help="Input video file path")
     parser.add_argument("-o", "--output", required=True, help="Output directory")
