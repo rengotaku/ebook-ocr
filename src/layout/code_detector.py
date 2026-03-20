@@ -21,6 +21,8 @@ _DEFAULT_CODE_DETECTION_CONFIG: dict = {
     "symbol_ratio_threshold": 0.08,
     "keyword_threshold": 2,
     "fragment_gap_threshold": 80,
+    "min_region_width": 100,
+    "min_region_height": 60,
 }
 
 
@@ -77,6 +79,8 @@ def load_code_detection_config(config_path: str | None = None) -> dict:
     result["symbol_ratio_threshold"] = float(result["symbol_ratio_threshold"])
     result["keyword_threshold"] = int(result["keyword_threshold"])
     result["fragment_gap_threshold"] = int(result["fragment_gap_threshold"])
+    result["min_region_width"] = int(result["min_region_width"])
+    result["min_region_height"] = int(result["min_region_height"])
 
     return result
 
@@ -283,6 +287,8 @@ def is_code_fragment(text: str | None) -> bool:
 def merge_code_fragments(
     regions: list[dict],
     gap_threshold: int = 80,
+    min_region_width: int = 100,
+    min_region_height: int = 60,
 ) -> list[dict]:
     """Merge adjacent CODE and code-fragment regions into single CODE regions.
 
@@ -293,7 +299,7 @@ def merge_code_fragments(
     A region is "mergeable" if:
     - Its type is "CODE", OR
     - It is a TEXT/FIGURE region whose text is identified as a code fragment
-      by is_code_fragment()
+      by is_code_fragment() AND its bbox meets minimum size requirements
 
     A non-mergeable region breaks the merge chain.
     Merged bbox is the bounding rectangle of all merged regions.
@@ -302,6 +308,8 @@ def merge_code_fragments(
         regions: List of region dicts with keys: type, label, bbox, confidence, text
         gap_threshold: Maximum vertical gap (px) between adjacent mergeable regions
                        to allow merging. Default: 80. Uses strict less-than (<).
+        min_region_width: Minimum width for fragment regions to be mergeable.
+        min_region_height: Minimum height for fragment regions to be mergeable.
 
     Returns:
         New list of region dicts. Input list and input dicts are not modified.
@@ -318,12 +326,25 @@ def merge_code_fragments(
             return True
         return is_code_fragment(region.get("text", ""))
 
-    def _merge_group(group: list[dict]) -> dict:
-        """Merge a group of regions into a single CODE region (bounding rect)."""
+    def _merge_group(group: list[dict]) -> dict | list[dict]:
+        """Merge a group of regions into a single CODE region (bounding rect).
+
+        If the group contains no original CODE region and the merged bbox
+        is too small, return the original regions unchanged (as a list).
+        """
         x1 = min(r["bbox"][0] for r in group)
         y1 = min(r["bbox"][1] for r in group)
         x2 = max(r["bbox"][2] for r in group)
         y2 = max(r["bbox"][3] for r in group)
+
+        has_real_code = any(r["type"] == "CODE" for r in group)
+        merged_w = x2 - x1
+        merged_h = y2 - y1
+
+        # Fragment-only groups that are too small stay as original regions
+        if not has_real_code and (merged_w < min_region_width or merged_h < min_region_height):
+            return [dict(r) for r in group]
+
         return {
             "type": "CODE",
             "label": "code",
@@ -363,7 +384,11 @@ def merge_code_fragments(
             j += 1
 
         # Emit merged region (or single region as new dict)
-        result.append(_merge_group(merge_group))
+        merged = _merge_group(merge_group)
+        if isinstance(merged, list):
+            result.extend(merged)
+        else:
+            result.append(merged)
         i = j
 
     return result

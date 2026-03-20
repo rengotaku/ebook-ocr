@@ -190,12 +190,13 @@ code block 2
         assert code_blocks[1].text == "code block 2"
 
     def test_code_block_not_merged_with_paragraph(self, tmp_path: Path):
+        # Must contain code indicators to survive filter_code_block
         md_content = """
 --- page_0001 ---
 
 paragraph before
 ```
-code here
+def hello(): pass
 ```
 paragraph after
 """
@@ -212,4 +213,4 @@ paragraph after
         assert len(code_blocks) == 1
         assert "paragraph before" in paragraphs[0].text
         assert "paragraph after" in paragraphs[1].text
-        assert code_blocks[0].text == "code here"
+        assert code_blocks[0].text == "def hello(): pass"

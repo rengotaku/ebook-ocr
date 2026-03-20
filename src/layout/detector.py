@@ -58,10 +58,15 @@ def paragraphs_to_layout(
         Layout dict with regions list
     """
     from src.layout.code_detector import (
+        _DEFAULT_CODE_DETECTION_CONFIG,
         detect_code_by_text,
         detect_gray_background,
         merge_code_fragments,
     )
+
+    # Extract min region size config once
+    cfg_min_w = _DEFAULT_CODE_DETECTION_CONFIG["min_region_width"]
+    cfg_min_h = _DEFAULT_CODE_DETECTION_CONFIG["min_region_height"]
 
     regions = []
 
@@ -84,10 +89,12 @@ def paragraphs_to_layout(
             x1, y1, x2, y2 = bbox
             width = x2 - x1
             height = y2 - y1
-            # Skip aspect ratio filter: wide strips (width/height > 8.0) stay TEXT
-            if height > 0 and (width / height) <= 8.0:
-                if detect_gray_background(cv_img, bbox):
-                    region_type = "CODE"
+            # Skip small regions: too small to be a meaningful code block
+            if width >= cfg_min_w and height >= cfg_min_h:
+                # Skip aspect ratio filter: wide strips (width/height > 8.0) stay TEXT
+                if height > 0 and (width / height) <= 8.0:
+                    if detect_gray_background(cv_img, bbox):
+                        region_type = "CODE"
 
         # Text analysis: only for TEXT regions (not TITLE, not already CODE)
         if region_type == "TEXT":
@@ -140,7 +147,11 @@ def paragraphs_to_layout(
             )
 
     # Merge adjacent CODE and code-fragment regions
-    merged_regions = merge_code_fragments(regions)
+    merged_regions = merge_code_fragments(
+        regions,
+        min_region_width=cfg_min_w,
+        min_region_height=cfg_min_h,
+    )
 
     return {
         "regions": merged_regions,
