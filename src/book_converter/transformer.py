@@ -7,6 +7,10 @@ from __future__ import annotations
 
 from xml.etree.ElementTree import Element, SubElement
 
+from src.book_converter.bullet_cleanup import (
+    merge_bullet_paragraphs_to_lists,
+    strip_heading_markers,
+)
 from src.book_converter.models import (
     Book,
     BookMetadata,
@@ -139,12 +143,13 @@ def transform_section(section: Section) -> Element:
         elem.set("number", section.number)
     elem.set("title", section.title)
 
-    for child in section.elements:
+    cleaned = merge_bullet_paragraphs_to_lists(section.elements)
+    for child in cleaned:
         if isinstance(child, Paragraph):
             child_elem = transform_paragraph(child)
             elem.append(child_elem)
         elif isinstance(child, Heading):
-            child_elem = transform_heading(child)
+            child_elem = transform_heading(strip_heading_markers(child))
             elem.append(child_elem)
         elif isinstance(child, List):
             child_elem = transform_list(child)
@@ -371,17 +376,19 @@ def transform_content(content: Content) -> Element | None:
     elem = Element("content")
     elem.set("readAloud", "true" if content.read_aloud else "false")
 
-    for element in content.elements:
+    cleaned = merge_bullet_paragraphs_to_lists(content.elements)
+    for element in cleaned:
         if isinstance(element, Paragraph):
             para_elem = Element("paragraph")
             para_elem.set("readAloud", "true" if element.read_aloud else "false")
             apply_emphasis(element.text, para_elem)
             elem.append(para_elem)
         elif isinstance(element, Heading):
+            cleaned_heading = strip_heading_markers(element)
             heading_elem = Element("heading")
-            heading_elem.set("level", str(element.level))
-            heading_elem.set("readAloud", "true" if element.read_aloud else "false")
-            apply_emphasis(element.text, heading_elem)
+            heading_elem.set("level", str(cleaned_heading.level))
+            heading_elem.set("readAloud", "true" if cleaned_heading.read_aloud else "false")
+            apply_emphasis(cleaned_heading.text, heading_elem)
             elem.append(heading_elem)
         elif isinstance(element, List):
             list_elem = Element("list")
@@ -449,14 +456,16 @@ def transform_structure_container(container: StructureContainer) -> Element:
             elem.set("number", container.number)
         elem.set("title", container.title)
 
-    for child in container.children:
+    cleaned_children = merge_bullet_paragraphs_to_lists(container.children)
+    for child in cleaned_children:
         if isinstance(child, StructureContainer):
             child_elem = transform_structure_container(child)
             elem.append(child_elem)
         elif isinstance(child, Heading):
+            cleaned_heading = strip_heading_markers(child)
             heading_elem = Element("heading")
-            heading_elem.set("readAloud", "true" if child.read_aloud else "false")
-            apply_emphasis(child.text, heading_elem)
+            heading_elem.set("readAloud", "true" if cleaned_heading.read_aloud else "false")
+            apply_emphasis(cleaned_heading.text, heading_elem)
             elem.append(heading_elem)
         elif isinstance(child, Paragraph):
             para_elem = Element("paragraph")
