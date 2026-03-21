@@ -21,12 +21,25 @@ HASHDIR ?=
 LIMIT ?=
 LIMIT_OPT := $(if $(LIMIT),--limit $(LIMIT),)
 
-# Book converter variables
+# Spread / trim variables
+SPREAD_MODE ?= $(shell $(call CFG,spread_mode))
+SPREAD_LEFT_PAGE_OUTER ?= $(shell $(call CFG,spread_left_trim))
+SPREAD_LEFT_PAGE_INNER ?= $(shell $(call CFG,spread_left_page_inner))
+SPREAD_RIGHT_PAGE_INNER ?= $(shell $(call CFG,spread_right_page_inner))
+SPREAD_RIGHT_PAGE_OUTER ?= $(shell $(call CFG,spread_right_trim))
+GLOBAL_TRIM_TOP ?= $(shell $(call CFG,global_trim_top))
+GLOBAL_TRIM_BOTTOM ?= $(shell $(call CFG,global_trim_bottom))
+GLOBAL_TRIM_LEFT ?= $(shell $(call CFG,global_trim_left))
+GLOBAL_TRIM_RIGHT ?= $(shell $(call CFG,global_trim_right))
 
-.PHONY: help setup run extract-frames deduplicate split-spreads detect-layout run-ocr consolidate preview-extract preview-trim preview-trim-grid test test-book-converter test-cov converter convert-sample heading-report normalize-toc normalize-headings ruff pylint lint clean clean-all
+# === Help & Setup ===
+.PHONY: help guide setup
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+guide: setup ## Interactive setup guide (recommended for first-time users)
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.guide
 
 setup: $(VENV)/bin/activate ## Create venv and install dependencies
 
@@ -35,7 +48,8 @@ $(VENV)/bin/activate: requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-# === Individual CLI Commands (New Pipeline) ===
+# === Pipeline Steps ===
+.PHONY: extract-frames deduplicate split-spreads detect-layout run-ocr consolidate converter run
 
 extract-frames: setup ## Step 1: Extract frames from video (requires VIDEO, OUTPUT or HASHDIR)
 	@test -n "$(VIDEO)" || { echo "Error: VIDEO required. Usage: make extract-frames VIDEO=input.mp4 OUTPUT=output"; exit 1; }
@@ -45,20 +59,6 @@ extract-frames: setup ## Step 1: Extract frames from video (requires VIDEO, OUTP
 deduplicate: setup ## Step 2: Deduplicate frames (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make deduplicate HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.deduplicate "$(HASHDIR)/frames" -o "$(HASHDIR)/pages" -t $(THRESHOLD) $(LIMIT_OPT)
-
-SPREAD_MODE ?= $(shell $(call CFG,spread_mode))
-
-# Split trim (新命名規則)
-SPREAD_LEFT_PAGE_OUTER ?= $(shell $(call CFG,spread_left_trim))
-SPREAD_LEFT_PAGE_INNER ?= $(shell $(call CFG,spread_left_page_inner))
-SPREAD_RIGHT_PAGE_INNER ?= $(shell $(call CFG,spread_right_page_inner))
-SPREAD_RIGHT_PAGE_OUTER ?= $(shell $(call CFG,spread_right_trim))
-
-# Global trim
-GLOBAL_TRIM_TOP ?= $(shell $(call CFG,global_trim_top))
-GLOBAL_TRIM_BOTTOM ?= $(shell $(call CFG,global_trim_bottom))
-GLOBAL_TRIM_LEFT ?= $(shell $(call CFG,global_trim_left))
-GLOBAL_TRIM_RIGHT ?= $(shell $(call CFG,global_trim_right))
 
 split-spreads: setup ## Step 2.5: Split spread images into pages (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make split-spreads HASHDIR=output/<hash>"; exit 1; }
@@ -73,47 +73,6 @@ split-spreads: setup ## Step 2.5: Split spread images into pages (requires HASHD
 		--global-trim-left $(GLOBAL_TRIM_LEFT) \
 		--global-trim-right $(GLOBAL_TRIM_RIGHT)
 
-preview-extract: setup ## Preview: Extract sample frames to preview/frames/ (requires VIDEO)
-	@test -n "$(VIDEO)" || { echo "Error: VIDEO parameter required. Usage: make preview-extract VIDEO=input.mp4"; exit 1; }
-	@test -f "$(VIDEO)" || { echo "Error: VIDEO file not found: $(VIDEO)"; exit 1; }
-	$(eval HASH := $(shell PYTHONPATH=$(CURDIR) $(PYTHON) -m src.preprocessing.hash "$(VIDEO)" --prefix-only 2>/dev/null))
-	@test -n "$(HASH)" || { echo "Error: Failed to compute hash for VIDEO $(VIDEO)"; exit 1; }
-	$(eval HASHDIR := $(or $(OUTPUT),output)/$(HASH))
-	$(eval PREVIEW_DIR := $(HASHDIR)/preview/frames)
-	@echo "=== Extracting preview frames to $(PREVIEW_DIR) ==="
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.extract_frames "$(VIDEO)" -o "$(PREVIEW_DIR)" -i $(INTERVAL)
-	@echo "=== Preview frames extracted: $(PREVIEW_DIR) ==="
-
-preview-trim: setup ## Preview: Apply trim to preview/frames/ -> preview/trimmed/ (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make preview-trim HASHDIR=output/<hash>"; exit 1; }
-	@test -d "$(HASHDIR)/preview/frames" || { echo "Error: $(HASHDIR)/preview/frames not found. Run 'make preview-extract' first."; exit 1; }
-	@echo "=== Applying trim to preview frames ==="
-	PYTHONPATH=$(CURDIR) $(PYTHON) -c \
-		"from src.cli.split_spreads import preview_trim; \
-		from src.preprocessing.split_spread import SpreadMode, TrimConfig; \
-		preview_trim('$(HASHDIR)/preview', \
-			mode=SpreadMode.$(shell echo $(SPREAD_MODE) | tr a-z A-Z), \
-			trim_config=TrimConfig( \
-				global_top=$(or $(GLOBAL_TRIM_TOP),0.0), \
-				global_bottom=$(or $(GLOBAL_TRIM_BOTTOM),0.0), \
-				global_left=$(or $(GLOBAL_TRIM_LEFT),0.0), \
-				global_right=$(or $(GLOBAL_TRIM_RIGHT),0.0), \
-				left_page_outer=$(or $(SPREAD_LEFT_PAGE_OUTER),0.0), \
-				left_page_inner=$(or $(SPREAD_LEFT_PAGE_INNER),0.0), \
-				right_page_inner=$(or $(SPREAD_RIGHT_PAGE_INNER),0.0), \
-				right_page_outer=$(or $(SPREAD_RIGHT_PAGE_OUTER),0.0)))"
-	@echo "=== Preview trim complete: $(HASHDIR)/preview/trimmed ==="
-
-preview-trim-grid: setup ## Preview: Show trim grid guides (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required"; exit 1; }
-	@test -d "$(HASHDIR)/preview/frames" || { echo "Error: Run 'make preview-extract' first."; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.preview_trim_grid \
-		"$(HASHDIR)/preview/frames" \
-		-o "$(HASHDIR)/preview/trim-grid" \
-		--step 0.05 \
-		--max 0.30 \
-		--spread-mode $(SPREAD_MODE)
-
 detect-layout: setup ## Step 3: Detect layout using yomitoku (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make detect-layout HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.detect_layout "$(HASHDIR)/pages" -o "$(HASHDIR)/layout" --device cpu $(LIMIT_OPT)
@@ -126,7 +85,11 @@ consolidate: setup ## Step 5: Consolidate OCR results (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make consolidate HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.consolidate "$(HASHDIR)/ocr_output" -o "$(HASHDIR)" $(LIMIT_OPT)
 
-# === Full Pipeline (Convenience) ===
+converter: setup ## Step 6: Convert book.md to XML (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make converter HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli "$(HASHDIR)/book.md" "$(HASHDIR)/book.xml" --group-pages \
+		$(if $(THRESHOLD),--running-head-threshold $(THRESHOLD)) \
+		$(if $(VERBOSE),--verbose)
 
 run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT optional)
 	@test -n "$(VIDEO)" || { echo "Error: VIDEO required. Usage: make run VIDEO=input.mp4 [LIMIT=25]"; exit 1; }
@@ -150,18 +113,32 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT option
 	@$(MAKE) --no-print-directory converter HASHDIR="$(HASHDIR)"
 	@echo "=== Done: $(HASHDIR)/book.xml ==="
 
-# === Book Converter ===
+# === Preview ===
+.PHONY: preview-extract preview-trim-grid
 
-converter: setup ## Step 6: Convert book.md to XML (requires HASHDIR)
-	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make converter HASHDIR=output/<hash>"; exit 1; }
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli "$(HASHDIR)/book.md" "$(HASHDIR)/book.xml" --group-pages \
-		$(if $(THRESHOLD),--running-head-threshold $(THRESHOLD)) \
-		$(if $(VERBOSE),--verbose)
+preview-extract: setup ## Preview: Extract sample frames to preview/frames/ (requires VIDEO)
+	@test -n "$(VIDEO)" || { echo "Error: VIDEO parameter required. Usage: make preview-extract VIDEO=input.mp4"; exit 1; }
+	@test -f "$(VIDEO)" || { echo "Error: VIDEO file not found: $(VIDEO)"; exit 1; }
+	$(eval HASH := $(shell PYTHONPATH=$(CURDIR) $(PYTHON) -m src.preprocessing.hash "$(VIDEO)" --prefix-only 2>/dev/null))
+	@test -n "$(HASH)" || { echo "Error: Failed to compute hash for VIDEO $(VIDEO)"; exit 1; }
+	$(eval HASHDIR := $(or $(OUTPUT),output)/$(HASH))
+	$(eval PREVIEW_DIR := $(HASHDIR)/preview/frames)
+	@echo "=== Extracting preview frames to $(PREVIEW_DIR) ==="
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.extract_frames "$(VIDEO)" -o "$(PREVIEW_DIR)" -i $(INTERVAL)
+	@echo "=== Preview frames extracted: $(PREVIEW_DIR) ==="
 
-convert-sample: setup ## Convert sample book.md to XML
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.book_converter.cli tests/book_converter/fixtures/sample_book.md output/sample_book.xml --group-pages
+preview-trim-grid: setup ## Preview: Show trim grid guides (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required"; exit 1; }
+	@test -d "$(HASHDIR)/preview/frames" || { echo "Error: Run 'make preview-extract' first."; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.preview_trim_grid \
+		"$(HASHDIR)/preview/frames" \
+		-o "$(HASHDIR)/preview/trim-grid" \
+		--step 0.05 \
+		--max 0.30 \
+		--spread-mode $(SPREAD_MODE)
 
 # === Heading Normalization ===
+.PHONY: heading-report normalize-toc normalize-headings
 
 heading-report: setup ## Generate heading pattern report (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make heading-report HASHDIR=output/<hash>"; exit 1; }
@@ -176,6 +153,7 @@ normalize-headings: setup ## Normalize headings to match TOC (requires HASHDIR, 
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_headings normalize "$(HASHDIR)/book.md" $(if $(APPLY),--apply)
 
 # === Testing ===
+.PHONY: test test-all test-slow test-cov test-cov-all
 
 test: setup ## Run fast tests only (excludes slow/e2e/ocr tests)
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v -m "not slow and not e2e and not ocr"
@@ -186,18 +164,14 @@ test-all: setup ## Run all tests (including slow/e2e/ocr tests)
 test-slow: setup ## Run only slow tests
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v -m "slow or e2e or ocr"
 
-test-book-converter: setup ## Run book_converter tests (fast only)
-	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/book_converter/ -v -m "not slow and not e2e and not ocr"
-
 test-cov: setup ## Run tests with coverage (fast only)
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing -m "not slow and not e2e and not ocr"
 
 test-cov-all: setup ## Run all tests with coverage (including slow)
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing
 
-coverage: test-cov ## Alias for test-cov
-
 # === Linting ===
+.PHONY: ruff pylint lint
 
 ruff: ## Run ruff linter
 	ruff check src/ tests/
@@ -209,8 +183,10 @@ pylint: ## Run pylint static analysis
 lint: ruff pylint ## Run all linters (ruff + pylint)
 
 # === Cleanup ===
+.PHONY: clean clean-all
 
 clean: ## Remove output files (keep venv)
+	@test -n "$(OUTPUT)" || { echo "Error: OUTPUT is empty, refusing to rm -rf"; exit 1; }
 	rm -rf $(OUTPUT)
 
 clean-all: clean ## Remove output and venv

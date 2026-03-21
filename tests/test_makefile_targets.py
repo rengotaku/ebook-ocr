@@ -104,96 +104,6 @@ class TestPreviewExtractTarget:
 
 
 # ===========================================================================
-# T052: preview-trim target tests
-# ===========================================================================
-
-
-class TestPreviewTrimTarget:
-    """preview-trim Makefile ターゲットが既存フレームに trim を適用する."""
-
-    def test_preview_trim_target_exists_in_makefile(self, project_root: Path) -> None:
-        """Makefile contains preview-trim target definition."""
-        makefile = project_root / "Makefile"
-        content = makefile.read_text()
-        assert "preview-trim:" in content, "preview-trim target not found in Makefile"
-
-    def test_preview_trim_requires_hashdir(self, project_root: Path) -> None:
-        """preview-trim requires HASHDIR parameter."""
-        result = subprocess.run(
-            ["make", "preview-trim"],
-            capture_output=True,
-            text=True,
-            cwd=str(project_root),
-            timeout=30,
-        )
-        # Should fail with error about missing HASHDIR
-        assert result.returncode != 0
-        assert "HASHDIR" in result.stderr or "HASHDIR" in result.stdout
-
-    def test_preview_trim_uses_spread_mode(self, project_root: Path) -> None:
-        """preview-trim passes SPREAD_MODE to the command."""
-        makefile = project_root / "Makefile"
-        content = makefile.read_text()
-        # Find preview-trim section and check it uses SPREAD_MODE
-        lines = content.split("\n")
-        in_preview_trim = False
-        has_spread_mode = False
-        for line in lines:
-            if line.startswith("preview-trim:"):
-                in_preview_trim = True
-                continue
-            if in_preview_trim:
-                if line and not line.startswith("\t") and not line.startswith(" "):
-                    break
-                if "SPREAD_MODE" in line or "mode" in line.lower():
-                    has_spread_mode = True
-        assert has_spread_mode, "preview-trim should use SPREAD_MODE"
-
-    def test_preview_trim_uses_global_trim_params(self, project_root: Path) -> None:
-        """preview-trim passes global trim parameters."""
-        makefile = project_root / "Makefile"
-        content = makefile.read_text()
-        lines = content.split("\n")
-        in_preview_trim = False
-        has_trim = False
-        for line in lines:
-            if line.startswith("preview-trim:"):
-                in_preview_trim = True
-                continue
-            if in_preview_trim:
-                if line and not line.startswith("\t") and not line.startswith(" "):
-                    break
-                if "global-trim" in line or "GLOBAL_TRIM" in line:
-                    has_trim = True
-        assert has_trim, "preview-trim should pass global trim parameters"
-
-    def test_preview_trim_outputs_to_preview_trimmed(self, project_root: Path) -> None:
-        """preview-trim outputs to preview/trimmed/ directory."""
-        makefile = project_root / "Makefile"
-        content = makefile.read_text()
-        # Should reference trimmed output directory
-        assert "trimmed" in content or "preview" in content, "preview trimmed directory not referenced"
-
-    def test_preview_trim_does_not_extract_frames(self, project_root: Path) -> None:
-        """preview-trim does NOT invoke frame extraction (independent of preview-extract)."""
-        makefile = project_root / "Makefile"
-        content = makefile.read_text()
-        lines = content.split("\n")
-        in_preview_trim = False
-        calls_extract = False
-        for line in lines:
-            if line.startswith("preview-trim:"):
-                in_preview_trim = True
-                continue
-            if in_preview_trim:
-                if line and not line.startswith("\t") and not line.startswith(" "):
-                    break
-                if "extract-frames" in line or "extract_frames" in line:
-                    calls_extract = True
-        assert not calls_extract, "preview-trim should NOT call extract-frames"
-
-
-# ===========================================================================
 # T054: make run integrates split-spreads step
 # ===========================================================================
 
@@ -334,19 +244,9 @@ class TestMakefileTargetEdgeCases:
                 return  # Pass
         pytest.fail("preview-extract should have a ## help comment")
 
-    def test_preview_trim_has_help_comment(self, project_root: Path) -> None:
-        """preview-trim target has help comment for make help."""
+    def test_trim_variables_are_overridable(self, project_root: Path) -> None:
+        """Trim parameters can be overridden via make variables."""
         makefile = project_root / "Makefile"
         content = makefile.read_text()
-        for line in content.split("\n"):
-            if line.startswith("preview-trim:") and "##" in line:
-                return  # Pass
-        pytest.fail("preview-trim should have a ## help comment")
-
-    def test_preview_trim_accepts_trim_override(self, project_root: Path) -> None:
-        """preview-trim allows trim parameters to be overridden via make variables."""
-        makefile = project_root / "Makefile"
-        content = makefile.read_text()
-        # Check that GLOBAL_TRIM variables are defined with ?= (overridable)
         assert "GLOBAL_TRIM_TOP ?=" in content, "GLOBAL_TRIM_TOP should be overridable"
         assert "GLOBAL_TRIM_BOTTOM ?=" in content, "GLOBAL_TRIM_BOTTOM should be overridable"
