@@ -480,6 +480,111 @@ class TestParagraphsToLayoutIntegration:
 
 
 # ============================================================
+# T014a: Small region size filtering
+# ============================================================
+
+
+class TestParagraphsToLayoutMinRegionSize:
+    """Small regions should NOT be detected as CODE via gray background."""
+
+    def test_tiny_region_stays_text(self) -> None:
+        """Region smaller than min_region_width/height stays TEXT even if gray."""
+        from src.layout.detector import paragraphs_to_layout
+
+        # 20x30 pixel region - too small
+        paragraph = make_paragraph_mock(
+            box=[100, 100, 120, 130],
+            role="plain text",
+            contents="3",
+        )
+
+        gray_img = make_solid_image([128, 128, 128], height=200, width=200)
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (200, 200),
+            cv_img=gray_img,
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "TEXT", "Tiny gray region should stay TEXT"
+
+    def test_narrow_region_stays_text(self) -> None:
+        """Region narrower than min_region_width stays TEXT even if gray."""
+        from src.layout.detector import paragraphs_to_layout
+
+        # 50x100 pixel region - too narrow
+        paragraph = make_paragraph_mock(
+            box=[100, 100, 150, 200],
+            role="plain text",
+            contents="code?",
+        )
+
+        gray_img = make_solid_image([128, 128, 128], height=300, width=300)
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (300, 300),
+            cv_img=gray_img,
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "TEXT", "Narrow gray region should stay TEXT"
+
+    def test_short_region_stays_text(self) -> None:
+        """Region shorter than min_region_height stays TEXT even if gray."""
+        from src.layout.detector import paragraphs_to_layout
+
+        # 200x30 pixel region - too short
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 210, 40],
+            role="plain text",
+            contents="single line",
+        )
+
+        gray_img = make_solid_image([128, 128, 128], height=100, width=300)
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (300, 100),
+            cv_img=gray_img,
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "TEXT", "Short gray region should stay TEXT"
+
+    def test_large_enough_region_becomes_code(self) -> None:
+        """Region meeting minimum size becomes CODE when gray."""
+        from src.layout.detector import paragraphs_to_layout
+
+        # 200x100 pixel region - large enough
+        paragraph = make_paragraph_mock(
+            box=[10, 10, 210, 110],
+            role="plain text",
+            contents="some text",
+        )
+
+        gray_img = make_solid_image([128, 128, 128], height=200, width=300)
+
+        result = paragraphs_to_layout(
+            [paragraph],
+            [],
+            (300, 200),
+            cv_img=gray_img,
+        )
+
+        regions = result["regions"]
+        assert len(regions) == 1
+        assert regions[0]["type"] == "CODE", "Large enough gray region should become CODE"
+
+
+# ============================================================
 # T014: paragraphs_to_layout() backward compatibility test
 # ============================================================
 
@@ -2134,3 +2239,13 @@ class TestLoadCodeDetectionConfig:
         assert isinstance(config["symbol_ratio_threshold"], float)
         assert isinstance(config["keyword_threshold"], int)
         assert isinstance(config["fragment_gap_threshold"], int)
+        assert isinstance(config["min_region_width"], int)
+        assert isinstance(config["min_region_height"], int)
+
+    def test_min_region_defaults(self) -> None:
+        """Default min_region_width/height should be present."""
+        from src.layout.code_detector import load_code_detection_config
+
+        config = load_code_detection_config()
+        assert config["min_region_width"] == 100
+        assert config["min_region_height"] == 60

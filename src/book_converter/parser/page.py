@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
+from src.book_converter.code_block_filter import filter_code_block
 from src.book_converter.models import (
     CodeBlock,
     Content,
@@ -655,7 +656,9 @@ def _parse_single_page_content(
         if is_fence:
             code_block, next_idx = _collect_code_block(lines, idx)
             if code_block is not None:
-                state.content_elements.append(code_block)
+                filtered = filter_code_block(code_block)
+                if filtered is not None:
+                    state.content_elements.append(filtered)
             idx = next_idx
             continue
 
