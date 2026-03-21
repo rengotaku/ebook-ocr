@@ -158,7 +158,7 @@ TDD Phase structure:
 - [ ] T0XX Verify `make test` PASS (GREEN)
 
 ### Verification
-- [ ] T0XX Verify `make coverage` ≥80%
+- [ ] T0XX Verify `make test-cov` ≥80%
 - [ ] T0XX Generate phase output: {FEATURE_DIR}/tasks/ph{N}-output.md
 ```
 

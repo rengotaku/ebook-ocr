@@ -118,7 +118,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      ```
 
    **Step 3: Coverage Verification**
-   - Verify ≥80% with `make coverage`
+   - Verify ≥80% with `make test-cov`
    - If insufficient, request additional tests from speckit:tdd-generator
 
    ### 6.4 Standard Flow (Polish/Documentation Phase)
