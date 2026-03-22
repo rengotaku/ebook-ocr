@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import shutil
 import sys
 import tempfile
@@ -16,6 +17,8 @@ from src.preprocessing.split_spread import (
     renumber_pages,
     split_spread_pages,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
@@ -88,14 +91,14 @@ def main() -> int:
 
     # Validate input
     if not Path(args.pages_dir).exists():
-        print(f"Error: Input not found: {args.pages_dir}", file=sys.stderr)
+        logger.error("Input not found: %s", args.pages_dir)
         return 1
 
     # Get mode (CLI argument > env var > default)
     try:
         mode = get_spread_mode(args.mode)
     except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("Error: %s", e)
         return 1
 
     # Build trim config from CLI arguments
@@ -124,7 +127,7 @@ def main() -> int:
                 right_page_outer=args.right_page_outer,
             )
         except ValueError as e:
-            print(f"Error: {e}", file=sys.stderr)
+            logger.error("Error: %s", e)
             return 1
 
     # Call existing functions
@@ -138,7 +141,7 @@ def main() -> int:
         renumber_pages(args.pages_dir)
         return 0
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("Error: %s", e)
         return 1
 
 
@@ -228,7 +231,7 @@ def preview_trim(
             output_dir=str(trimmed_dir),
         )
 
-    print(f"Preview trim complete. Output: {trimmed_dir}")
+    logger.info("Preview trim complete. Output: %s", trimmed_dir)
 
 
 if __name__ == "__main__":

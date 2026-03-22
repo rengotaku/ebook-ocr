@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 from src.layout_ocr import run_layout_ocr
 from src.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
@@ -36,13 +39,13 @@ def main() -> int:
 
     # Validate --limit
     if args.limit is not None and args.limit <= 0:
-        print("Error: --limit must be a positive integer", file=sys.stderr)
+        logger.error("--limit must be a positive integer")
         return 1
 
     # Validate input
     pages_path = Path(args.pages_dir)
     if not pages_path.exists():
-        print(f"Error: Input not found: {args.pages_dir}", file=sys.stderr)
+        logger.error("Input not found: %s", args.pages_dir)
         return 1
 
     # Load layout.json
@@ -57,9 +60,10 @@ def main() -> int:
     if args.limit is not None:
         all_pages = sorted(pages_path.glob("*.png"))
         if args.limit < len(all_pages):
-            print(
-                f"Limiting to first {args.limit} of {len(all_pages)} files",
-                file=sys.stderr,
+            logger.warning(
+                "Limiting to first %d of %d files",
+                args.limit,
+                len(all_pages),
             )
             # Filter layout_data to only include limited pages
             limited_pages = {p.name for p in all_pages[: args.limit]}
@@ -80,7 +84,7 @@ def main() -> int:
         )
         return 0
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("Error: %s", e)
         return 1
 
 

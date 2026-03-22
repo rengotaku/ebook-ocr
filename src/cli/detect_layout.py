@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 from src.layout.detector import detect_layout
 from src.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
@@ -31,12 +34,12 @@ def main() -> int:
 
     # Validate --limit
     if args.limit is not None and args.limit <= 0:
-        print("Error: --limit must be a positive integer", file=sys.stderr)
+        logger.error("--limit must be a positive integer")
         return 1
 
     # Validate input
     if not Path(args.pages_dir).exists():
-        print(f"Error: Input not found: {args.pages_dir}", file=sys.stderr)
+        logger.error("Input not found: %s", args.pages_dir)
         return 1
 
     # Call existing function
@@ -44,7 +47,7 @@ def main() -> int:
         detect_layout(args.pages_dir, args.output, device=args.device, limit=args.limit)
         return 0
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("Error: %s", e)
         return 1
 
 
