@@ -11,12 +11,15 @@ Grid lines are color-coded by direction:
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
 from src.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -92,22 +95,22 @@ def validate_args(args: argparse.Namespace) -> None:
     """
     # Validate input directory exists
     if not args.input_dir.exists():
-        print(f"Error: Input directory does not exist: {args.input_dir}", file=sys.stderr)
+        logger.error("Input directory does not exist: %s", args.input_dir)
         sys.exit(1)
 
     # Validate step > 0
     if args.step <= 0:
-        print("Error: --step must be greater than 0", file=sys.stderr)
+        logger.error("--step must be greater than 0")
         sys.exit(1)
 
     # Validate step <= max
     if args.step > args.max:
-        print("Error: --step must be less than or equal to --max", file=sys.stderr)
+        logger.error("--step must be less than or equal to --max")
         sys.exit(1)
 
     # Validate max < 0.5
     if args.max >= 0.5:
-        print("Error: --max must be less than 0.5", file=sys.stderr)
+        logger.error("--max must be less than 0.5")
         sys.exit(1)
 
 
@@ -231,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("Error: %s", e)
         return 1
 
 

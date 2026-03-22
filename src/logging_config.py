@@ -23,6 +23,11 @@ import logging
 import logging.config
 from pathlib import Path
 
+from rich.console import Console
+
+# Module-level Console for use in logging.yml via ext:// protocol
+stderr_console = Console(stderr=True)
+
 
 def setup_logging(
     config_path: Path | str | None = None,
@@ -72,6 +77,7 @@ def _setup_fallback(level: int) -> None:
         datefmt="[%m/%d/%y %H:%M:%S]",
         handlers=[
             RichHandler(
+                console=stderr_console,
                 rich_tracebacks=True,
                 tracebacks_show_locals=False,
                 show_path=True,

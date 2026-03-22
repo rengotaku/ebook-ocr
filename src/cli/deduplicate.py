@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 from src.logging_config import setup_logging
 from src.preprocessing.deduplicate import deduplicate_frames
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
@@ -32,22 +35,22 @@ def main() -> int:
 
     # Validate --limit
     if args.limit is not None and args.limit <= 0:
-        print("Error: --limit must be a positive integer", file=sys.stderr)
+        logger.error("--limit must be a positive integer")
         return 1
 
     # Validate input
     input_path = Path(args.input_dir)
     if not input_path.exists():
-        print(f"Error: Input not found: {args.input_dir}", file=sys.stderr)
+        logger.error("Input not found: %s", args.input_dir)
         return 1
 
     if not input_path.is_dir():
-        print(f"Error: Input is not a directory: {args.input_dir}", file=sys.stderr)
+        logger.error("Input is not a directory: %s", args.input_dir)
         return 1
 
     # Check if directory is empty
     if not list(input_path.glob("frame_*.png")):
-        print(f"Error: No frames found in: {args.input_dir}", file=sys.stderr)
+        logger.error("No frames found in: %s", args.input_dir)
         return 1
 
     # Call existing function
@@ -55,7 +58,7 @@ def main() -> int:
         deduplicate_frames(args.input_dir, args.output, args.threshold, limit=args.limit)
         return 0
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("Error: %s", e)
         return 1
 
 

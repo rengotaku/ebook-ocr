@@ -53,6 +53,11 @@ def _run_cli(*args: str, cwd: str | None = None) -> subprocess.CompletedProcess[
     )
 
 
+def _combined_output(result: subprocess.CompletedProcess[str]) -> str:
+    """Get combined stdout + stderr output."""
+    return result.stdout + result.stderr
+
+
 # ===========================================================================
 # report サブコマンドテスト
 # ===========================================================================
@@ -67,10 +72,11 @@ class TestReportCommand:
         result = _run_cli("report", str(book_md))
 
         assert result.returncode == 0, f"stderr: {result.stderr}"
+        combined = _combined_output(result)
         # レポートに見出し総数が含まれる
-        assert "Total" in result.stdout or "total" in result.stdout.lower()
+        assert "Total" in combined or "total" in combined.lower()
         # パターン分布が含まれる
-        assert "Pattern" in result.stdout or "pattern" in result.stdout.lower() or "numbered" in result.stdout.lower()
+        assert "Pattern" in combined or "pattern" in combined.lower() or "numbered" in combined.lower()
 
     def test_report_command_file_not_found(self, tmp_path: Path) -> None:
         """存在しないファイルを指定した場合にエラーを返す."""
@@ -80,7 +86,7 @@ class TestReportCommand:
 
         assert result.returncode != 0
         # エラーメッセージにファイルパスまたは "not found" が含まれる (NotImplementedError ではなく)
-        combined = result.stderr + result.stdout
+        combined = _combined_output(result)
         assert "NotImplementedError" not in combined, "Should show user-friendly error, not NotImplementedError"
         assert "not found" in combined.lower() or "no such file" in combined.lower() or "error" in combined.lower()
 
@@ -93,7 +99,7 @@ class TestReportCommand:
 
         # マーカーがないのでエラー
         assert result.returncode != 0
-        assert "content" in result.stderr.lower()
+        assert "content" in _combined_output(result).lower()
 
     def test_report_command_shows_numbered_pattern(self, tmp_path: Path) -> None:
         """番号付き見出しパターンがレポートに表示される."""
@@ -104,8 +110,8 @@ class TestReportCommand:
 
         assert result.returncode == 0, f"stderr: {result.stderr}"
         # 番号付きパターンの情報が含まれる
-        stdout_lower = result.stdout.lower()
-        assert "numbered" in stdout_lower or "番号" in result.stdout
+        combined = _combined_output(result).lower()
+        assert "numbered" in combined or "番号" in _combined_output(result)
 
 
 # ===========================================================================
@@ -162,7 +168,7 @@ class TestNormalizeCommand:
         result = _run_cli("normalize", nonexistent)
 
         assert result.returncode != 0
-        combined = result.stderr + result.stdout
+        combined = _combined_output(result)
         assert "NotImplementedError" not in combined, "Should show user-friendly error, not NotImplementedError"
         assert "not found" in combined.lower() or "no such file" in combined.lower() or "error" in combined.lower()
 
@@ -198,7 +204,8 @@ class TestNormalizeCommand:
 
         assert result.returncode == 0, f"stderr: {result.stderr}"
         # 1.5.5 should be MISSING, not MISSING(NUM) / FIX_NUM
-        lines = result.stdout.splitlines()
+        combined = _combined_output(result)
+        lines = combined.splitlines()
         for line in lines:
             if "1.5.5" in line:
                 assert "FIX_NUM" not in line, (
@@ -217,9 +224,9 @@ class TestNormalizeCommand:
 
         assert result.returncode == 0, f"stderr: {result.stderr}"
         # プレビューに変更行情報が含まれる (Line や -> 等)
-        stdout = result.stdout
+        combined = _combined_output(result)
         # 少なくとも何らかの出力がある
-        assert len(stdout) > 0
+        assert len(combined) > 0
 
 
 # ===========================================================================
@@ -237,9 +244,10 @@ class TestValidateCommand:
 
         assert result.returncode == 0, f"stderr: {result.stderr}"
         # 検証レポートのヘッダが含まれる
-        assert "Validation Report" in result.stdout or "validation" in result.stdout.lower()
+        combined = _combined_output(result)
+        assert "Validation Report" in combined or "validation" in combined.lower()
         # サマリー情報が含まれる
-        assert "TOC" in result.stdout or "toc" in result.stdout.lower()
+        assert "TOC" in combined or "toc" in combined.lower()
 
     def test_validate_command_warn_exit_code(self, tmp_path: Path) -> None:
         """MISSING エントリがあっても exit code は 0 である."""
@@ -266,8 +274,8 @@ class TestValidateCommand:
         # MISSING があっても exit 0 (CI でブロックしない)
         assert result.returncode == 0, f"stderr: {result.stderr}"
         # WARN ステータスまたは MISSING 情報が含まれる
-        stdout = result.stdout
-        assert "WARN" in stdout or "MISSING" in stdout or "missing" in stdout.lower()
+        combined = _combined_output(result)
+        assert "WARN" in combined or "MISSING" in combined or "missing" in combined.lower()
 
     def test_validate_command_file_not_found(self, tmp_path: Path) -> None:
         """存在しないファイルを指定した場合にエラーを返す."""
@@ -276,7 +284,7 @@ class TestValidateCommand:
         result = _run_cli("validate", nonexistent)
 
         assert result.returncode != 0
-        combined = result.stderr + result.stdout
+        combined = _combined_output(result)
         assert "NotImplementedError" not in combined, "Should show user-friendly error, not NotImplementedError"
         assert "not found" in combined.lower() or "no such file" in combined.lower() or "error" in combined.lower()
 
@@ -289,8 +297,8 @@ class TestValidateCommand:
 
         assert result.returncode == 0, f"stderr: {result.stderr}"
         # テーブルまたは詳細情報が含まれる
-        stdout = result.stdout
-        assert "Match" in stdout or "match" in stdout.lower() or "EXACT" in stdout or "FUZZY" in stdout
+        combined = _combined_output(result)
+        assert "Match" in combined or "match" in combined.lower() or "EXACT" in combined or "FUZZY" in combined
 
     def test_validate_command_shows_excluded(self, tmp_path: Path) -> None:
         """特殊マーカー見出しが Excluded セクションに表示される."""
@@ -301,8 +309,8 @@ class TestValidateCommand:
 
         assert result.returncode == 0, f"stderr: {result.stderr}"
         # Excluded セクションに特殊マーカー見出しが含まれる
-        stdout = result.stdout
-        assert "Excluded" in stdout or "excluded" in stdout.lower()
+        combined = _combined_output(result)
+        assert "Excluded" in combined or "excluded" in combined.lower()
 
     def test_validate_command_with_threshold(self, tmp_path: Path) -> None:
         """--threshold オプションが受け付けられる."""
@@ -326,7 +334,7 @@ class TestCLICommon:
 
         # argparse はサブコマンドなしで error (returncode != 0) を返す
         assert result.returncode != 0
-        combined = result.stderr + result.stdout
+        combined = _combined_output(result)
         assert "NotImplementedError" not in combined, "Should show argparse help, not NotImplementedError"
         assert "usage" in combined.lower() or "error" in combined.lower()
 
@@ -366,7 +374,7 @@ class TestCLICommon:
         result = _run_cli("invalid_command")
 
         assert result.returncode != 0
-        combined = result.stderr + result.stdout
+        combined = _combined_output(result)
         assert "NotImplementedError" not in combined, "Should show argparse error, not NotImplementedError"
 
     def test_module_runnable(self) -> None:

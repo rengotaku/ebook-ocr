@@ -14,11 +14,14 @@ NOTE: このスクリプトは normalize_toc.py と相互に影響します。
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 import unicodedata
 from pathlib import Path
 
 from src.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def _display_width(text: str) -> int:
@@ -70,14 +73,14 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     # File existence check
     if not file_path.exists():
-        print(f"Error: File not found: {file_path}", file=sys.stderr)
+        logger.error("File not found: %s", file_path)
         return 1
 
     # Read file
     try:
         content = file_path.read_text(encoding="utf-8")
     except Exception as e:
-        print(f"Error: Failed to read file: {e}", file=sys.stderr)
+        logger.error("Failed to read file: %s", e)
         return 1
 
     # Extract headings
@@ -85,27 +88,27 @@ def cmd_report(args: argparse.Namespace) -> int:
     try:
         headings = extract_headings(lines)
     except MissingMarkerError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     # Classify patterns
     report = classify_heading_patterns(headings)
 
     # Print report
-    print("Heading Pattern Report")
-    print("======================")
-    print(f"Total headings: {report.total}")
-    print()
-    print("Pattern Distribution:")
+    logger.info("Heading Pattern Report")
+    logger.info("======================")
+    logger.info("Total headings: %d", report.total)
+    logger.info("")
+    logger.info("Pattern Distribution:")
     if report.total > 0:
         numbered_pct = (report.numbered_count / report.total) * 100
         unnumbered_pct = (report.unnumbered_count / report.total) * 100
         special_pct = (report.special_marker_count / report.total) * 100
-        print(f"  Numbered (##N.N):       {report.numbered_count} ({numbered_pct:.1f}%)")
-        print(f"  Unnumbered:             {report.unnumbered_count} ({unnumbered_pct:.1f}%)")
-        print(f"  Special markers:        {report.special_marker_count} ({special_pct:.1f}%)")
+        logger.info("  Numbered (##N.N):       %d (%.1f%%)", report.numbered_count, numbered_pct)
+        logger.info("  Unnumbered:             %d (%.1f%%)", report.unnumbered_count, unnumbered_pct)
+        logger.info("  Special markers:        %d (%.1f%%)", report.special_marker_count, special_pct)
     else:
-        print("  No headings found.")
+        logger.info("  No headings found.")
 
     return 0
 
@@ -139,14 +142,14 @@ def cmd_normalize(args: argparse.Namespace) -> int:
 
     # File existence check
     if not file_path.exists():
-        print(f"Error: File not found: {file_path}", file=sys.stderr)
+        logger.error("File not found: %s", file_path)
         return 1
 
     # Read file
     try:
         content = file_path.read_text(encoding="utf-8")
     except Exception as e:
-        print(f"Error: Failed to read file: {e}", file=sys.stderr)
+        logger.error("Failed to read file: %s", e)
         return 1
 
     lines = content.splitlines()
@@ -156,7 +159,7 @@ def cmd_normalize(args: argparse.Namespace) -> int:
     has_toc_end = any(parse_toc_marker(line) == MarkerType.TOC_END for line in lines)
 
     if not has_toc_start or not has_toc_end:
-        print("Error: Required markers <!-- toc --> and <!-- /toc --> not found", file=sys.stderr)
+        logger.error("Required markers <!-- toc --> and <!-- /toc --> not found")
         return 1
 
     # Extract TOC entries
@@ -186,7 +189,7 @@ def cmd_normalize(args: argparse.Namespace) -> int:
     try:
         headings = extract_headings(lines)
     except MissingMarkerError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     # Convert HeadingInfo to Heading for matcher
@@ -306,20 +309,20 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         backup_path = file_path.with_suffix(".md.bk")
         try:
             backup_path.write_text(content, encoding="utf-8")
-            print(f"Backup saved to {backup_path}")
+            logger.info("Backup saved to %s", backup_path)
         except Exception as e:
-            print(f"Error: Failed to create backup: {e}", file=sys.stderr)
+            logger.error("Failed to create backup: %s", e)
             return 1
 
         # Write back
         try:
             file_path.write_text(modified_content, encoding="utf-8")
-            print(f"Applied {len(rules)} normalization rules to {file_path}")
-            print()
-            print(f"TOC Entries: {len(toc_entries)}")
-            print(f"Matched: {matched_count}, Missing: {missing_count}")
+            logger.info("Applied %d normalization rules to %s", len(rules), file_path)
+            logger.info("")
+            logger.info("TOC Entries: %d", len(toc_entries))
+            logger.info("Matched: %d, Missing: %d", matched_count, missing_count)
         except Exception as e:
-            print(f"Error: Failed to write file: {e}", file=sys.stderr)
+            logger.error("Failed to write file: %s", e)
             return 1
     else:
         # Preview changes
@@ -448,23 +451,23 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         )
 
         # Print summary
-        print("Normalization Preview")
-        print("=====================")
-        print()
-        print(f"TOC Entries:    {len(toc_entries)}")
-        print(f"Body Headings:  {len(body_headings)}")
+        logger.info("Normalization Preview")
+        logger.info("=====================")
+        logger.info("")
+        logger.info("TOC Entries:    %d", len(toc_entries))
+        logger.info("Body Headings:  %d", len(body_headings))
         matched_pct = matched_count * 100 // len(toc_entries) if toc_entries else 0
         matched_line = f"Matched:        {matched_count} ({matched_pct}%)"
         if matched_actions:
             parts = [f"{a}:{c}" for a, c in sorted(matched_actions.items())]
             matched_line += f"  {', '.join(parts)}"
-        print(matched_line)
+        logger.info("%s", matched_line)
         missing_line = f"Missing:        {missing_count}"
         if missing_actions:
             parts = [f"{a}:{c}" for a, c in sorted(missing_actions.items())]
             missing_line += f"          {', '.join(parts)}"
-        print(missing_line)
-        print()
+        logger.info("%s", missing_line)
+        logger.info("")
 
         # Filter rows if --hide-ok is set
         hide_ok = getattr(args, "hide_ok", False)
@@ -496,25 +499,25 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         header_parts = []
         for i, h in enumerate(headers):
             header_parts.append(_pad_to_width(h, col_widths[i]))
-        print("  ".join(header_parts))
-        print("-" * (sum(col_widths) + 2 * (len(headers) - 1)))
+        logger.info("%s", "  ".join(header_parts))
+        logger.info("%s", "-" * (sum(col_widths) + 2 * (len(headers) - 1)))
 
         # Print rows
         for row in table_rows:
             row_parts = []
             for i, cell in enumerate(row):
                 row_parts.append(_pad_to_width(cell, col_widths[i]))
-            print("  ".join(row_parts))
+            logger.info("%s", "  ".join(row_parts))
 
-        print("-" * (sum(col_widths) + 2 * (len(headers) - 1)))
-        print()
-        print("Column: BodyPage/BodyLine=本文見出しの位置 (content内), BodyNum/Body Title=候補の情報")
-        print("Status: OK=変更不要, MATCH=変更必要, MISSING=候補なし, MISSING(NUM)=番号不一致, NO_NUM=番号なし")
-        print("Action: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正, FIX_NUM=番号修正, MANUAL=手動対応")
+        logger.info("%s", "-" * (sum(col_widths) + 2 * (len(headers) - 1)))
+        logger.info("")
+        logger.info("Column: BodyPage/BodyLine=本文見出しの位置 (content内), BodyNum/Body Title=候補の情報")
+        logger.info("Status: OK=変更不要, MATCH=変更必要, MISSING=候補なし, MISSING(NUM)=番号不一致, NO_NUM=番号なし")
+        logger.info("Action: +NUM=番号付与, +MRK=マーカー付与, FMT=フォーマット修正, FIX_NUM=番号修正, MANUAL=手動対応")
 
         if rules:
-            print()
-            print("Run with APPLY=1 to apply changes.")
+            logger.info("")
+            logger.info("Run with APPLY=1 to apply changes.")
 
     return 0
 
@@ -539,14 +542,14 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     # File existence check
     if not file_path.exists():
-        print(f"Error: File not found: {file_path}", file=sys.stderr)
+        logger.error("File not found: %s", file_path)
         return 1
 
     # Read file
     try:
         content = file_path.read_text(encoding="utf-8")
     except Exception as e:
-        print(f"Error: Failed to read file: {e}", file=sys.stderr)
+        logger.error("Failed to read file: %s", e)
         return 1
 
     lines = content.splitlines()
@@ -556,7 +559,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     has_toc_end = any(parse_toc_marker(line) == MarkerType.TOC_END for line in lines)
 
     if not has_toc_start or not has_toc_end:
-        print("Error: Required markers <!-- toc --> and <!-- /toc --> not found", file=sys.stderr)
+        logger.error("Required markers <!-- toc --> and <!-- /toc --> not found")
         return 1
 
     # Extract TOC entries
@@ -586,7 +589,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     try:
         headings = extract_headings(lines)
     except MissingMarkerError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     # Convert HeadingInfo to Heading for matcher
@@ -646,7 +649,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
         matches,
         similar_candidates,
     )
-    print(formatted)
+    logger.info("%s", formatted)
 
     # Always exit 0 (even with MISSING)
     return 0

@@ -14,6 +14,7 @@ NOTE: このスクリプトは normalize_headings.py と相互に影響します
 from __future__ import annotations
 
 import argparse
+import logging
 import re
 import sys
 import unicodedata
@@ -21,6 +22,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from src.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -207,15 +210,15 @@ def _display_width(text: str) -> int:
 def print_preview(fixes: list[TocFix]) -> None:
     """Print a preview of fixes to be applied."""
     if not fixes:
-        print("No OCR errors found in TOC entries.")
+        logger.info("No OCR errors found in TOC entries.")
         return
 
-    print(f"Found {len(fixes)} fix(es):\n")
+    logger.info("Found %d fix(es):\n", len(fixes))
     for fix in fixes:
-        print(f"  L{fix.line_number}: {fix.reason}")
-        print(f"    - {fix.original.strip()}")
-        print(f"    + {fix.fixed.strip()}")
-        print()
+        logger.info("  L%d: %s", fix.line_number, fix.reason)
+        logger.info("    - %s", fix.original.strip())
+        logger.info("    + %s", fix.fixed.strip())
+        logger.info("")
 
 
 def apply_fixes(lines: list[str], fixes: list[TocFix]) -> list[str]:
@@ -265,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     book_path: Path = args.book_md
 
     if not book_path.exists():
-        print(f"Error: {book_path} not found", file=sys.stderr)
+        logger.error("%s not found", book_path)
         return 1
 
     content = book_path.read_text(encoding="utf-8")
@@ -275,13 +278,13 @@ def main(argv: list[str] | None = None) -> int:
     fixes = find_toc_fixes(lines_stripped)
 
     if not fixes:
-        print("No OCR errors found in TOC entries.")
+        logger.info("No OCR errors found in TOC entries.")
         return 0
 
     print_preview(fixes)
 
     if not args.apply:
-        print(f"Dry-run: {len(fixes)} fix(es) found. Use --apply to apply.")
+        logger.info("Dry-run: %d fix(es) found. Use --apply to apply.", len(fixes))
         return 0
 
     # Rebuild with original line endings preserved
@@ -292,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
         fixed_lines.append(fixed + ending)
 
     book_path.write_text("".join(fixed_lines), encoding="utf-8")
-    print(f"Applied {len(fixes)} fix(es) to {book_path}")
+    logger.info("Applied %d fix(es) to %s", len(fixes), book_path)
     return 0
 
 

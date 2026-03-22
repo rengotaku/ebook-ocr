@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 from src.logging_config import setup_logging
 from src.preprocessing.frames import extract_frames
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
@@ -27,7 +30,7 @@ def main() -> int:
 
     # Validate input
     if not Path(args.video).exists():
-        print(f"Error: Input not found: {args.video}", file=sys.stderr)
+        logger.error("Input not found: %s", args.video)
         return 1
 
     # Call existing function
@@ -35,7 +38,7 @@ def main() -> int:
         extract_frames(args.video, args.output, args.interval)
         return 0
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("Error: %s", e)
         return 1
 
 

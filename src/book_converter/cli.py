@@ -6,6 +6,7 @@ Provides command-line interface for converting book.md to book.xml.
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
@@ -26,6 +27,8 @@ from src.book_converter.models import (
 from src.book_converter.parser import count_markers, parse_pages_with_errors
 from src.book_converter.xml_builder import build_xml_with_errors
 from src.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
@@ -215,7 +218,7 @@ def main(args: list[str] | None = None) -> int:
 
         # Check if input file exists
         if not input_path.exists():
-            print(f"エラー: 入力ファイルが見つかりません: {input_path}", file=sys.stderr)
+            logger.error("入力ファイルが見つかりません: %s", input_path)
             return 1
 
         # Build header level config from CLI args
@@ -229,11 +232,13 @@ def main(args: list[str] | None = None) -> int:
 
         # Convert
         if parsed.verbose:
-            print(f"変換中: {input_path} -> {output_path}")
+            logger.info("変換中: %s -> %s", input_path, output_path)
             if header_level_config.has_any_config():
-                print(
-                    f"見出しレベル設定: L1={header_level_config.level1}, "
-                    f"L2={header_level_config.level2}, L3={header_level_config.level3}"
+                logger.info(
+                    "見出しレベル設定: L1=%s, L2=%s, L3=%s",
+                    header_level_config.level1,
+                    header_level_config.level2,
+                    header_level_config.level3,
                 )
 
         result = convert_book(
@@ -250,33 +255,38 @@ def main(args: list[str] | None = None) -> int:
 
         # Output summary (unless quiet mode)
         if not parsed.quiet:
-            print(f"変換完了: {result.total_pages}ページ処理")
+            logger.info("変換完了: %dページ処理", result.total_pages)
             # Marker statistics
-            print(f"マーカー: toc={marker_stats.toc}, content={marker_stats.content}, skip={marker_stats.skip}")
+            logger.info(
+                "マーカー: toc=%d, content=%d, skip=%d",
+                marker_stats.toc,
+                marker_stats.content,
+                marker_stats.skip,
+            )
             if result.error_count > 0:
-                print(f"警告: {result.error_count}個のエラーが発生しました")
+                logger.warning("警告: %d個のエラーが発生しました", result.error_count)
 
         # Error summary at the end
         if result.error_count > 0 and not parsed.quiet:
-            print("\n=== エラーサマリー ===", file=sys.stderr)
+            logger.error("=== エラーサマリー ===")
             for error in result.errors:
                 location = ""
                 if error.line_number > 0:
                     location = f" (行 {error.line_number})"
                 if error.page_number:
                     location += f" (ページ {error.page_number})"
-                print(f"  [{error.error_type}] {error.message}{location}", file=sys.stderr)
+                logger.error("  [%s] %s%s", error.error_type, error.message, location)
 
         # Check error rate (10% threshold)
         if result.total_pages > 0:
             error_rate = result.error_count / result.total_pages
             if error_rate > 0.10:
-                print(f"\n警告: エラー率が10%を超えています ({error_rate:.1%})", file=sys.stderr)
+                logger.warning("エラー率が10%%を超えています (%.1f%%)", error_rate * 100)
 
         return 0
 
     except Exception as e:
-        print(f"エラー: {e}", file=sys.stderr)
+        logger.error("エラー: %s", e)
         return 1
 
 
