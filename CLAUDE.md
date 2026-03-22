@@ -159,8 +159,8 @@ make preview-trim-grid HASHDIR=output/<hash>
 open output/<hash>/preview/trim-grid/page_001.png
 # 例: 赤いライン3本目 = T:0.15 → GLOBAL_TRIM_TOP=0.15
 
-# 4. 確認したトリム値を適用
-make preview-trim HASHDIR=output/<hash> GLOBAL_TRIM_TOP=0.15
+# 4. 確認したトリム値をパイプラインに適用
+make run VIDEO=input.mp4 GLOBAL_TRIM_TOP=0.15
 ```
 
 **色分け**:

@@ -92,7 +92,7 @@ Verify all tests PASS. If FAIL, fix implementation.
 
 ### 8. Validation (TDD Phase only)
 
-- Verify coverage (`make coverage` ≥80%)
+- Verify coverage (`make test-cov` ≥80%)
 - Execute other validation tasks if any
 
 ### 9. Update tasks.md
