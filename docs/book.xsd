@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!-- ============================================================ -->
+  <!-- Root Element                                                  -->
+  <!-- ============================================================ -->
+
+  <xs:element name="book">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="metadata" />
+        <xs:element ref="toc" minOccurs="0" />
+        <!-- Modern format: chapter-based -->
+        <xs:element ref="front-matter" minOccurs="0" />
+        <xs:element ref="chapter" minOccurs="0" maxOccurs="unbounded" />
+        <!-- Legacy format: page-based -->
+        <xs:element ref="page" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ============================================================ -->
+  <!-- Metadata                                                      -->
+  <!-- ============================================================ -->
+
+  <xs:element name="metadata">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="title" type="xs:string" />
+        <xs:element name="isbn" type="xs:string" minOccurs="0" />
+        <xs:element name="sourceFormat" type="xs:string" minOccurs="0" />
+        <xs:element name="conversionDate" type="xs:string" minOccurs="0" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ============================================================ -->
+  <!-- Table of Contents                                             -->
+  <!-- ============================================================ -->
+
+  <xs:element name="toc">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="entry" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="begin" type="xs:string" />
+      <xs:attribute name="end" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="entry">
+    <xs:complexType>
+      <xs:attribute name="level" type="xs:positiveInteger" use="required" />
+      <xs:attribute name="number" type="xs:string" />
+      <xs:attribute name="title" type="xs:string" use="required" />
+      <xs:attribute name="page" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ============================================================ -->
+  <!-- Modern Format: Chapter / Section                              -->
+  <!-- ============================================================ -->
+
+  <xs:element name="front-matter">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="heading" />
+        <xs:element ref="paragraph" />
+        <xs:element ref="list" />
+        <xs:element ref="figure" />
+        <xs:element ref="code" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="chapter">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="heading" />
+        <xs:element ref="paragraph" />
+        <xs:element ref="list" />
+        <xs:element ref="figure" />
+        <xs:element ref="code" />
+        <xs:element ref="section" />
+      </xs:choice>
+      <xs:attribute name="number" type="xs:string" />
+      <xs:attribute name="title" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="section">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="heading" />
+        <xs:element ref="paragraph" />
+        <xs:element ref="list" />
+        <xs:element ref="figure" />
+        <xs:element ref="code" />
+      </xs:choice>
+      <xs:attribute name="number" type="xs:string" />
+      <xs:attribute name="title" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ============================================================ -->
+  <!-- Content Elements                                              -->
+  <!-- ============================================================ -->
+
+  <xs:complexType name="textWithEmphasis" mixed="true">
+    <xs:sequence>
+      <xs:element ref="em" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="heading">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element ref="em" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="level" type="xs:positiveInteger" />
+      <xs:attribute name="readAloud" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="paragraph">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element ref="em" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="readAloud" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="list">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="item" minOccurs="1" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="readAloud" type="xs:string" />
+      <xs:attribute name="type" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="item">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element ref="em" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="figure">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="file" type="xs:string" minOccurs="0" />
+        <xs:element name="caption" minOccurs="0">
+          <xs:complexType mixed="true">
+            <xs:attribute name="readAloud" type="xs:string" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="description" type="xs:string" minOccurs="0" />
+      </xs:sequence>
+      <xs:attribute name="path" type="xs:string" />
+      <xs:attribute name="caption" type="xs:string" />
+      <xs:attribute name="marker" type="xs:string" />
+      <xs:attribute name="readAloud" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="code">
+    <xs:complexType mixed="true">
+      <xs:attribute name="readAloud" type="xs:string" />
+      <xs:attribute name="language" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="em" type="xs:string" />
+
+  <!-- ============================================================ -->
+  <!-- Legacy Format: Page-based                                     -->
+  <!-- ============================================================ -->
+
+  <xs:element name="page">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="pageAnnouncement" minOccurs="0" />
+        <xs:element ref="figure" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="content" minOccurs="0" />
+        <xs:element ref="pageMetadata" minOccurs="0" />
+      </xs:sequence>
+      <xs:attribute name="number" type="xs:string" use="required" />
+      <xs:attribute name="sourceFile" type="xs:string" use="required" />
+      <xs:attribute name="continued" type="xs:string" />
+      <xs:attribute name="type" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="pageAnnouncement">
+    <xs:complexType mixed="true">
+      <xs:attribute name="format" type="xs:string" />
+      <xs:attribute name="readAloud" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="content">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="heading" />
+        <xs:element ref="paragraph" />
+        <xs:element ref="list" />
+        <xs:element ref="code" />
+      </xs:choice>
+      <xs:attribute name="readAloud" type="xs:string" />
+      <xs:attribute name="continued" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="pageMetadata">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element ref="em" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="type" type="xs:string" />
+      <xs:attribute name="readAloud" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>
