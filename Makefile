@@ -112,6 +112,9 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT option
 	@echo "=== Step 6: Convert to XML ==="
 	@$(MAKE) --no-print-directory converter HASHDIR="$(HASHDIR)"
 	@echo "=== Done: $(HASHDIR)/book.xml ==="
+	@echo ""
+	@echo "To use with text-reading-with-llm:"
+	@echo "  export BOOK_DIR=$(abspath $(HASHDIR))"
 
 # === Preview ===
 .PHONY: preview-extract preview-trim-grid
