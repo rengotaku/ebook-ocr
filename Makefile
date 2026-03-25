@@ -111,6 +111,8 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT option
 	@$(MAKE) --no-print-directory consolidate HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
 	@echo "=== Step 6: Convert to XML ==="
 	@$(MAKE) --no-print-directory converter HASHDIR="$(HASHDIR)"
+	@echo "=== Step 7: Validate XML ==="
+	@$(MAKE) --no-print-directory validate-xml HASHDIR="$(HASHDIR)"
 	@echo "=== Done: $(HASHDIR)/book.xml ==="
 	@echo ""
 	@echo "To use with text-reading-with-llm:"
