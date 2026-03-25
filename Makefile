@@ -111,7 +111,12 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT option
 	@$(MAKE) --no-print-directory consolidate HASHDIR="$(HASHDIR)" LIMIT="$(LIMIT)"
 	@echo "=== Step 6: Convert to XML ==="
 	@$(MAKE) --no-print-directory converter HASHDIR="$(HASHDIR)"
+	@echo "=== Step 7: Validate XML ==="
+	@$(MAKE) --no-print-directory validate-xml HASHDIR="$(HASHDIR)"
 	@echo "=== Done: $(HASHDIR)/book.xml ==="
+	@echo ""
+	@echo "To use with text-reading-with-llm:"
+	@echo "  export BOOK_DIR=$(abspath $(HASHDIR))"
 
 # === Preview ===
 .PHONY: preview-extract preview-trim-grid
@@ -151,6 +156,13 @@ normalize-toc: setup ## Normalize OCR errors in TOC entries (requires HASHDIR, o
 normalize-headings: setup ## Normalize headings to match TOC (requires HASHDIR, optional APPLY=1)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make normalize-headings HASHDIR=output/<hash> [APPLY=1]"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.normalize_headings normalize "$(HASHDIR)/book.md" $(if $(APPLY),--apply)
+
+# === Validation ===
+.PHONY: validate-xml
+
+validate-xml: setup ## Validate book.xml against XSD schema (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make validate-xml HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.validate_xml "$(HASHDIR)/book.xml"
 
 # === Testing ===
 .PHONY: test test-all test-slow test-cov test-cov-all

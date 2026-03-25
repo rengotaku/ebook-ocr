@@ -9,3 +9,4 @@ pytesseract>=0.3.10
 yomitoku>=0.10.0
 pylint>=3.0.0
 rich
+lxml
