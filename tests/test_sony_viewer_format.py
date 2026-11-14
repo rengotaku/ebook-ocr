@@ -57,9 +57,9 @@ class TestBuildSampleOrder:
         assert side == 48
         assert set(order) == set(range(16 * 27))
 
-    def test_last_tile_appears_twice(self):
+    def test_has_one_entry_per_tile(self):
         order, _ = fmt.build_sample_order("12345", 1, 768, 1280)
-        assert len(order) == 16 * 27 + 1
+        assert len(order) == 16 * 27
 
     def test_requires_digits_in_iid(self):
         with pytest.raises(ValueError):
