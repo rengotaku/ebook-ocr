@@ -238,6 +238,11 @@ def save_pages(pages: list[Page], recovered: dict, out_dir: Path, sources: dict)
     return written
 
 
+def default_output(har: Path) -> Path:
+    """HAR の隣に ``<HAR 名>_webp`` を作る."""
+    return har.with_name(f"{har.name}_webp")
+
+
 def output_dir(base: Path, content_id: str, multiple: bool) -> Path:
     return base / content_id if multiple else base
 
@@ -245,9 +250,10 @@ def output_dir(base: Path, content_id: str, multiple: bool) -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Sony ビューアの HAR からページ画像を復元する")
     parser.add_argument("har", type=Path, help="DevTools で書き出した HAR")
-    parser.add_argument("-o", "--out", type=Path, default=Path("pages"), help="出力ディレクトリ")
+    parser.add_argument("-o", "--out", type=Path, help="出力ディレクトリ（既定: <HAR 名>_webp）")
     parser.add_argument("--limit", type=int, help="先頭 N ページだけ処理する（動作確認用）")
     args = parser.parse_args(argv)
+    out_dir = args.out or default_output(args.har)
 
     sources = collect(read_har(args.har))
     if not sources["image_bundles"]:
@@ -268,8 +274,8 @@ def main(argv: list[str] | None = None) -> int:
         written = 0
         for content_id in content_ids:
             group = [page for page in pages if page.content_id == content_id]
-            written += save_pages(group, recovered, output_dir(args.out, content_id, len(content_ids) > 1), sources)
-    print(f"{written} ページを {args.out} に書き出した")
+            written += save_pages(group, recovered, output_dir(out_dir, content_id, len(content_ids) > 1), sources)
+    print(f"{written} ページを {out_dir.resolve()} に書き出した")
     return 0
 
 
