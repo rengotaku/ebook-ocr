@@ -81,7 +81,6 @@ def build_sample_order(
     """暗号化されていないページの並べ替え順を、ビューアと同じ手順で作る.
 
     ``iid`` の数字と ``seed_shift``（ビューアの URL にある ``v``）で擬似乱数を初期化する。
-    生成される順序は末尾のタイルが 1 つ重複する（ビューアもそのまま描画する）。
     """
     seeds = [int(char) for char in str(iid) if char in "123456789"]
     if not seeds:
@@ -108,7 +107,8 @@ def build_sample_order(
         line = list(range(row * columns, (row + 1) * columns))
         main.extend(line[:-1])
         horizontal_tail.append(line[-1])
-    vertical_tail = list(range((rows - 1) * columns, rows * columns))
+    # 最後のタイルは別に足すので、ここでは含めない（ビューアの実装と同じ）
+    vertical_tail = list(range((rows - 1) * columns, rows * columns - 1))
 
     main = shuffle(main)
     horizontal_tail = shuffle(horizontal_tail)
