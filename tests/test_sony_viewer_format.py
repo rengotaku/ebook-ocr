@@ -98,6 +98,13 @@ class TestDescramble:
             fmt.descramble(self._tiled_image(), [0, 1], 48)
 
 
+class TestDefaultOutput:
+    def test_sits_next_to_the_har(self):
+        from extract_pages import default_output
+
+        assert default_output(Path("/tmp/book.har")) == Path("/tmp/book.har_webp")
+
+
 class TestSideLength:
     def test_text_and_comic(self):
         assert fmt.side_length_for("text") == 48

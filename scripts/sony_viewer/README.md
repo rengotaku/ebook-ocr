@@ -10,17 +10,23 @@ Sony 電子書籍ストアのビューア（`viewer.ebookstore.sony.jp`）が返
 
 ```bash
 # 1. ビューアで本を開き、DevTools の Network タブから「Export HAR」で保存する
-# 2. 復元する
-python scripts/sony_viewer/extract_pages.py download_openbook -o pages
+# 2. 復元する（出力先を省くと HAR の隣に <HAR 名>_webp/ ができる）
+python scripts/sony_viewer/extract_pages.py ~/Downloads/download_openbook
+```
+
+```
+~/Downloads/download_openbook_webp/0000.webp
+~/Downloads/download_openbook_webp/0001.webp
+...
 ```
 
 | オプション | 意味 |
 |---|---|
-| `-o, --out` | 出力ディレクトリ（既定 `pages`） |
+| `-o, --out` | 出力ディレクトリ（既定: `<HAR 名>_webp`） |
 | `--limit` | 先頭 N ページだけ処理する（動作確認用） |
 
-- 出力は `pages/0000.webp` のようにビューアのページ番号で並ぶ。可逆 WebP（VP8L）
-- 複数の本のログが混ざっている場合は `pages/<contentId>/` に分かれる
+- 出力は `0000.webp` のようにビューアのページ番号で並ぶ。可逆 WebP（VP8L）
+- 複数の本のログが混ざっている場合は `<出力先>/<contentId>/` に分かれる
 - 依存: Pillow と Node（18 以上）。復号はビューアの JavaScript をそのまま使うため Node が要る
 
 ## 仕組み
