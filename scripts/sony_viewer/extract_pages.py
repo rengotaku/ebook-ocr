@@ -3,7 +3,7 @@
 
 使い方::
 
-    python scripts/sony_viewer/extract_pages.py download_openbook -o pages
+    python3 scripts/sony_viewer/extract_pages.py download_openbook -o pages
 
 HAR はブラウザの DevTools から「Export HAR」で保存したもの。
 出力は ``pages/0000.webp`` のようにビューアのページ番号で並ぶ。
