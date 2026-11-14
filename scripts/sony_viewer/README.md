@@ -11,7 +11,7 @@ Sony 電子書籍ストアのビューア（`viewer.ebookstore.sony.jp`）が返
 ```bash
 # 1. ビューアで本を開き、DevTools の Network タブから「Export HAR」で保存する
 # 2. 復元する（出力先を省くと HAR の隣に <HAR 名>_webp/ ができる）
-python scripts/sony_viewer/extract_pages.py ~/Downloads/download_openbook
+python3 scripts/sony_viewer/extract_pages.py ~/Downloads/download_openbook
 ```
 
 ```
@@ -83,5 +83,5 @@ python scripts/sony_viewer/extract_pages.py ~/Downloads/download_openbook
 ## テスト
 
 ```bash
-python -m pytest tests/test_sony_viewer_format.py
+python3 -m pytest tests/test_sony_viewer_format.py
 ```
