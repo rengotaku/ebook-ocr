@@ -31,6 +31,12 @@ from pathlib import Path
 from PIL import Image
 
 from src.layout.reading_order import remove_overlaps, sort_reading_order
+from src.layout.running_head import (
+    find_running_heads,
+    is_running_head,
+    normalize_running_head_text,
+    strip_running_head_lines,
+)
 from src.layout_ocr_utils import (
     FIGURE_LIKE_TYPES,
     crop_region,
@@ -143,6 +149,7 @@ def ocr_by_layout(
     page_path: str,
     layout: dict,
     device: str = "cpu",
+    running_heads: frozenset[str] = frozenset(),
 ) -> list[OCRResult]:
     """ページ内の全領域をOCR処理。
 
@@ -150,6 +157,7 @@ def ocr_by_layout(
         page_path: ページ画像のパス
         layout: {"regions": list[dict], "page_size": [w, h]}
         device: Device for Yomitoku ("cpu" or "cuda")
+        running_heads: 柱とみなす文字列（``find_running_heads()`` の戻り値）
 
     Returns:
         各領域のOCRResult リスト（読み順ソート済み）
@@ -157,12 +165,29 @@ def ocr_by_layout(
     regions = layout.get("regions", [])
     page_size = tuple(layout.get("page_size", [0, 0]))
 
+    # ページ全体 OCR に回すかどうかは、柱を落とす前の領域で決める。
+    # 柱を落とすとカバー率がわずかに下がり、境界のページがフォールバックに転ぶ。
+    fallback = should_fallback(regions, page_size)
+
+    # 柱・ノンブルは本文ではないので落とす（#98）。落とした行は、このページの
+    # 柱として覚えておき、ページ全体 OCR に落ちたときにも取り除く。
+    page_heads = frozenset(
+        normalize_running_head_text(r.get("text") or "")
+        for r in regions
+        if is_running_head(r, page_size, running_heads)
+    )
+    page_heads = frozenset(key for key in page_heads if key)
+    regions = [r for r in regions if not is_running_head(r, page_size, running_heads)]
+
     # フォールバック判定
-    if should_fallback(regions, page_size):
+    if fallback:
         # ページ全体OCRを実行 (Yomitoku)
         from src.ocr_yomitoku import ocr_page_yomitoku
 
         ocr_text = ocr_page_yomitoku(page_path, device=device)
+
+        # フォールバック結果にも柱・ノンブルが混ざるので、このページの柱は位置を問わず落とす
+        ocr_text = strip_running_head_lines(ocr_text, running_heads, page_heads)
 
         # フォールバック結果を返す
         return [
@@ -250,6 +275,11 @@ def run_layout_ocr(
         pages = pages[:limit]
     all_results: list[tuple[str, list[OCRResult]]] = []
 
+    # 柱・ノンブルは本全体で決まる（同じ行が複数ページに出るか）ので、先に集めておく
+    running_heads = find_running_heads(layout_data)
+    if running_heads:
+        print(f"  Running heads: {len(running_heads)}")
+
     for page_path in pages:
         page_name = page_path.name
         page_stem = page_path.stem
@@ -257,20 +287,13 @@ def run_layout_ocr(
 
         # Get layout for this page
         page_layout = layout_data.get(page_name, {"regions": [], "page_size": [0, 0]})
-        regions = page_layout.get("regions", [])
-        page_size = page_layout.get("page_size", [0, 0])
-
-        # Sort regions in reading order & remove overlaps
-        if regions and page_size[0] > 0:
-            regions = remove_overlaps(regions)
-            regions = sort_reading_order(regions, page_size[0])
-            page_layout = {"regions": regions, "page_size": page_size}
 
         # Run layout-aware OCR
         ocr_results = ocr_by_layout(
             str(page_path),
             page_layout,
             device=device,
+            running_heads=running_heads,
         )
 
         # Report status

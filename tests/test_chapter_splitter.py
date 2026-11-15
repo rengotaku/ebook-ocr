@@ -7,6 +7,7 @@ from pathlib import Path
 from src.chapter_splitter import (
     build_chapters,
     chapter_starts,
+    chapter_titles,
     llm_format,
     render_chapter,
     running_head_titles,
@@ -86,6 +87,23 @@ class TestRunningHeadTitles:
     def test_most_frequent_title(self):
         titles = running_head_titles(split_pages(BOOK))
         assert titles[1] == "データ分析を設計する"
+
+
+class TestChapterTitles:
+    """章名は扉ページの見出しから取る（柱を本文から除いても章名が残るように）."""
+
+    def test_title_from_opener_line(self):
+        titles = chapter_titles(split_pages(BOOK))
+        assert titles[1] == "データ分析を設計する"
+        assert titles[2] == "データをチェックする"
+
+    def test_title_from_line_after_chapter_number(self):
+        book = "--- 0050 ---\n\n## 第2章\nデータを事前にチェックする\n\n本文です。\n"
+        assert chapter_titles(split_pages(book))[2] == "データを事前にチェックする"
+
+    def test_falls_back_to_running_head_when_opener_has_no_title(self):
+        book = "--- 0002 ---\n\n第1章\n本文がすぐ始まる。\n\n20 第1章 データ分析を設計する\n"
+        assert chapter_titles(split_pages(book))[1] == "データ分析を設計する"
 
 
 class TestBuildChapters:
