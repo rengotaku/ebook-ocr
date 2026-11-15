@@ -124,7 +124,7 @@ class TestDescribeImage:
             calls.append(path)
             return ""
 
-        assert describe_image(self._image(tmp_path), retries=2, chat=chat) == ""
+        assert describe_image(self._image(tmp_path), retries=2, fallback_model=None, chat=chat) == ""
         assert len(calls) == 3
 
     def test_raises_when_ollama_is_unavailable(self, tmp_path: Path):
@@ -232,3 +232,33 @@ class TestMinimumArea:
         }
         assert page_figures(page) == []
         assert len(page_figures(page, min_area_ratio=0.0)) == 1
+
+
+class TestFallbackModel:
+    @staticmethod
+    def _image(tmp_path: Path) -> Path:
+        path = tmp_path / "crop.png"
+        Image.new("RGB", (10, 10), "white").save(path)
+        return path
+
+    def test_uses_fallback_when_primary_is_empty(self, tmp_path: Path):
+        calls = []
+
+        def chat(path, model=..., **kwargs):
+            calls.append(model)
+            return "" if model == "primary" else "控えのモデルの説明"
+
+        text = describe_image(self._image(tmp_path), model="primary", fallback_model="backup", retries=0, chat=chat)
+
+        assert text == "控えのモデルの説明"
+        assert calls == ["primary", "backup"]
+
+    def test_no_fallback_when_disabled(self, tmp_path: Path):
+        calls = []
+
+        def chat(path, model=..., **kwargs):
+            calls.append(model)
+            return ""
+
+        assert describe_image(self._image(tmp_path), fallback_model=None, retries=0, chat=chat) == ""
+        assert len(calls) == 1

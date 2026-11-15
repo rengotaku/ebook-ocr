@@ -8,6 +8,7 @@ from pathlib import Path
 
 from src.describe_figures import (
     DEFAULT_BASE_URL,
+    DEFAULT_FALLBACK_MODEL,
     DEFAULT_MODEL,
     describe_book,
     load_layout,
@@ -23,6 +24,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-o", "--output", type=Path, help="書き出し先（既定: book.md を上書き）")
     parser.add_argument("--vlm-model", default=DEFAULT_MODEL, help=f"Ollama のモデル（既定: {DEFAULT_MODEL}）")
     parser.add_argument("--vlm-base-url", default=DEFAULT_BASE_URL, help=f"Ollama の URL（既定: {DEFAULT_BASE_URL}）")
+    parser.add_argument(
+        "--vlm-fallback-model",
+        default=DEFAULT_FALLBACK_MODEL,
+        help=f"1 つ目のモデルが空応答のときに使うモデル。空文字で無効（既定: {DEFAULT_FALLBACK_MODEL}）",
+    )
     parser.add_argument("--timeout", type=int, default=300, help="1 枚あたりのタイムアウト秒")
     parser.add_argument("--limit-pages", type=int, help="図があるページを先頭から N ページだけ処理する（試運用）")
     parser.add_argument(
@@ -52,6 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         model=args.vlm_model,
         base_url=args.vlm_base_url,
         timeout=args.timeout,
+        fallback_model=args.vlm_fallback_model or None,
         max_pages=args.limit_pages,
         min_area_ratio=args.min_area_ratio,
     )
