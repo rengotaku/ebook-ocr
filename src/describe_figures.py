@@ -33,7 +33,7 @@ DEFAULT_MODEL = "qwen3-vl:8b"
 DEFAULT_FALLBACK_MODEL = "gemma3:12b"
 DEFAULT_BASE_URL = "http://localhost:11434"
 # 思考が長引くと content が空のまま終わるので、生成量に上限を置く
-DEFAULT_NUM_PREDICT = 512
+DEFAULT_NUM_PREDICT = 1024
 
 
 @dataclass(frozen=True)
