@@ -7,6 +7,7 @@ from src.layout.running_head import (
     in_margin_band,
     is_running_head,
     normalize_running_head_text,
+    printed_page_number,
     strip_running_head_lines,
 )
 
@@ -147,3 +148,29 @@ class TestStripRunningHeadLines:
         page_heads = frozenset({normalize_running_head_text("23 第2章 データを事前にチェックする")})
 
         assert strip_running_head_lines(text, frozenset(), page_heads) == "本文の 1 行目\n本文の 2 行目"
+
+
+class TestPrintedPageNumber:
+    """柱から紙面のページ番号（ノンブル）を取り出す."""
+
+    def test_number_only(self) -> None:
+        assert printed_page_number(_region("23", [430, 1194, 470, 1209])) == 23
+
+    def test_leading_number(self) -> None:
+        assert printed_page_number(_region("22 第1章 データ分析を設計する", [114, 1194, 500, 1209])) == 22
+
+    def test_trailing_number(self) -> None:
+        assert printed_page_number(_region("第1章 データ分析を設計する 23", [100, 1194, 500, 1209])) == 23
+
+    def test_toc_head(self) -> None:
+        assert printed_page_number(_region("14 目次", [100, 1193, 300, 1210])) == 14
+
+    def test_roman_numeral_is_not_a_number(self) -> None:
+        """前付のローマ数字は推測で埋めない."""
+        assert printed_page_number(_region("ⅲ", [430, 1194, 470, 1209])) is None
+
+    def test_no_number(self) -> None:
+        assert (
+            printed_page_number(_region("参考資料 本書のワークで使うエクセルの主な操作", [100, 1194, 800, 1210]))
+            is None
+        )

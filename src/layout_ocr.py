@@ -30,11 +30,14 @@ from pathlib import Path
 
 from PIL import Image
 
+from src.book_meta import write_book_meta
 from src.layout.reading_order import remove_overlaps, sort_reading_order
 from src.layout.running_head import (
+    chapter_title_from_region,
     find_running_heads,
     is_running_head,
     normalize_running_head_text,
+    printed_page_number,
     strip_running_head_lines,
 )
 from src.layout_ocr_utils import (
@@ -274,6 +277,8 @@ def run_layout_ocr(
     if limit is not None:
         pages = pages[:limit]
     all_results: list[tuple[str, list[OCRResult]]] = []
+    page_numbers: dict[str, int] = {}
+    chapter_title_votes: dict[int, dict[str, int]] = {}
 
     # 柱・ノンブルは本全体で決まる（同じ行が複数ページに出るか）ので、先に集めておく
     running_heads = find_running_heads(layout_data)
@@ -295,6 +300,20 @@ def run_layout_ocr(
             device=device,
             running_heads=running_heads,
         )
+
+        # 柱・ノンブルから紙面のページ番号（ノンブル）と章名を取り出しておく（#99）
+        page_size = page_layout.get("page_size") or [0, 0]
+        for region in page_layout.get("regions", []):
+            if not is_running_head(region, page_size, running_heads):
+                continue
+            number = printed_page_number(region)
+            if number is not None and page_stem not in page_numbers:
+                page_numbers[page_stem] = number
+            chapter = chapter_title_from_region(region)
+            if chapter is not None:
+                chapter_number, title = chapter
+                chapter_title_votes.setdefault(chapter_number, {}).setdefault(title, 0)
+                chapter_title_votes[chapter_number][title] += 1
 
         # Report status
         if ocr_results and ocr_results[0].region_type == "FALLBACK":
@@ -319,6 +338,16 @@ def run_layout_ocr(
             for result in ocr_results:
                 f.write(result.formatted)
                 f.write("\n\n")
+
+    # 紙面のページ番号（ノンブル）と章名。本文から柱を除いた分をここに残す（#99）
+    chapter_titles = {
+        number: max(votes.items(), key=lambda item: item[1])[0] for number, votes in chapter_title_votes.items()
+    }
+    meta_file = write_book_meta(output_path.parent, page_numbers, chapter_titles)
+    if meta_file is not None:
+        print(
+            f"  Book meta: {len(page_numbers)} page numbers, {len(chapter_titles)} chapter titles -> {meta_file.name}"
+        )
 
     print(f"  OCR complete. Output saved to: {output_file}")
     return all_results

@@ -12,6 +12,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from src.book_meta import load_book_meta
+
 PAGE_MARKER_RE = re.compile(r"^--- (\d+) ---\s*$", re.M)
 CHAPTER_START_RE = re.compile(r"^(?:##\s*)?第\s*(\d+)\s*章")
 RUNNING_HEAD_RE = re.compile(r"^\s*\d{0,3}\s*第\s*(\d+)\s*章\s+(.+?)(?:\s+\d{1,3})?\s*$")
@@ -23,7 +25,7 @@ BACK_MATTER_RE = re.compile(r"^(?:●\s*)?(著者一覧|参考文献|参考資�
 SECTION_HEAD_RE = re.compile(r"^\d+-\d+[.．]\s*\S")
 # 節番号だけが 1 行に載り、見出しが次の行に来ることがある（``1-1.`` → ``分析ストーリー…``）
 SECTION_NUMBER_RE = re.compile(r"^(\d+-\d+[.．])\s*$")
-FIGURE_LINK_RE = re.compile(r"^!\[図\]\([^)]*\)\s*$")
+FIGURE_LINK_RE = re.compile(r"^!\[図\]\(([^)]*)\)\s*$")
 FIGURE_CAPTION_PREFIX = "**図**:"
 SENTENCE_ENDINGS = ("。", "．", "！", "？", "」", "』", "）")
 
@@ -85,46 +87,48 @@ def running_head_titles(pages: list[tuple[str, str]]) -> dict[int, str]:
     return {number: counter.most_common(1)[0][0] for number, counter in votes.items()}
 
 
-def chapter_titles(pages: list[tuple[str, str]]) -> dict[int, str]:
-    """章番号ごとの章名を返す。
+def chapter_titles(pages: list[tuple[str, str]], known_titles: dict[int, str] | None = None) -> dict[int, str]:
+    """章番号ごとの章名を返す.
 
-    扉ページの見出し（``## 第2章`` の次の行、または同じ行の続き）を優先する。
-    柱を本文から除いた後でも章名が付くようにするためで、見出しが取れない章だけ
-    柱から拾う。
+    柱から取った章名（``book_meta.json`` の ``chapter_titles``）を優先する。柱を
+    本文から除いた後でも、出版された章名がそのまま使える。無ければ扉ページの
+    見出し（``## 第2章`` の次の行、または同じ行の続き）から取る。
     """
-    titles: dict[int, str] = {}
-    for _, body in pages:
-        lines = [line.strip() for line in body.splitlines()]
-        for index, line in enumerate(lines):
-            match = CHAPTER_START_RE.match(line)
-            if not match:
-                continue
-            number = int(match.group(1))
-            if number in titles:
-                break
-            rest = line[match.end() :].strip("# 　")
-            if not rest:
-                following = next((candidate for candidate in lines[index + 1 :] if candidate), "")
-                candidate = following.lstrip("# ").strip()
-                # 扉ページに見出しが無いときは本文の 1 行目が来る。長い行・文末記号で終わる行は見出しとみなさない
-                if candidate and len(candidate) <= 40 and not candidate.endswith(SENTENCE_ENDINGS):
-                    rest = candidate
-            if rest:
-                titles[number] = rest
-            break
+    titles: dict[int, str] = dict(known_titles or {})
 
-    # 見出しから章名が取れなかった章は、柱の最頻値で補う
+    starts = chapter_starts(pages)
+    opener_pages = {page: number for number, page in starts.items()}
+    for page, body in pages:
+        number = opener_pages.get(page)
+        if number is None or number in titles:
+            continue
+        lines = [line.strip() for line in body.splitlines() if line.strip()]
+        if not lines:
+            continue
+        match = CHAPTER_START_RE.match(lines[0])
+        if not match:
+            continue
+        rest = lines[0][match.end() :].strip("# 　")
+        if not rest and len(lines) > 1:
+            candidate = lines[1].lstrip("# ").strip()
+            # 扉ページに見出しが無いときは本文の 1 行目が来る。長い行・文末記号で終わる行は見出しとみなさない
+            if len(candidate) <= 40 and not candidate.endswith(SENTENCE_ENDINGS):
+                rest = candidate
+        if rest:
+            titles[number] = rest
+
+    # 見出しからも取れなかった章は、本文に残っている柱の最頻値で補う
     for number, title in running_head_titles(pages).items():
         titles.setdefault(number, title)
     return titles
 
 
-def build_chapters(pages: list[tuple[str, str]]) -> list[Chapter]:
+def build_chapters(pages: list[tuple[str, str]], known_titles: dict[int, str] | None = None) -> list[Chapter]:
     """ページ列を章ごとにまとめる（前付・後付は number=None）."""
     if not pages:
         return []
     starts = chapter_starts(pages)
-    titles = chapter_titles(pages)
+    titles = chapter_titles(pages, known_titles)
 
     order = sorted(starts.items(), key=lambda item: item[1])
     back_start = _back_matter_start(pages)
@@ -227,8 +231,11 @@ def llm_format(body: str) -> str:
             # 紙面では 1 行ごとに空行が入るため、空行は段落の区切りとして扱わない。
             # 文末で終わったときだけ段落を切る（折り返しの復元は _join_line が担う）。
             continue
-        if FIGURE_LINK_RE.match(line):
+        figure_link = FIGURE_LINK_RE.match(line)
+        if figure_link:
+            # LLM 用でも原画像の場所は注記として残す（#99）
             flush()
+            paragraphs.append(f"<!-- 図: {figure_link.group(1)} -->")
             continue
         if line.startswith(FIGURE_CAPTION_PREFIX):
             flush()
@@ -265,32 +272,66 @@ def llm_format(body: str) -> str:
     return "\n\n".join(paragraphs)
 
 
-def render_chapter(chapter: Chapter, llm: bool = True) -> str:
-    """1 章分の Markdown を組み立てる."""
+def render_chapter(
+    chapter: Chapter,
+    llm: bool = True,
+    page_numbers: dict[str, int] | None = None,
+) -> str:
+    """1 章分の Markdown を組み立てる.
+
+    各ページの先頭に ``<!-- page 0085 (紙面 86) -->`` の注記を置き、
+    どの段落が紙面のどこから来たかを辿れるようにする（#99）。紙面のページ番号が
+    分からないページは ``<!-- page 0085 -->`` だけにする（推測で埋めない）。
+    """
     header = [f"# {chapter.title}" if chapter.number is None else f"# 第{chapter.number}章 {chapter.title}"]
-    header.append(f"<!-- pages: {chapter.start_page}-{chapter.end_page} -->")
-    body_parts = []
-    for _page, body in chapter.pages:
+    header.append(f"<!-- pages: {chapter.start_page}-{chapter.end_page} / pages-dir: pages / figures-dir: figures -->")
+
+    page_bodies: list[tuple[str, str]] = []
+    for page, body in chapter.pages:
         text = llm_format(body) if llm else body.strip()
         if text:
-            body_parts.append(text)
-    if body_parts and chapter.title and body_parts[0].startswith(chapter.title):
+            page_bodies.append((page, text))
+
+    if page_bodies and chapter.title and page_bodies[0][1].startswith(chapter.title):
         # 章扉の章名が本文の頭に残ることがあるので落とす（H1 と重複する）
-        body_parts[0] = body_parts[0][len(chapter.title) :].lstrip()
+        first_page, first_text = page_bodies[0]
+        page_bodies[0] = (first_page, first_text[len(chapter.title) :].lstrip())
+
+    body_parts = []
+    for page, text in page_bodies:
+        if not text:
+            continue
+        printed = (page_numbers or {}).get(page)
+        marker = f"<!-- page {page} (紙面 {printed}) -->" if printed is not None else f"<!-- page {page} -->"
+        body_parts.append(f"{marker}\n\n{text}")
     return "\n".join(header) + "\n\n" + "\n\n".join(body_parts) + "\n"
+
+
+def write_page_numbers_csv(out_dir: Path, page_numbers: dict[str, int]) -> Path | None:
+    """ページ番号と紙面のページ番号（ノンブル）の対応表を書き出す."""
+    if not page_numbers:
+        return None
+    target = out_dir / "_pages.csv"
+    lines = ["page,printed", *(f"{page},{page_numbers[page]}" for page in sorted(page_numbers))]
+    target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return target
 
 
 def split_file(
     book_md: Path,
     out_dir: Path,
     llm: bool = True,
+    book_meta: dict | None = None,
 ) -> list[Path]:
     """book.md を章ごとのファイルに書き出し、書いたパスを返す."""
-    chapters = build_chapters(split_pages(book_md.read_text(encoding="utf-8")))
+    meta = book_meta if book_meta is not None else load_book_meta(book_md)
+    page_numbers = meta.get("page_numbers") or {}
+    chapters = build_chapters(split_pages(book_md.read_text(encoding="utf-8")), meta.get("chapter_titles") or {})
     out_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     for chapter in chapters:
         target = out_dir / chapter.file_name
-        target.write_text(render_chapter(chapter, llm=llm), encoding="utf-8")
+        target.write_text(render_chapter(chapter, llm=llm, page_numbers=page_numbers), encoding="utf-8")
         written.append(target)
+    write_page_numbers_csv(out_dir, page_numbers)
     return written

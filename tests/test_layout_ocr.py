@@ -20,6 +20,7 @@ FIGURE regions are now skipped instead of processed by VLM.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -1957,3 +1958,48 @@ class TestRunningHeadInLayoutOcr:
 
         assert results[0].region_type == "FALLBACK"
         assert results[0].text == "本文\n続きの本文"
+
+
+# ============================================================
+# #99: 紙面のページ番号（ノンブル）を書き出す
+# ============================================================
+
+
+class TestPageNumbersOutput:
+    """run_layout_ocr が book_meta.json（紙面のページ番号・章名）を書き出す."""
+
+    def test_writes_page_numbers_from_running_heads(self, tmp_path: Path) -> None:
+        from src.layout_ocr import run_layout_ocr
+
+        pages_dir = tmp_path / "pages"
+        pages_dir.mkdir()
+        for i in range(3):
+            Image.new("RGB", (960, 1280), "white").save(pages_dir / f"{i:04d}.png")
+        layout = {
+            f"{i:04d}.png": {
+                "regions": [
+                    {"type": "TEXT", "bbox": [106, 194, 859, 900], "confidence": 1.0, "text": "本文"},
+                    {
+                        "type": "TEXT",
+                        "bbox": [114, 1194, 500, 1209],
+                        "confidence": 1.0,
+                        "text": f"{20 + i} 第1章 データ分析を設計する",
+                    },
+                ],
+                "page_size": [960, 1280],
+            }
+            for i in range(3)
+        }
+        out_dir = tmp_path / "out"
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="本文"):
+            run_layout_ocr(
+                str(pages_dir),
+                layout,
+                str(out_dir / "ocr_combined.txt"),
+                warmup=False,
+            )
+
+        written = json.loads((out_dir / "book_meta.json").read_text(encoding="utf-8"))
+        assert written["page_numbers"] == {"0000": 20, "0001": 21, "0002": 22}
+        assert written["chapter_titles"] == {"1": "データ分析を設計する"}
