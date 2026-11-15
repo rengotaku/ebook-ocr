@@ -1685,94 +1685,43 @@ class TestResultConcatenationWithReadingOrder:
 
 
 # ============================================================
-# T015: format_ocr_result("CODE", text) -> code fence output
+# T015: CODE は図として扱う（本文には出さない）
 # ============================================================
 
 
-class TestFormatOcrResultCode:
-    """CODE region should be formatted with code fences."""
+class TestCodeRegionTreatedAsFigure:
+    """CODE 領域は図として扱い、本文の Markdown には出さない."""
 
-    def test_code_region_wrapped_in_code_fence(self) -> None:
-        """format_ocr_result("CODE", text) should wrap text in code fences."""
+    def test_code_region_is_not_emitted(self) -> None:
         from src.layout_ocr_utils import format_ocr_result
 
-        text = "class Foo {\n    int x;\n}"
-        result = format_ocr_result("CODE", text)
+        text = "1112200\nAGAATERMARAR"
+        assert format_ocr_result("CODE", text) == ""
 
-        assert result.startswith("```"), "CODE output should start with code fence"
-        assert result.endswith("```"), "CODE output should end with code fence"
-        assert text in result, "CODE output should contain original text"
+    def test_figure_and_code_are_both_figure_like(self) -> None:
+        from src.layout_ocr_utils import FIGURE_LIKE_TYPES
 
-    def test_code_region_format_structure(self) -> None:
-        """Code fence format should be: ```\\n{text}\\n```"""
-        from src.layout_ocr_utils import format_ocr_result
+        assert "FIGURE" in FIGURE_LIKE_TYPES
+        assert "CODE" in FIGURE_LIKE_TYPES
 
-        text = "print('hello')"
-        result = format_ocr_result("CODE", text)
-
-        expected = f"```\n{text}\n```"
-        assert result == expected, f"Expected '{expected}', got '{result}'"
-
-    def test_code_region_multiline(self) -> None:
-        """Multi-line code should be preserved inside code fence."""
-        from src.layout_ocr_utils import format_ocr_result
-
-        text = "def hello():\n    print('world')\n    return 42"
-        result = format_ocr_result("CODE", text)
-
-        expected = f"```\n{text}\n```"
-        assert result == expected
-
-    def test_code_region_empty_text(self) -> None:
-        """Empty text CODE should still produce code fences."""
-        from src.layout_ocr_utils import format_ocr_result
-
-        result = format_ocr_result("CODE", "")
-
-        expected = "```\n\n```"
-        assert result == expected
-
-    def test_code_region_special_chars(self) -> None:
-        """Special characters in code should be preserved inside code fences."""
-        from src.layout_ocr_utils import format_ocr_result
-
-        text = 'std::cout << "hello" >> file;'
-        result = format_ocr_result("CODE", text)
-
-        expected = f"```\n{text}\n```"
-        assert result == expected, f"Expected code fence with special chars. Got: {result}"
-
-    def test_code_region_unicode(self) -> None:
-        """Unicode characters (Japanese comments) should be preserved."""
-        from src.layout_ocr_utils import format_ocr_result
-
-        text = "# コメント\nprint('hello')"
-        result = format_ocr_result("CODE", text)
-
-        expected = f"```\n{text}\n```"
-        assert result == expected
-
-
-# ============================================================
-# T016: select_ocr_engine("CODE") -> "yomitoku"
-# ============================================================
-
-
-class TestSelectOcrEngineCode:
-    """CODE region should use yomitoku OCR engine."""
-
-    def test_code_region_uses_yomitoku(self) -> None:
-        """select_ocr_engine("CODE") should return "yomitoku"."""
+    def test_code_region_is_skipped_by_engine_selection(self) -> None:
         from src.layout_ocr_utils import select_ocr_engine
 
-        engine = select_ocr_engine("CODE")
+        assert select_ocr_engine("CODE") == "skip"
 
-        assert engine == "yomitoku", f"CODE region should use yomitoku. Got: {engine}"
+    def test_text_region_is_still_emitted(self) -> None:
+        from src.layout_ocr_utils import format_ocr_result
 
-    def test_code_engine_not_skip(self) -> None:
-        """CODE region should NOT be skipped."""
-        from src.layout_ocr_utils import select_ocr_engine
+        assert format_ocr_result("TEXT", "本文") == "本文"
 
-        engine = select_ocr_engine("CODE")
+    def test_ocr_region_returns_empty_for_code(self) -> None:
+        """ocr_region は CODE 領域で OCR を実行しない."""
+        from PIL import Image
 
-        assert engine != "skip", "CODE region should not be skipped"
+        from src.layout_ocr import ocr_region
+
+        img = Image.new("RGB", (100, 100), "white")
+        result = ocr_region(img, {"type": "CODE", "bbox": [0, 0, 50, 50]})
+
+        assert result.text == ""
+        assert result.formatted == ""
