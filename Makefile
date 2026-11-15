@@ -113,6 +113,8 @@ run: setup ## Run full pipeline for a video (VIDEO required, OUTPUT/LIMIT option
 	@$(MAKE) --no-print-directory converter HASHDIR="$(HASHDIR)"
 	@echo "=== Step 7: Validate XML ==="
 	@$(MAKE) --no-print-directory validate-xml HASHDIR="$(HASHDIR)"
+	@# 中身の異常は警告として出す（直さない・失敗させない）
+	@$(MAKE) --no-print-directory validate-output HASHDIR="$(HASHDIR)" || true
 	@echo "=== Done: $(HASHDIR)/book.xml ==="
 	@echo ""
 	@echo "To use with text-reading-with-llm:"
@@ -163,6 +165,11 @@ normalize-headings: setup ## Normalize headings to match TOC (requires HASHDIR, 
 validate-xml: setup ## Validate book.xml against XSD schema (requires HASHDIR)
 	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make validate-xml HASHDIR=output/<hash>"; exit 1; }
 	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.validate_xml "$(HASHDIR)/book.xml"
+
+validate-output: setup ## 出力の異常（欠落・文の途中切れ・柱混入など）を検出する (requires HASHDIR)
+	@test -n "$(HASHDIR)" || { echo "Error: HASHDIR required. Usage: make validate-output HASHDIR=output/<hash>"; exit 1; }
+	PYTHONPATH=$(CURDIR) $(PYTHON) -m src.cli.validate_output "$(HASHDIR)/book.md" \
+		$(if $(wildcard $(HASHDIR)/layout/layout.json),--layout "$(HASHDIR)/layout/layout.json")
 
 # === Testing ===
 .PHONY: test test-all test-slow test-cov test-cov-all

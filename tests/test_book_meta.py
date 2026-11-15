@@ -49,4 +49,4 @@ class TestLoadBookMeta:
         book = tmp_path / "book.md"
         book.write_text("本文\n", encoding="utf-8")
 
-        assert load_book_meta(book) == {"page_numbers": {}, "chapter_titles": {}}
+        assert load_book_meta(book) == {"page_numbers": {}, "chapter_titles": {}, "fallback_pages": []}
