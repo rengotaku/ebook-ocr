@@ -9,10 +9,12 @@ from src.chapter_splitter import (
     chapter_starts,
     chapter_titles,
     llm_format,
+    load_page_numbers,
     render_chapter,
     running_head_titles,
     split_file,
     split_pages,
+    write_page_numbers_csv,
 )
 
 BOOK = """\
@@ -138,7 +140,11 @@ class TestLlmFormat:
     def test_figure_caption_becomes_quote(self):
         text = llm_format("本文です。\n\n![図](figures/0003_fig1.png)\n\n**図**: 概念図の説明。\n")
         assert "![" not in text
-        assert text == "本文です。\n\n> **図**: 概念図の説明。"
+        assert text == "本文です。\n\n<!-- 図: figures/0003_fig1.png -->\n\n> **図**: 概念図の説明。"
+
+    def test_figure_keeps_relative_image_path_as_comment(self):
+        text = llm_format("![図](figures/0086_fig1.png)\n\n**図**: 説明。\n")
+        assert "<!-- 図: figures/0086_fig1.png -->" in text
 
     def test_section_number_on_its_own_line(self):
         text = llm_format("1-1.\n\n見える化って何?\n")
@@ -154,8 +160,25 @@ class TestRenderChapter:
         chapter = build_chapters(split_pages(BOOK))[1]
         text = render_chapter(chapter)
         assert text.startswith("# 第1章 データ分析を設計する\n")
-        assert "<!-- pages: 0002-0003 -->" in text
+        assert "<!-- pages: 0002-0003 / pages-dir: pages / figures-dir: figures -->" in text
         assert "20 第1章" not in text
+
+    def test_each_page_gets_a_page_comment(self):
+        chapter = build_chapters(split_pages(BOOK))[1]
+        text = render_chapter(chapter)
+        assert "<!-- page 0002 -->" in text
+        assert "<!-- page 0003 -->" in text
+
+    def test_page_comment_includes_printed_page_number(self):
+        chapter = build_chapters(split_pages(BOOK))[1]
+        text = render_chapter(chapter, page_numbers={"0002": 20, "0003": 21})
+        assert "<!-- page 0002 (紙面 20) -->" in text
+        assert "<!-- page 0003 (紙面 21) -->" in text
+
+    def test_page_comment_omits_unknown_printed_number(self):
+        chapter = build_chapters(split_pages(BOOK))[1]
+        text = render_chapter(chapter, page_numbers={"0002": 20})
+        assert "<!-- page 0003 -->" in text
 
 
 class TestSplitFile:
@@ -172,3 +195,41 @@ class TestSplitFile:
             "99_back.md",
         ]
         assert "概念図の説明" in (tmp_path / "chapters" / "01_データ分析を設計する.md").read_text(encoding="utf-8")
+
+
+class TestPageNumbers:
+    """紙面のページ番号（ノンブル）の対応表 (#99)."""
+
+    def test_loads_next_to_book_md(self, tmp_path: Path) -> None:
+        import json
+
+        book = tmp_path / "book.md"
+        book.write_text("--- 0001 ---\n\n本文\n", encoding="utf-8")
+        (tmp_path / "page_numbers.json").write_text(json.dumps({"0001": 20}), encoding="utf-8")
+
+        assert load_page_numbers(book) == {"0001": 20}
+
+    def test_loads_from_ocr_output_dir(self, tmp_path: Path) -> None:
+        import json
+
+        book = tmp_path / "book.md"
+        book.write_text("--- 0001 ---\n\n本文\n", encoding="utf-8")
+        (tmp_path / "ocr_output").mkdir()
+        (tmp_path / "ocr_output" / "page_numbers.json").write_text(json.dumps({"0001": 20}), encoding="utf-8")
+
+        assert load_page_numbers(book) == {"0001": 20}
+
+    def test_missing_file_returns_empty(self, tmp_path: Path) -> None:
+        book = tmp_path / "book.md"
+        book.write_text("本文\n", encoding="utf-8")
+
+        assert load_page_numbers(book) == {}
+
+    def test_writes_csv(self, tmp_path: Path) -> None:
+        path = write_page_numbers_csv(tmp_path, {"0003": 21, "0002": 20})
+
+        assert path == tmp_path / "_pages.csv"
+        assert path.read_text(encoding="utf-8") == "page,printed\n0002,20\n0003,21\n"
+
+    def test_no_csv_when_empty(self, tmp_path: Path) -> None:
+        assert write_page_numbers_csv(tmp_path, {}) is None

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -23,7 +24,7 @@ BACK_MATTER_RE = re.compile(r"^(?:●\s*)?(著者一覧|参考文献|参考資�
 SECTION_HEAD_RE = re.compile(r"^\d+-\d+[.．]\s*\S")
 # 節番号だけが 1 行に載り、見出しが次の行に来ることがある（``1-1.`` → ``分析ストーリー…``）
 SECTION_NUMBER_RE = re.compile(r"^(\d+-\d+[.．])\s*$")
-FIGURE_LINK_RE = re.compile(r"^!\[図\]\([^)]*\)\s*$")
+FIGURE_LINK_RE = re.compile(r"^!\[図\]\(([^)]*)\)\s*$")
 FIGURE_CAPTION_PREFIX = "**図**:"
 SENTENCE_ENDINGS = ("。", "．", "！", "？", "」", "』", "）")
 
@@ -227,8 +228,11 @@ def llm_format(body: str) -> str:
             # 紙面では 1 行ごとに空行が入るため、空行は段落の区切りとして扱わない。
             # 文末で終わったときだけ段落を切る（折り返しの復元は _join_line が担う）。
             continue
-        if FIGURE_LINK_RE.match(line):
+        figure_link = FIGURE_LINK_RE.match(line)
+        if figure_link:
+            # LLM 用でも原画像の場所は注記として残す（#99）
             flush()
+            paragraphs.append(f"<!-- 図: {figure_link.group(1)} -->")
             continue
         if line.startswith(FIGURE_CAPTION_PREFIX):
             flush()
@@ -265,25 +269,70 @@ def llm_format(body: str) -> str:
     return "\n\n".join(paragraphs)
 
 
-def render_chapter(chapter: Chapter, llm: bool = True) -> str:
-    """1 章分の Markdown を組み立てる."""
+def render_chapter(
+    chapter: Chapter,
+    llm: bool = True,
+    page_numbers: dict[str, int] | None = None,
+) -> str:
+    """1 章分の Markdown を組み立てる.
+
+    各ページの先頭に ``<!-- page 0085 (紙面 86) -->`` の注記を置き、
+    どの段落が紙面のどこから来たかを辿れるようにする（#99）。紙面のページ番号が
+    分からないページは ``<!-- page 0085 -->`` だけにする（推測で埋めない）。
+    """
     header = [f"# {chapter.title}" if chapter.number is None else f"# 第{chapter.number}章 {chapter.title}"]
-    header.append(f"<!-- pages: {chapter.start_page}-{chapter.end_page} -->")
-    body_parts = []
-    for _page, body in chapter.pages:
+    header.append(f"<!-- pages: {chapter.start_page}-{chapter.end_page} / pages-dir: pages / figures-dir: figures -->")
+
+    page_bodies: list[tuple[str, str]] = []
+    for page, body in chapter.pages:
         text = llm_format(body) if llm else body.strip()
         if text:
-            body_parts.append(text)
-    if body_parts and chapter.title and body_parts[0].startswith(chapter.title):
+            page_bodies.append((page, text))
+
+    if page_bodies and chapter.title and page_bodies[0][1].startswith(chapter.title):
         # 章扉の章名が本文の頭に残ることがあるので落とす（H1 と重複する）
-        body_parts[0] = body_parts[0][len(chapter.title) :].lstrip()
+        first_page, first_text = page_bodies[0]
+        page_bodies[0] = (first_page, first_text[len(chapter.title) :].lstrip())
+
+    body_parts = []
+    for page, text in page_bodies:
+        if not text:
+            continue
+        printed = (page_numbers or {}).get(page)
+        marker = f"<!-- page {page} (紙面 {printed}) -->" if printed is not None else f"<!-- page {page} -->"
+        body_parts.append(f"{marker}\n\n{text}")
     return "\n".join(header) + "\n\n" + "\n\n".join(body_parts) + "\n"
+
+
+def load_page_numbers(book_md: Path) -> dict[str, int]:
+    """紙面のページ番号（ノンブル）の対応表を読む.
+
+    OCR の実行時に ``page_numbers.json`` として書き出されている。book.md の隣か、
+    その 1 つ下の ``ocr_output/`` を探す。見つからなければ空。
+    """
+    for candidate in (book_md.parent / "page_numbers.json", book_md.parent / "ocr_output" / "page_numbers.json"):
+        if not candidate.exists():
+            continue
+        data = json.loads(candidate.read_text(encoding="utf-8"))
+        return {str(page): int(number) for page, number in data.items() if str(number).isdigit()}
+    return {}
+
+
+def write_page_numbers_csv(out_dir: Path, page_numbers: dict[str, int]) -> Path | None:
+    """ページ番号と紙面のページ番号（ノンブル）の対応表を書き出す."""
+    if not page_numbers:
+        return None
+    target = out_dir / "_pages.csv"
+    lines = ["page,printed", *(f"{page},{page_numbers[page]}" for page in sorted(page_numbers))]
+    target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return target
 
 
 def split_file(
     book_md: Path,
     out_dir: Path,
     llm: bool = True,
+    page_numbers: dict[str, int] | None = None,
 ) -> list[Path]:
     """book.md を章ごとのファイルに書き出し、書いたパスを返す."""
     chapters = build_chapters(split_pages(book_md.read_text(encoding="utf-8")))
@@ -291,6 +340,7 @@ def split_file(
     written: list[Path] = []
     for chapter in chapters:
         target = out_dir / chapter.file_name
-        target.write_text(render_chapter(chapter, llm=llm), encoding="utf-8")
+        target.write_text(render_chapter(chapter, llm=llm, page_numbers=page_numbers), encoding="utf-8")
         written.append(target)
+    write_page_numbers_csv(out_dir, page_numbers or {})
     return written

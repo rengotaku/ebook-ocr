@@ -90,6 +90,30 @@ def is_running_head(region: dict, page_size: tuple[int, int] | list[int], runnin
     return normalize_running_head_text(text) in running_heads
 
 
+# 柱から紙面のページ番号（ノンブル）を取り出すための形。
+# ``22 第1章 データ分析を設計する`` の先頭、``第1章 データ分析を設計する 23`` の末尾。
+_PRINTED_NUMBER_LEADING_RE = re.compile(r"^(\d{1,4})\s+\S")
+_PRINTED_NUMBER_TRAILING_RE = re.compile(r"\S\s+(\d{1,4})$")
+
+
+def printed_page_number(region: dict) -> int | None:
+    """柱・ノンブルから紙面のページ番号を取り出す.
+
+    アラビア数字のときだけ返す。ローマ数字（前付の ``ⅲ`` など）や、
+    番号が読み取れなかったものは None（推測で埋めない）。
+    """
+    text = (region.get("text") or "").strip()
+    if not text:
+        return None
+    if text.isdigit() and len(text) <= 4:
+        return int(text)
+    for pattern in (_PRINTED_NUMBER_LEADING_RE, _PRINTED_NUMBER_TRAILING_RE):
+        match = pattern.search(text)
+        if match:
+            return int(match.group(1))
+    return None
+
+
 def _is_running_head_line(line: str, running_heads: frozenset[str]) -> bool:
     stripped = line.strip()
     if not stripped:

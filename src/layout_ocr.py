@@ -24,6 +24,7 @@ Region Text Source:
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,6 +36,7 @@ from src.layout.running_head import (
     find_running_heads,
     is_running_head,
     normalize_running_head_text,
+    printed_page_number,
     strip_running_head_lines,
 )
 from src.layout_ocr_utils import (
@@ -274,6 +276,7 @@ def run_layout_ocr(
     if limit is not None:
         pages = pages[:limit]
     all_results: list[tuple[str, list[OCRResult]]] = []
+    page_numbers: dict[str, int] = {}
 
     # 柱・ノンブルは本全体で決まる（同じ行が複数ページに出るか）ので、先に集めておく
     running_heads = find_running_heads(layout_data)
@@ -295,6 +298,16 @@ def run_layout_ocr(
             device=device,
             running_heads=running_heads,
         )
+
+        # 柱・ノンブルから紙面のページ番号（ノンブル）を取り出しておく（#99）
+        page_size = page_layout.get("page_size") or [0, 0]
+        for region in page_layout.get("regions", []):
+            if not is_running_head(region, page_size, running_heads):
+                continue
+            number = printed_page_number(region)
+            if number is not None:
+                page_numbers[page_stem] = number
+                break
 
         # Report status
         if ocr_results and ocr_results[0].region_type == "FALLBACK":
@@ -319,6 +332,15 @@ def run_layout_ocr(
             for result in ocr_results:
                 f.write(result.formatted)
                 f.write("\n\n")
+
+    # 紙面のページ番号（ノンブル）の対応表。章ファイルの注記に使う（#99）
+    if page_numbers:
+        numbers_file = output_path.parent / "page_numbers.json"
+        numbers_file.write_text(
+            json.dumps(page_numbers, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(f"  Page numbers: {len(page_numbers)} pages -> {numbers_file.name}")
 
     print(f"  OCR complete. Output saved to: {output_file}")
     return all_results
