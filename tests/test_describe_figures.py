@@ -302,3 +302,26 @@ class TestBriefPromptRetry:
         assert text == "控えの説明"
         assert [c[0] for c in calls] == ["primary", "primary", "backup"]
         assert calls[1][1] == PROMPT_BRIEF
+
+
+class TestAspectRatioFilter:
+    def test_wide_strip_is_not_a_figure(self):
+        page = {
+            "page_size": [960, 1280],
+            "regions": [
+                {"type": "CODE", "bbox": [100, 687, 854, 735]},  # 754x48 = 15.7 倍
+                {"type": "FIGURE", "bbox": [133, 143, 820, 576]},  # 687x433 = 1.6 倍
+            ],
+        }
+        kept = page_figures(page)
+        assert len(kept) == 1
+        assert kept[0]["bbox"] == [133, 143, 820, 576]
+
+    def test_threshold_is_configurable(self):
+        page = {"page_size": [960, 1280], "regions": [{"type": "CODE", "bbox": [0, 0, 800, 100]}]}
+        assert page_figures(page) == []
+        assert len(page_figures(page, max_aspect_ratio=20.0)) == 1
+
+    def test_zero_height_is_treated_as_infinite_aspect(self):
+        page = {"page_size": [960, 1280], "regions": [{"type": "FIGURE", "bbox": [10, 10, 200, 10]}]}
+        assert page_figures(page) == []
