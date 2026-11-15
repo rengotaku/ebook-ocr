@@ -29,6 +29,10 @@ PROMPT = (
     "読み取れた数値は書いてください。読み取れない数値は書かないでください。"
 )
 
+# 数値を求めるとモデルが読み取りに時間を使い、生成枠を使い切って content が空になる
+# ことがある（#88）。2 文だけ・数値不要の短い指示に切り替えると返ってくる。
+PROMPT_BRIEF = "図の内容を日本語で2文以内で説明してください。数値は書かなくてよいです。説明だけを出力してください。"
+
 DEFAULT_MODEL = "qwen3-vl:8b"
 DEFAULT_FALLBACK_MODEL = "gemma3:12b"
 DEFAULT_BASE_URL = "http://localhost:11434"
@@ -51,7 +55,12 @@ class OllamaUnavailable(RuntimeError):
 
 
 def _ollama_chat(
-    image_path: Path, model: str, base_url: str, timeout: int, num_predict: int = DEFAULT_NUM_PREDICT
+    image_path: Path,
+    model: str,
+    base_url: str,
+    timeout: int,
+    num_predict: int = DEFAULT_NUM_PREDICT,
+    prompt: str = PROMPT,
 ) -> str:
     """Ollama に画像を送り、説明文を返す."""
     payload = {
@@ -59,7 +68,7 @@ def _ollama_chat(
         "messages": [
             {
                 "role": "user",
-                "content": PROMPT,
+                "content": prompt,
                 "images": [base64.b64encode(image_path.read_bytes()).decode()],
             }
         ],
@@ -90,13 +99,17 @@ def describe_image(
 ) -> str:
     """画像の説明を取る.
 
-    qwen3-vl は思考が長引くと content が空で返ることがある。空なら同じモデルで
-    retries 回まで引き直し、それでも空なら fallback_model を 1 回だけ試す。
+    qwen3-vl は思考が長引くと content が空で返ることがある。空なら
+    (1) 同じモデルで retries 回まで引き直し、(2) 短い指示（数値不要）で 1 回、
+    (3) fallback_model で 1 回、の順に試す。
     """
     for _ in range(retries + 1):
         text = chat(image_path, model=model, base_url=base_url, timeout=timeout)
         if text:
             return text
+    text = chat(image_path, model=model, base_url=base_url, timeout=timeout, prompt=PROMPT_BRIEF)
+    if text:
+        return text
     if fallback_model:
         return chat(image_path, model=fallback_model, base_url=base_url, timeout=timeout)
     return ""

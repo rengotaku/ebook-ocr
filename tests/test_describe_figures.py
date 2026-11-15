@@ -125,7 +125,8 @@ class TestDescribeImage:
             return ""
 
         assert describe_image(self._image(tmp_path), retries=2, fallback_model=None, chat=chat) == ""
-        assert len(calls) == 3
+        # 再試行 3 回 + 短い指示 1 回
+        assert len(calls) == 4
 
     def test_raises_when_ollama_is_unavailable(self, tmp_path: Path):
         def chat(path, **kwargs):
@@ -251,7 +252,8 @@ class TestFallbackModel:
         text = describe_image(self._image(tmp_path), model="primary", fallback_model="backup", retries=0, chat=chat)
 
         assert text == "控えのモデルの説明"
-        assert calls == ["primary", "backup"]
+        # primary（通常）→ primary（短い指示）→ backup
+        assert calls == ["primary", "primary", "backup"]
 
     def test_no_fallback_when_disabled(self, tmp_path: Path):
         calls = []
@@ -261,4 +263,42 @@ class TestFallbackModel:
             return ""
 
         assert describe_image(self._image(tmp_path), fallback_model=None, retries=0, chat=chat) == ""
-        assert len(calls) == 1
+        # 通常の指示 1 回 + 短い指示 1 回
+        assert len(calls) == 2
+
+
+class TestBriefPromptRetry:
+    @staticmethod
+    def _image(tmp_path: Path) -> Path:
+        path = tmp_path / "crop.png"
+        Image.new("RGB", (10, 10), "white").save(path)
+        return path
+
+    def test_retries_with_brief_prompt_before_switching_model(self, tmp_path: Path):
+        from src.describe_figures import PROMPT, PROMPT_BRIEF
+
+        calls = []
+
+        def chat(path, model=..., prompt=PROMPT, **kwargs):
+            calls.append((model, prompt))
+            return "短い指示で返った" if prompt == PROMPT_BRIEF else ""
+
+        text = describe_image(self._image(tmp_path), model="primary", fallback_model="backup", retries=0, chat=chat)
+
+        assert text == "短い指示で返った"
+        assert calls == [("primary", PROMPT), ("primary", PROMPT_BRIEF)]
+
+    def test_falls_back_to_model_after_brief_prompt_fails(self, tmp_path: Path):
+        from src.describe_figures import PROMPT_BRIEF
+
+        calls = []
+
+        def chat(path, model=..., prompt=..., **kwargs):
+            calls.append((model, prompt))
+            return "控えの説明" if model == "backup" else ""
+
+        text = describe_image(self._image(tmp_path), model="primary", fallback_model="backup", retries=0, chat=chat)
+
+        assert text == "控えの説明"
+        assert [c[0] for c in calls] == ["primary", "primary", "backup"]
+        assert calls[1][1] == PROMPT_BRIEF
