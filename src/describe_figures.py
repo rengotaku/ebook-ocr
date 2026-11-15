@@ -116,13 +116,22 @@ def describe_image(
 
 
 DEFAULT_MIN_AREA_RATIO = 0.02
+# 横長すぎる領域は図ではなく本文の行・見出しのことが多い（対象の本では 12〜16 倍の帯が
+# 本文 2 行や節見出しだった）。図は概ね 1〜3 倍に収まる。
+DEFAULT_MAX_ASPECT_RATIO = 6.0
 
 
-def page_figures(layout_page: dict, min_area_ratio: float = DEFAULT_MIN_AREA_RATIO) -> list[dict]:
+def page_figures(
+    layout_page: dict,
+    min_area_ratio: float = DEFAULT_MIN_AREA_RATIO,
+    max_aspect_ratio: float = DEFAULT_MAX_ASPECT_RATIO,
+) -> list[dict]:
     """1 ページ分の layout から図として扱う領域を面積の大きい順に返す.
 
-    ロゴや著者名の行のような小さい領域まで図として説明すると、本文に対してノイズになる。
-    ページ面積に対する比率で足切りする（既定 2%）。
+    図ではない領域を落とす基準は 2 つ。
+
+    - ページ面積に対する比率（既定 2%）: ロゴや著者名の行のような小さい領域
+    - 縦横比（既定 6.0）: 本文の行や節見出しのような横長の帯
     """
     page_size = layout_page.get("page_size") or [0, 0]
     page_area = int(page_size[0]) * int(page_size[1])
@@ -132,8 +141,18 @@ def page_figures(layout_page: dict, min_area_ratio: float = DEFAULT_MIN_AREA_RAT
             continue
         if page_area and _area(region["bbox"]) / page_area < min_area_ratio:
             continue
+        if _aspect_ratio(region["bbox"]) > max_aspect_ratio:
+            continue
         regions.append(region)
     return sorted(regions, key=lambda region: _area(region["bbox"]), reverse=True)
+
+
+def _aspect_ratio(bbox: list[int]) -> float:
+    width = max(0, bbox[2] - bbox[0])
+    height = max(0, bbox[3] - bbox[1])
+    if height == 0:
+        return float("inf")
+    return width / height
 
 
 def _area(bbox: list[int]) -> int:
@@ -181,6 +200,7 @@ def describe_book(
     fallback_model: str | None = DEFAULT_FALLBACK_MODEL,
     max_pages: int | None = None,
     min_area_ratio: float = DEFAULT_MIN_AREA_RATIO,
+    max_aspect_ratio: float = DEFAULT_MAX_ASPECT_RATIO,
     describe: Callable[..., str] = describe_image,
 ) -> tuple[str, list[Figure]]:
     """book.md の本文に図の説明を差し込んだ文字列を返す.
@@ -200,7 +220,7 @@ def describe_book(
             break
         page_key = f"{page}.webp"
         page_layout = layout.get(page_key) or layout.get(f"{page}.png") or {}
-        regions = page_figures(page_layout, min_area_ratio=min_area_ratio)
+        regions = page_figures(page_layout, min_area_ratio=min_area_ratio, max_aspect_ratio=max_aspect_ratio)
         if not regions:
             continue
         page_image = _find_page_image(pages_dir, page)

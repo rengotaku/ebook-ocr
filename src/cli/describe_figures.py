@@ -37,6 +37,12 @@ def main(argv: list[str] | None = None) -> int:
         default=0.02,
         help="図として扱う最小の面積比（ページ面積に対する割合。既定 0.02）",
     )
+    parser.add_argument(
+        "--max-figure-aspect",
+        type=float,
+        default=6.0,
+        help="図として扱う最大の縦横比（幅÷高さ。既定 6.0。これより横長は本文の行とみなす）",
+    )
     args = parser.parse_args(argv)
 
     if not args.book_md.exists():
@@ -61,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         fallback_model=args.vlm_fallback_model or None,
         max_pages=args.limit_pages,
         min_area_ratio=args.min_area_ratio,
+        max_aspect_ratio=args.max_figure_aspect,
     )
 
     output.write_text(text, encoding="utf-8")
