@@ -22,6 +22,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from src.utils import list_page_images
+
 # Re-export public API
 from .engines import (
     ocr_easyocr,
@@ -146,7 +148,7 @@ def run_ensemble_ocr(
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    pages = sorted(pages_path.glob("*.png"))
+    pages = list_page_images(pages_path)
     all_results: list[tuple[str, EnsembleResult]] = []
 
     print(f"Running ensemble OCR ({', '.join(engines)}) on {len(pages)} pages...")

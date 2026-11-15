@@ -7,8 +7,24 @@ from __future__ import annotations
 
 import base64
 import io
+from pathlib import Path
 
 from PIL import Image, ImageDraw
+
+# ページ画像として受け付ける拡張子。ソニーのビューアから取り出したページは webp で、
+# png だけに絞ると 0 件になる（2026-11-15）。
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")
+
+
+def list_page_images(directory: str | Path) -> list[Path]:
+    """ディレクトリ直下のページ画像をファイル名順に返す.
+
+    拡張子は ``IMAGE_SUFFIXES`` で判定する。中身の形式は各ライブラリが判定するため、
+    ``.webp`` を ``.png`` にリネームする必要はない。
+    """
+    return sorted(
+        path for path in Path(directory).iterdir() if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES
+    )
 
 
 def encode_image_file(path: str) -> str:

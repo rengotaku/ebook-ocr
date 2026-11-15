@@ -34,6 +34,7 @@ from src.ocr_integrated_utils import (
     select_best_engine,
     structure_text_by_paragraphs,
 )
+from src.utils import list_page_images
 
 # Re-export for backward compatibility
 __all__ = [
@@ -205,7 +206,7 @@ def run_integrated_ocr_batch(
         with open(layout_file) as f:
             layout_data = json.load(f)
 
-    pages = sorted(pages_path.glob("*.png"))
+    pages = list_page_images(pages_path)
     all_results: list[tuple[str, IntegratedResult]] = []
 
     print(f"Running integrated OCR on {len(pages)} pages...")
