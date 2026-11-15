@@ -291,10 +291,10 @@ class TestCropRegion:
 
 
 class TestTextRegionOcr:
-    """TEXT領域のOCRテスト（Yomitoku使用）。"""
+    """TEXT領域のOCRテスト（layout.json の text を使う）。"""
 
-    def test_text_region_uses_yomitoku(self, tmp_path: Path) -> None:
-        """TEXT領域がYomitokuで処理されることを検証。"""
+    def test_text_region_uses_layout_text(self, tmp_path: Path) -> None:
+        """TEXT領域はレイアウト検出時の text を使い、クロップ再 OCR をしないことを検証。"""
         from src.layout_ocr import ocr_region
 
         # Arrange
@@ -303,34 +303,50 @@ class TestTextRegionOcr:
             "type": "TEXT",
             "bbox": [10, 10, 490, 190],
             "confidence": 0.9,
+            "text": "テキスト内容",
         }
 
-        # Act & Assert: ocr_page_yomitoku をモック
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="テキスト内容") as mock_ocr:
-            ocr_region(img, region)
-
-            # Yomitokuが呼ばれたことを確認
-            assert mock_ocr.called, "ocr_page_yomitoku should be called for TEXT region"
-
-    def test_text_region_ocr_result_format(self, tmp_path: Path) -> None:
-        """TEXT領域のOCR結果がフォーマットされることを検証。"""
-        from src.layout_ocr import ocr_region
-
-        # Arrange
-        img = Image.new("RGB", (500, 200), color=(255, 255, 255))
-        region = {
-            "type": "TEXT",
-            "bbox": [10, 10, 490, 190],
-            "confidence": 0.9,
-        }
-
-        # Act: ocr_page_yomitoku をモック
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="これは本文です。"):
+        # Act & Assert: ocr_page_yomitoku は呼ばれない
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="再OCRの結果") as mock_ocr:
             result = ocr_region(img, region)
 
+            assert result.text == "テキスト内容", f"Should use layout.json text. Got: {result.text}"
+            assert not mock_ocr.called, "ocr_page_yomitoku should NOT be called for TEXT region"
+
+    def test_text_region_ocr_result_format(self) -> None:
+        """TEXT領域の text がそのまま出力されることを検証。"""
+        from src.layout_ocr import ocr_region
+
+        # Arrange
+        img = Image.new("RGB", (500, 200), color=(255, 255, 255))
+        region = {
+            "type": "TEXT",
+            "bbox": [10, 10, 490, 190],
+            "confidence": 0.9,
+            "text": "これは本文です。",
+        }
+
+        # Act
+        result = ocr_region(img, region)
+
         # Assert: TEXTはそのまま出力
-        assert result.text == "これは本文です。", f"OCR text should be extracted. Got: {result.text}"
+        assert result.text == "これは本文です。", f"Layout text should be extracted. Got: {result.text}"
         assert result.formatted == "これは本文です。", f"TEXT should remain unchanged. Got: {result.formatted}"
+
+    def test_text_region_without_text_is_empty(self) -> None:
+        """text を持たない TEXT 領域でも落ちず、空で出力されることを検証。"""
+        from src.layout_ocr import ocr_region
+
+        # Arrange
+        img = Image.new("RGB", (500, 200), color=(255, 255, 255))
+        region = {"type": "TEXT", "bbox": [10, 10, 490, 190], "confidence": 0.9}
+
+        # Act
+        result = ocr_region(img, region)
+
+        # Assert
+        assert result.text == ""
+        assert result.formatted == ""
 
 
 class TestFigureRegionOcr:
@@ -357,10 +373,10 @@ class TestFigureRegionOcr:
 
 
 class TestTitleRegionOcr:
-    """TITLE領域のOCRテスト。"""
+    """TITLE領域のOCRテスト（layout.json の text を使う）。"""
 
-    def test_title_region_uses_yomitoku(self) -> None:
-        """TITLE領域がYomitokuで処理されることを検証。"""
+    def test_title_region_uses_layout_text(self) -> None:
+        """TITLE領域がレイアウト検出時の text を使うことを検証。"""
         from src.layout_ocr import ocr_region
 
         # Arrange
@@ -369,17 +385,18 @@ class TestTitleRegionOcr:
             "type": "TITLE",
             "bbox": [10, 5, 590, 45],
             "confidence": 0.98,
+            "text": "第2章 システム設計",
         }
 
-        # Act & Assert: ocr_page_yomitoku をモック
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="第2章 システム設計") as mock_ocr:
-            ocr_region(img, region)
+        # Act & Assert: ocr_page_yomitoku は呼ばれない
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="再OCRの結果") as mock_ocr:
+            result = ocr_region(img, region)
 
-            # Yomitokuが呼ばれたことを確認
-            assert mock_ocr.called, "ocr_page_yomitoku should be called for TITLE region"
+            assert result.text == "第2章 システム設計", f"Should use layout.json text. Got: {result.text}"
+            assert not mock_ocr.called, "ocr_page_yomitoku should NOT be called for TITLE region"
 
     def test_title_region_formatted_as_heading(self) -> None:
-        """TITLE領域のOCR結果が見出しマークアップで出力されることを検証。"""
+        """TITLE領域の text が見出しマークアップで出力されることを検証。"""
         from src.layout_ocr import ocr_region
 
         # Arrange
@@ -388,11 +405,11 @@ class TestTitleRegionOcr:
             "type": "TITLE",
             "bbox": [10, 5, 590, 45],
             "confidence": 0.98,
+            "text": "第3章 実装",
         }
 
-        # Act: ocr_page_yomitoku をモック
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="第3章 実装"):
-            result = ocr_region(img, region)
+        # Act
+        result = ocr_region(img, region)
 
         # Assert
         assert result.formatted == "## 第3章 実装", (
@@ -414,25 +431,26 @@ class TestResultConcatenation:
 
         layout = {
             "regions": [
-                {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95},
-                {"type": "TEXT", "bbox": [50, 120, 750, 300], "confidence": 0.9},
-                {"type": "TEXT", "bbox": [50, 320, 750, 500], "confidence": 0.88},
+                {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95, "text": "第1章 概要"},
+                {"type": "TEXT", "bbox": [50, 120, 750, 300], "confidence": 0.9, "text": "これは最初の段落です。"},
+                {"type": "TEXT", "bbox": [50, 320, 750, 500], "confidence": 0.88, "text": "これは2番目の段落です。"},
             ],
             "page_size": [800, 600],
         }
 
-        # Mock Yomitoku OCR responses
-        ocr_responses = ["第1章 概要", "これは最初の段落です。", "これは2番目の段落です。"]
-
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=ocr_responses):
-            results = ocr_by_layout(str(img_path), layout)
+        results = ocr_by_layout(str(img_path), layout)
 
         # Assert
         assert len(results) == 3, f"Should return 3 OCR results. Got: {len(results)}"
         assert results[0].region_type == "TITLE", "First result should be TITLE"
         assert results[1].region_type == "TEXT", "Second result should be TEXT"
         assert results[2].region_type == "TEXT", "Third result should be TEXT"
+        assert [r.text for r in results] == [
+            "第1章 概要",
+            "これは最初の段落です。",
+            "これは2番目の段落です。",
+        ], f"Texts should be kept in order. Got: {[r.text for r in results]}"
 
     def test_ocr_by_layout_respects_region_order(self, tmp_path: Path) -> None:
         """OCR結果がレイアウトの領域順序を維持することを検証。"""
@@ -446,23 +464,24 @@ class TestResultConcatenation:
         # 読み順: TITLE -> CAPTION -> TEXT
         layout = {
             "regions": [
-                {"type": "TITLE", "bbox": [50, 50, 600, 100], "confidence": 0.95},
-                {"type": "CAPTION", "bbox": [50, 110, 400, 140], "confidence": 0.85},
-                {"type": "TEXT", "bbox": [50, 150, 750, 550], "confidence": 0.9},
+                {"type": "TITLE", "bbox": [50, 50, 600, 100], "confidence": 0.95, "text": "表1のタイトル"},
+                {"type": "CAPTION", "bbox": [50, 110, 400, 140], "confidence": 0.85, "text": "表1: サンプルデータ"},
+                {"type": "TEXT", "bbox": [50, 150, 750, 550], "confidence": 0.9, "text": "本文テキスト"},
             ],
             "page_size": [800, 600],
         }
 
-        # Mock Yomitoku OCR responses
-        ocr_responses = ["表1のタイトル", "表1: サンプルデータ", "本文テキスト"]
-
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=ocr_responses):
-            results = ocr_by_layout(str(img_path), layout)
+        results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 順序が維持されている
         types = [r.region_type for r in results]
         assert types == ["TITLE", "CAPTION", "TEXT"], f"Results should maintain region order. Got: {types}"
+        assert [r.text for r in results] == [
+            "表1のタイトル",
+            "表1: サンプルデータ",
+            "本文テキスト",
+        ], f"Texts should follow reading order. Got: {[r.text for r in results]}"
 
     def test_ocr_by_layout_skips_abandon_regions(self, tmp_path: Path) -> None:
         """ABANDON領域がスキップされることを検証。"""
@@ -476,15 +495,14 @@ class TestResultConcatenation:
         layout = {
             "regions": [
                 {"type": "ABANDON", "bbox": [700, 10, 790, 30], "confidence": 0.8},  # Header
-                {"type": "TEXT", "bbox": [50, 100, 750, 500], "confidence": 0.9},
+                {"type": "TEXT", "bbox": [50, 100, 750, 500], "confidence": 0.9, "text": "本文テキスト"},
                 {"type": "ABANDON", "bbox": [350, 570, 450, 590], "confidence": 0.75},  # Page num
             ],
             "page_size": [800, 600],
         }
 
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="本文テキスト"):
-            results = ocr_by_layout(str(img_path), layout)
+        results = ocr_by_layout(str(img_path), layout)
 
         # Assert: ABANDONは結果に含まれない
         assert len(results) == 1, f"Only TEXT region should be processed. Got: {len(results)}"
@@ -541,23 +559,22 @@ class TestOcrByLayoutEdgeCases:
         img = Image.new("RGB", (800, 600), color=(255, 255, 255))
         img.save(img_path)
 
+        # Unicode text with various characters
+        unicode_text = "日本語テキスト。\n絵文字テスト。\nSpecial: '\"\\/n"
+
         layout = {
             "regions": [
-                {"type": "TEXT", "bbox": [50, 50, 750, 550], "confidence": 0.9},
+                {"type": "TEXT", "bbox": [50, 50, 750, 550], "confidence": 0.9, "text": unicode_text},
             ],
             "page_size": [800, 600],
         }
 
-        # Unicode text with various characters
-        unicode_text = "日本語テキスト。\n絵文字テスト。\nSpecial: '\"\\/n"
-
-        # Act: ocr_page_yomitoku をモック
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=unicode_text):
-            results = ocr_by_layout(str(img_path), layout)
+        # Act
+        results = ocr_by_layout(str(img_path), layout)
 
         # Assert
         assert len(results) == 1, "Should return 1 result"
-        assert "日本語" in results[0].text, "Unicode text should be preserved"
+        assert results[0].text == unicode_text, "Unicode text should be preserved"
 
     def test_ocr_by_layout_mixed_region_types(self, tmp_path: Path) -> None:
         """異なる領域タイプが混在する場合の処理を検証。
@@ -573,29 +590,18 @@ class TestOcrByLayoutEdgeCases:
 
         layout = {
             "regions": [
-                {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95},
-                {"type": "TEXT", "bbox": [50, 120, 750, 250], "confidence": 0.9},
+                {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95, "text": "第5章 結論"},
+                {"type": "TEXT", "bbox": [50, 120, 750, 250], "confidence": 0.9, "text": "左カラムのテキスト"},
                 {"type": "FIGURE", "bbox": [50, 270, 750, 450], "confidence": 0.88},
-                {"type": "CAPTION", "bbox": [50, 460, 750, 490], "confidence": 0.85},
-                {"type": "TEXT", "bbox": [50, 510, 750, 640], "confidence": 0.9},
-                {"type": "FOOTNOTE", "bbox": [50, 750, 750, 790], "confidence": 0.8},
+                {"type": "CAPTION", "bbox": [50, 460, 750, 490], "confidence": 0.85, "text": "図5.1: 統計データ"},
+                {"type": "TEXT", "bbox": [50, 510, 750, 640], "confidence": 0.9, "text": "結論の本文テキスト"},
+                {"type": "FOOTNOTE", "bbox": [50, 750, 750, 790], "confidence": 0.8, "text": "脚注: 参考文献より"},
             ],
             "page_size": [800, 800],
         }
 
-        # 各領域タイプに応じたモックレスポンス（上から下の順、FIGUREは除外）
-        mock_yomitoku_responses = [
-            "第5章 結論",  # TITLE (y=50)
-            "左カラムのテキスト",  # TEXT (y=120)
-            "図5.1: 統計データ",  # CAPTION (y=460)
-            "結論の本文テキスト",  # TEXT (y=510)
-            "脚注: 参考文献より",  # FOOTNOTE (y=750)
-        ]
-
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
-            mock_ocr.side_effect = mock_yomitoku_responses
-            results = ocr_by_layout(str(img_path), layout)
+        results = ocr_by_layout(str(img_path), layout)
 
         # Assert: FIGUREは除外されるので5つの結果（元6領域 - FIGURE 1つ）
         assert len(results) == 5, f"Should return 5 results (FIGURE excluded). Got: {len(results)}"
@@ -1571,16 +1577,15 @@ class TestFigureExclusion:
 
         layout = {
             "regions": [
-                {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95},
+                {"type": "TITLE", "bbox": [50, 50, 750, 100], "confidence": 0.95, "text": "タイトル"},
                 {"type": "FIGURE", "bbox": [50, 120, 400, 350], "confidence": 0.9},
-                {"type": "TEXT", "bbox": [50, 370, 750, 550], "confidence": 0.88},
+                {"type": "TEXT", "bbox": [50, 370, 750, 550], "confidence": 0.88, "text": "テキスト内容"},
             ],
             "page_size": [800, 600],
         }
 
-        # Act: モックでOCR結果を設定（FIGUREはスキップされるため2つの応答のみ）
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", side_effect=["タイトル", "テキスト内容"]):
-            results = ocr_by_layout(str(img_path), layout)
+        # Act
+        results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 結果にFIGUREが含まれない
         figure_results = [r for r in results if r.region_type == "FIGURE"]
@@ -1621,29 +1626,19 @@ class TestResultConcatenationWithReadingOrder:
         layout = {
             "regions": [
                 # 右カラム上部（読み順: 3番目）
-                {"type": "TEXT", "bbox": [550, 50, 950, 200], "confidence": 0.9},
+                {"type": "TEXT", "bbox": [550, 50, 950, 200], "confidence": 0.9, "text": "右カラム上部"},
                 # 左カラム上部（読み順: 1番目）
-                {"type": "TITLE", "bbox": [50, 50, 450, 100], "confidence": 0.95},
+                {"type": "TITLE", "bbox": [50, 50, 450, 100], "confidence": 0.95, "text": "タイトル"},
                 # 左カラム中部（読み順: 2番目）
-                {"type": "TEXT", "bbox": [50, 120, 450, 300], "confidence": 0.88},
+                {"type": "TEXT", "bbox": [50, 120, 450, 300], "confidence": 0.88, "text": "左カラム本文"},
                 # 右カラム下部（読み順: 4番目）
-                {"type": "TEXT", "bbox": [550, 220, 950, 400], "confidence": 0.87},
+                {"type": "TEXT", "bbox": [550, 220, 950, 400], "confidence": 0.87, "text": "右カラム下部"},
             ],
             "page_size": [1000, 600],
         }
 
-        # Mock OCR responses - 各領域に異なるテキストを返す
-
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
-            # 読み順でソートされた後に呼ばれるので、順番を設定
-            mock_ocr.side_effect = [
-                "タイトル",  # 左カラム TITLE
-                "左カラム本文",  # 左カラム TEXT
-                "右カラム上部",  # 右カラム TEXT (上)
-                "右カラム下部",  # 右カラム TEXT (下)
-            ]
-            results = ocr_by_layout(str(img_path), layout)
+        results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 読み順（左カラム→右カラム）で結果が返される
         assert len(results) == 4, f"Should have 4 results. Got: {len(results)}"
@@ -1652,6 +1647,12 @@ class TestResultConcatenationWithReadingOrder:
         assert results[0].region_type == "TITLE", f"First result should be TITLE. Got: {results[0].region_type}"
         # 2番目は左カラムのTEXT
         assert results[1].region_type == "TEXT", f"Second result should be TEXT. Got: {results[1].region_type}"
+        assert [r.text for r in results] == [
+            "タイトル",
+            "左カラム本文",
+            "右カラム上部",
+            "右カラム下部",
+        ], f"Texts should follow reading order. Got: {[r.text for r in results]}"
 
     def test_results_maintain_sorted_order_for_single_column(self, tmp_path: Path) -> None:
         """単一カラムレイアウトでも上から下の順序が維持されることを検証。"""
@@ -1665,23 +1666,24 @@ class TestResultConcatenationWithReadingOrder:
         layout = {
             "regions": [
                 # 下から上に定義（ソートが機能することを確認）
-                {"type": "TEXT", "bbox": [50, 400, 550, 600], "confidence": 0.85},
-                {"type": "TEXT", "bbox": [50, 200, 550, 380], "confidence": 0.88},
-                {"type": "TITLE", "bbox": [50, 50, 550, 100], "confidence": 0.95},
+                {"type": "TEXT", "bbox": [50, 400, 550, 600], "confidence": 0.85, "text": "段落2"},
+                {"type": "TEXT", "bbox": [50, 200, 550, 380], "confidence": 0.88, "text": "段落1"},
+                {"type": "TITLE", "bbox": [50, 50, 550, 100], "confidence": 0.95, "text": "タイトル"},
             ],
             "page_size": [600, 800],
         }
 
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
-            mock_ocr.side_effect = ["タイトル", "段落1", "段落2"]
-            results = ocr_by_layout(str(img_path), layout)
+        results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 上から下の順序
         assert len(results) == 3, f"Should have 3 results. Got: {len(results)}"
         assert results[0].region_type == "TITLE", "First should be TITLE (top)"
         assert results[1].region_type == "TEXT", "Second should be TEXT (middle)"
         assert results[2].region_type == "TEXT", "Third should be TEXT (bottom)"
+        assert [r.text for r in results] == ["タイトル", "段落1", "段落2"], (
+            f"Texts should be sorted top to bottom. Got: {[r.text for r in results]}"
+        )
 
 
 # ============================================================
@@ -1758,3 +1760,91 @@ class TestTitleFormatting:
         assert format_ocr_result("TITLE", "6-2. 大小関係の確からしさをどう考えるか?") == (
             "## 6-2. 大小関係の確からしさをどう考えるか?"
         )
+
+
+# ============================================================
+# #97: 本文は layout.json の text を正とし、空にしない
+# ============================================================
+
+
+class TestLayoutTextIsAuthoritative:
+    """本文・見出しの text はレイアウト検出時の認識結果を正とする."""
+
+    def test_text_region_does_not_reocr(self) -> None:
+        """TEXT 領域でクロップ再 OCR を呼ばない."""
+        from src.layout_ocr import ocr_region
+
+        img = Image.new("RGB", (400, 200), "white")
+        region = {"type": "TEXT", "bbox": [10, 10, 390, 190], "confidence": 1.0, "text": "紙面にある本文"}
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
+            result = ocr_region(img, region)
+
+        assert mock_ocr.called is False
+        assert result.text == "紙面にある本文"
+
+    def test_text_region_keeps_text_when_crop_would_be_empty(self, tmp_path: Path) -> None:
+        """クロップ再 OCR が空になる紙面でも、本文が消えない.
+
+        #97 の再現条件: 小さい・薄い領域を切り出すと認識結果が空になる。
+        再 OCR の結果を正にしないので、本文は layout.json の text のまま残る。
+        """
+        from src.layout_ocr import ocr_by_layout
+
+        img_path = tmp_path / "page.png"
+        Image.new("RGB", (400, 200), "white").save(img_path)
+        layout = {
+            "regions": [
+                {
+                    "type": "TEXT",
+                    "bbox": [10, 10, 390, 150],
+                    "confidence": 1.0,
+                    "text": "① データ分析で重大な見落としを防ぐ",
+                },
+            ],
+            "page_size": [400, 200],
+        }
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=""):
+            results = ocr_by_layout(str(img_path), layout)
+
+        assert [r.text for r in results] == ["① データ分析で重大な見落としを防ぐ"]
+
+    def test_text_region_can_be_empty_without_error(self) -> None:
+        """text が空の TEXT 領域でも例外にせず、空で返す."""
+        from src.layout_ocr import ocr_region
+
+        img = Image.new("RGB", (400, 200), "white")
+        region = {"type": "TEXT", "bbox": [10, 10, 390, 190], "confidence": 1.0, "text": ""}
+
+        result = ocr_region(img, region)
+
+        assert result.text == ""
+        assert result.formatted == ""
+
+
+class TestTableRegionReocr:
+    """TABLE は構造を取り直すため再 OCR し、空なら layout.json の text に戻す."""
+
+    def test_table_region_is_reocrd(self) -> None:
+        from src.layout_ocr import ocr_region
+
+        img = Image.new("RGB", (400, 300), "white")
+        region = {"type": "TABLE", "bbox": [10, 10, 390, 290], "confidence": 1.0, "text": "セル1 | セル2"}
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="| セル1 | セル2 |") as mock_ocr:
+            result = ocr_region(img, region)
+
+        assert mock_ocr.called is True
+        assert result.text == "| セル1 | セル2 |"
+
+    def test_table_region_falls_back_to_layout_text(self) -> None:
+        from src.layout_ocr import ocr_region
+
+        img = Image.new("RGB", (400, 300), "white")
+        region = {"type": "TABLE", "bbox": [10, 10, 390, 290], "confidence": 1.0, "text": "セル1 | セル2"}
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=""):
+            result = ocr_region(img, region)
+
+        assert result.text == "セル1 | セル2"
