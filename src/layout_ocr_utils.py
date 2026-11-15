@@ -141,6 +141,24 @@ def should_fallback(
 FIGURE_LIKE_TYPES = ("FIGURE", "CODE")
 
 
+# 見出しの本文がこれで終わっていたら、見出しではなく本文の行とみなす（#90）
+SENTENCE_ENDINGS = ("。", "、", "．", "！", "？")
+
+
+def _format_title(text: str) -> str:
+    """TITLE 領域を Markdown の見出しにする.
+
+    - 空文字なら何も出さない（``## `` だけの行を作らない）
+    - 文末記号で終わるなら見出しではなく本文の行なので、そのまま出す
+    """
+    stripped = text.strip()
+    if not stripped:
+        return ""
+    if stripped.endswith(SENTENCE_ENDINGS):
+        return stripped
+    return f"## {stripped}"
+
+
 def format_ocr_result(region_type: str, text: str) -> str:
     """領域種類に応じたMarkdownフォーマットを適用。
 
@@ -163,7 +181,7 @@ def format_ocr_result(region_type: str, text: str) -> str:
         フォーマット済みテキスト
     """
     if region_type == "TITLE":
-        return f"## {text}"
+        return _format_title(text)
     elif region_type in FIGURE_LIKE_TYPES:
         # 図として扱うので本文には出さない（#83）
         return ""

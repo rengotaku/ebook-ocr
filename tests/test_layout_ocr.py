@@ -1725,3 +1725,36 @@ class TestCodeRegionTreatedAsFigure:
 
         assert result.text == ""
         assert result.formatted == ""
+
+
+# ============================================================
+# T017: TITLE の空テキスト・本文行の扱い
+# ============================================================
+
+
+class TestTitleFormatting:
+    """見出しが空なら行を出さず、文末記号で終わるものは本文として出す."""
+
+    def test_empty_title_emits_nothing(self) -> None:
+        from src.layout_ocr_utils import format_ocr_result
+
+        assert format_ocr_result("TITLE", "") == ""
+        assert format_ocr_result("TITLE", "   ") == ""
+
+    def test_heading_gets_markdown(self) -> None:
+        from src.layout_ocr_utils import format_ocr_result
+
+        assert format_ocr_result("TITLE", "第3章 分析方法を選ぶ") == "## 第3章 分析方法を選ぶ"
+
+    def test_sentence_ending_title_is_body_text(self) -> None:
+        from src.layout_ocr_utils import format_ocr_result
+
+        text = "まず、計算をする前に踏まねばならないステップが3つあります。"
+        assert format_ocr_result("TITLE", text) == text
+
+    def test_sentence_ending_midway_is_heading(self) -> None:
+        from src.layout_ocr_utils import format_ocr_result
+
+        assert format_ocr_result("TITLE", "6-2. 大小関係の確からしさをどう考えるか?") == (
+            "## 6-2. 大小関係の確からしさをどう考えるか?"
+        )
