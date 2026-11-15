@@ -35,6 +35,7 @@ from src.layout_ocr_utils import (
     select_ocr_engine,
     should_fallback,
 )
+from src.utils import list_page_images
 
 
 @dataclass(frozen=True)
@@ -226,7 +227,7 @@ def run_layout_ocr(
     ocr_texts_dir = output_path.parent / "ocr_texts"
     ocr_texts_dir.mkdir(parents=True, exist_ok=True)
 
-    pages = sorted(pages_path.glob("*.png"))
+    pages = list_page_images(pages_path)
     if limit is not None:
         pages = pages[:limit]
     all_results: list[tuple[str, list[OCRResult]]] = []
@@ -345,7 +346,7 @@ def run_yomitoku_ocr(
     ocr_texts_dir = output_dir / "ocr_texts"
     ocr_texts_dir.mkdir(parents=True, exist_ok=True)
 
-    pages = sorted(pages_path.glob("*.png"))
+    pages = list_page_images(pages_path)
     all_results: list[tuple[str, str]] = []
 
     # Check if we need to initialize analyzer (for non-cached pages)

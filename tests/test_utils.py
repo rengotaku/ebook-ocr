@@ -13,9 +13,11 @@ from pathlib import Path
 from PIL import Image
 
 from src.utils import (
+    IMAGE_SUFFIXES,
     encode_image_file,
     encode_pil_image,
     format_figure_markers,
+    list_page_images,
     mask_figure_regions,
 )
 
@@ -159,3 +161,55 @@ class TestMaskFigureRegions:
             for y in range(80):
                 pixel = result.getpixel((x, y))
                 assert pixel == (255, 255, 255), f"Pixel at ({x},{y}) should be white after clamp, got {pixel}"
+
+
+# ---------- list_page_images ----------
+
+
+class TestListPageImages:
+    @staticmethod
+    def _make(tmp_path: Path, name: str) -> Path:
+        path = tmp_path / name
+        path.write_bytes(b"dummy")
+        return path
+
+    def test_collects_webp_pages(self, tmp_path: Path):
+        self._make(tmp_path, "page_0001.webp")
+        self._make(tmp_path, "page_0002.webp")
+
+        assert [p.name for p in list_page_images(tmp_path)] == ["page_0001.webp", "page_0002.webp"]
+
+    def test_accepts_mixed_png_and_webp(self, tmp_path: Path):
+        for name in ("page_0002.png", "page_0001.webp", "page_0003.jpg", "page_0004.WEBP"):
+            self._make(tmp_path, name)
+
+        assert sorted(p.name for p in list_page_images(tmp_path)) == [
+            "page_0001.webp",
+            "page_0002.png",
+            "page_0003.jpg",
+            "page_0004.WEBP",
+        ]
+
+    def test_ignores_other_files_and_directories(self, tmp_path: Path):
+        self._make(tmp_path, "page_0001.webp")
+        self._make(tmp_path, "book.md")
+        self._make(tmp_path, ".DS_Store")
+        (tmp_path / "figures").mkdir()
+
+        assert [p.name for p in list_page_images(tmp_path)] == ["page_0001.webp"]
+
+    def test_returns_sorted_order(self, tmp_path: Path):
+        for name in ("page_0010.webp", "page_0002.webp", "page_0001.webp"):
+            self._make(tmp_path, name)
+
+        assert [p.name for p in list_page_images(tmp_path)] == [
+            "page_0001.webp",
+            "page_0002.webp",
+            "page_0010.webp",
+        ]
+
+    def test_empty_directory(self, tmp_path: Path):
+        assert list_page_images(tmp_path) == []
+
+    def test_webp_is_a_supported_suffix(self):
+        assert ".webp" in IMAGE_SUFFIXES

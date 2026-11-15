@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 import cv2
 
+from src.utils import list_page_images
+
 if TYPE_CHECKING:
     from yomitoku import DocumentAnalyzer
 
@@ -354,7 +356,7 @@ def detect_layout_yomitoku(
     lay_dir = Path(layouts_dir) if layouts_dir else out_path / "layouts"
     lay_dir.mkdir(parents=True, exist_ok=True)
 
-    pages = sorted(pages_path.glob("*.png"))
+    pages = list_page_images(pages_path)
     if limit:
         print(f"Processing first {limit} of {len(pages)} files", file=sys.stderr)
         pages = pages[:limit]

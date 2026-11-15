@@ -11,6 +11,8 @@ from pathlib import Path
 
 import cv2
 
+from src.utils import list_page_images
+
 
 def paragraphs_to_layout(paragraphs: list, figures: list, page_size: tuple[int, int]) -> dict:
     """Convert yomitoku paragraphs and figures to layout.json format.
@@ -163,7 +165,7 @@ def detect_layout_yomitoku(
     lay_dir = Path(layouts_dir) if layouts_dir else out_path / "layouts"
     lay_dir.mkdir(parents=True, exist_ok=True)
 
-    pages = sorted(pages_path.glob("*.png"))
+    pages = list_page_images(pages_path)
     if not pages:
         print("No page images found")
         return {}

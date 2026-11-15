@@ -10,6 +10,7 @@ from pathlib import Path
 
 from src.layout_ocr import run_layout_ocr
 from src.logging_config import setup_logging
+from src.utils import list_page_images
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ def main() -> int:
 
     # Apply --limit: filter pages before passing to run_layout_ocr
     if args.limit is not None:
-        all_pages = sorted(pages_path.glob("*.png"))
+        all_pages = list_page_images(pages_path)
         if args.limit < len(all_pages):
             logger.warning(
                 "Limiting to first %d of %d files",
