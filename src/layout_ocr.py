@@ -2,21 +2,23 @@
 
 This module implements User Story 2: Region-based OCR Processing.
 Each detected region is processed with the appropriate OCR engine:
-- TEXT/TITLE/TABLE/CAPTION/FOOTNOTE/FORMULA: Yomitoku
+- TEXT/TITLE/CAPTION/FOOTNOTE/FORMULA: use the text recognized during layout detection
+  (`layout.json` の `region["text"]`)
+- TABLE: crop the region and OCR it again (its structure has to be read from the pixels)
 - FIGURE/CODE: Skip (treated as a figure, excluded from text output)
 - ABANDON: Skip
 
-OCR Engine Selection Rules:
-| Region Type | OCR Engine | Output Format |
-|-------------|------------|---------------|
-| TITLE | Yomitoku | `## {text}` |
-| TEXT | Yomitoku | `{text}` |
-| TABLE | Yomitoku | Markdown table |
+Region Text Source:
+| Region Type | Text Source | Output Format |
+|-------------|-------------|---------------|
+| TITLE | layout.json | `## {text}` |
+| TEXT | layout.json | `{text}` |
+| TABLE | crop re-OCR (fallback: layout.json) | Markdown table |
 | FIGURE | Skip | (treated as a figure) |
 | CODE | Skip | (treated as a figure) |
-| CAPTION | Yomitoku | `*{text}*` |
-| FOOTNOTE | Yomitoku | `^{text}^` |
-| FORMULA | Yomitoku | `$${text}$$` |
+| CAPTION | layout.json | `*{text}*` |
+| FOOTNOTE | layout.json | `^{text}^` |
+| FORMULA | layout.json | `$${text}$$` |
 | ABANDON | Skip | None |
 """
 
@@ -47,6 +49,11 @@ class OCRResult:
     region_type: str  # 元の領域種類
     text: str  # OCR出力テキスト
     formatted: str  # フォーマット済みテキスト（Markdown形式）
+
+
+# レイアウト検出時に認識済みの text をそのまま使う領域。
+# 領域を切り出して OCR をかけ直すと、薄い・小さい領域で空になる（#97）。
+LAYOUT_TEXT_TYPES = ("TEXT", "TITLE", "CAPTION", "FOOTNOTE", "FORMULA")
 
 
 def ocr_with_fallback(image: Image.Image, device: str = "cpu") -> tuple[str, str]:
@@ -83,24 +90,21 @@ def ocr_region(
 ) -> OCRResult:
     """単一領域のOCR処理。
 
+    本文・見出しはレイアウト検出時の認識結果（``region["text"]``）を使い、
+    クロップした画像への再 OCR は構造を取り直す必要がある TABLE だけに残す。
+
     Args:
         img: ページ全体の PIL Image
-        region: {"type": str, "bbox": list[int], "confidence": float}
+        region: {"type": str, "bbox": list[int], "confidence": float, "text": str}
         device: Device for Yomitoku ("cpu" or "cuda")
 
     Returns:
         OCRResult with text and formatted output
     """
     region_type = region["type"]
-    bbox = region["bbox"]
 
-    # 1. 領域をクロップ
-    cropped_img = crop_region(img, bbox)
-
-    # 2. OCRエンジン選択
+    # 1. FIGURE/CODE/ABANDON領域はスキップ
     engine = select_ocr_engine(region_type)
-
-    # 3. FIGURE/ABANDON領域はスキップ
     if engine == "skip":
         return OCRResult(
             region_type=region_type,
@@ -108,18 +112,30 @@ def ocr_region(
             formatted="",
         )
 
-    # 4. OCR実行 (Yomitoku)
+    layout_text = region.get("text") or ""
+
+    # 2. 本文・見出しはレイアウト検出時の text を正とする
+    if region_type in LAYOUT_TEXT_TYPES:
+        return OCRResult(
+            region_type=region_type,
+            text=layout_text,
+            formatted=format_ocr_result(region_type, layout_text),
+        )
+
+    # 3. TABLE など構造を取り直す領域はクロップして再 OCR
     from src.ocr_yomitoku import ocr_page_yomitoku
 
+    cropped_img = crop_region(img, region["bbox"])
     ocr_text = ocr_page_yomitoku("", device=device, img=cropped_img)
 
-    # 5. フォーマット
-    formatted_text = format_ocr_result(region_type, ocr_text)
+    # 4. 再 OCR が空ならレイアウトの text に戻す（文字があるのに空にしない）
+    if not ocr_text.strip():
+        ocr_text = layout_text
 
     return OCRResult(
         region_type=region_type,
         text=ocr_text,
-        formatted=formatted_text,
+        formatted=format_ocr_result(region_type, ocr_text),
     )
 
 
