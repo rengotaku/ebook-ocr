@@ -30,7 +30,10 @@ PROMPT = (
 )
 
 DEFAULT_MODEL = "qwen3-vl:8b"
+DEFAULT_FALLBACK_MODEL = "gemma3:12b"
 DEFAULT_BASE_URL = "http://localhost:11434"
+# 思考が長引くと content が空のまま終わるので、生成量に上限を置く
+DEFAULT_NUM_PREDICT = 512
 
 
 @dataclass(frozen=True)
@@ -47,7 +50,9 @@ class OllamaUnavailable(RuntimeError):
     """Ollama に接続できない."""
 
 
-def _ollama_chat(image_path: Path, model: str, base_url: str, timeout: int) -> str:
+def _ollama_chat(
+    image_path: Path, model: str, base_url: str, timeout: int, num_predict: int = DEFAULT_NUM_PREDICT
+) -> str:
     """Ollama に画像を送り、説明文を返す."""
     payload = {
         "model": model,
@@ -59,7 +64,7 @@ def _ollama_chat(image_path: Path, model: str, base_url: str, timeout: int) -> s
             }
         ],
         "stream": False,
-        "options": {"temperature": 0.1},
+        "options": {"temperature": 0.1, "num_predict": num_predict},
     }
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/chat",
@@ -79,17 +84,21 @@ def describe_image(
     model: str = DEFAULT_MODEL,
     base_url: str = DEFAULT_BASE_URL,
     timeout: int = 300,
-    retries: int = 2,
+    retries: int = 1,
+    fallback_model: str | None = DEFAULT_FALLBACK_MODEL,
     chat: Callable[..., str] = _ollama_chat,
 ) -> str:
-    """画像の説明を取る。空応答は retries 回まで引き直す.
+    """画像の説明を取る.
 
-    qwen3-vl は思考が長引くと content が空で返ることがあるため、空なら再試行する。
+    qwen3-vl は思考が長引くと content が空で返ることがある。空なら同じモデルで
+    retries 回まで引き直し、それでも空なら fallback_model を 1 回だけ試す。
     """
     for _ in range(retries + 1):
         text = chat(image_path, model=model, base_url=base_url, timeout=timeout)
         if text:
             return text
+    if fallback_model:
+        return chat(image_path, model=fallback_model, base_url=base_url, timeout=timeout)
     return ""
 
 
@@ -156,6 +165,7 @@ def describe_book(
     model: str = DEFAULT_MODEL,
     base_url: str = DEFAULT_BASE_URL,
     timeout: int = 300,
+    fallback_model: str | None = DEFAULT_FALLBACK_MODEL,
     max_pages: int | None = None,
     min_area_ratio: float = DEFAULT_MIN_AREA_RATIO,
     describe: Callable[..., str] = describe_image,
@@ -188,7 +198,13 @@ def describe_book(
         cropped = crop_figures(page_image, regions, figures_dir)
         for index, (_, crop_path) in enumerate(cropped, 1):
             try:
-                description = describe(crop_path, model=model, base_url=base_url, timeout=timeout)
+                description = describe(
+                    crop_path,
+                    model=model,
+                    base_url=base_url,
+                    timeout=timeout,
+                    fallback_model=fallback_model,
+                )
             except OllamaUnavailable as error:
                 print(f"[describe_figures] {error} — 図の説明を飛ばす", file=sys.stderr)
                 disabled = True
