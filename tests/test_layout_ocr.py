@@ -1848,3 +1848,112 @@ class TestTableRegionReocr:
             result = ocr_region(img, region)
 
         assert result.text == "セル1 | セル2"
+
+
+# ============================================================
+# #98: 柱・ノンブルを本文から除く
+# ============================================================
+
+
+class TestRunningHeadInLayoutOcr:
+    """レイアウト OCR の出力に柱・ノンブルを混ぜない."""
+
+    def test_running_head_region_is_dropped(self, tmp_path: Path) -> None:
+        from src.layout.running_head import find_running_heads
+        from src.layout_ocr import ocr_by_layout
+
+        img_path = tmp_path / "page.png"
+        Image.new("RGB", (960, 1280), "white").save(img_path)
+        layout = {
+            "regions": [
+                {"type": "TEXT", "bbox": [106, 194, 859, 900], "confidence": 1.0, "text": "本文"},
+                {
+                    "type": "TEXT",
+                    "bbox": [114, 1194, 500, 1209],
+                    "confidence": 1.0,
+                    "text": "22 第1章 データ分析を設計する",
+                },
+            ],
+            "page_size": [960, 1280],
+        }
+        heads = find_running_heads(
+            {
+                f"{i:04d}.webp": {
+                    "regions": [
+                        {
+                            "type": "TEXT",
+                            "bbox": [114, 1194, 500, 1209],
+                            "confidence": 1.0,
+                            "text": f"第1章 データ分析を設計する {n}",
+                        },
+                    ],
+                    "page_size": [960, 1280],
+                }
+                for i, n in enumerate([20, 21, 22])
+            }
+        )
+
+        results = ocr_by_layout(str(img_path), layout, running_heads=heads)
+
+        assert [r.text for r in results] == ["本文"]
+
+    def test_page_number_region_is_dropped(self, tmp_path: Path) -> None:
+        from src.layout_ocr import ocr_by_layout
+
+        img_path = tmp_path / "page.png"
+        Image.new("RGB", (960, 1280), "white").save(img_path)
+        layout = {
+            "regions": [
+                {"type": "TEXT", "bbox": [106, 194, 859, 900], "confidence": 1.0, "text": "本文"},
+                {"type": "TEXT", "bbox": [430, 1194, 470, 1209], "confidence": 1.0, "text": "23"},
+            ],
+            "page_size": [960, 1280],
+        }
+
+        results = ocr_by_layout(str(img_path), layout)
+
+        assert [r.text for r in results] == ["本文"]
+
+    def test_fallback_text_has_running_head_lines_stripped(self, tmp_path: Path) -> None:
+        from src.layout.running_head import find_running_heads
+        from src.layout_ocr import ocr_by_layout
+
+        img_path = tmp_path / "page.png"
+        Image.new("RGB", (960, 1280), "white").save(img_path)
+        layout = {
+            "regions": [
+                {"type": "TEXT", "bbox": [106, 194, 400, 300], "confidence": 1.0, "text": "本文"},
+                {
+                    "type": "TEXT",
+                    "bbox": [114, 1194, 500, 1209],
+                    "confidence": 1.0,
+                    "text": "23 第1章 データ分析を設計する",
+                },
+            ],
+            "page_size": [960, 1280],
+        }
+        heads = find_running_heads(
+            {
+                f"{i:04d}.webp": {
+                    "regions": [
+                        {
+                            "type": "TEXT",
+                            "bbox": [114, 1194, 500, 1209],
+                            "confidence": 1.0,
+                            "text": f"第1章 データ分析を設計する {n}",
+                        },
+                    ],
+                    "page_size": [960, 1280],
+                }
+                for i, n in enumerate([20, 21, 22])
+            }
+        )
+
+        with patch(
+            "src.ocr_yomitoku.ocr_page_yomitoku",
+            return_value="本文\n23 第1章 データ分析を設計する\n続きの本文",
+        ):
+            results = ocr_by_layout(str(img_path), layout, running_heads=heads)
+
+        assert results[0].region_type == "FALLBACK"
+        assert results[0].text == "本文\n続きの本文"

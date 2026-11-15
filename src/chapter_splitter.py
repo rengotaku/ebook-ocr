@@ -85,12 +85,46 @@ def running_head_titles(pages: list[tuple[str, str]]) -> dict[int, str]:
     return {number: counter.most_common(1)[0][0] for number, counter in votes.items()}
 
 
+def chapter_titles(pages: list[tuple[str, str]]) -> dict[int, str]:
+    """章番号ごとの章名を返す。
+
+    扉ページの見出し（``## 第2章`` の次の行、または同じ行の続き）を優先する。
+    柱を本文から除いた後でも章名が付くようにするためで、見出しが取れない章だけ
+    柱から拾う。
+    """
+    titles: dict[int, str] = {}
+    for _, body in pages:
+        lines = [line.strip() for line in body.splitlines()]
+        for index, line in enumerate(lines):
+            match = CHAPTER_START_RE.match(line)
+            if not match:
+                continue
+            number = int(match.group(1))
+            if number in titles:
+                break
+            rest = line[match.end() :].strip("# 　")
+            if not rest:
+                following = next((candidate for candidate in lines[index + 1 :] if candidate), "")
+                candidate = following.lstrip("# ").strip()
+                # 扉ページに見出しが無いときは本文の 1 行目が来る。長い行・文末記号で終わる行は見出しとみなさない
+                if candidate and len(candidate) <= 40 and not candidate.endswith(SENTENCE_ENDINGS):
+                    rest = candidate
+            if rest:
+                titles[number] = rest
+            break
+
+    # 見出しから章名が取れなかった章は、柱の最頻値で補う
+    for number, title in running_head_titles(pages).items():
+        titles.setdefault(number, title)
+    return titles
+
+
 def build_chapters(pages: list[tuple[str, str]]) -> list[Chapter]:
     """ページ列を章ごとにまとめる（前付・後付は number=None）."""
     if not pages:
         return []
     starts = chapter_starts(pages)
-    titles = running_head_titles(pages)
+    titles = chapter_titles(pages)
 
     order = sorted(starts.items(), key=lambda item: item[1])
     back_start = _back_matter_start(pages)

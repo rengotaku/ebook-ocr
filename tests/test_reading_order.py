@@ -484,3 +484,127 @@ class TestSortReadingOrderEdgeCases:
             assert "negative" in str(e).lower() or "invalid" in str(e).lower(), (
                 f"Should raise descriptive error for negative coords: {e}"
             )
+
+
+class TestSingleColumnReadingOrder:
+    """1 段組みのページで、下にある要素が上へ飛ばないこと（#98）."""
+
+    def test_boxed_list_below_body_stays_below(self) -> None:
+        """22 ページ目の形: 全幅の本文の下にある囲みが本文より前に出ないこと.
+
+        以前は領域の中心 x で左右に分けていたため、左寄りの囲みと柱が
+        本文（中心がわずかに右）より先に並んでいた。
+        """
+        from src.layout.reading_order import sort_reading_order
+
+        regions = [
+            {
+                "type": "TITLE",
+                "bbox": [121, 123, 623, 156],
+                "confidence": 1.0,
+                "text": "1-2. なぜ「分析の概念図」を描くのか?",
+            },
+            {"type": "TEXT", "bbox": [106, 194, 859, 268], "confidence": 1.0, "text": "本文1"},
+            {"type": "TEXT", "bbox": [106, 276, 859, 378], "confidence": 1.0, "text": "本文2"},
+            {"type": "TEXT", "bbox": [128, 715, 404, 735], "confidence": 1.0, "text": "①"},
+            {"type": "TEXT", "bbox": [128, 743, 324, 762], "confidence": 1.0, "text": "②"},
+            {"type": "TEXT", "bbox": [108, 879, 858, 927], "confidence": 1.0, "text": "本文3"},
+            {
+                "type": "TEXT",
+                "bbox": [114, 1194, 325, 1209],
+                "confidence": 1.0,
+                "text": "22 第1章 データ分析を設計する",
+            },
+        ]
+
+        ordered = sort_reading_order(regions, 960)
+
+        assert [r["text"] for r in ordered] == [
+            "1-2. なぜ「分析の概念図」を描くのか?",
+            "本文1",
+            "本文2",
+            "①",
+            "②",
+            "本文3",
+            "22 第1章 データ分析を設計する",
+        ]
+
+    def test_page_number_column_at_right_edge_is_not_a_column(self) -> None:
+        """右端にページ番号だけが並ぶ目次ページを 2 段組みとみなさないこと."""
+        from src.layout.reading_order import sort_reading_order
+
+        regions = [
+            {"type": "TEXT", "bbox": [221, 226, 552, 247], "confidence": 1.0, "text": "2-1. なぜ事前チェックするのか?"},
+            {"type": "TEXT", "bbox": [826, 226, 849, 247], "confidence": 1.0, "text": "52"},
+            {
+                "type": "TEXT",
+                "bbox": [220, 258, 552, 280],
+                "confidence": 1.0,
+                "text": "2-2. データの出所をチェックする",
+            },
+            {"type": "TEXT", "bbox": [826, 258, 849, 280], "confidence": 1.0, "text": "55"},
+        ]
+
+        ordered = sort_reading_order(regions, 960)
+
+        assert [r["text"] for r in ordered] == [
+            "2-1. なぜ事前チェックするのか?",
+            "52",
+            "2-2. データの出所をチェックする",
+            "55",
+        ]
+
+    def test_full_width_heading_keeps_page_single_column(self) -> None:
+        """段抜きの見出しが段の間をふさぐページは 1 段組みとして扱うこと."""
+        from src.layout.reading_order import sort_reading_order
+
+        regions = [
+            {"type": "TITLE", "bbox": [50, 50, 950, 100], "confidence": 1.0, "text": "段抜き見出し"},
+            {"type": "TEXT", "bbox": [50, 120, 450, 300], "confidence": 1.0, "text": "左上"},
+            {"type": "TEXT", "bbox": [500, 120, 900, 300], "confidence": 1.0, "text": "右上"},
+            {"type": "TEXT", "bbox": [50, 320, 450, 500], "confidence": 1.0, "text": "左下"},
+            {"type": "TEXT", "bbox": [500, 320, 900, 500], "confidence": 1.0, "text": "右下"},
+        ]
+
+        ordered = sort_reading_order(regions, 1000)
+
+        # 段抜き見出しが段の間をふさぐので、上から下（同じ高さは左から右）
+        assert [r["text"] for r in ordered] == [
+            "段抜き見出し",
+            "左上",
+            "右上",
+            "左下",
+            "右下",
+        ]
+
+
+class TestTwoColumnDetection:
+    """段の間がページ中央にあるときだけ 2 段組みとして扱う."""
+
+    def test_gutter_at_center_is_two_columns(self) -> None:
+        from src.layout.reading_order import sort_reading_order
+
+        regions = [
+            {"type": "TEXT", "bbox": [50, 100, 450, 200], "confidence": 1.0, "text": "左上"},
+            {"type": "TEXT", "bbox": [550, 100, 950, 200], "confidence": 1.0, "text": "右上"},
+            {"type": "TEXT", "bbox": [50, 220, 450, 320], "confidence": 1.0, "text": "左下"},
+            {"type": "TEXT", "bbox": [550, 220, 950, 320], "confidence": 1.0, "text": "右下"},
+        ]
+
+        ordered = sort_reading_order(regions, 1000)
+
+        assert [r["text"] for r in ordered] == ["左上", "左下", "右上", "右下"]
+
+    def test_gutter_at_right_edge_is_not_two_columns(self) -> None:
+        from src.layout.reading_order import sort_reading_order
+
+        regions = [
+            {"type": "TEXT", "bbox": [50, 100, 700, 200], "confidence": 1.0, "text": "本文1"},
+            {"type": "TEXT", "bbox": [850, 100, 950, 200], "confidence": 1.0, "text": "注記1"},
+            {"type": "TEXT", "bbox": [50, 220, 700, 320], "confidence": 1.0, "text": "本文2"},
+            {"type": "TEXT", "bbox": [850, 220, 950, 320], "confidence": 1.0, "text": "注記2"},
+        ]
+
+        ordered = sort_reading_order(regions, 1000)
+
+        assert [r["text"] for r in ordered] == ["本文1", "注記1", "本文2", "注記2"]
