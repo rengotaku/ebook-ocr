@@ -9,7 +9,6 @@ from src.chapter_splitter import (
     chapter_starts,
     chapter_titles,
     llm_format,
-    load_page_numbers,
     render_chapter,
     running_head_titles,
     split_file,
@@ -107,6 +106,16 @@ class TestChapterTitles:
         book = "--- 0002 ---\n\n第1章\n本文がすぐ始まる。\n\n20 第1章 データ分析を設計する\n"
         assert chapter_titles(split_pages(book))[1] == "データ分析を設計する"
 
+    def test_known_titles_from_book_meta_win(self):
+        titles = chapter_titles(split_pages(BOOK), {1: "柱から取った章名"})
+        assert titles[1] == "柱から取った章名"
+
+    def test_body_lines_do_not_become_titles(self):
+        book = "--- 0002 ---\n\n第2章\nデータを事前にチェックする\n\n第3章の理解度チェック\n"
+        titles = chapter_titles(split_pages(book))
+        assert titles[2] == "データを事前にチェックする"
+        assert 3 not in titles
+
 
 class TestBuildChapters:
     def test_front_chapters_and_back(self):
@@ -199,31 +208,6 @@ class TestSplitFile:
 
 class TestPageNumbers:
     """紙面のページ番号（ノンブル）の対応表 (#99)."""
-
-    def test_loads_next_to_book_md(self, tmp_path: Path) -> None:
-        import json
-
-        book = tmp_path / "book.md"
-        book.write_text("--- 0001 ---\n\n本文\n", encoding="utf-8")
-        (tmp_path / "page_numbers.json").write_text(json.dumps({"0001": 20}), encoding="utf-8")
-
-        assert load_page_numbers(book) == {"0001": 20}
-
-    def test_loads_from_ocr_output_dir(self, tmp_path: Path) -> None:
-        import json
-
-        book = tmp_path / "book.md"
-        book.write_text("--- 0001 ---\n\n本文\n", encoding="utf-8")
-        (tmp_path / "ocr_output").mkdir()
-        (tmp_path / "ocr_output" / "page_numbers.json").write_text(json.dumps({"0001": 20}), encoding="utf-8")
-
-        assert load_page_numbers(book) == {"0001": 20}
-
-    def test_missing_file_returns_empty(self, tmp_path: Path) -> None:
-        book = tmp_path / "book.md"
-        book.write_text("本文\n", encoding="utf-8")
-
-        assert load_page_numbers(book) == {}
 
     def test_writes_csv(self, tmp_path: Path) -> None:
         path = write_page_numbers_csv(tmp_path, {"0003": 21, "0002": 20})

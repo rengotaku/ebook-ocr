@@ -1966,7 +1966,7 @@ class TestRunningHeadInLayoutOcr:
 
 
 class TestPageNumbersOutput:
-    """run_layout_ocr が page_numbers.json を書き出す."""
+    """run_layout_ocr が book_meta.json（紙面のページ番号・章名）を書き出す."""
 
     def test_writes_page_numbers_from_running_heads(self, tmp_path: Path) -> None:
         from src.layout_ocr import run_layout_ocr
@@ -2000,5 +2000,6 @@ class TestPageNumbersOutput:
                 warmup=False,
             )
 
-        written = json.loads((out_dir / "page_numbers.json").read_text(encoding="utf-8"))
-        assert written == {"0000": 20, "0001": 21, "0002": 22}
+        written = json.loads((out_dir / "book_meta.json").read_text(encoding="utf-8"))
+        assert written["page_numbers"] == {"0000": 20, "0001": 21, "0002": 22}
+        assert written["chapter_titles"] == {"1": "データ分析を設計する"}

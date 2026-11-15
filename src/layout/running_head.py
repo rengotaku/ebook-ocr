@@ -114,6 +114,19 @@ def printed_page_number(region: dict) -> int | None:
     return None
 
 
+# 柱から章番号と章名を取り出すための形（``22 第1章 データ分析を設計する``）
+_CHAPTER_HEAD_RE = re.compile(r"^\d{0,3}\s*第\s*(\d+)\s*章\s+(\S.*?)(?:\s+\d{1,3})?\s*$")
+
+
+def chapter_title_from_region(region: dict) -> tuple[int, str] | None:
+    """柱から章番号と章名を取り出す。章の柱でなければ None."""
+    text = (region.get("text") or "").strip()
+    match = _CHAPTER_HEAD_RE.match(text)
+    if not match:
+        return None
+    return int(match.group(1)), match.group(2).strip()
+
+
 def _is_running_head_line(line: str, running_heads: frozenset[str]) -> bool:
     stripped = line.strip()
     if not stripped:

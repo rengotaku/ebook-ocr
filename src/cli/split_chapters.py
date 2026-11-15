@@ -6,7 +6,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.chapter_splitter import load_page_numbers, split_file, write_page_numbers_csv
+from src.book_meta import load_book_meta
+from src.chapter_splitter import split_file, write_page_numbers_csv
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -25,8 +26,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     out_dir = args.outdir or args.book_md.parent / "chapters"
-    page_numbers = load_page_numbers(args.book_md)
-    written = split_file(args.book_md, out_dir, llm=not args.raw, page_numbers=page_numbers)
+    book_meta = load_book_meta(args.book_md)
+    page_numbers = book_meta.get("page_numbers") or {}
+    written = split_file(args.book_md, out_dir, llm=not args.raw, book_meta=book_meta)
 
     print(f"{len(written)} 章を書き出した: {out_dir}")
     for path in written:
@@ -36,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
         numbers_path = write_page_numbers_csv(out_dir, page_numbers)
         print(f"ページ番号の対応表: {numbers_path} ({len(page_numbers)} ページ)")
     else:
-        print("ページ番号の対応表: page_numbers.json が見つからないため未出力")
+        print("ページ番号の対応表: book_meta.json が見つからないため未出力")
     return 0
 
 

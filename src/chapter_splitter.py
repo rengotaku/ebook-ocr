@@ -7,11 +7,12 @@
 
 from __future__ import annotations
 
-import json
 import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from src.book_meta import load_book_meta
 
 PAGE_MARKER_RE = re.compile(r"^--- (\d+) ---\s*$", re.M)
 CHAPTER_START_RE = re.compile(r"^(?:##\s*)?第\s*(\d+)\s*章")
@@ -86,46 +87,48 @@ def running_head_titles(pages: list[tuple[str, str]]) -> dict[int, str]:
     return {number: counter.most_common(1)[0][0] for number, counter in votes.items()}
 
 
-def chapter_titles(pages: list[tuple[str, str]]) -> dict[int, str]:
-    """章番号ごとの章名を返す。
+def chapter_titles(pages: list[tuple[str, str]], known_titles: dict[int, str] | None = None) -> dict[int, str]:
+    """章番号ごとの章名を返す.
 
-    扉ページの見出し（``## 第2章`` の次の行、または同じ行の続き）を優先する。
-    柱を本文から除いた後でも章名が付くようにするためで、見出しが取れない章だけ
-    柱から拾う。
+    柱から取った章名（``book_meta.json`` の ``chapter_titles``）を優先する。柱を
+    本文から除いた後でも、出版された章名がそのまま使える。無ければ扉ページの
+    見出し（``## 第2章`` の次の行、または同じ行の続き）から取る。
     """
-    titles: dict[int, str] = {}
-    for _, body in pages:
-        lines = [line.strip() for line in body.splitlines()]
-        for index, line in enumerate(lines):
-            match = CHAPTER_START_RE.match(line)
-            if not match:
-                continue
-            number = int(match.group(1))
-            if number in titles:
-                break
-            rest = line[match.end() :].strip("# 　")
-            if not rest:
-                following = next((candidate for candidate in lines[index + 1 :] if candidate), "")
-                candidate = following.lstrip("# ").strip()
-                # 扉ページに見出しが無いときは本文の 1 行目が来る。長い行・文末記号で終わる行は見出しとみなさない
-                if candidate and len(candidate) <= 40 and not candidate.endswith(SENTENCE_ENDINGS):
-                    rest = candidate
-            if rest:
-                titles[number] = rest
-            break
+    titles: dict[int, str] = dict(known_titles or {})
 
-    # 見出しから章名が取れなかった章は、柱の最頻値で補う
+    starts = chapter_starts(pages)
+    opener_pages = {page: number for number, page in starts.items()}
+    for page, body in pages:
+        number = opener_pages.get(page)
+        if number is None or number in titles:
+            continue
+        lines = [line.strip() for line in body.splitlines() if line.strip()]
+        if not lines:
+            continue
+        match = CHAPTER_START_RE.match(lines[0])
+        if not match:
+            continue
+        rest = lines[0][match.end() :].strip("# 　")
+        if not rest and len(lines) > 1:
+            candidate = lines[1].lstrip("# ").strip()
+            # 扉ページに見出しが無いときは本文の 1 行目が来る。長い行・文末記号で終わる行は見出しとみなさない
+            if len(candidate) <= 40 and not candidate.endswith(SENTENCE_ENDINGS):
+                rest = candidate
+        if rest:
+            titles[number] = rest
+
+    # 見出しからも取れなかった章は、本文に残っている柱の最頻値で補う
     for number, title in running_head_titles(pages).items():
         titles.setdefault(number, title)
     return titles
 
 
-def build_chapters(pages: list[tuple[str, str]]) -> list[Chapter]:
+def build_chapters(pages: list[tuple[str, str]], known_titles: dict[int, str] | None = None) -> list[Chapter]:
     """ページ列を章ごとにまとめる（前付・後付は number=None）."""
     if not pages:
         return []
     starts = chapter_starts(pages)
-    titles = chapter_titles(pages)
+    titles = chapter_titles(pages, known_titles)
 
     order = sorted(starts.items(), key=lambda item: item[1])
     back_start = _back_matter_start(pages)
@@ -304,20 +307,6 @@ def render_chapter(
     return "\n".join(header) + "\n\n" + "\n\n".join(body_parts) + "\n"
 
 
-def load_page_numbers(book_md: Path) -> dict[str, int]:
-    """紙面のページ番号（ノンブル）の対応表を読む.
-
-    OCR の実行時に ``page_numbers.json`` として書き出されている。book.md の隣か、
-    その 1 つ下の ``ocr_output/`` を探す。見つからなければ空。
-    """
-    for candidate in (book_md.parent / "page_numbers.json", book_md.parent / "ocr_output" / "page_numbers.json"):
-        if not candidate.exists():
-            continue
-        data = json.loads(candidate.read_text(encoding="utf-8"))
-        return {str(page): int(number) for page, number in data.items() if str(number).isdigit()}
-    return {}
-
-
 def write_page_numbers_csv(out_dir: Path, page_numbers: dict[str, int]) -> Path | None:
     """ページ番号と紙面のページ番号（ノンブル）の対応表を書き出す."""
     if not page_numbers:
@@ -332,15 +321,17 @@ def split_file(
     book_md: Path,
     out_dir: Path,
     llm: bool = True,
-    page_numbers: dict[str, int] | None = None,
+    book_meta: dict | None = None,
 ) -> list[Path]:
     """book.md を章ごとのファイルに書き出し、書いたパスを返す."""
-    chapters = build_chapters(split_pages(book_md.read_text(encoding="utf-8")))
+    meta = book_meta if book_meta is not None else load_book_meta(book_md)
+    page_numbers = meta.get("page_numbers") or {}
+    chapters = build_chapters(split_pages(book_md.read_text(encoding="utf-8")), meta.get("chapter_titles") or {})
     out_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     for chapter in chapters:
         target = out_dir / chapter.file_name
         target.write_text(render_chapter(chapter, llm=llm, page_numbers=page_numbers), encoding="utf-8")
         written.append(target)
-    write_page_numbers_csv(out_dir, page_numbers or {})
+    write_page_numbers_csv(out_dir, page_numbers)
     return written
