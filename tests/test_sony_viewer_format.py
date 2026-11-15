@@ -65,6 +65,35 @@ class TestBuildSampleOrder:
         with pytest.raises(ValueError):
             fmt.build_sample_order("abcdef", 3, 768, 1280)
 
+    def test_matches_viewer_for_comic_pages(self):
+        # ビューアの retrieveHeader（contents.js）をそのまま実行した結果の先頭 20 要素。
+        # 並べ替えのたびに乱数列を作り直す実装でないと 20 個目（横の端の列）からずれる。
+        order, side = fmt.build_sample_order("BT000038521500100101550001", 2, 960, 1280, 48)
+        assert side == 48
+        assert order[:20] == [
+            5,
+            47,
+            68,
+            110,
+            131,
+            173,
+            194,
+            236,
+            257,
+            300,
+            321,
+            363,
+            384,
+            426,
+            447,
+            489,
+            510,
+            26,
+            89,
+            119,
+        ]
+        assert order[-5:] == [521, 532, 520, 531, 539]
+
 
 class TestDescramble:
     @staticmethod
@@ -106,7 +135,49 @@ class TestDefaultOutput:
 
 
 class TestSideLength:
-    def test_text_and_comic(self):
-        assert fmt.side_length_for("text") == 48
-        assert fmt.side_length_for("comic") == 152
+    def test_webp_comic_uses_large_tiles(self):
+        assert fmt.side_length_for("comic", "image/webp") == 152
+
+    def test_jpeg_comic_uses_default_tiles(self):
+        # ビューアは WebP のマンガだけ 152。JPEG のマンガは 48。
+        assert fmt.side_length_for("comic", "image/jpeg") == 48
+
+    def test_text_and_unknown(self):
+        assert fmt.side_length_for("text", "image/webp") == 48
         assert fmt.side_length_for(None) == 48
+
+
+class TestDeduplicate:
+    @staticmethod
+    def _page(index: int, width: int, content_id: str = "cid"):
+        from extract_pages import Page
+
+        return Page(
+            content_id=content_id,
+            index=index,
+            width=width,
+            height=width * 4 // 3,
+            scrambled=False,
+            encrypted=False,
+            image=b"",
+        )
+
+    def test_keeps_largest_image_for_duplicate_index(self):
+        from extract_pages import deduplicate
+
+        pages = [self._page(1, 960), self._page(0, 960), self._page(1, 144)]
+        result = deduplicate(pages)
+        assert [page.index for page in result] == [0, 1]
+        assert result[1].width == 960
+
+    def test_keeps_larger_image_even_when_it_comes_first(self):
+        from extract_pages import deduplicate
+
+        pages = [self._page(2, 960), self._page(2, 144)]
+        assert deduplicate(pages)[0].width == 960
+
+    def test_does_not_merge_pages_of_different_books(self):
+        from extract_pages import deduplicate
+
+        pages = [self._page(0, 960, "book-a"), self._page(0, 960, "book-b")]
+        assert len(deduplicate(pages)) == 2

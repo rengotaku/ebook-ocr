@@ -44,6 +44,7 @@ class Page:
     encrypted: bool
     image: bytes
     header: bytes | None = None
+    mimetype: str | None = None
 
 
 def read_har(path: Path) -> list[dict]:
@@ -159,9 +160,26 @@ def build_pages(bundle_key: tuple[str, str], image_body: bytes, sources: dict) -
                 encrypted=bool(meta.get("isCrypted", False)),
                 image=chunk,
                 header=header,
+                mimetype=meta.get("mimetype"),
             )
         )
     return pages
+
+
+def deduplicate(pages: list[Page]) -> list[Page]:
+    """同じ本の同じページ番号が複数の束に出てくるときは、大きい画像だけを残す.
+
+    HAR にはサムネイル一覧用の小さい束（144x192 など）も混ざる。束の並び順によっては
+    後から来たサムネイルが本文ページを上書きするため、面積で選ぶ。
+    複数の本のログが混ざっていても壊れないよう、本（content_id）とページ番号の組で見る。
+    """
+    best: dict[tuple[str, int], Page] = {}
+    for page in pages:
+        key = (page.content_id, page.index)
+        current = best.get(key)
+        if current is None or page.width * page.height > current.width * current.height:
+            best[key] = page
+    return [best[key] for key in sorted(best)]
 
 
 def decrypt_pages(pages: list[Page], worker: bytes, workdir: Path) -> dict[int, tuple[bytes, bytes]]:
@@ -210,7 +228,7 @@ def decrypt_pages(pages: list[Page], worker: bytes, workdir: Path) -> dict[int, 
 def order_for(page: Page, recovered: dict, sources: dict) -> tuple[list[int], int]:
     if page.encrypted:
         return fmt.unpack_order(recovered[page.index][1])
-    side = fmt.side_length_for(sources["book_types"].get(page.content_id))
+    side = fmt.side_length_for(sources["book_types"].get(page.content_id), page.mimetype)
     return fmt.build_sample_order(
         page.content_id,
         sources["seed_shifts"].get(page.content_id, 1),
@@ -264,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
     pages: list[Page] = []
     for bundle_key, body in sources["image_bundles"].items():
         pages.extend(build_pages(bundle_key, body, sources))
-    pages.sort(key=lambda page: page.index)
+    pages = deduplicate(pages)
     if args.limit:
         pages = pages[: args.limit]
 
