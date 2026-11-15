@@ -88,14 +88,11 @@ def build_sample_order(
     for _ in range(seed_shift % len(seeds)):
         seeds.append(seeds.pop(0))
 
-    shared_iter = _cycle(_PRE_SHARED_NUMBERS)
-    seed_iter = _cycle(seeds)
-
-    def next_rand() -> int:
-        return next(shared_iter) + next(seed_iter)
-
     def shuffle(indices: list[int]) -> list[int]:
-        keyed = sorted((next_rand(), index) for index in indices)
+        # ビューアは並べ替えのたびに乱数列を作り直す（続きから使うと順序がずれる）
+        shared_iter = _cycle(_PRE_SHARED_NUMBERS)
+        seed_iter = _cycle(seeds)
+        keyed = sorted((next(shared_iter) + next(seed_iter), index) for index in indices)
         return [index for _, index in keyed]
 
     columns = math.ceil(width / side)
@@ -171,6 +168,12 @@ def _cycle(values: list[int]) -> Iterable[int]:
             yield value
 
 
-def side_length_for(book_type: str | None) -> int:
-    """書籍種別からタイルの一辺を決める（ビューアの実装に合わせる）."""
-    return COMIC_SIDE_LENGTH if book_type == "comic" else DEFAULT_SIDE_LENGTH
+def side_length_for(book_type: str | None, mimetype: str | None = None) -> int:
+    """書籍種別と画像形式からタイルの一辺を決める.
+
+    ビューアの ``retrieveHeader`` は ``image/webp`` のマンガだけ 152 を使い、
+    それ以外（JPEG のマンガを含む）は 48 にする。
+    """
+    if book_type == "comic" and mimetype == "image/webp":
+        return COMIC_SIDE_LENGTH
+    return DEFAULT_SIDE_LENGTH

@@ -43,6 +43,16 @@ const toArrayBuffer = (buffer) => buffer.buffer.slice(buffer.byteOffset, buffer.
 const wordsAt = (buffer, offset) =>
   Array.from(new Uint32Array(Uint8Array.from(buffer.slice(offset, offset + 16)).buffer));
 
+const JPEG_MAGIC = [0xff, 0xd8, 0xff];
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+// 復号結果が画像かどうか。本によって WebP と JPEG が混ざるので両方見る。
+function looksLikeImage(image) {
+  if (image.slice(0, 4).toString('latin1') === 'RIFF') return true;
+  if (JPEG_MAGIC.every((byte, index) => image[index] === byte)) return true;
+  return PNG_MAGIC.every((byte, index) => image[index] === byte);
+}
+
 function main() {
   const [workerPath, jobsPath, outDir] = process.argv.slice(2);
   if (!workerPath || !jobsPath || !outDir) {
@@ -67,7 +77,7 @@ function main() {
 
       fs.writeFileSync(path.join(outDir, `${job.id}.webp.bin`), image);
       fs.writeFileSync(path.join(outDir, `${job.id}.order.bin`), order);
-      console.log(JSON.stringify({ id: job.id, ok: image.slice(0, 4).toString('latin1') === 'RIFF' }));
+      console.log(JSON.stringify({ id: job.id, ok: looksLikeImage(image) }));
     } catch (error) {
       console.log(JSON.stringify({ id: job.id, error: String((error && error.message) || error) }));
     }
