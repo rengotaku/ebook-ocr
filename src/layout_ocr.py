@@ -279,6 +279,7 @@ def run_layout_ocr(
     all_results: list[tuple[str, list[OCRResult]]] = []
     page_numbers: dict[str, int] = {}
     chapter_title_votes: dict[int, dict[str, int]] = {}
+    fallback_pages: list[str] = []
 
     # 柱・ノンブルは本全体で決まる（同じ行が複数ページに出るか）ので、先に集めておく
     running_heads = find_running_heads(layout_data)
@@ -317,6 +318,7 @@ def run_layout_ocr(
 
         # Report status
         if ocr_results and ocr_results[0].region_type == "FALLBACK":
+            fallback_pages.append(page_stem)
             print("    → Fallback: page-level OCR (low coverage or detection failure)")
         else:
             print(f"    → Processed {len(ocr_results)} regions")
@@ -343,7 +345,7 @@ def run_layout_ocr(
     chapter_titles = {
         number: max(votes.items(), key=lambda item: item[1])[0] for number, votes in chapter_title_votes.items()
     }
-    meta_file = write_book_meta(output_path.parent, page_numbers, chapter_titles)
+    meta_file = write_book_meta(output_path.parent, page_numbers, chapter_titles, fallback_pages)
     if meta_file is not None:
         print(
             f"  Book meta: {len(page_numbers)} page numbers, {len(chapter_titles)} chapter titles -> {meta_file.name}"
