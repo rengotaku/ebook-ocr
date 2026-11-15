@@ -136,6 +136,11 @@ def should_fallback(
     return False
 
 
+# 図として扱う領域。CODE は yomitoku が「コードらしく見える図・表」に付ける型で、
+# 実際の書籍では図の中の文字であることが多い。本文には出さず、図として切り出す（#83）。
+FIGURE_LIKE_TYPES = ("FIGURE", "CODE")
+
+
 def format_ocr_result(region_type: str, text: str) -> str:
     """領域種類に応じたMarkdownフォーマットを適用。
 
@@ -148,7 +153,7 @@ def format_ocr_result(region_type: str, text: str) -> str:
     | CAPTION | `*{text}*` |
     | FOOTNOTE | `^{text}^` |
     | FORMULA | `$${text}$$` |
-    | FIGURE/ABANDON | `` (empty) |
+    | FIGURE/CODE/ABANDON | `` (empty) |
 
     Args:
         region_type: 領域の種類
@@ -159,8 +164,9 @@ def format_ocr_result(region_type: str, text: str) -> str:
     """
     if region_type == "TITLE":
         return f"## {text}"
-    elif region_type == "CODE":
-        return f"```\n{text}\n```"
+    elif region_type in FIGURE_LIKE_TYPES:
+        # 図として扱うので本文には出さない（#83）
+        return ""
     elif region_type == "CAPTION":
         return f"*{text}*"
     elif region_type == "FOOTNOTE":
@@ -183,6 +189,6 @@ def select_ocr_engine(region_type: str) -> str:
     Returns:
         "yomitoku" | "skip"
     """
-    if region_type in ("FIGURE", "ABANDON"):
+    if region_type in (*FIGURE_LIKE_TYPES, "ABANDON"):
         return "skip"
     return "yomitoku"

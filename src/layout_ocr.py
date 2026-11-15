@@ -3,7 +3,7 @@
 This module implements User Story 2: Region-based OCR Processing.
 Each detected region is processed with the appropriate OCR engine:
 - TEXT/TITLE/TABLE/CAPTION/FOOTNOTE/FORMULA: Yomitoku
-- FIGURE: Skip (excluded from text output)
+- FIGURE/CODE: Skip (treated as a figure, excluded from text output)
 - ABANDON: Skip
 
 OCR Engine Selection Rules:
@@ -12,7 +12,8 @@ OCR Engine Selection Rules:
 | TITLE | Yomitoku | `## {text}` |
 | TEXT | Yomitoku | `{text}` |
 | TABLE | Yomitoku | Markdown table |
-| FIGURE | Skip | (excluded) |
+| FIGURE | Skip | (treated as a figure) |
+| CODE | Skip | (treated as a figure) |
 | CAPTION | Yomitoku | `*{text}*` |
 | FOOTNOTE | Yomitoku | `^{text}^` |
 | FORMULA | Yomitoku | `$${text}$$` |
@@ -29,6 +30,7 @@ from PIL import Image
 
 from src.layout.reading_order import remove_overlaps, sort_reading_order
 from src.layout_ocr_utils import (
+    FIGURE_LIKE_TYPES,
     crop_region,
     format_ocr_result,
     is_low_quality,
@@ -166,8 +168,8 @@ def ocr_by_layout(
     # 各領域をOCR処理
     results = []
     for region in regions:
-        # ABANDON/FIGURE領域はスキップ
-        if region["type"] in ("ABANDON", "FIGURE"):
+        # ABANDON/FIGURE/CODE領域はスキップ（CODE は図として扱う）
+        if region["type"] in (*FIGURE_LIKE_TYPES, "ABANDON"):
             continue
 
         result = ocr_region(
