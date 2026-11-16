@@ -35,6 +35,13 @@ MIN_PARAGRAPH_LENGTH = 40
 # 同じ行の重複を見るときの最小の長さ。短い行は箇条書き・表の繰り返しが多く、本文の二重出力と区別できない
 MIN_DUPLICATE_LENGTH = 60
 
+# 柱・ノンブルらしき短い行（``184 エピローグ`` など）。段落の切れ目を判定するときは読み飛ばす
+MARGIN_LINE_RE = re.compile(r"^\d{1,4}\s+\S{1,12}$")
+# 数字・記号だけのブロック（表のセルが並んだもの）。段落の区切りとみなさない
+NUMERIC_BLOCK_RE = re.compile(r"^[\d\s,.\-:：%％()（）]+$")
+# 脚注の始まり（``2) 下記サイト…`` ``※ 注記…``）。本文の続きではない
+FOOTNOTE_START_RE = re.compile(r"^(?:\d{1,2}[)）]|※)")
+
 # ページ全体 OCR にフォールバックしたページは、領域の text と出力が一致しない。
 # 領域の text がこれ未満しか見つからないページは「領域別に処理していない」とみなして飛ばす
 MIN_REGION_HIT_RATIO = 0.5
@@ -129,19 +136,57 @@ def check_empty_regions(
     return issues
 
 
+def _is_margin_line(block: str) -> bool:
+    """柱・ノンブルらしい短い行か（段落の切れ目を判定するときは読み飛ばす）."""
+    text = block.strip()
+    if "\n" in text:
+        return False
+    return bool(RUNNING_HEAD_RE.match(text) or PAGE_NUMBER_ONLY_RE.match(text) or MARGIN_LINE_RE.match(text))
+
+
+def _is_numeric_block(block: str) -> bool:
+    """数字と記号だけのブロックか（表のセルが並んだもの）."""
+    lines = [line.strip() for line in block.splitlines() if line.strip()]
+    return bool(lines) and all(NUMERIC_BLOCK_RE.match(line) for line in lines)
+
+
+def _only_margin_noise_after(blocks: list[str], index: int) -> bool:
+    """この段落の後ろ（同じページ）が、柱・数字・脚注だけかどうか."""
+    for block in blocks[index + 1 :]:
+        if _is_margin_line(block) or _is_numeric_block(block):
+            continue
+        if FOOTNOTE_START_RE.match(block.strip()) and len(block.splitlines()) <= 4:
+            continue
+        return False
+    return True
+
+
+def _next_content_block(blocks: list[str], index: int, following_pages: list[str]) -> str:
+    """この段落の次に来る「意味のある」ブロックを返す（柱・ノンブルは読み飛ばす）."""
+    for block in blocks[index + 1 :] + following_pages:
+        if _is_margin_line(block):
+            continue
+        return block
+    return ""
+
+
 def check_broken_paragraphs(pages: dict[str, str]) -> list[Issue]:
     """文末記号で終わらず、次の段落ともつながらない段落を探す.
 
     紙面の段落はページをまたぐので、ページの最後の段落は次のページの先頭とつなげて見る。
+
+    - 柱・ノンブルらしい行は読み飛ばす（``184 エピローグ`` を挟んで次ページに続くことがある）
+    - 数字・記号だけのブロックは表のセルなので、段落の区切りとみなさない
     """
     issues: list[Issue] = []
     page_items = list(pages.items())
     for position, (page, body) in enumerate(page_items):
         blocks = _blocks(body)
-        next_page_first = ""
-        if position + 1 < len(page_items):
-            following_blocks = _blocks(page_items[position + 1][1])
-            next_page_first = following_blocks[0] if following_blocks else ""
+        following_pages: list[str] = []
+        for _, following_body in page_items[position + 1 :]:
+            following_pages.extend(_blocks(following_body))
+            if following_pages:
+                break
         for index, block in enumerate(blocks):
             if _is_structural(block):
                 continue
@@ -150,11 +195,12 @@ def check_broken_paragraphs(pages: dict[str, str]) -> list[Issue]:
                 continue
             if text.endswith(PARAGRAPH_ENDINGS) or text.endswith(CONTINUATION_ENDINGS):
                 continue
-            following = blocks[index + 1] if index + 1 < len(blocks) else next_page_first
-            if following and not _is_structural(following):
+            following = _next_content_block(blocks, index, following_pages)
+            if following and (not _is_structural(following) or _is_numeric_block(following)):
                 # 次の段落（次ページの先頭を含む）が続きとして読めるなら、段落が分かれただけ
                 continue
-            issues.append(Issue(kind="broken_paragraph", page=page, detail=text[-40:]))
+            kind = "page_end_cut" if _only_margin_noise_after(blocks, index) else "broken_paragraph"
+            issues.append(Issue(kind=kind, page=page, detail=text[-40:]))
     return issues
 
 
