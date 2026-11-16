@@ -2080,3 +2080,78 @@ class TestFallbackKeepsHeadings:
 
         assert [r.region_type for r in results] == ["FALLBACK"]
         assert results[0].text == long_text
+
+
+# ============================================================
+# #116: ページ全体 OCR のページに、レイアウトの見出しを差し込む
+# ============================================================
+
+
+class TestApplyLayoutHeadings:
+    def test_title_appearing_once_becomes_heading(self) -> None:
+        from src.layout_ocr import apply_layout_headings
+
+        text = "2. データ分析って何?\n\n本文がここにあります。"
+        regions = [{"type": "TITLE", "bbox": [0, 0, 10, 10], "text": "2. データ分析って何?"}]
+
+        assert apply_layout_headings(text, regions) == "## 2. データ分析って何?\n\n本文がここにあります。"
+
+    def test_title_appearing_twice_is_left_alone(self) -> None:
+        from src.layout_ocr import apply_layout_headings
+
+        text = "同じ見出し\n\n本文です。\n\n同じ見出し"
+        regions = [{"type": "TITLE", "bbox": [0, 0, 10, 10], "text": "同じ見出し"}]
+
+        assert apply_layout_headings(text, regions) == text
+
+    def test_sentence_ending_title_is_not_a_heading(self) -> None:
+        from src.layout_ocr import apply_layout_headings
+
+        text = "まず、計算をする前に踏まねばならないステップが3つあります。"
+        regions = [
+            {
+                "type": "TITLE",
+                "bbox": [0, 0, 10, 10],
+                "text": "まず、計算をする前に踏まねばならないステップが3つあります。",
+            }
+        ]
+
+        assert apply_layout_headings(text, regions) == text
+
+    def test_already_heading_is_not_doubled(self) -> None:
+        from src.layout_ocr import apply_layout_headings
+
+        text = "## 見出しです\n\n本文です。"
+        regions = [{"type": "TITLE", "bbox": [0, 0, 10, 10], "text": "## 見出しです"}]
+
+        assert apply_layout_headings(text, regions) == text
+
+    def test_fallback_page_gets_heading(self, tmp_path: Path) -> None:
+        """フォールバックしたページでも見出しが付く."""
+        from src.layout_ocr import ocr_by_layout
+
+        img_path = tmp_path / "page.png"
+        Image.new("RGB", (960, 1280), "white").save(img_path)
+        layout = {
+            "regions": [
+                {"type": "TITLE", "bbox": [50, 50, 400, 90], "confidence": 1.0, "text": "2. データ分析って何?"},
+            ],
+            "page_size": [960, 1280],
+        }
+        page_text = "2. データ分析って何?\n\n" + "本文です。" * 30
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=page_text):
+            results = ocr_by_layout(str(img_path), layout)
+
+        assert results[0].region_type == "FALLBACK"
+        assert results[0].text.startswith("## 2. データ分析って何?")
+
+
+class TestDotLeaderTitles:
+    def test_toc_dot_leader_is_not_a_heading(self) -> None:
+        from src.layout_ocr import apply_layout_headings
+
+        text = "1. ワークシートの基本操作………\n\n本文です。"
+        regions = [{"type": "TITLE", "bbox": [0, 0, 10, 10], "text": "1. ワークシートの基本操作………"}]
+
+        assert apply_layout_headings(text, regions) == text
