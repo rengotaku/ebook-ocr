@@ -232,3 +232,23 @@ class TestBackMatterHeading:
 
         assert [(c.number, c.title) for c in chapters] == [(1, "はじめに"), (None, "99_back")]
         assert chapters[-1].start_page == "0003"
+
+
+class TestTableBlock:
+    """表は行を詰めたまま 1 ブロックで残す (#101)."""
+
+    def test_table_rows_are_not_joined(self):
+        body = "| 項目 | 値 |\n| --- | --- |\n| 本体価格 | 5 万円 |\n\n本文です。\n"
+
+        text = llm_format(body)
+
+        assert "| 項目 | 値 |\n| --- | --- |\n| 本体価格 | 5 万円 |" in text
+        assert "| 項目 | 値 || ---" not in text
+
+    def test_text_before_and_after_table_is_kept(self):
+        body = "前の段落です。\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n\n後の段落です。\n"
+
+        text = llm_format(body)
+
+        assert text.startswith("前の段落です。\n\n| A | B |")
+        assert text.endswith("後の段落です。")

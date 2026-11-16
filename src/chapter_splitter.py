@@ -220,6 +220,7 @@ def llm_format(body: str) -> str:
     paragraphs: list[str] = []
     buffer = ""
     pending_section = ""
+    table_lines: list[str] = []
 
     def flush() -> None:
         nonlocal buffer
@@ -227,8 +228,25 @@ def llm_format(body: str) -> str:
             paragraphs.append(buffer)
             buffer = ""
 
+    def flush_table() -> None:
+        nonlocal table_lines
+        if table_lines:
+            # 表は行を詰めて 1 ブロックにする（間に空行を入れると表として壊れる）
+            paragraphs.append("\n".join(table_lines))
+            table_lines = []
+
     for raw in body.splitlines():
         line = raw.strip()
+        if not line:
+            # 紙面では 1 行ごとに空行が入るため、空行は段落の区切りとして扱わない。
+            # 文末で終わったときだけ段落を切る（折り返しの復元は _join_line が担う）。
+            continue
+        if line.startswith("|"):
+            # Markdown の表（#101）。行をつないだり折り返しを戻したりしない
+            flush()
+            table_lines.append(line)
+            continue
+        flush_table()
         if not line:
             # 紙面では 1 行ごとに空行が入るため、空行は段落の区切りとして扱わない。
             # 文末で終わったときだけ段落を切る（折り返しの復元は _join_line が担う）。
@@ -271,6 +289,7 @@ def llm_format(body: str) -> str:
             flush()
             buffer = line
     flush()
+    flush_table()
     return "\n\n".join(paragraphs)
 
 
