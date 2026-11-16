@@ -27,7 +27,8 @@ SECTION_HEAD_RE = re.compile(r"^\d+-\d+[.．]\s*\S")
 # 節番号だけが 1 行に載り、見出しが次の行に来ることがある（``1-1.`` → ``分析ストーリー…``）
 SECTION_NUMBER_RE = re.compile(r"^(\d+-\d+[.．])\s*$")
 FIGURE_LINK_RE = re.compile(r"^!\[図\]\(([^)]*)\)\s*$")
-FIGURE_CAPTION_PREFIX = "**図**:"
+# 図の説明の行。種別と「自動生成」が付く（``**図（表・自動生成）**: ...``）
+FIGURE_CAPTION_RE = re.compile(r"^\*\*図(?:（[^）]*）)?\*\*:")
 SENTENCE_ENDINGS = ("。", "．", "！", "？", "」", "』", "）")
 
 
@@ -238,7 +239,7 @@ def llm_format(body: str) -> str:
             flush()
             paragraphs.append(f"<!-- 図: {figure_link.group(1)} -->")
             continue
-        if line.startswith(FIGURE_CAPTION_PREFIX):
+        if FIGURE_CAPTION_RE.match(line):
             flush()
             paragraphs.append(f"> {line}")
             continue

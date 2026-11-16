@@ -141,8 +141,12 @@ class TestDescribeImage:
 
 class TestFigureBlock:
     def test_format(self, tmp_path: Path):
+        figure = Figure(page="0002", index=1, path=tmp_path / "0002_fig1.png", description="説明文", kind="表")
+        assert figure_block(figure, "figures") == ("![図](figures/0002_fig1.png)\n\n**図（表・自動生成）**: 説明文\n")
+
+    def test_kind_is_omitted_when_unknown(self, tmp_path: Path):
         figure = Figure(page="0002", index=1, path=tmp_path / "0002_fig1.png", description="説明文")
-        assert figure_block(figure, "figures") == "![図](figures/0002_fig1.png)\n\n**図**: 説明文\n"
+        assert "**図（自動生成）**: 説明文" in figure_block(figure, "figures")
 
     def test_empty_description(self, tmp_path: Path):
         figure = Figure(page="0002", index=1, path=tmp_path / "0002_fig1.png", description="")
@@ -175,9 +179,9 @@ class TestDescribeBook:
 
         assert len(figures) == 1
         assert "![図](figures/0002_fig1.png)" in text
-        assert "**図**: 所得分布の棒グラフ" in text
+        assert "**図（自動生成）**: 所得分布の棒グラフ" in text
         # 図があるページの後ろに入る（0003 の本文より前）
-        assert text.index("**図**: 所得分布の棒グラフ") < text.index("--- 0003 ---")
+        assert text.index("**図（自動生成）**: 所得分布の棒グラフ") < text.index("--- 0003 ---")
 
     def test_pages_without_figures_are_unchanged(self, tmp_path: Path):
         pages = _pages_dir(tmp_path)
@@ -325,3 +329,51 @@ class TestAspectRatioFilter:
     def test_zero_height_is_treated_as_infinite_aspect(self):
         page = {"page_size": [960, 1280], "regions": [{"type": "FIGURE", "bbox": [10, 10, 200, 10]}]}
         assert page_figures(page) == []
+
+
+class TestParseDescription:
+    """VLM の出力から種別と内容を取り出す (#100)."""
+
+    def test_parses_kind_and_content(self):
+        from src.describe_figures import parse_description
+
+        kind, content = parse_description("種別: 表\n内容: スマホの要件表で、ボイスメモや本体価格が並んでいる。")
+
+        assert kind == "表"
+        assert content == "スマホの要件表で、ボイスメモや本体価格が並んでいる。"
+
+    def test_unknown_kind_is_dropped(self):
+        from src.describe_figures import parse_description
+
+        kind, content = parse_description("種別: 魚の骨図\n内容: 要因を並べた図。")
+
+        assert kind == ""
+        assert content == "要因を並べた図。"
+
+    def test_unformatted_output_is_kept_as_content(self):
+        from src.describe_figures import parse_description
+
+        kind, content = parse_description("所得分布の棒グラフです。")
+
+        assert kind == ""
+        assert content == "所得分布の棒グラフです。"
+
+    def test_content_lines_are_joined(self):
+        from src.describe_figures import parse_description
+
+        kind, content = parse_description("種別: グラフ\n内容: 1 行目\n2 行目")
+
+        assert kind == "グラフ"
+        assert content == "1 行目2 行目"
+
+
+class TestFigurePrompt:
+    """プロンプトが種別の語彙を限定していること (#100)."""
+
+    def test_prompt_lists_only_known_kinds(self):
+        from src.describe_figures import FIGURE_KINDS, PROMPT
+
+        for kind in FIGURE_KINDS:
+            assert kind in PROMPT
+        assert "魚の骨図" in PROMPT  # 使わない例として挙げている
+        assert "固有名詞は使わない" in PROMPT

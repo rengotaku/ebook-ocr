@@ -24,14 +24,52 @@ from src.layout_ocr_utils import FIGURE_LIKE_TYPES
 
 PAGE_MARKER_RE = re.compile(r"^--- (\d+) ---\s*$", re.M)
 
+# 図の種別はこの語彙だけを使わせる。自由に名付けさせると「魚の骨図」「イシノカワ図」
+# のような固有名詞で誤ラベルする（#100）。
+FIGURE_KINDS = ("表", "グラフ", "模式図", "スクリーンショット", "写真", "その他")
+
 PROMPT = (
-    "この画像の図が何を示しているか、日本語で3文以内で説明してください。"
-    "読み取れた数値は書いてください。読み取れない数値は書かないでください。"
+    "この画像を説明してください。出力は次の 2 行だけにしてください。\n"
+    "種別: " + "／".join(FIGURE_KINDS) + " から 1 つ\n"
+    "内容: 画像に写っているものと、画像の中に書かれている文字を 2〜3 文で説明\n"
+    "\n"
+    "守ること:\n"
+    "- 図の種類を名付けるときは「種別」の語だけを使う（「魚の骨図」「イシノカワ図」のような\n"
+    "  固有名詞は使わない）\n"
+    "- 画像から読み取れないことは書かない。推測で補わない\n"
+    "- 数値は、画像にはっきり書かれているものだけ書く\n"
+    "- 「〜と思われます」のような推測の言い回しを置かない"
 )
 
 # 数値を求めるとモデルが読み取りに時間を使い、生成枠を使い切って content が空になる
-# ことがある（#88）。2 文だけ・数値不要の短い指示に切り替えると返ってくる。
-PROMPT_BRIEF = "図の内容を日本語で2文以内で説明してください。数値は書かなくてよいです。説明だけを出力してください。"
+# ことがある（#88）。短い指示に切り替えると返ってくる。種別の形式は保つ。
+PROMPT_BRIEF = (
+    "この画像の種別（" + "／".join(FIGURE_KINDS) + "）と内容を 2 文以内で、"
+    "「種別: ...」「内容: ...」の形だけで書いてください。推測は書かないでください。"
+)
+
+# 種別と内容の取り出し。形式を守らなかったときは、本文全体を内容として扱う
+KIND_RE = re.compile(r"^\s*種別\s*[:：]\s*(\S+)", re.M)
+CONTENT_RE = re.compile(r"^\s*内容\s*[:：]\s*(.+)$", re.M | re.S)
+
+
+def parse_description(text: str) -> tuple[str, str]:
+    """VLM の出力から (種別, 内容) を取り出す.
+
+    種別は ``FIGURE_KINDS`` にある語だけを受け付ける（想定外の語は捨てる）。
+    """
+    kind_match = KIND_RE.search(text)
+    kind = kind_match.group(1).strip("。.、, ") if kind_match else ""
+    if kind not in FIGURE_KINDS:
+        kind = ""
+
+    content_match = CONTENT_RE.search(text)
+    if content_match:
+        content = content_match.group(1).strip()
+    else:
+        content = text.strip()
+    return kind, "".join(line.strip() for line in content.splitlines() if line.strip())
+
 
 DEFAULT_MODEL = "qwen3-vl:8b"
 DEFAULT_FALLBACK_MODEL = "gemma3:12b"
@@ -48,6 +86,7 @@ class Figure:
     index: int
     path: Path
     description: str
+    kind: str = ""
 
 
 class OllamaUnavailable(RuntimeError):
@@ -184,9 +223,13 @@ def crop_figures(
 
 
 def figure_block(figure: Figure, figures_link: str) -> str:
-    """book.md に差し込む Markdown ブロック."""
+    """book.md に差し込む Markdown ブロック.
+
+    説明は VLM の自動生成なので、種別と「自動生成」をラベルに出す（#100）。
+    """
     caption = figure.description or "（説明なし）"
-    return f"![図]({figures_link}/{figure.path.name})\n\n**図**: {caption}\n"
+    label = f"図（{figure.kind}・自動生成）" if figure.kind else "図（自動生成）"
+    return f"![図]({figures_link}/{figure.path.name})\n\n**{label}**: {caption}\n"
 
 
 def describe_book(
@@ -242,7 +285,8 @@ def describe_book(
                 print(f"[describe_figures] {error} — 図の説明を飛ばす", file=sys.stderr)
                 disabled = True
                 break
-            figures.append(Figure(page=page, index=index, path=crop_path, description=description))
+            kind, content = parse_description(description)
+            figures.append(Figure(page=page, index=index, path=crop_path, description=content, kind=kind))
 
     return _insert_figures(text, figures, figures_dir), figures
 

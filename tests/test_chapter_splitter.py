@@ -151,6 +151,10 @@ class TestLlmFormat:
         assert "![" not in text
         assert text == "本文です。\n\n<!-- 図: figures/0003_fig1.png -->\n\n> **図**: 概念図の説明。"
 
+    def test_kind_labeled_caption_becomes_quote(self):
+        text = llm_format("![図](figures/0035_fig1.png)\n\n**図（表・自動生成）**: スマホの要件表。\n")
+        assert text == "<!-- 図: figures/0035_fig1.png -->\n\n> **図（表・自動生成）**: スマホの要件表。"
+
     def test_figure_keeps_relative_image_path_as_comment(self):
         text = llm_format("![図](figures/0086_fig1.png)\n\n**図**: 説明。\n")
         assert "<!-- 図: figures/0086_fig1.png -->" in text
