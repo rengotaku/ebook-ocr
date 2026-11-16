@@ -174,3 +174,32 @@ class TestCleanBook:
 
         assert check_all(pages, layout) == []
         assert summarize([]) == {}
+
+
+class TestBrokenParagraphFalsePositives:
+    """「文の途中切れ」の誤判定を出さない (#114)."""
+
+    def test_numbers_after_paragraph_are_not_a_break(self) -> None:
+        body = f"{LONG_PARAGRAPH[:-12]}\n\n79,231\n\n91,538\n\n68,462"
+
+        assert check_broken_paragraphs({"0001": body}) == []
+
+    def test_margin_line_between_pages_is_skipped(self) -> None:
+        body = f"{LONG_PARAGRAPH[:-12]}\n\n184 エピローグ\n"
+        pages = {"0001": body, "0002": "し、その効果を確認しましょう。"}
+
+        assert check_broken_paragraphs(pages) == []
+
+    def test_page_end_cut_is_reported_separately(self) -> None:
+        body = f"{LONG_PARAGRAPH[:-12]}\n\n2) 下記サイトを参照\nhttps://example.com"
+        pages = {"0001": body, "0002": "別の段落がここから始まります。"}
+
+        issues = check_broken_paragraphs(pages)
+
+        assert [issue.kind for issue in issues] == ["page_end_cut"]
+
+    def test_real_cut_before_heading_is_still_reported(self) -> None:
+        """本文の途中で切れて、そのまま見出しが来るものは検出する（negative control）."""
+        body = f"{LONG_PARAGRAPH[:-12]}\n\n## 次の見出し\n\n本文です。"
+
+        assert [issue.kind for issue in check_broken_paragraphs({"0001": body})] == ["broken_paragraph"]
