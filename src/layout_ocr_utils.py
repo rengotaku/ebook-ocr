@@ -136,6 +136,32 @@ def should_fallback(
     return False
 
 
+# ページ全体 OCR に回す判定になっても、領域別の text と文字数がほぼ同じなら
+# 見出しと読取順を優先して領域別を採る（#108）。この割合を下回る、または差が
+# この文字数を超えるときは、図・表として検出された領域に本文が入っているとみなす。
+LAYOUT_TEXT_KEEP_RATIO = 0.95
+LAYOUT_TEXT_KEEP_SLACK = 20
+
+
+def char_count(text: str) -> int:
+    """見出し記号と空白を除いた文字数."""
+    return len("".join(text.replace("#", "").split()))
+
+
+def prefer_layout_text(page_text: str, region_text: str) -> bool:
+    """ページ全体 OCR より領域別の text を採るかどうか.
+
+    領域別のほうが文字数で大きく負けていなければ、見出し（``##``）と読取順が
+    効く領域別を採る。負けているときは、図・表として検出された領域に本文が
+    入っている（領域別では消える）ので、ページ全体 OCR を採る。
+    """
+    page_chars = char_count(page_text)
+    region_chars = char_count(region_text)
+    if page_chars == 0:
+        return True
+    return region_chars >= page_chars * LAYOUT_TEXT_KEEP_RATIO and page_chars - region_chars <= LAYOUT_TEXT_KEEP_SLACK
+
+
 # 図として扱う領域。CODE は yomitoku が「コードらしく見える図・表」に付ける型で、
 # 実際の書籍では図の中の文字であることが多い。本文には出さず、図として切り出す（#83）。
 FIGURE_LIKE_TYPES = ("FIGURE", "CODE")
