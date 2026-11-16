@@ -20,7 +20,8 @@ RUNNING_HEAD_RE = re.compile(r"^\s*\d{0,3}\s*第\s*(\d+)\s*章\s+(.+?)(?:\s+\d{1
 PAGE_NUMBER_RE = re.compile(r"^\s*[\divxlcIVXLC]{1,6}\s*$")
 TOC_HEAD_RE = re.compile(r"^\s*\d*\s*目次\s*\d*\s*$")
 # 後付（著者一覧・参考資料・索引・奥付）の開始行
-BACK_MATTER_RE = re.compile(r"^(?:●\s*)?(著者一覧|参考文献|参考資料|索引|奥付|あとがき|謝辞)")
+# 後付の開始行。見出し記号（##）や ● が付いていても拾う
+BACK_MATTER_RE = re.compile(r"^(?:#{1,3}\s*)?(?:●\s*)?(著者一覧|参考文献|参考資料|索引|奥付|あとがき|謝辞)")
 # 「1-1. 見出し」形式の節見出し（この本の節番号）
 SECTION_HEAD_RE = re.compile(r"^\d+-\d+[.．]\s*\S")
 # 節番号だけが 1 行に載り、見出しが次の行に来ることがある（``1-1.`` → ``分析ストーリー…``）
