@@ -24,6 +24,7 @@ Region Text Source:
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -198,6 +199,8 @@ def ocr_by_layout(
 
     # フォールバック結果にも柱・ノンブルが混ざるので、このページの柱は位置を問わず落とす
     ocr_text = strip_running_head_lines(ocr_text, running_heads, page_heads)
+    # 見出しだけはレイアウトから差し込む（本文は変えない）
+    ocr_text = apply_layout_headings(ocr_text, regions)
 
     region_text = "\n\n".join(result.formatted for result in region_results if result.formatted.strip())
     if prefer_layout_text(ocr_text, region_text):
@@ -210,6 +213,42 @@ def ocr_by_layout(
             formatted=ocr_text,
         )
     ]
+
+
+# 目次の点線（``………`` ``......``）
+_DOT_LEADER_RE = re.compile(r"[…]{2,}|\.{3,}")
+
+
+def apply_layout_headings(text: str, regions: list[dict]) -> str:
+    """ページ全体 OCR の本文に、レイアウトの TITLE を見出しとして差し込む.
+
+    ページ全体 OCR に回ったページは領域ごとの整形を通らないので見出しが付かない（#108）。
+    本文はそのまま残し、TITLE の文字が本文に **1 行だけ** そのまま出てくるときだけ
+    ``## `` を付ける。2 回以上出てくるものは、どれが見出しか決められないので触らない。
+    """
+    titles = [r for r in regions if r["type"] == "TITLE" and (r.get("text") or "").strip()]
+    if not titles:
+        return text
+
+    lines = text.split("\n")
+    stripped = [line.strip() for line in lines]
+    for region in titles:
+        title = region["text"].strip()
+        if not format_ocr_result("TITLE", title).startswith("## "):
+            # 文末記号で終わるものは本文の行（#90 と同じ規則）
+            continue
+        if _DOT_LEADER_RE.search(title):
+            # 目次の「1. ワークシートの基本操作………」のような点線付きの行は見出しにしない
+            continue
+        positions = [index for index, value in enumerate(stripped) if value == title]
+        if len(positions) != 1:
+            continue
+        index = positions[0]
+        if stripped[index].startswith("#"):
+            continue
+        lines[index] = f"## {stripped[index]}"
+        stripped[index] = lines[index]
+    return "\n".join(lines)
 
 
 def _ocr_regions(
