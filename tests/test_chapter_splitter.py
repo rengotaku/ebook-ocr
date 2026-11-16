@@ -223,10 +223,7 @@ class TestBackMatterHeading:
     """後付の開始行は見出し記号が付いていても拾う (#108 の副作用)."""
 
     def test_heading_marked_author_list_starts_back_matter(self):
-        book = (
-            "--- 0002 ---\n\n第1章 はじめに\n\n本文です。\n\n"
-            "--- 0003 ---\n\n## ●著者一覧\n\n河村 真一\n"
-        )
+        book = "--- 0002 ---\n\n第1章 はじめに\n\n本文です。\n\n--- 0003 ---\n\n## ●著者一覧\n\n河村 真一\n"
         chapters = build_chapters(split_pages(book))
 
         assert [(c.number, c.title) for c in chapters] == [(1, "はじめに"), (None, "99_back")]
