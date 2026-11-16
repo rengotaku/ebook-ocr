@@ -20,6 +20,7 @@ from typing import Callable
 
 from PIL import Image
 
+from src.layout.table import UNSTRUCTURED_NOTE
 from src.layout_ocr_utils import FIGURE_LIKE_TYPES
 
 PAGE_MARKER_RE = re.compile(r"^--- (\d+) ---\s*$", re.M)
@@ -87,6 +88,7 @@ class Figure:
     path: Path
     description: str
     kind: str = ""
+    note: str = ""
 
 
 class OllamaUnavailable(RuntimeError):
@@ -229,7 +231,10 @@ def figure_block(figure: Figure, figures_link: str) -> str:
     """
     caption = figure.description or "（説明なし）"
     label = f"図（{figure.kind}・自動生成）" if figure.kind else "図（自動生成）"
-    return f"![図]({figures_link}/{figure.path.name})\n\n**{label}**: {caption}\n"
+    block = f"![図]({figures_link}/{figure.path.name})\n\n**{label}**: {caption}\n"
+    if figure.note:
+        block += f"\n*{figure.note}*\n"
+    return block
 
 
 def describe_book(
@@ -272,7 +277,7 @@ def describe_book(
             continue
         processed_pages += 1
         cropped = crop_figures(page_image, regions, figures_dir)
-        for index, (_, crop_path) in enumerate(cropped, 1):
+        for index, (region, crop_path) in enumerate(cropped, 1):
             try:
                 description = describe(
                     crop_path,
@@ -286,7 +291,8 @@ def describe_book(
                 disabled = True
                 break
             kind, content = parse_description(description)
-            figures.append(Figure(page=page, index=index, path=crop_path, description=content, kind=kind))
+            note = UNSTRUCTURED_NOTE if region.get("table_note") else ""
+            figures.append(Figure(page=page, index=index, path=crop_path, description=content, kind=kind, note=note))
 
     return _insert_figures(text, figures, figures_dir), figures
 

@@ -63,7 +63,8 @@ class OCRResult:
 
 # レイアウト検出時に認識済みの text をそのまま使う領域。
 # 領域を切り出して OCR をかけ直すと、薄い・小さい領域で空になる（#97）。
-LAYOUT_TEXT_TYPES = ("TEXT", "TITLE", "CAPTION", "FOOTNOTE", "FORMULA")
+# TABLE は検出時に表構造から Markdown を組み立てているので、ここに含める（#101）。
+LAYOUT_TEXT_TYPES = ("TEXT", "TITLE", "CAPTION", "FOOTNOTE", "FORMULA", "TABLE")
 
 
 def ocr_with_fallback(image: Image.Image, device: str = "cpu") -> tuple[str, str]:
@@ -132,7 +133,7 @@ def ocr_region(
             formatted=format_ocr_result(region_type, layout_text),
         )
 
-    # 3. TABLE など構造を取り直す領域はクロップして再 OCR
+    # 3. 未知の領域種別はクロップして読み直す（既知の種別は上で text を使っている）
     from src.ocr_yomitoku import ocr_page_yomitoku
 
     cropped_img = crop_region(img, region["bbox"])
