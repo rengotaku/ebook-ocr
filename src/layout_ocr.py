@@ -45,6 +45,7 @@ from src.layout_ocr_utils import (
     crop_region,
     format_ocr_result,
     is_low_quality,
+    prefer_layout_text,
     select_ocr_engine,
     should_fallback,
 )
@@ -182,47 +183,53 @@ def ocr_by_layout(
     page_heads = frozenset(key for key in page_heads if key)
     regions = [r for r in regions if not is_running_head(r, page_size, running_heads)]
 
-    # フォールバック判定
-    if fallback:
-        # ページ全体OCRを実行 (Yomitoku)
-        from src.ocr_yomitoku import ocr_page_yomitoku
+    region_results = _ocr_regions(page_path, regions, page_size, device)
 
-        ocr_text = ocr_page_yomitoku(page_path, device=device)
+    if not fallback:
+        return region_results
 
-        # フォールバック結果にも柱・ノンブルが混ざるので、このページの柱は位置を問わず落とす
-        ocr_text = strip_running_head_lines(ocr_text, running_heads, page_heads)
+    # ページ全体 OCR に回す判定になったページでも、領域別の text と文字数がほぼ同じなら
+    # 見出しと読取順を優先して領域別を採る（#108）。ページ全体 OCR のほうが長いときは、
+    # 図・表として検出された領域の中に本文が入っているので、ページ全体を採る。
+    from src.ocr_yomitoku import ocr_page_yomitoku
 
-        # フォールバック結果を返す
-        return [
-            OCRResult(
-                region_type="FALLBACK",
-                text=ocr_text,
-                formatted=ocr_text,
-            )
-        ]
+    ocr_text = ocr_page_yomitoku(page_path, device=device)
 
-    # 読み順ソート適用
+    # フォールバック結果にも柱・ノンブルが混ざるので、このページの柱は位置を問わず落とす
+    ocr_text = strip_running_head_lines(ocr_text, running_heads, page_heads)
+
+    region_text = "\n\n".join(result.formatted for result in region_results if result.formatted.strip())
+    if prefer_layout_text(ocr_text, region_text):
+        return region_results
+
+    return [
+        OCRResult(
+            region_type="FALLBACK",
+            text=ocr_text,
+            formatted=ocr_text,
+        )
+    ]
+
+
+def _ocr_regions(
+    page_path: str,
+    regions: list[dict],
+    page_size: tuple[int, ...],
+    device: str,
+) -> list[OCRResult]:
+    """領域ごとに text を取り出し、読み順に並べて返す."""
     if regions and page_size[0] > 0:
         regions = remove_overlaps(regions)
         regions = sort_reading_order(regions, page_size[0])
 
-    # 画像を読み込み
     img = Image.open(page_path)
 
-    # 各領域をOCR処理
     results = []
     for region in regions:
         # ABANDON/FIGURE/CODE領域はスキップ（CODE は図として扱う）
         if region["type"] in (*FIGURE_LIKE_TYPES, "ABANDON"):
             continue
-
-        result = ocr_region(
-            img,
-            region,
-            device=device,
-        )
-        results.append(result)
-
+        results.append(ocr_region(img, region, device=device))
     return results
 
 

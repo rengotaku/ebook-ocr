@@ -2003,3 +2003,76 @@ class TestPageNumbersOutput:
         written = json.loads((out_dir / "book_meta.json").read_text(encoding="utf-8"))
         assert written["page_numbers"] == {"0000": 20, "0001": 21, "0002": 22}
         assert written["chapter_titles"] == {"1": "データ分析を設計する"}
+
+
+# ============================================================
+# #108: フォールバックしたページでも見出しと読取順を効かせる
+# ============================================================
+
+
+class TestPreferLayoutText:
+    """ページ全体 OCR と領域別の文字数から、領域別を採るか決める."""
+
+    def test_same_length_prefers_layout_text(self) -> None:
+        from src.layout_ocr_utils import prefer_layout_text
+
+        assert prefer_layout_text("本文です。", "本文です。") is True
+
+    def test_slightly_shorter_still_prefers_layout_text(self) -> None:
+        from src.layout_ocr_utils import prefer_layout_text
+
+        page = "本文がここにあります。" * 40
+        region = page[:-10]
+
+        assert prefer_layout_text(page, region) is True
+
+    def test_much_shorter_keeps_page_ocr(self) -> None:
+        from src.layout_ocr_utils import prefer_layout_text
+
+        page = "本文がここにあります。" * 10
+        region = page[: len(page) // 3]
+
+        assert prefer_layout_text(page, region) is False
+
+    def test_empty_page_text_prefers_layout_text(self) -> None:
+        from src.layout_ocr_utils import prefer_layout_text
+
+        assert prefer_layout_text("", "本文です。") is True
+
+
+class TestFallbackKeepsHeadings:
+    """フォールバック判定のページでも、文字数が同じなら領域別（見出しつき）を返す."""
+
+    def _low_coverage_layout(self) -> dict:
+        return {
+            "regions": [
+                {"type": "TITLE", "bbox": [50, 50, 400, 90], "confidence": 1.0, "text": "2. データ分析って何?"},
+                {"type": "TEXT", "bbox": [50, 100, 400, 200], "confidence": 1.0, "text": "本文です。"},
+            ],
+            "page_size": [960, 1280],
+        }
+
+    def test_page_ocr_with_same_length_uses_layout_text(self, tmp_path: Path) -> None:
+        from src.layout_ocr import ocr_by_layout
+
+        img_path = tmp_path / "page.png"
+        Image.new("RGB", (960, 1280), "white").save(img_path)
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="本文です。"):
+            results = ocr_by_layout(str(img_path), self._low_coverage_layout())
+
+        assert [r.region_type for r in results] == ["TITLE", "TEXT"]
+        assert results[0].formatted == "## 2. データ分析って何?"
+
+    def test_page_ocr_much_longer_keeps_fallback(self, tmp_path: Path) -> None:
+        from src.layout_ocr import ocr_by_layout
+
+        img_path = tmp_path / "page.png"
+        Image.new("RGB", (960, 1280), "white").save(img_path)
+        long_text = "ページ全体の OCR 結果です。" * 20
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=long_text):
+            results = ocr_by_layout(str(img_path), self._low_coverage_layout())
+
+        assert [r.region_type for r in results] == ["FALLBACK"]
+        assert results[0].text == long_text
