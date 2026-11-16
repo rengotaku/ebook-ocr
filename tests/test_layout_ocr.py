@@ -1824,31 +1824,35 @@ class TestLayoutTextIsAuthoritative:
         assert result.formatted == ""
 
 
-class TestTableRegionReocr:
-    """TABLE は構造を取り直すため再 OCR し、空なら layout.json の text に戻す."""
+class TestTableRegion:
+    """TABLE は検出時に組み立てた Markdown をそのまま使う（#101）."""
 
-    def test_table_region_is_reocrd(self) -> None:
+    def test_table_region_uses_layout_markdown(self) -> None:
         from src.layout_ocr import ocr_region
 
         img = Image.new("RGB", (400, 300), "white")
-        region = {"type": "TABLE", "bbox": [10, 10, 390, 290], "confidence": 1.0, "text": "セル1 | セル2"}
+        markdown = "| 項目 | 値 |\n| --- | --- |\n| 本体価格 | 5 万円 |"
+        region = {"type": "TABLE", "bbox": [10, 10, 390, 290], "confidence": 1.0, "text": markdown}
 
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="| セル1 | セル2 |") as mock_ocr:
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku") as mock_ocr:
+            result = ocr_region(img, region)
+
+        assert mock_ocr.called is False
+        assert result.text == markdown
+        assert result.formatted == markdown
+
+    def test_unknown_region_type_is_reocrd(self) -> None:
+        """未知の種別はクロップして読み直す（保険）."""
+        from src.layout_ocr import ocr_region
+
+        img = Image.new("RGB", (400, 300), "white")
+        region = {"type": "UNKNOWN", "bbox": [10, 10, 390, 290], "confidence": 1.0, "text": "元の text"}
+
+        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="読み直した text") as mock_ocr:
             result = ocr_region(img, region)
 
         assert mock_ocr.called is True
-        assert result.text == "| セル1 | セル2 |"
-
-    def test_table_region_falls_back_to_layout_text(self) -> None:
-        from src.layout_ocr import ocr_region
-
-        img = Image.new("RGB", (400, 300), "white")
-        region = {"type": "TABLE", "bbox": [10, 10, 390, 290], "confidence": 1.0, "text": "セル1 | セル2"}
-
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=""):
-            result = ocr_region(img, region)
-
-        assert result.text == "セル1 | セル2"
+        assert result.text == "読み直した text"
 
 
 # ============================================================

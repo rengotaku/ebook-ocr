@@ -377,3 +377,41 @@ class TestFigurePrompt:
             assert kind in PROMPT
         assert "魚の骨図" in PROMPT  # 使わない例として挙げている
         assert "固有名詞は使わない" in PROMPT
+
+
+class TestTableNote:
+    """表として組み立てられなかった図に注記を出す (#101)."""
+
+    def test_note_is_rendered(self, tmp_path: Path):
+        from src.layout.table import UNSTRUCTURED_NOTE
+
+        figure = Figure(
+            page="0002",
+            index=1,
+            path=tmp_path / "0002_fig1.png",
+            description="説明文",
+            kind="表",
+            note=UNSTRUCTURED_NOTE,
+        )
+
+        block = figure_block(figure, "figures")
+
+        assert f"*{UNSTRUCTURED_NOTE}*" in block
+
+    def test_note_comes_from_region(self, tmp_path: Path):
+        from src.layout.table import UNSTRUCTURED_NOTE
+
+        pages = _pages_dir(tmp_path)
+        Image.new("RGB", (100, 100), "white").save(pages / "0002.webp", lossless=True)
+        book = _book(tmp_path)
+        layout = {
+            "0002.webp": {
+                "regions": [{"type": "FIGURE", "bbox": [0, 0, 50, 50], "table_note": True}],
+                "page_size": [100, 100],
+            }
+        }
+
+        text, figures = describe_book(book, layout, pages, tmp_path / "figures", describe=lambda path, **kwargs: "説明")
+
+        assert figures[0].note == UNSTRUCTURED_NOTE
+        assert UNSTRUCTURED_NOTE in text

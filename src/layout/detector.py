@@ -41,11 +41,27 @@ def get_analyzer(device: str = "cpu") -> "DocumentAnalyzer":
     return _yomitoku_analyzer
 
 
+def _area(bbox: list[int]) -> int:
+    return max(0, bbox[2] - bbox[0]) * max(0, bbox[3] - bbox[1])
+
+
+def _inside_ratio(inner: list[int], outer: list[int]) -> float:
+    """``inner`` の面積のうち ``outer`` に含まれる割合."""
+    x1 = max(inner[0], outer[0])
+    y1 = max(inner[1], outer[1])
+    x2 = min(inner[2], outer[2])
+    y2 = min(inner[3], outer[3])
+    overlap = max(0, x2 - x1) * max(0, y2 - y1)
+    area = _area(inner)
+    return overlap / area if area else 0.0
+
+
 def paragraphs_to_layout(
     paragraphs: list,
     figures: list,
     page_size: tuple[int, int],
     cv_img=None,
+    tables: list | None = None,
 ) -> dict:
     """Convert yomitoku paragraphs and figures to layout.json format.
 
@@ -55,6 +71,7 @@ def paragraphs_to_layout(
         page_size: (width, height) of the page
         cv_img: Optional BGR image (numpy array) for gray background detection.
                 If None, no gray detection is performed (backward compatible).
+        tables: yomitoku の表構造（``results.tables``）。表は TABLE 領域にする（#101）
 
     Returns:
         Layout dict with regions list
@@ -154,6 +171,33 @@ def paragraphs_to_layout(
         min_region_width=cfg_min_w,
         min_region_height=cfg_min_h,
     )
+
+    # 表は構造を持った TABLE 領域にする（#101）。表の中に入っている図・本文は
+    # 同じ内容が二度出るので落とす。
+    from src.layout.table import table_regions, unstable_table_boxes
+
+    table_list = list(tables or [])
+    tables_regions = table_regions(table_list)
+    if tables_regions:
+        merged_regions = [
+            region
+            for region in merged_regions
+            if not any(_inside_ratio(region["bbox"], table["bbox"]) >= 0.8 for table in tables_regions)
+        ]
+        merged_regions.extend(tables_regions)
+
+    # 崩れていて表にできなかったものは、図として残して注記を付ける（#101）
+    unstable_boxes = unstable_table_boxes(table_list)
+    if unstable_boxes:
+        marked = []
+        for region in merged_regions:
+            if region["type"] in ("FIGURE", "CODE") and any(
+                _inside_ratio(region["bbox"], box) >= 0.8 for box in unstable_boxes
+            ):
+                marked.append({**region, "table_note": True})
+            else:
+                marked.append(region)
+        merged_regions = marked
 
     return {
         "regions": merged_regions,
@@ -387,7 +431,11 @@ def detect_layout_yomitoku(
 
         # Convert to layout format
         page_layout = paragraphs_to_layout(
-            results.paragraphs, results.figures, (page_width, page_height), cv_img=cv_img
+            results.paragraphs,
+            results.figures,
+            (page_width, page_height),
+            cv_img=cv_img,
+            tables=getattr(results, "tables", None),
         )
         layout_data[page_name] = page_layout
 
