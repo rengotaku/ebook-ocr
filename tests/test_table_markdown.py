@@ -153,6 +153,31 @@ class TestMarkdownReady:
 
         assert is_markdown_ready(grid) is False
 
+    def test_table_with_an_empty_column_is_not_ready(self) -> None:
+        # アイコン（●■◆）の列や罫線の写り込みが混じるグラフィック（#120）
+        from src.layout.table import is_markdown_ready
+
+        grid = [
+            ["機能の充足", "", "経済性", "", "安全性"],
+            ["ボイスメモ", "", "本体価格", "", "ウイルス耐性"],
+            ["電子マネー", "", "月額料金", "", "本体の頑丈さ"],
+        ]
+
+        assert is_markdown_ready(grid) is False
+
+    def test_table_with_a_sparse_column_is_ready(self) -> None:
+        # 空が半分程度の列は許す（結合セルで 1 マスだけ空く形は実在する）
+        from src.layout.table import is_markdown_ready
+
+        grid = [
+            ["A", "B", "C"],
+            ["1", "", "3"],
+            ["4", "", "6"],
+            ["7", "8", "9"],
+        ]
+
+        assert is_markdown_ready(grid) is True
+
 
 class TestUnstableTables:
     def test_unstable_table_boxes_are_returned(self) -> None:
