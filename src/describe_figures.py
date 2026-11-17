@@ -89,6 +89,7 @@ class Figure:
     description: str
     kind: str = ""
     note: str = ""
+    text: str = ""
 
 
 class OllamaUnavailable(RuntimeError):
@@ -200,6 +201,94 @@ def _area(bbox: list[int]) -> int:
     return max(0, bbox[2] - bbox[0]) * max(0, bbox[3] - bbox[1])
 
 
+# 図の中の文字は、罫線・点・1 文字の記号が多く出る。1 文字は捨てる。
+MIN_FIGURE_TEXT_CHARS = 2
+# 数字と記号だけでできた行（目次・索引のページ番号、軸の目盛りの写り込み）。
+# 文字として読ませる意味が無いので落とす。
+_NUMBERS_ONLY_RE = re.compile(r"^[\d\s.,、。·・:：;；\-–—~〜/()（）\[\]{}]+$")
+
+
+def _squash(text: str) -> str:
+    return re.sub(r"\s+", "", text)
+
+
+def clean_figure_text(text: str) -> str:
+    """OCR の生テキストを、図中の文字として出す形に整える.
+
+    - 1 文字・記号だけの行を落とす（罫線・点・ノイズ）
+    - 見出し記号や表の罫線の記号を落とす
+    - 同じ行の繰り返しを 1 つにする
+    """
+    parts: list[str] = []
+    seen: set[str] = set()
+    for raw in text.splitlines():
+        line = raw.strip().strip("#>*`_~| \t")
+        line = line.replace("`", "").strip()
+        if len(line) < MIN_FIGURE_TEXT_CHARS:
+            continue
+        if not re.search(r"\w", line):
+            continue
+        if _NUMBERS_ONLY_RE.match(line):
+            continue
+        key = _squash(line)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        parts.append(line)
+    return " / ".join(parts)
+
+
+# 本文の行がクロップに写り込んだときの重複を落とす。図の短いラベル（「売上」「利益」など）は
+# 本文の文に偶然出てくるので、文ほどの長さの行だけを対象にする。
+MIN_BODY_REPEAT_CHARS = 8
+
+
+def drop_body_repeats(text: str, body: str, min_chars: int = MIN_BODY_REPEAT_CHARS) -> str:
+    """ページの本文にそのまま出ている行を落とす.
+
+    図のクロップが本文の領域に重なっていると、本文の行がそのまま返ることがある。
+    短いラベルは本文の文に偶然出てくるので、``min_chars`` 以上のものだけを対象にする。
+    """
+    if not text or not body:
+        return text
+    squashed_body = _squash(body)
+    kept: list[str] = []
+    for part in text.split(" / "):
+        key = _squash(part)
+        if not key:
+            continue
+        if len(key) >= min_chars and key in squashed_body:
+            continue
+        kept.append(part)
+    return " / ".join(kept)
+
+
+def _ocr_crop_text(crop_path: Path, device: str) -> str:
+    from src.ocr_yomitoku import ocr_page_yomitoku
+
+    with Image.open(crop_path) as image:
+        return ocr_page_yomitoku("", device=device, img=image.convert("RGB"))
+
+
+def figure_text(
+    crop_path: Path,
+    device: str = "cpu",
+    ocr: Callable[[Path, str], str] | None = None,
+) -> str:
+    """図のクロップから文字を取る.
+
+    図中の文字は本文の補助情報なので、OCR が落ちても図の説明と本文は出す。
+    失敗したときは stderr に出して空文字を返す。
+    """
+    run = ocr or _ocr_crop_text
+    try:
+        raw = run(crop_path, device)
+    except Exception as error:  # pylint: disable=broad-except  # 補助情報なので落とさない
+        print(f"[describe_figures] {crop_path.name}: 図中の文字を取れない ({error})", file=sys.stderr)
+        return ""
+    return clean_figure_text(raw)
+
+
 def crop_figures(
     page_image: Path,
     regions: list[dict],
@@ -228,10 +317,13 @@ def figure_block(figure: Figure, figures_link: str) -> str:
     """book.md に差し込む Markdown ブロック.
 
     説明は VLM の自動生成なので、種別と「自動生成」をラベルに出す（#100）。
+    図の中の文字は本文に混ぜず、説明の次の行に別枠で置く（#119）。
     """
     caption = figure.description or "（説明なし）"
     label = f"図（{figure.kind}・自動生成）" if figure.kind else "図（自動生成）"
     block = f"![図]({figures_link}/{figure.path.name})\n\n**{label}**: {caption}\n"
+    if figure.text:
+        block += f"\n**図中の文字**: {figure.text}\n"
     if figure.note:
         block += f"\n*{figure.note}*\n"
     return block
@@ -250,20 +342,26 @@ def describe_book(
     min_area_ratio: float = DEFAULT_MIN_AREA_RATIO,
     max_aspect_ratio: float = DEFAULT_MAX_ASPECT_RATIO,
     describe: Callable[..., str] = describe_image,
+    device: str = "cpu",
+    with_figure_text: bool = False,
+    ocr: Callable[[Path, str], str] | None = None,
 ) -> tuple[str, list[Figure]]:
     """book.md の本文に図の説明を差し込んだ文字列を返す.
 
     ``max_pages`` を指定すると、図があるページを先頭からその数だけ処理する（試運用向け）。
+
+    図の中の文字（``**図中の文字**``）は本文に混ぜず、図の説明の次の行に置く。
+    OCR を回すかどうかは ``with_figure_text`` で決める（CLI は既定でオン）。
+    テストのように OCR を回したくない呼び出しではオフにする。
     """
     text = book_md.read_text(encoding="utf-8")
     sections = _split_pages(text)
-    figures: list[Figure] = []
-    disabled = False
-    processed_pages = 0
 
+    # 1) 図を切り出し、図の中の文字を先に取る。Ollama が VRAM を掴んだまま
+    #    yomitoku を動かすと OOM になるので、VLM より先に OCR を終わらせる。
+    crops: list[tuple[str, str, dict, Path, int]] = []
+    processed_pages = 0
     for page, body in sections:
-        if disabled:
-            break
         if max_pages is not None and processed_pages >= max_pages:
             break
         page_key = f"{page}.webp"
@@ -276,23 +374,38 @@ def describe_book(
             print(f"[describe_figures] {page}: ページ画像が見つからないためスキップ", file=sys.stderr)
             continue
         processed_pages += 1
-        cropped = crop_figures(page_image, regions, figures_dir)
-        for index, (region, crop_path) in enumerate(cropped, 1):
-            try:
-                description = describe(
-                    crop_path,
-                    model=model,
-                    base_url=base_url,
-                    timeout=timeout,
-                    fallback_model=fallback_model,
-                )
-            except OllamaUnavailable as error:
-                print(f"[describe_figures] {error} — 図の説明を飛ばす", file=sys.stderr)
-                disabled = True
-                break
-            kind, content = parse_description(description)
-            note = UNSTRUCTURED_NOTE if region.get("table_note") else ""
-            figures.append(Figure(page=page, index=index, path=crop_path, description=content, kind=kind, note=note))
+        for index, (region, crop_path) in enumerate(crop_figures(page_image, regions, figures_dir), 1):
+            crops.append((page, body, region, crop_path, index))
+
+    crop_texts: dict[Path, str] = {}
+    if with_figure_text:
+        for _page, _body, _region, crop_path, _index in crops:
+            crop_texts[crop_path] = figure_text(crop_path, device=device, ocr=ocr)
+
+    # 2) 説明を付ける。Ollama に繋がらなくなったら、そこから先は差し込まない。
+    figures: list[Figure] = []
+    disabled = False
+    for page, body, region, crop_path, index in crops:
+        if disabled:
+            break
+        try:
+            description = describe(
+                crop_path,
+                model=model,
+                base_url=base_url,
+                timeout=timeout,
+                fallback_model=fallback_model,
+            )
+        except OllamaUnavailable as error:
+            print(f"[describe_figures] {error} — 図の説明を飛ばす", file=sys.stderr)
+            disabled = True
+            break
+        kind, content = parse_description(description)
+        note = UNSTRUCTURED_NOTE if region.get("table_note") else ""
+        figure_body = drop_body_repeats(crop_texts.get(crop_path, ""), body)
+        figures.append(
+            Figure(page=page, index=index, path=crop_path, description=content, kind=kind, note=note, text=figure_body)
+        )
 
     return _insert_figures(text, figures, figures_dir), figures
 
