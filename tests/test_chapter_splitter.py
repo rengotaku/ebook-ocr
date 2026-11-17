@@ -159,6 +159,14 @@ class TestLlmFormat:
         text = llm_format("![図](figures/0086_fig1.png)\n\n**図**: 説明。\n")
         assert "<!-- 図: figures/0086_fig1.png -->" in text
 
+    def test_figure_text_becomes_quote(self):
+        text = llm_format(
+            "![図](figures/0086_fig1.png)\n\n**図（グラフ・自動生成）**: 棒グラフ。\n\n**図中の文字**: 所得 / 度数\n"
+        )
+        assert "> **図中の文字**: 所得 / 度数" in text
+        # 説明の後ろに置かれ、本文とつながらない
+        assert text.index("> **図（グラフ・自動生成）**") < text.index("> **図中の文字**")
+
     def test_section_number_on_its_own_line(self):
         text = llm_format("1-1.\n\n見える化って何?\n")
         assert text == "## 1-1. 見える化って何?"

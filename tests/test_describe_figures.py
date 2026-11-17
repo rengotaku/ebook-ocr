@@ -10,10 +10,13 @@ from PIL import Image
 from src.describe_figures import (
     Figure,
     OllamaUnavailable,
+    clean_figure_text,
     crop_figures,
     describe_book,
     describe_image,
+    drop_body_repeats,
     figure_block,
+    figure_text,
     page_figures,
 )
 
@@ -415,3 +418,109 @@ class TestTableNote:
 
         assert figures[0].note == UNSTRUCTURED_NOTE
         assert UNSTRUCTURED_NOTE in text
+
+
+class TestFigureText:
+    """図の中の文字を本文と別枠で出す (#119)."""
+
+    @staticmethod
+    def _page(tmp_path: Path) -> tuple[Path, Path]:
+        pages = _pages_dir(tmp_path)
+        Image.new("RGB", (100, 100), "white").save(pages / "0002.webp", lossless=True)
+        return pages, _book(tmp_path)
+
+    @staticmethod
+    def _layout() -> dict:
+        return {"0002.webp": {"regions": [{"type": "FIGURE", "bbox": [0, 0, 50, 50]}], "page_size": [100, 100]}}
+
+    def test_block_includes_figure_text(self, tmp_path: Path):
+        figure = Figure(
+            page="0002",
+            index=1,
+            path=tmp_path / "0002_fig1.png",
+            description="説明文",
+            kind="グラフ",
+            text="売上 / 利益",
+        )
+
+        block = figure_block(figure, "figures")
+
+        assert "**図中の文字**: 売上 / 利益" in block
+        # 説明の後、注記の前に置く
+        assert block.index("**図（グラフ・自動生成）**:") < block.index("**図中の文字**")
+
+    def test_block_has_no_figure_text_line_when_empty(self, tmp_path: Path):
+        figure = Figure(page="0002", index=1, path=tmp_path / "0002_fig1.png", description="説明文")
+        assert "図中の文字" not in figure_block(figure, "figures")
+
+    def test_clean_drops_short_and_symbol_lines(self):
+        text = "売上高\n-\n| |\nA\n利益率 20%\n"
+
+        assert clean_figure_text(text) == "売上高 / 利益率 20%"
+
+    def test_clean_removes_duplicate_lines(self):
+        assert clean_figure_text("売上高\n売上高\n利益") == "売上高 / 利益"
+
+    def test_clean_strips_markdown_markers(self):
+        assert clean_figure_text("## 見出し\n| 項目 | 値 |") == "見出し / 項目 | 値"
+
+    def test_clean_drops_numbers_only_lines(self):
+        assert clean_figure_text("評価軸を決める\n24\n110\n-1\n(1)(2)(3)") == "評価軸を決める"
+
+    def test_drop_body_repeats_removes_body_lines(self):
+        text = "本文に出ている長い行です / 図だけの語"
+
+        kept = drop_body_repeats(text, "ここは本文に出ている長い行です。")
+
+        assert kept == "図だけの語"
+
+    def test_short_labels_survive_body_repeats(self):
+        # 2 文字のラベルは本文に偶然出てくるので落とさない
+        assert drop_body_repeats("売上 / 利益", "売上と利益の推移を説明する。") == "売上 / 利益"
+
+    def test_returns_empty_when_ocr_fails(self, tmp_path: Path):
+        def broken(path, device):
+            raise RuntimeError("CUDA out of memory")
+
+        crop = tmp_path / "crop.png"
+        Image.new("RGB", (10, 10), "white").save(crop)
+
+        assert figure_text(crop, ocr=broken) == ""
+
+    def test_describe_book_adds_text_without_touching_body(self, tmp_path: Path):
+        pages, book = self._page(tmp_path)
+        before = book.read_text(encoding="utf-8")
+
+        text, figures = describe_book(
+            book,
+            self._layout(),
+            pages,
+            tmp_path / "figures",
+            describe=lambda path, **kwargs: "所得分布の棒グラフ。縦軸は度数。",
+            with_figure_text=True,
+            ocr=lambda path, device: "所得 / 度数",
+        )
+
+        assert figures[0].text == "所得 / 度数"
+        assert "**図中の文字**: 所得 / 度数" in text
+        # 本文（ページマーカーと各行）は変わらない
+        body_before = [line for line in before.splitlines() if line.startswith("本文")]
+        body_after = [line for line in text.splitlines() if line.startswith("本文")]
+        assert body_after == body_before
+
+    def test_describe_book_skips_ocr_by_default(self, tmp_path: Path):
+        pages, book = self._page(tmp_path)
+        called = []
+
+        text, figures = describe_book(
+            book,
+            self._layout(),
+            pages,
+            tmp_path / "figures",
+            describe=lambda path, **kwargs: "説明",
+            ocr=lambda path, device: called.append(path) or "文字",
+        )
+
+        assert called == []
+        assert figures[0].text == ""
+        assert "図中の文字" not in text

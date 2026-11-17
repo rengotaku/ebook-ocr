@@ -43,6 +43,17 @@ def main(argv: list[str] | None = None) -> int:
         default=6.0,
         help="図として扱う最大の縦横比（幅÷高さ。既定 6.0。これより横長は本文の行とみなす）",
     )
+    parser.add_argument(
+        "--device",
+        default="cpu",
+        choices=("cpu", "cuda"),
+        help="図の中の文字を取るときのデバイス（既定: cpu）",
+    )
+    parser.add_argument(
+        "--no-figure-text",
+        action="store_true",
+        help="図の中の文字（**図中の文字**）を出力しない",
+    )
     args = parser.parse_args(argv)
 
     if not args.book_md.exists():
@@ -68,6 +79,8 @@ def main(argv: list[str] | None = None) -> int:
         max_pages=args.limit_pages,
         min_area_ratio=args.min_area_ratio,
         max_aspect_ratio=args.max_figure_aspect,
+        device=args.device,
+        with_figure_text=not args.no_figure_text,
     )
 
     output.write_text(text, encoding="utf-8")
