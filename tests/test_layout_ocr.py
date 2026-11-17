@@ -28,6 +28,11 @@ import pytest
 from PIL import Image
 
 
+def _blocks(text: str) -> list[dict]:
+    """ページ全体 OCR の段落を 1 つだけ返す（並べ替えに位置が要る）."""
+    return [{"type": "TEXT", "text": text, "bbox": [0, 0, 100, 50], "confidence": 1.0}]
+
+
 class TestSelectOcrEngine:
     """OCRエンジン選択ロジックのテスト。"""
 
@@ -308,7 +313,7 @@ class TestTextRegionOcr:
         }
 
         # Act & Assert: ocr_page_yomitoku は呼ばれない
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="再OCRの結果") as mock_ocr:
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("再OCRの結果")) as mock_ocr:
             result = ocr_region(img, region)
 
             assert result.text == "テキスト内容", f"Should use layout.json text. Got: {result.text}"
@@ -390,7 +395,7 @@ class TestTitleRegionOcr:
         }
 
         # Act & Assert: ocr_page_yomitoku は呼ばれない
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="再OCRの結果") as mock_ocr:
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("再OCRの結果")) as mock_ocr:
             result = ocr_region(img, region)
 
             assert result.text == "第2章 システム設計", f"Should use layout.json text. Got: {result.text}"
@@ -897,7 +902,7 @@ class TestFallbackEmptyLayout:
         }
 
         # Act: ocr_page_yomitoku をモック
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="ページ全体のOCR結果") as mock_ocr:
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("ページ全体のOCR結果")) as mock_ocr:
             results = ocr_by_layout(str(img_path), layout)
 
             # Assert: フォールバックでページ全体OCRが実行される
@@ -924,7 +929,7 @@ class TestFallbackEmptyLayout:
         }
 
         # Act: ocr_page_yomitoku をモック
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="フォールバックOCR結果"):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("フォールバックOCR結果")):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert
@@ -958,7 +963,7 @@ class TestFallbackLowCoverage:
         }
 
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="フォールバック結果"):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("フォールバック結果")):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: フォールバックが実行される
@@ -985,7 +990,7 @@ class TestFallbackLowCoverage:
         }
 
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="通常OCR結果"):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("通常OCR結果")):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 領域別OCRが実行される（フォールバックしない）
@@ -1011,7 +1016,7 @@ class TestFallbackLowCoverage:
         }
 
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="フォールバック結果"):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("フォールバック結果")):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: 29%はフォールバック
@@ -1045,7 +1050,7 @@ class TestFallbackSingleFigure:
         }
 
         # Act
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="ページ全体のテキスト"):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("ページ全体のテキスト")):
             results = ocr_by_layout(str(img_path), layout)
 
         # Assert: フォールバックが実行される
@@ -1806,7 +1811,7 @@ class TestLayoutTextIsAuthoritative:
             "page_size": [400, 200],
         }
 
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=""):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("")):
             results = ocr_by_layout(str(img_path), layout)
 
         assert [r.text for r in results] == ["① データ分析で重大な見落としを防ぐ"]
@@ -1955,8 +1960,8 @@ class TestRunningHeadInLayoutOcr:
         )
 
         with patch(
-            "src.ocr_yomitoku.ocr_page_yomitoku",
-            return_value="本文\n23 第1章 データ分析を設計する\n続きの本文",
+            "src.ocr_yomitoku.ocr_page_blocks",
+            return_value=_blocks("本文\n23 第1章 データ分析を設計する\n続きの本文"),
         ):
             results = ocr_by_layout(str(img_path), layout, running_heads=heads)
 
@@ -1996,7 +2001,7 @@ class TestPageNumbersOutput:
         }
         out_dir = tmp_path / "out"
 
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="本文"):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("本文")):
             run_layout_ocr(
                 str(pages_dir),
                 layout,
@@ -2062,7 +2067,7 @@ class TestFallbackKeepsHeadings:
         img_path = tmp_path / "page.png"
         Image.new("RGB", (960, 1280), "white").save(img_path)
 
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value="本文です。"):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks("本文です。")):
             results = ocr_by_layout(str(img_path), self._low_coverage_layout())
 
         assert [r.region_type for r in results] == ["TITLE", "TEXT"]
@@ -2075,7 +2080,7 @@ class TestFallbackKeepsHeadings:
         Image.new("RGB", (960, 1280), "white").save(img_path)
         long_text = "ページ全体の OCR 結果です。" * 20
 
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=long_text):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks(long_text)):
             results = ocr_by_layout(str(img_path), self._low_coverage_layout())
 
         assert [r.region_type for r in results] == ["FALLBACK"]
@@ -2140,7 +2145,7 @@ class TestApplyLayoutHeadings:
         }
         page_text = "2. データ分析って何?\n\n" + "本文です。" * 30
 
-        with patch("src.ocr_yomitoku.ocr_page_yomitoku", return_value=page_text):
+        with patch("src.ocr_yomitoku.ocr_page_blocks", return_value=_blocks(page_text)):
             results = ocr_by_layout(str(img_path), layout)
 
         assert results[0].region_type == "FALLBACK"
@@ -2155,3 +2160,53 @@ class TestDotLeaderTitles:
         regions = [{"type": "TITLE", "bbox": [0, 0, 10, 10], "text": "1. ワークシートの基本操作………"}]
 
         assert apply_layout_headings(text, regions) == text
+
+
+class TestOrderPageBlocks:
+    """ページ全体 OCR の段落を紙面の順に並べ直す (#121)."""
+
+    @staticmethod
+    def _block(text: str, bbox):
+        return {"type": "TEXT", "text": text, "bbox": bbox, "confidence": 1.0}
+
+    def test_orders_single_column_by_y(self) -> None:
+        from src.layout_ocr import order_page_blocks
+
+        blocks = [
+            self._block("下", [100, 400, 900, 460]),
+            self._block("上", [100, 100, 900, 160]),
+        ]
+
+        ordered = order_page_blocks(blocks, 1000)
+
+        assert [b["text"] for b in ordered] == ["上", "下"]
+
+    def test_orders_two_columns_left_first(self) -> None:
+        from src.layout_ocr import order_page_blocks
+
+        blocks = [
+            self._block("右上", [600, 100, 800, 200]),
+            self._block("左下", [100, 300, 300, 400]),
+            self._block("左上", [100, 100, 300, 200]),
+        ]
+
+        ordered = order_page_blocks(blocks, 1000)
+
+        assert [b["text"] for b in ordered] == ["左上", "左下", "右上"]
+
+    def test_returns_none_when_a_block_has_no_position(self) -> None:
+        from src.layout_ocr import order_page_blocks
+
+        blocks = [self._block("本文", [0, 0, 10, 10]), {"type": "TEXT", "text": "位置なし", "bbox": None}]
+
+        assert order_page_blocks(blocks, 1000) is None
+
+    def test_returns_none_without_page_width(self) -> None:
+        from src.layout_ocr import order_page_blocks
+
+        assert order_page_blocks([self._block("本文", [0, 0, 10, 10])], 0) is None
+
+    def test_returns_none_for_empty_blocks(self) -> None:
+        from src.layout_ocr import order_page_blocks
+
+        assert order_page_blocks([], 1000) is None

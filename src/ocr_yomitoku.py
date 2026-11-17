@@ -59,6 +59,58 @@ class YomitokuResult:
     figures: int  # Number of figures detected
 
 
+def _analyze_page(page_path: str, device: str, img: Image.Image | None):
+    """ページ画像を解析して yomitoku の結果を返す（画像が読めなければ None）."""
+    analyzer = get_analyzer(device)
+    if img is not None:
+        img_array = np.array(img.convert("RGB"))
+        cv_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+    else:
+        cv_img = cv2.imread(page_path)
+    if cv_img is None:
+        return None
+    results, _, _ = analyzer(cv_img)
+    return results
+
+
+def _paragraph_text(paragraph) -> str:
+    if hasattr(paragraph, "contents"):
+        return paragraph.contents or ""
+    if hasattr(paragraph, "text"):
+        return paragraph.text or ""
+    return str(paragraph)
+
+
+def ocr_page_blocks(
+    page_path: str,
+    device: str = "cpu",
+    img: Image.Image | None = None,
+) -> list[dict]:
+    """段落ごとの文字と位置を返す（読取順の並べ替えに使う）.
+
+    位置（``box``）が取れない段落は ``bbox`` を ``None`` にして返す。
+    並べ替えは呼び出し側で、全段落の位置がそろっているときだけ行う（#121）。
+    """
+    results = _analyze_page(page_path, device, img)
+    if results is None:
+        return []
+    blocks: list[dict] = []
+    for paragraph in results.paragraphs:
+        text = _paragraph_text(paragraph)
+        if not text.strip():
+            continue
+        box = getattr(paragraph, "box", None)
+        blocks.append(
+            {
+                "type": "TEXT",
+                "text": text,
+                "bbox": [int(value) for value in box] if box else None,
+                "confidence": 1.0,
+            }
+        )
+    return blocks
+
+
 def ocr_page_yomitoku(
     page_path: str,
     device: str = "cpu",

@@ -151,6 +151,18 @@ def ocr_region(
     )
 
 
+def order_page_blocks(blocks: list[dict], page_width: int) -> list[dict] | None:
+    """ページ全体 OCR の段落を、領域と同じ規則で紙面の順に並べ直す.
+
+    位置が取れない段落が 1 つでもあれば並べ替えずに ``None`` を返す（文字を落とさない）。
+    """
+    if not blocks or not page_width:
+        return None
+    if any(block.get("bbox") is None for block in blocks):
+        return None
+    return sort_reading_order(blocks, page_width)
+
+
 def ocr_by_layout(
     page_path: str,
     layout: dict,
@@ -193,9 +205,11 @@ def ocr_by_layout(
     # ページ全体 OCR に回す判定になったページでも、領域別の text と文字数がほぼ同じなら
     # 見出しと読取順を優先して領域別を採る（#108）。ページ全体 OCR のほうが長いときは、
     # 図・表として検出された領域の中に本文が入っているので、ページ全体を採る。
-    from src.ocr_yomitoku import ocr_page_yomitoku
+    from src.ocr_yomitoku import ocr_page_blocks
 
-    ocr_text = ocr_page_yomitoku(page_path, device=device)
+    blocks = ocr_page_blocks(page_path, device=device)
+    ordered = order_page_blocks(blocks, page_size[0] if page_size else 0)
+    ocr_text = "\n\n".join(block["text"] for block in (ordered if ordered is not None else blocks))
 
     # フォールバック結果にも柱・ノンブルが混ざるので、このページの柱は位置を問わず落とす
     ocr_text = strip_running_head_lines(ocr_text, running_heads, page_heads)
