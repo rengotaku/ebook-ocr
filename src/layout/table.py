@@ -19,6 +19,9 @@ UNSTRUCTURED_NOTE = "表として組み立てられなかったため、図と�
 MIN_FILL_RATIO = 0.6
 MAX_EMPTY_ROW_RATIO = 0.2
 MAX_COLS = 10
+# 空のセルがこの割合を超える列が 1 つでもあると、表として崩れている。
+# アイコン（●■◆）だけの列や罫線の写り込みが混じるグラフィックを弾く（#120）。
+MAX_EMPTY_COLUMN_RATIO = 0.8
 
 
 def table_grid(table) -> list[list[str]]:
@@ -91,6 +94,14 @@ def is_markdown_ready(grid: list[list[str]]) -> bool:
         return False
     empty_rows = sum(1 for row in grid if not any(row))
     if empty_rows / len(grid) > MAX_EMPTY_ROW_RATIO:
+        return False
+    width = max(len(row) for row in grid)
+    empty_columns = sum(
+        1
+        for index in range(width)
+        if sum(1 for row in grid if index >= len(row) or not row[index]) / len(grid) > MAX_EMPTY_COLUMN_RATIO
+    )
+    if empty_columns:
         return False
     return max(len(row) for row in grid) <= MAX_COLS
 
