@@ -29,10 +29,16 @@ COLUMN_GUTTER_CENTER_RANGE = (0.35, 0.65)
 PAGE_NUMBER_ONLY_RE = re.compile(r"^[\d０-９Ⅰ-ⅿivxlcIVXLC]{1,5}$")
 
 
-def _sort_key(region: dict) -> tuple[int, int, int]:
-    """上から下、同じ高さなら TITLE 優先、次に左から右."""
+def _sort_key(region: dict, y_tolerance: int = 0) -> tuple[int, int, int]:
+    """上から下、同じ高さなら TITLE 優先、次に左から右.
+
+    ``y_tolerance`` を指定すると、その幅の中の y は同じ行とみなす（段落の並べ替え用）。
+    """
+    y = region["bbox"][1]
+    if y_tolerance > 0:
+        y = y // y_tolerance
     return (
-        region["bbox"][1],
+        y,
         TYPE_PRIORITY.get(region["type"], 99),
         region["bbox"][0],
     )
@@ -123,7 +129,7 @@ def _split_columns(regions: list[dict], page_width: int) -> tuple[list[dict], li
     return left, right
 
 
-def sort_reading_order(regions: list[dict], page_width: int) -> list[dict]:
+def sort_reading_order(regions: list[dict], page_width: int, y_tolerance: int = 0) -> list[dict]:
     """Sort regions in reading order for horizontal layout.
 
     Algorithm:
@@ -138,6 +144,7 @@ def sort_reading_order(regions: list[dict], page_width: int) -> list[dict]:
     Args:
         regions: List of regions (with type, bbox, confidence)
         page_width: Page width (for column detection)
+        y_tolerance: この幅の中の y は同じ行とみなす（0 なら従来どおり 1px 単位）
 
     Returns:
         New sorted list (input is not modified - immutable)
@@ -151,9 +158,11 @@ def sort_reading_order(regions: list[dict], page_width: int) -> list[dict]:
     columns = _split_columns(regions_copy, page_width)
     if columns is not None:
         left, right = columns
-        return sorted(left, key=_sort_key) + sorted(right, key=_sort_key)
+        return sorted(left, key=lambda r: _sort_key(r, y_tolerance)) + sorted(
+            right, key=lambda r: _sort_key(r, y_tolerance)
+        )
 
-    return sorted(regions_copy, key=_sort_key)
+    return sorted(regions_copy, key=lambda r: _sort_key(r, y_tolerance))
 
 
 def iou(r1: dict, r2: dict) -> float:

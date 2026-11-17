@@ -2210,3 +2210,39 @@ class TestOrderPageBlocks:
         from src.layout_ocr import order_page_blocks
 
         assert order_page_blocks([], 1000) is None
+
+    def test_running_head_is_dropped_before_ordering(self) -> None:
+        """左右をまたぐ柱を落としてから並べる（2 段組みが 1 段組みにならない）."""
+        from src.layout.running_head import normalize_running_head_text
+        from src.layout_ocr import filter_page_blocks, order_page_blocks
+
+        head = "20 第1章 データ分析を設計する"
+        page_heads = frozenset({normalize_running_head_text(head)})
+        blocks = [
+            self._block(head, [100, 50, 900, 70]),  # 左右をまたぐ柱
+            self._block("左上", [100, 100, 300, 200]),
+            self._block("左下", [100, 300, 300, 400]),
+            self._block("右上", [600, 100, 800, 200]),
+            self._block("右下", [600, 300, 800, 400]),
+        ]
+
+        # 柱を残したまま並べると 1 段組みと判定され、左右が交互になる
+        without_filter = order_page_blocks(blocks, 1000)
+        assert [b["text"] for b in without_filter] == [head, "左上", "右上", "左下", "右下"]
+
+        ordered = order_page_blocks(filter_page_blocks(blocks, frozenset(), page_heads), 1000)
+
+        assert [b["text"] for b in ordered] == ["左上", "左下", "右上", "右下"]
+
+    def test_heading_within_a_few_pixels_stays_before_body(self) -> None:
+        """数 px の y の差で、同じ行の見出しと本文が入れ替わらないこと."""
+        from src.layout_ocr import order_page_blocks
+
+        blocks = [
+            {"type": "TEXT", "text": "本文", "bbox": [300, 788, 700, 819], "confidence": 1.0},
+            {"type": "TITLE", "text": "表形式", "bbox": [165, 789, 204, 803], "confidence": 1.0},
+        ]
+
+        ordered = order_page_blocks(blocks, 960)
+
+        assert [b["text"] for b in ordered] == ["表形式", "本文"]
