@@ -203,3 +203,24 @@ class TestBrokenParagraphFalsePositives:
         body = f"{LONG_PARAGRAPH[:-12]}\n\n## 次の見出し\n\n本文です。"
 
         assert [issue.kind for issue in check_broken_paragraphs({"0001": body})] == ["broken_paragraph"]
+
+
+class TestSentenceWithoutPeriod:
+    """句点を付けずに終わるキャプションは途中切れとみなさない（#121）."""
+
+    def test_caption_ending_with_masu_before_heading(self) -> None:
+        from src.output_checks import check_broken_paragraphs
+
+        body = "[行ラベル]の各フィールドのアイテムは、行をずらして表示されます\n\n## 表形式\n\n本文です。"
+
+        assert check_broken_paragraphs({"0001": body}) == []
+
+    def test_text_cut_mid_word_before_heading_is_still_reported(self) -> None:
+        from src.output_checks import check_broken_paragraphs
+
+        body = (
+            "この段落は紙面の都合で途中で切れており、ここで文章が終わらずに次の語へ続くはずだったのだが"
+            "\n\n## 次の見出し\n\n本文です。"
+        )
+
+        assert [issue.kind for issue in check_broken_paragraphs({"0001": body})] == ["broken_paragraph"]

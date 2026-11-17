@@ -151,6 +151,52 @@ def ocr_region(
     )
 
 
+# 段落の並べ替えで「同じ行」とみなす y の幅（px）
+BLOCK_Y_TOLERANCE = 10
+
+
+def order_page_blocks(blocks: list[dict], page_width: int) -> list[dict] | None:
+    """ページ全体 OCR の段落を、領域と同じ規則で紙面の順に並べ直す.
+
+    位置が取れない段落が 1 つでもあれば並べ替えずに ``None`` を返す（文字を落とさない）。
+    """
+    if not blocks or not page_width:
+        return None
+    if any(block.get("bbox") is None for block in blocks):
+        return None
+    # 段落の y は数 px ずれる。同じ行の見出しと本文が入れ替わらないよう幅を持たせる。
+    return sort_reading_order(blocks, page_width, y_tolerance=BLOCK_Y_TOLERANCE)
+
+
+def filter_page_blocks(
+    blocks: list[dict],
+    running_heads: frozenset[str],
+    page_heads: frozenset[str],
+) -> list[dict]:
+    """柱・ノンブルにあたる段落を落とす（並べ替えの前に呼ぶ）.
+
+    柱は左右の段をまたぐので、残したまま段の判定をすると 2 段組みが 1 段組みになる。
+    落とすのは 2 種類だけにする。
+
+    - このページで柱と確認された行（``page_heads``。座標で決まる）
+    - ページの先頭・末尾の段落で、本全体で繰り返す柱（``running_heads``）にあたるもの
+
+    本全体の柱は本文の途中にも同じ文字が現れる（目次の「プロローグ」など）ので、
+    真ん中の段落には当てない。
+    """
+    kept: list[dict] = []
+    for index, block in enumerate(blocks):
+        text = block["text"]
+        if normalize_running_head_text(text) in page_heads:
+            continue
+        if index in (0, len(blocks) - 1):
+            text = strip_running_head_lines(text, running_heads, frozenset())
+            if not text.strip():
+                continue
+        kept.append({**block, "text": text})
+    return kept
+
+
 def ocr_by_layout(
     page_path: str,
     layout: dict,
@@ -193,11 +239,16 @@ def ocr_by_layout(
     # ページ全体 OCR に回す判定になったページでも、領域別の text と文字数がほぼ同じなら
     # 見出しと読取順を優先して領域別を採る（#108）。ページ全体 OCR のほうが長いときは、
     # 図・表として検出された領域の中に本文が入っているので、ページ全体を採る。
-    from src.ocr_yomitoku import ocr_page_yomitoku
+    from src.ocr_yomitoku import ocr_page_blocks
 
-    ocr_text = ocr_page_yomitoku(page_path, device=device)
+    blocks = ocr_page_blocks(page_path, device=device)
+    # 柱・ノンブルは段の判定を邪魔する（2 段組みの段間を柱が塞ぐと 1 段組みと判定される）。
+    # 並べ替える前に落とす（#121、codex の指摘）。
+    blocks = filter_page_blocks(blocks, running_heads, page_heads)
+    ordered = order_page_blocks(blocks, page_size[0] if page_size else 0)
+    ocr_text = "\n\n".join(block["text"] for block in (ordered if ordered is not None else blocks))
 
-    # フォールバック結果にも柱・ノンブルが混ざるので、このページの柱は位置を問わず落とす
+    # 段落に分かれていない柱が残っていれば、ここでも落とす
     ocr_text = strip_running_head_lines(ocr_text, running_heads, page_heads)
     # 見出しだけはレイアウトから差し込む（本文は変えない）
     ocr_text = apply_layout_headings(ocr_text, regions)
