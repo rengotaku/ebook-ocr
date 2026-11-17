@@ -136,6 +136,39 @@ def _generate_markdown_from_results(results, cv_img, fallback_text: str) -> str:
     return markdown
 
 
+def ocr_image_text(img: Image.Image, device: str = "cpu") -> str:
+    """画像 1 枚の文字を、図として判定された領域の中の段落も含めて返す.
+
+    図のクロップを OCR すると、yomitoku はその中の段落を ``results.figures[]`` に
+    移す。``results.paragraphs`` だけ見ると、図と判定されたクロップの文字が
+    空になる（#119）。
+    """
+    analyzer = get_analyzer(device)
+    img_array = np.array(img.convert("RGB"))
+    cv_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+    results, _, _ = analyzer(cv_img)
+    return "\n\n".join(paragraph_texts(results))
+
+
+def paragraph_texts(results) -> list[str]:
+    """段落の文字を取り出す（図の中の段落も含める）."""
+    texts: list[str] = []
+
+    def collect(paragraphs) -> None:
+        for paragraph in paragraphs or []:
+            if hasattr(paragraph, "contents"):
+                texts.append(paragraph.contents or "")
+            elif hasattr(paragraph, "text"):
+                texts.append(paragraph.text or "")
+            else:
+                texts.append(str(paragraph))
+
+    collect(results.paragraphs)
+    for figure in getattr(results, "figures", None) or []:
+        collect(getattr(figure, "paragraphs", None))
+    return [text for text in texts if text.strip()]
+
+
 def ocr_page_yomitoku_full(
     page_path: str,
     device: str = "cpu",

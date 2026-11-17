@@ -264,10 +264,10 @@ def drop_body_repeats(text: str, body: str, min_chars: int = MIN_BODY_REPEAT_CHA
 
 
 def _ocr_crop_text(crop_path: Path, device: str) -> str:
-    from src.ocr_yomitoku import ocr_page_yomitoku
+    from src.ocr_yomitoku import ocr_image_text
 
     with Image.open(crop_path) as image:
-        return ocr_page_yomitoku("", device=device, img=image.convert("RGB"))
+        return ocr_image_text(image.convert("RGB"), device=device)
 
 
 def figure_text(
@@ -357,8 +357,10 @@ def describe_book(
     text = book_md.read_text(encoding="utf-8")
     sections = _split_pages(text)
 
-    # 1) 図を切り出し、図の中の文字を先に取る。Ollama が VRAM を掴んだまま
-    #    yomitoku を動かすと OOM になるので、VLM より先に OCR を終わらせる。
+    # 1) 図を切り出し、図の中の文字を先に取る。Ollama は最初の説明呼び出しで
+    #    モデルを VRAM に読み込む。VLM を先に走らせるとそのモデルが残ったまま
+    #    yomitoku を動かすことになり OOM になった（実測）ので、順序を入れ替える。
+    #    yomitoku 側の使用量は小さく、VLM と同居しても OOM にはならない。
     crops: list[tuple[str, str, dict, Path, int]] = []
     processed_pages = 0
     for page, body in sections:
