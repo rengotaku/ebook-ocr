@@ -176,12 +176,24 @@ def filter_page_blocks(
     """柱・ノンブルにあたる段落を落とす（並べ替えの前に呼ぶ）.
 
     柱は左右の段をまたぐので、残したまま段の判定をすると 2 段組みが 1 段組みになる。
+    落とすのは 2 種類だけにする。
+
+    - このページで柱と確認された行（``page_heads``。座標で決まる）
+    - ページの先頭・末尾の段落で、本全体で繰り返す柱（``running_heads``）にあたるもの
+
+    本全体の柱は本文の途中にも同じ文字が現れる（目次の「プロローグ」など）ので、
+    真ん中の段落には当てない。
     """
     kept: list[dict] = []
-    for block in blocks:
-        text = strip_running_head_lines(block["text"], running_heads, page_heads)
-        if text.strip():
-            kept.append({**block, "text": text})
+    for index, block in enumerate(blocks):
+        text = block["text"]
+        if normalize_running_head_text(text) in page_heads:
+            continue
+        if index in (0, len(blocks) - 1):
+            text = strip_running_head_lines(text, running_heads, frozenset())
+            if not text.strip():
+                continue
+        kept.append({**block, "text": text})
     return kept
 
 

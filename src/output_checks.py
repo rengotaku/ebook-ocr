@@ -23,6 +23,20 @@ PARAGRAPH_ENDINGS = ("。", "．", "！", "？", "!", "?", "…", "」", "』", 
 HEADING_ENDINGS = ("。", "．", "！", "？", "…")
 # 文の継続を表す行末（読点・中黒・開き括弧）
 CONTINUATION_ENDINGS = ("、", "，", "・", "（", "(")
+# 句点を付けずに終わる文末（図表の注記・キャプション）。
+# 次が HEADING でも、文として終わっていれば途中切れとみなさない（#121）
+SENTENCE_FINAL_ENDINGS = (
+    "です",
+    "ます",
+    "でした",
+    "ました",
+    "ません",
+    "ください",
+    "でしょう",
+    "ましょう",
+    "である",
+    "だった",
+)
 
 PAGE_MARKER_RE = re.compile(r"^--- (\d+) ---$", re.M)
 RUNNING_HEAD_RE = re.compile(r"^\s*\d{0,3}\s*第\s*\d+\s*章\s+\S")
@@ -193,7 +207,11 @@ def check_broken_paragraphs(pages: dict[str, str]) -> list[Issue]:
             text = block.replace("\n", "")
             if len(text) < MIN_PARAGRAPH_LENGTH:
                 continue
-            if text.endswith(PARAGRAPH_ENDINGS) or text.endswith(CONTINUATION_ENDINGS):
+            if (
+                text.endswith(PARAGRAPH_ENDINGS)
+                or text.endswith(CONTINUATION_ENDINGS)
+                or text.endswith(SENTENCE_FINAL_ENDINGS)
+            ):
                 continue
             following = _next_content_block(blocks, index, following_pages)
             if following and (not _is_structural(following) or _is_numeric_block(following)):

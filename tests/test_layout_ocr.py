@@ -2246,3 +2246,19 @@ class TestOrderPageBlocks:
         ordered = order_page_blocks(blocks, 960)
 
         assert [b["text"] for b in ordered] == ["表形式", "本文"]
+
+    def test_running_head_in_the_middle_is_kept(self) -> None:
+        """目次の「プロローグ」のような、本全体の柱と同じ文字が本文の途中にあっても消さない."""
+        from src.layout.running_head import normalize_running_head_text
+        from src.layout_ocr import filter_page_blocks
+
+        running_heads = frozenset({normalize_running_head_text("プロローグ")})
+        blocks = [
+            self._block("CONTENTS", [100, 100, 300, 120]),
+            self._block("プロローグ", [132, 258, 210, 277]),
+            self._block("第1章", [156, 433, 208, 452]),
+        ]
+
+        kept = filter_page_blocks(blocks, running_heads, frozenset())
+
+        assert [b["text"] for b in kept] == ["CONTENTS", "プロローグ", "第1章"]
