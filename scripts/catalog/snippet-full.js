@@ -2,7 +2,8 @@
 // 使い方: https://ebookstore.sony.jp/mybook/list?displayStatus=true を開いた状態で
 //         DevTools Console に貼り付け → Enter（所要 2〜3 分）
 (async () => {
-  const qs = (u) => new URLSearchParams((u || '').split('?')[1] || '');
+  // href は ? 付き、name 属性は ? なしのクエリ文字列。どちらも受ける
+  const qs = (u) => new URLSearchParams(((u || '').includes('?') ? u.split('?')[1] : u) || '');
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const OUT = { fetchedAt: new Date().toISOString(), shelf: [], series: {}, history: null };
   const seen = new Set();

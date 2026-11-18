@@ -6,6 +6,7 @@ import json
 import re
 from html import unescape
 from pathlib import Path
+from urllib.parse import urlsplit
 
 LI_RE = re.compile(r'<li class="bookshelfList__listBox">(.*?)</li>', re.S)
 A_RE = re.compile(r'<a\b[^>]*?name="([^"]*)"[^>]*?>(.*?)</a>', re.S)
@@ -37,7 +38,8 @@ def parse_html(html: str, list_page: int | None = None, status: str = 'true') ->
         meta = parse_qs(m.group(1))
         href_m = HREF_RE.search(m.group(0))
         href = unescape(href_m.group(1)) if href_m else ''
-        title_id = parse_qs(href).get('titleId')
+        # href はパス付き（/mybook/series/list?titleId=...）なので、クエリだけを見る
+        title_id = parse_qs(urlsplit(href).query).get('titleId')
         img_m = IMG_RE.search(block)
         img = SRC_RE.search(img_m.group(0)).group(1) if img_m else None
         if img and img.startswith('/'):

@@ -129,8 +129,9 @@ def main() -> None:
         row['coverXl'] = h.get('coverXl')
         if row.get('coverXl') and '/photo/' not in row['coverXl']:
             row['coverXl'] = None
-        if not row['coverXl'] and row.get('coverUrl', '').endswith('_LARGE.jpg'):
-            row['coverXl'] = row['coverUrl'].replace('_LARGE.jpg', '_XLARGE.jpg')
+        cover_url = row.get('coverUrl') or ''
+        if not row['coverXl'] and cover_url.endswith('_LARGE.jpg'):
+            row['coverXl'] = cover_url.replace('_LARGE.jpg', '_XLARGE.jpg')
 
     rows = sorted(books.values(), key=lambda r: (r.get('seriesTitle') or '', r.get('volumeTitle') or ''))
     out = Path('out')
