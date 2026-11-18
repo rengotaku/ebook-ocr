@@ -130,6 +130,17 @@ def _ollama_chat(
     return str(body.get("message", {}).get("content", "")).strip()
 
 
+# 説明が文末で終わっているかを見る記号。ここで終わらない説明は
+# 生成が途中で切れていることがある（#125）
+SENTENCE_ENDINGS = ("。", "．", "！", "？", "!", "?", "」", "』", "）", ")", "】")
+
+
+def is_complete_description(text: str) -> bool:
+    """説明が文末記号で終わっているか."""
+    stripped = text.strip()
+    return bool(stripped) and stripped.endswith(SENTENCE_ENDINGS)
+
+
 def describe_image(
     image_path: Path,
     model: str = DEFAULT_MODEL,
@@ -144,7 +155,38 @@ def describe_image(
     qwen3-vl は思考が長引くと content が空で返ることがある。空なら
     (1) 同じモデルで retries 回まで引き直し、(2) 短い指示（数値不要）で 1 回、
     (3) fallback_model で 1 回、の順に試す。
+
+    文末で終わらない（途中で切れた）説明は 1 回だけ引き直す。引き直しても
+    終わらなければ、そのまま返す（無限に再試行しない）。説明文を推測で
+    補うことはしない。
     """
+    text = _describe_once(
+        image_path,
+        model=model,
+        base_url=base_url,
+        timeout=timeout,
+        retries=retries,
+        fallback_model=fallback_model,
+        chat=chat,
+    )
+    if text and not is_complete_description(text):
+        retry = chat(image_path, model=model, base_url=base_url, timeout=timeout)
+        if retry.strip():
+            text = retry
+    return text
+
+
+def _describe_once(
+    image_path: Path,
+    model: str,
+    base_url: str,
+    timeout: int,
+    retries: int,
+    fallback_model: str | None,
+    chat: Callable[..., str],
+) -> str:
+    """空応答のときの引き直しと、モデルの切り替えまで."""
+    text = ""
     for _ in range(retries + 1):
         text = chat(image_path, model=model, base_url=base_url, timeout=timeout)
         if text:
