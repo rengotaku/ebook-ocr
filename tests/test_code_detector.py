@@ -867,14 +867,32 @@ class TestCountCodeKeywords:
 class TestDetectCodeByTextOrCondition:
     """detect_code_by_text() uses OR condition: symbol ratio OR keyword count."""
 
-    def test_symbol_ratio_only_returns_true(self) -> None:
-        """High symbol ratio alone (no keywords) should return True."""
+    def test_symbol_ratio_with_letters_returns_true(self) -> None:
+        """High symbol ratio with some letters should return True."""
         from src.layout.code_detector import detect_code_by_text
 
-        # Lots of symbols but no language keywords
-        result = detect_code_by_text("{{{{}}}}()()()()")
+        result = detect_code_by_text("x = foo(a[1]);")
 
-        assert result is True, "High symbol ratio alone should trigger CODE"
+        assert result is True
+
+    def test_symbols_only_returns_false(self) -> None:
+        """記号だけの塊は CODE にしない（#57）."""
+        from src.layout.code_detector import detect_code_by_text
+
+        assert detect_code_by_text("{{{{}}}}()()()()") is False
+
+    def test_tilde_between_capitals_is_not_code(self) -> None:
+        """`OM~P` `OT~W` のような OCR の波線を CODE にしない（#57）."""
+        from src.layout.code_detector import detect_code_by_text
+
+        assert detect_code_by_text("OM~P") is False
+        assert detect_code_by_text("OT~W") is False
+
+    def test_dropped_symbols_are_not_counted(self) -> None:
+        """チルダは code の記号として数えない（#57）."""
+        from src.layout.code_detector import calc_symbol_ratio
+
+        assert calc_symbol_ratio("OM~P") == 0.0
 
     def test_keyword_only_returns_true(self) -> None:
         """Enough keywords alone (low symbol ratio) should return True."""

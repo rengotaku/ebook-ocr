@@ -7,6 +7,7 @@ by analyzing text content for programming symbols and keywords.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -162,10 +163,16 @@ EXTENDED_KEYWORDS: list[str] = [
 ]
 
 # Code symbols used for symbol ratio calculation
-_CODE_SYMBOLS: frozenset[str] = frozenset("{}();=<>[]!&|+-*/%#@^~\\")
+# チルダは code の記号に入れない。OCR が波線を拾うと「OM~P」「OT~W」のような
+# 誤検出になる（#57）
+_CODE_SYMBOLS: frozenset[str] = frozenset("{}();=<>[]!&|+-*/%#@^\\")
 
 # OCR misread patterns: single characters commonly misread (e.g., '3' for '}')
 _OCR_MISREADS: frozenset[str] = frozenset({"3"})
+
+# 英数字が 1 文字も無い記号だけの塊（`}` `);` など）は、コードではなく
+# OCR の取りこぼし。コードとして扱うと中身の無い図が増える（#57）
+_HAS_ALNUM_RE = re.compile(r"[0-9A-Za-z]")
 
 
 def calc_symbol_ratio(text: str) -> float:
@@ -239,6 +246,10 @@ def detect_code_by_text(
         Returns False for None or empty string.
     """
     if text is None or not text:
+        return False
+
+    if not _HAS_ALNUM_RE.search(text):
+        # 記号だけの塊はコードではない（#57）
         return False
 
     if calc_symbol_ratio(text) > sym_threshold:
