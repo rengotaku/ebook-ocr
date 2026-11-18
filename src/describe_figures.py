@@ -130,6 +130,17 @@ def _ollama_chat(
     return str(body.get("message", {}).get("content", "")).strip()
 
 
+# 説明が文末で終わっているかを見る記号。ここで終わらない説明は
+# 生成が途中で切れていることがある（#125）
+SENTENCE_ENDINGS = ("。", "．", "！", "？", "!", "?", "」", "』", "）", ")", "】")
+
+
+def is_complete_description(text: str) -> bool:
+    """説明が文末記号で終わっているか."""
+    stripped = text.strip()
+    return bool(stripped) and stripped.endswith(SENTENCE_ENDINGS)
+
+
 def describe_image(
     image_path: Path,
     model: str = DEFAULT_MODEL,
@@ -144,17 +155,53 @@ def describe_image(
     qwen3-vl は思考が長引くと content が空で返ることがある。空なら
     (1) 同じモデルで retries 回まで引き直し、(2) 短い指示（数値不要）で 1 回、
     (3) fallback_model で 1 回、の順に試す。
+
+    文末で終わらない（途中で切れた）説明は 1 回だけ引き直す。引き直しても
+    終わらなければ、そのまま返す（無限に再試行しない）。説明文を推測で
+    補うことはしない。
+    """
+    text, used_model, used_prompt = _describe_once(
+        image_path,
+        model=model,
+        base_url=base_url,
+        timeout=timeout,
+        retries=retries,
+        fallback_model=fallback_model,
+        chat=chat,
+    )
+    if text and not is_complete_description(text):
+        # 説明を返したのと同じモデル・指示で引き直す（短い指示や控えのモデルで
+        # 返った場合、元の組み合わせに戻すと空応答になる）
+        retry = chat(image_path, model=used_model, base_url=base_url, timeout=timeout, prompt=used_prompt)
+        if retry.strip():
+            text = retry
+    return text
+
+
+def _describe_once(
+    image_path: Path,
+    model: str,
+    base_url: str,
+    timeout: int,
+    retries: int,
+    fallback_model: str | None,
+    chat: Callable[..., str],
+) -> tuple[str, str, str]:
+    """空応答のときの引き直しと、モデルの切り替えまで.
+
+    戻り値は (説明, 説明を返したモデル, そのときの指示)。
     """
     for _ in range(retries + 1):
-        text = chat(image_path, model=model, base_url=base_url, timeout=timeout)
+        text = chat(image_path, model=model, base_url=base_url, timeout=timeout, prompt=PROMPT)
         if text:
-            return text
+            return text, model, PROMPT
     text = chat(image_path, model=model, base_url=base_url, timeout=timeout, prompt=PROMPT_BRIEF)
     if text:
-        return text
+        return text, model, PROMPT_BRIEF
     if fallback_model:
-        return chat(image_path, model=fallback_model, base_url=base_url, timeout=timeout)
-    return ""
+        text = chat(image_path, model=fallback_model, base_url=base_url, timeout=timeout, prompt=PROMPT)
+        return text, fallback_model, PROMPT
+    return "", model, PROMPT
 
 
 DEFAULT_MIN_AREA_RATIO = 0.02

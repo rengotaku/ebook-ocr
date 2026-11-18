@@ -107,18 +107,18 @@ class TestDescribeImage:
 
         def chat(path, **kwargs):
             calls.append(path)
-            return "図の説明"
+            return "図の説明。"
 
-        assert describe_image(self._image(tmp_path), chat=chat) == "図の説明"
+        assert describe_image(self._image(tmp_path), chat=chat) == "図の説明。"
         assert len(calls) == 1
 
     def test_retries_on_empty_content(self, tmp_path: Path):
-        responses = ["", "", "3 回目で成功"]
+        responses = ["", "", "3 回目で成功。"]
 
         def chat(path, **kwargs):
             return responses.pop(0)
 
-        assert describe_image(self._image(tmp_path), chat=chat) == "3 回目で成功"
+        assert describe_image(self._image(tmp_path), chat=chat) == "3 回目で成功。"
 
     def test_gives_up_after_retries(self, tmp_path: Path):
         calls = []
@@ -254,11 +254,11 @@ class TestFallbackModel:
 
         def chat(path, model=..., **kwargs):
             calls.append(model)
-            return "" if model == "primary" else "控えのモデルの説明"
+            return "" if model == "primary" else "控えのモデルの説明。"
 
         text = describe_image(self._image(tmp_path), model="primary", fallback_model="backup", retries=0, chat=chat)
 
-        assert text == "控えのモデルの説明"
+        assert text == "控えのモデルの説明。"
         # primary（通常）→ primary（短い指示）→ backup
         assert calls == ["primary", "primary", "backup"]
 
@@ -288,11 +288,11 @@ class TestBriefPromptRetry:
 
         def chat(path, model=..., prompt=PROMPT, **kwargs):
             calls.append((model, prompt))
-            return "短い指示で返った" if prompt == PROMPT_BRIEF else ""
+            return "短い指示で返った。" if prompt == PROMPT_BRIEF else ""
 
         text = describe_image(self._image(tmp_path), model="primary", fallback_model="backup", retries=0, chat=chat)
 
-        assert text == "短い指示で返った"
+        assert text == "短い指示で返った。"
         assert calls == [("primary", PROMPT), ("primary", PROMPT_BRIEF)]
 
     def test_falls_back_to_model_after_brief_prompt_fails(self, tmp_path: Path):
@@ -302,11 +302,11 @@ class TestBriefPromptRetry:
 
         def chat(path, model=..., prompt=..., **kwargs):
             calls.append((model, prompt))
-            return "控えの説明" if model == "backup" else ""
+            return "控えの説明。" if model == "backup" else ""
 
         text = describe_image(self._image(tmp_path), model="primary", fallback_model="backup", retries=0, chat=chat)
 
-        assert text == "控えの説明"
+        assert text == "控えの説明。"
         assert [c[0] for c in calls] == ["primary", "primary", "backup"]
         assert calls[1][1] == PROMPT_BRIEF
 
@@ -524,3 +524,72 @@ class TestFigureText:
         assert called == []
         assert figures[0].text == ""
         assert "図中の文字" not in text
+
+
+class TestTruncatedDescription:
+    """文末で終わらない説明は 1 回だけ引き直す（#125）."""
+
+    @staticmethod
+    def _image(tmp_path: Path) -> Path:
+        path = tmp_path / "crop.png"
+        Image.new("RGB", (10, 10), "white").save(path)
+        return path
+
+    def test_complete_description_is_not_retried(self, tmp_path: Path):
+        calls = []
+
+        def chat(path, **kwargs):
+            calls.append(kwargs.get("model"))
+            return "最後まで書けています。"
+
+        assert describe_image(self._image(tmp_path), chat=chat) == "最後まで書けています。"
+        assert len(calls) == 1
+
+    def test_truncated_description_is_retried_once(self, tmp_path: Path):
+        responses = ["画像には日本語の2行の質問文が", "画像には日本語の2行の質問文がある。"]
+        calls = []
+
+        def chat(path, **kwargs):
+            calls.append(kwargs.get("model"))
+            return responses.pop(0)
+
+        assert describe_image(self._image(tmp_path), chat=chat) == "画像には日本語の2行の質問文がある。"
+        assert len(calls) == 2
+
+    def test_still_truncated_after_retry_is_returned(self, tmp_path: Path):
+        responses = ["途中で切れて", "まだ途中で切れて"]
+        calls = []
+
+        def chat(path, **kwargs):
+            calls.append(kwargs.get("model"))
+            return responses.pop(0)
+
+        assert describe_image(self._image(tmp_path), chat=chat) == "まだ途中で切れて"
+        assert len(calls) == 2
+
+    def test_is_complete_description(self):
+        from src.describe_figures import is_complete_description
+
+        assert is_complete_description("文が終わっています。") is True
+        assert is_complete_description("「引用で終わる」") is True
+        assert is_complete_description("文が途中で") is False
+        assert is_complete_description("") is False
+
+    def test_retry_uses_the_model_and_prompt_that_answered(self, tmp_path: Path):
+        """短い指示で返った説明が切れていたら、同じ短い指示で引き直す."""
+        from src.describe_figures import PROMPT, PROMPT_BRIEF
+
+        calls = []
+
+        def chat(path, model=..., prompt=PROMPT, **kwargs):
+            calls.append((model, prompt))
+            if prompt == PROMPT_BRIEF and len(calls) == 3:
+                return "短い指示で文章を最後まで書けました。"
+            if prompt == PROMPT_BRIEF:
+                return "短い指示で途中まで"
+            return ""
+
+        text = describe_image(self._image(tmp_path), model="primary", fallback_model=None, retries=0, chat=chat)
+
+        assert text == "短い指示で文章を最後まで書けました。"
+        assert calls == [("primary", PROMPT), ("primary", PROMPT_BRIEF), ("primary", PROMPT_BRIEF)]
