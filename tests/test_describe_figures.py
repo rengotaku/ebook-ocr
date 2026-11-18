@@ -574,3 +574,22 @@ class TestTruncatedDescription:
         assert is_complete_description("「引用で終わる」") is True
         assert is_complete_description("文が途中で") is False
         assert is_complete_description("") is False
+
+    def test_retry_uses_the_model_and_prompt_that_answered(self, tmp_path: Path):
+        """短い指示で返った説明が切れていたら、同じ短い指示で引き直す."""
+        from src.describe_figures import PROMPT, PROMPT_BRIEF
+
+        calls = []
+
+        def chat(path, model=..., prompt=PROMPT, **kwargs):
+            calls.append((model, prompt))
+            if prompt == PROMPT_BRIEF and len(calls) == 3:
+                return "短い指示で文章を最後まで書けました。"
+            if prompt == PROMPT_BRIEF:
+                return "短い指示で途中まで"
+            return ""
+
+        text = describe_image(self._image(tmp_path), model="primary", fallback_model=None, retries=0, chat=chat)
+
+        assert text == "短い指示で文章を最後まで書けました。"
+        assert calls == [("primary", PROMPT), ("primary", PROMPT_BRIEF), ("primary", PROMPT_BRIEF)]
