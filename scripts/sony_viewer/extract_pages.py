@@ -246,7 +246,7 @@ def save_pages(pages: list[Page], recovered: dict, out_dir: Path, sources: dict)
             image.load()
             if page.scrambled:
                 order, side = order_for(page, recovered, sources)
-                fixed = fmt.descramble(image, order, side)
+                fixed = fmt.descramble(image, order, side, (page.width, page.height))
             else:
                 fixed = image.convert("RGBA")
         target = out_dir / f"{page.index:04d}.webp"
