@@ -121,17 +121,28 @@ def build_sample_order(
     return order, side
 
 
-def descramble(image: Image.Image, order: Iterable[int], side: int) -> Image.Image:
+def descramble(
+    image: Image.Image, order: Iterable[int], side: int, size: tuple[int, int] | None = None
+) -> Image.Image:
     """並べ替えられたタイルを元の位置に戻す.
 
-    ビューアの draw() と同じく、並べ替え後の ``index`` 番目のタイルを
-    ``order[index]`` 番目の位置へ移す。
+    ビューアの ``drawer/unscramble/draw`` と同じく、並べ替え後の ``index`` 番目の
+    タイルを ``order[index]`` 番目の位置へ移す。
+
+    ``size`` はビューアが描くキャンバス（メタの表示サイズ）。配信画像がこのサイズより
+    大きいときは、余りを列・行の間で均等に配分して切り出す位置をずらす。実測では
+    メタ 901x1280 に対して画像が 921x1312 で配信され、``side`` をそのまま使うと
+    タイル数が合わずに欠ける。
     """
-    width, height = image.size
+    width, height = size or image.size
     columns = math.ceil(width / side)
     rows = math.ceil(height / side)
     last_width = width - (columns - 1) * side
     last_height = height - (rows - 1) * side
+    # ビューアは列ごとの余り (image.width - width) / (columns - 1) を切り出し位置に足す。
+    # 1 列しかないときは割り算できないので 0 にする。
+    extra_x = (image.width - width) / (columns - 1) if columns > 1 else 0
+    extra_y = (image.height - height) / (rows - 1) if rows > 1 else 0
 
     source = image.convert("RGBA")
     fixed = Image.new("RGBA", (width, height))
@@ -146,11 +157,13 @@ def descramble(image: Image.Image, order: Iterable[int], side: int) -> Image.Ima
         src_column, src_row = index % columns, index // columns
         tile_width = last_width if dst_column == columns - 1 else side
         tile_height = last_height if dst_row == rows - 1 else side
+        left = round(src_column * (side + extra_x))
+        top = round(src_row * (side + extra_y))
         box = (
-            src_column * side,
-            src_row * side,
-            min(src_column * side + tile_width, width),
-            min(src_row * side + tile_height, height),
+            left,
+            top,
+            min(left + tile_width, image.width),
+            min(top + tile_height, image.height),
         )
         tile = source.crop(box)
         fixed.paste(tile, (dst_column * side, dst_row * side))

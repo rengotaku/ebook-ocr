@@ -147,6 +147,53 @@ class TestSideLength:
         assert fmt.side_length_for(None) == 48
 
 
+class TestDescrambleToDisplaySize:
+    """配信画像がメタの表示サイズより大きいときの並べ替え（ビューアと同じ手順）."""
+
+    @staticmethod
+    def _tiled_image() -> Image.Image:
+        image = Image.new("RGBA", (96, 96))
+        colors = [(255, 0, 0, 255), (0, 255, 0, 255), (0, 0, 255, 255), (255, 255, 0, 255)]
+        for index, color in enumerate(colors):
+            image.paste(color, ((index % 2) * 48, (index // 2) * 48, (index % 2) * 48 + 48, (index // 2) * 48 + 48))
+        return image
+
+    @staticmethod
+    def _scramble(image: Image.Image, order: list[int], side: int) -> Image.Image:
+        scrambled = Image.new("RGBA", image.size)
+        for index, target in enumerate(order):
+            column, row = index % 2, index // 2
+            box = ((target % 2) * side, (target // 2) * side, (target % 2) * side + side, (target // 2) * side + side)
+            scrambled.paste(image.crop(box), (column * side, row * side))
+        return scrambled
+
+    @staticmethod
+    def _widen(scrambled: Image.Image, extra: int) -> Image.Image:
+        # ビューアの想定: タイルの間に余り extra を均等に挟んだ画像が配信される。
+        widened = Image.new("RGBA", (scrambled.width + extra, scrambled.height + extra))
+        step = 48 + extra
+        for index in range(4):
+            column, row = index % 2, index // 2
+            box = (column * 48, row * 48, column * 48 + 48, row * 48 + 48)
+            widened.paste(scrambled.crop(box), (column * step, row * step))
+        return widened
+
+    def test_restores_original_from_larger_image(self):
+        order = [2, 0, 3, 1]
+        original = self._tiled_image()
+        served = self._widen(self._scramble(original, order, 48), extra=10)
+        assert served.size == (106, 106)
+        restored = fmt.descramble(served, order, 48, size=(96, 96))
+        assert list(restored.getdata()) == list(original.getdata())
+
+    def test_uses_image_size_when_size_is_omitted(self):
+        order = [2, 0, 3, 1]
+        original = self._tiled_image()
+        scrambled = self._scramble(original, order, 48)
+        restored = fmt.descramble(scrambled, order, 48)
+        assert list(restored.getdata()) == list(original.getdata())
+
+
 class TestDeduplicate:
     @staticmethod
     def _page(index: int, width: int, content_id: str = "cid"):
