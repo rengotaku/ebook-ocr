@@ -16,12 +16,16 @@ import argparse
 import base64
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 from urllib.parse import parse_qs, urlsplit
 
 from PIL import Image
@@ -30,6 +34,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sony_viewer_format as fmt  # noqa: E402
 
 RUNNER = Path(__file__).resolve().parent / "decrypt_runner.js"
+
+# 復号ワーカーは末尾に固定鍵の配列を持つ。エラーワーカー（apiError を返すだけの
+# 252 バイトの JS）と区別するために、この形があるかで判定する。
+WORKER_KEY_RE = re.compile(r"var n=\[0,1,2,3\],e=\[[0-9,]+\]")
+
+# HAR のリクエストから復号ワーカー・メタを取りに行くときに送るヘッダー。
+# 画像取得用の x-indices / x-quality などは送らない。
+ASSET_REQUEST_HEADERS = ("x-token", "x-uuid", "x-nmr", "x-use-cache", "user-agent", "referer", "accept")
+
+DEFAULT_FETCH_TIMEOUT = 15
 
 
 @dataclass
@@ -80,8 +94,75 @@ def json_of(entry: dict) -> dict:
         return {}
 
 
+def is_decrypt_worker(body: bytes | None) -> bool:
+    """復号鍵を持つワーカーか（apiError を返すだけのエラーワーカーと区別する）."""
+    if not body:
+        return False
+    return bool(WORKER_KEY_RE.search(body.decode("utf-8", "replace")))
+
+
+def request_headers(headers: dict[str, str]) -> dict[str, str]:
+    """HAR のリクエストヘッダーから、取得に使うものだけを小文字の名前で残す."""
+    return {name.lower(): value for name, value in headers.items() if name.lower() in ASSET_REQUEST_HEADERS}
+
+
+def viewer_url(content_id: str, endpoint: str, version: str) -> str:
+    """復号ワーカーやメタの取得先を組み立てる."""
+    return f"https://viewer.ebookstore.sony.jp/viewer/{content_id}/{endpoint}?viewer_version={version}"
+
+
+def fetch_viewer_asset(url: str, headers: dict[str, str], timeout: int = DEFAULT_FETCH_TIMEOUT) -> bytes | None:
+    """HAR の認証ヘッダーを使ってビューアから取得する（トークンはログに出さない）."""
+    request = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.read()
+    except (urllib.error.URLError, OSError) as error:
+        print(f"[extract_pages] {urlsplit(url).path} の取得に失敗した: {error}", file=sys.stderr)
+        return None
+
+
+def fetch_missing_assets(
+    sources: dict,
+    pages: list["Page"],
+    fetch: Callable[[str, dict[str, str]], bytes | None] = fetch_viewer_asset,
+) -> None:
+    """HAR に無い復号ワーカー・メタを、HAR の認証ヘッダーで取りに行く.
+
+    ビューアの Service Worker がキャッシュから返すと、``/decrypt`` や ``/meta`` は
+    HAR に記録されない。画像リクエストには ``x-token`` などの認証ヘッダーが残って
+    いるので、それを使って同じオリジンから取得できる。トークンが期限切れなら諦める。
+    """
+    version = sources.get("viewer_version")
+    if not version:
+        return
+    for content_id in sorted({page.content_id for page in pages}):
+        headers = sources["auth_headers"].get(content_id)
+        if not headers:
+            continue
+        needs_worker = any(page.encrypted for page in pages if page.content_id == content_id)
+        if needs_worker and sources["worker"] is None:
+            body = fetch(viewer_url(content_id, "decrypt", version), headers)
+            if is_decrypt_worker(body):
+                sources["worker"] = body
+                print(f"HAR に復号ワーカーが無いため、記録済みの認証ヘッダーで取得した（{len(body)} バイト）")
+            elif body is not None:
+                print("[extract_pages] /decrypt を取得したが復号ワーカーではなかった", file=sys.stderr)
+        needs_type = any(not page.encrypted and page.scrambled for page in pages if page.content_id == content_id)
+        if needs_type and content_id not in sources["book_types"]:
+            body = fetch(viewer_url(content_id, "meta", version), headers)
+            if body:
+                try:
+                    book_type = json.loads(body.decode("utf-8")).get("data", {}).get("type")
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    book_type = None
+                if book_type:
+                    sources["book_types"][content_id] = book_type
+                    print(f"HAR に /meta が無いため、記録済みの認証ヘッダーで取得した（type={book_type}）")
+
+
 def collect(entries: list[dict]) -> dict:
-    """HAR から束・メタ・復号ワーカーを集める."""
+    """HAR から束・メタ・復号ワーカー・認証ヘッダーを集める."""
     sources: dict = {
         "header_bundles": {},
         "image_bundles": {},
@@ -89,6 +170,8 @@ def collect(entries: list[dict]) -> dict:
         "book_types": {},
         "seed_shifts": {},
         "worker": None,
+        "auth_headers": {},
+        "viewer_version": None,
     }
     for entry in entries:
         url = entry["request"]["url"]
@@ -99,8 +182,21 @@ def collect(entries: list[dict]) -> dict:
         path = urlsplit(url).path
         indices = query_indices(url)
 
+        if sources["viewer_version"] is None:
+            values = parse_qs(urlsplit(url).query).get("viewer_version")
+            if values:
+                sources["viewer_version"] = values[0]
+        if content_id not in sources["auth_headers"]:
+            raw_headers = {header["name"]: header["value"] for header in entry["request"].get("headers", [])}
+            headers = request_headers(raw_headers)
+            if headers.get("x-token"):
+                sources["auth_headers"][content_id] = headers
+
         if body and path.endswith("/decrypt"):
-            sources["worker"] = body
+            # エラーワーカーが混ざることがあるので、鍵を持つものを優先する
+            current = sources["worker"]
+            if current is None or (is_decrypt_worker(body), len(body)) > (is_decrypt_worker(current), len(current)):
+                sources["worker"] = body
         elif body and path.endswith("/header") and indices is not None:
             sources["header_bundles"][(content_id, indices)] = body
         elif body and path.endswith("/image") and indices is not None:
@@ -256,6 +352,11 @@ def save_pages(pages: list[Page], recovered: dict, out_dir: Path, sources: dict)
     return written
 
 
+def requires_decrypt_worker(pages: list[Page]) -> bool:
+    """復号ワーカーが要るか（暗号化ページが 1 枚も無ければ要らない）."""
+    return any(page.encrypted for page in pages)
+
+
 def default_output(har: Path) -> Path:
     """HAR の隣に ``<HAR 名>_webp`` を作る."""
     return har.with_name(f"{har.name}_webp")
@@ -270,19 +371,47 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("har", type=Path, help="DevTools で書き出した HAR")
     parser.add_argument("-o", "--out", type=Path, help="出力ディレクトリ（既定: <HAR 名>_webp）")
     parser.add_argument("--limit", type=int, help="先頭 N ページだけ処理する（動作確認用）")
+    parser.add_argument(
+        "--worker",
+        type=Path,
+        help="復号ワーカー JS のファイル（HAR に入っていないときに使う）",
+    )
+    parser.add_argument(
+        "--no-fetch",
+        action="store_true",
+        help="HAR に無い /decrypt・/meta を、記録済みの認証ヘッダーで取得しに行かない",
+    )
     args = parser.parse_args(argv)
     out_dir = args.out or default_output(args.har)
 
     sources = collect(read_har(args.har))
     if not sources["image_bundles"]:
         raise SystemExit("HAR にページ画像が入っていない")
-    if sources["worker"] is None:
-        raise SystemExit("HAR に復号ワーカー（/decrypt）が入っていない。通信ログの取り直しが要る")
 
     pages: list[Page] = []
     for bundle_key, body in sources["image_bundles"].items():
         pages.extend(build_pages(bundle_key, body, sources))
     pages = deduplicate(pages)
+
+    if args.worker:
+        try:
+            sources["worker"] = args.worker.read_bytes()
+        except OSError as error:
+            raise SystemExit(f"復号ワーカーを読めない: {error}") from error
+        if not is_decrypt_worker(sources["worker"]):
+            print("[extract_pages] 指定されたファイルは復号ワーカーの形をしていない", file=sys.stderr)
+    if not args.no_fetch:
+        fetch_missing_assets(sources, pages)
+
+    if sources["worker"] is None and requires_decrypt_worker(pages):
+        raise SystemExit(
+            "HAR に復号ワーカー（/decrypt）が入っていない。"
+            "ビューアの Service Worker がキャッシュから返すと HAR に記録されない。"
+            "HAR のリクエストに x-token があれば自動取得を試みるが、期限切れのときは"
+            "Service Workers の「Bypass for network」を有効にして取り直すか、"
+            "--worker でワーカー JS を渡す"
+        )
+
     if args.limit:
         pages = pages[: args.limit]
 
