@@ -24,10 +24,17 @@ python3 scripts/sony_viewer/extract_pages.py ~/Downloads/download_openbook
 |---|---|
 | `-o, --out` | 出力ディレクトリ（既定: `<HAR 名>_webp`） |
 | `--limit` | 先頭 N ページだけ処理する（動作確認用） |
+| `--worker` | 復号ワーカー JS のファイル（HAR に入っていないときに使う） |
+| `--no-fetch` | HAR に無い `/decrypt`・`/meta` を取得しに行かない |
 
 - 出力は `0000.webp` のようにビューアのページ番号で並ぶ。可逆 WebP（VP8L）
 - 複数の本のログが混ざっている場合は `<出力先>/<contentId>/` に分かれる
 - 依存: Pillow と Node（18 以上）。復号はビューアの JavaScript をそのまま使うため Node が要る
+- ビューアは Service Worker を使うため、2 回目以降は `/decrypt` や `/meta` が
+  キャッシュから返り、HAR に記録されないことがある。その場合スクリプトは HAR の
+  `/image` リクエストに残っている `x-token` などの認証ヘッダーで取得を試みる。
+  トークンが期限切れのときは、DevTools の Application → Service Workers で
+  「Bypass for network」を有効にして取り直すか、`--worker` でワーカー JS を渡す
 
 ## 仕組み
 

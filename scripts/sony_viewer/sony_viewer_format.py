@@ -121,9 +121,7 @@ def build_sample_order(
     return order, side
 
 
-def descramble(
-    image: Image.Image, order: Iterable[int], side: int, size: tuple[int, int] | None = None
-) -> Image.Image:
+def descramble(image: Image.Image, order: Iterable[int], side: int, size: tuple[int, int] | None = None) -> Image.Image:
     """並べ替えられたタイルを元の位置に戻す.
 
     ビューアの ``drawer/unscramble/draw`` と同じく、並べ替え後の ``index`` 番目の
